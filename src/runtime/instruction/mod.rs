@@ -3,121 +3,95 @@
 //!
 //! Every instruction keeps the Java javadoc *Specification* (Operation /
 //! Input / Output) as its doc comment, reports through its own
-//! [`ErrorReporter`], and reproduces the Java debug `println` output.
+//! `ErrorReporter`, and reproduces the Java debug `println` output.
 //!
-//! Grouping (SPEC §2): one category per file.
+//! 一类一文件(SPEC §5.5):每个指令一个文件,文件名 = Java 类名 snake_case;
+//! 本模块只做 mod 声明 + re-export,外部 `use` 路径保持不变。
 
-use std::rc::Rc;
+pub mod break_continue_instruction;
+pub mod call_const_instruction;
+pub mod call_function_instruction;
+pub mod call_instruction;
+pub mod cast_instruction;
+pub mod check_time_out_instruction;
+pub mod close_scope_instruction;
+pub mod const_instruction;
+pub mod define_function_instruction;
+pub mod define_local_instruction;
+pub mod for_each_instruction;
+pub mod for_instruction;
+pub mod get_field_instruction;
+pub mod get_method_instruction;
+pub mod index_instruction;
+pub mod jump_if_instruction;
+pub mod jump_if_pop_instruction;
+pub mod jump_instruction;
+pub mod load_instruction;
+pub mod load_lambda_instruction;
+pub mod method_invoke_instruction;
+pub mod multi_new_array_instruction;
+pub mod new_array_instruction;
+pub mod new_filled_instance_instruction;
+pub mod new_instance_instruction;
+pub mod new_list_instruction;
+pub mod new_map_instruction;
+pub mod new_scope_instruction;
+pub mod operator_instruction;
+pub mod pop_instruction;
+pub mod ql_instruction;
+pub mod return_instruction;
+pub mod slice_instruction;
+pub mod spread_get_field_instruction;
+pub mod spread_method_invoke_instruction;
+pub mod string_join_instruction;
+pub mod throw_instruction;
+pub mod trace_evaluated_instruction;
+pub mod trace_peek_instruction;
+pub mod try_catch_instruction;
+pub mod unary_instruction;
+pub mod while_instruction;
 
-use crate::exception::error_reporter::ErrorReporter;
-use crate::exception::QLException;
-use crate::ql_options::QLOptions;
-use crate::ql_result::QResult;
-use crate::runtime::qcontext::QContext;
+pub use break_continue_instruction::BreakContinueInstruction;
+pub use call_const_instruction::CallConstInstruction;
+pub use call_function_instruction::CallFunctionInstruction;
+pub use call_instruction::CallInstruction;
+pub use cast_instruction::CastInstruction;
+pub use check_time_out_instruction::CheckTimeOutInstruction;
+pub use close_scope_instruction::CloseScopeInstruction;
+pub use const_instruction::ConstInstruction;
+pub use define_function_instruction::DefineFunctionInstruction;
+pub use define_local_instruction::DefineLocalInstruction;
+pub use for_each_instruction::ForEachInstruction;
+pub use for_instruction::ForInstruction;
+pub use get_field_instruction::GetFieldInstruction;
+pub use get_method_instruction::GetMethodInstruction;
+pub use index_instruction::IndexInstruction;
+pub use jump_if_instruction::JumpIfInstruction;
+pub use jump_if_pop_instruction::JumpIfPopInstruction;
+pub use jump_instruction::JumpInstruction;
+pub use load_instruction::LoadInstruction;
+pub use load_lambda_instruction::LoadLambdaInstruction;
+pub use method_invoke_instruction::MethodInvokeInstruction;
+pub use multi_new_array_instruction::MultiNewArrayInstruction;
+pub use new_array_instruction::NewArrayInstruction;
+pub use new_filled_instance_instruction::NewFilledInstanceInstruction;
+pub use new_instance_instruction::NewInstanceInstruction;
+pub use new_list_instruction::NewListInstruction;
+pub use new_map_instruction::NewMapInstruction;
+pub use new_scope_instruction::NewScopeInstruction;
+pub use operator_instruction::OperatorInstruction;
+pub use pop_instruction::PopInstruction;
+pub use ql_instruction::{Instruction, QLInstruction};
+pub use return_instruction::{ReturnInstruction, ReturnResultType};
+pub use slice_instruction::{SliceInstruction, SliceMode};
+pub use spread_get_field_instruction::SpreadGetFieldInstruction;
+pub use spread_method_invoke_instruction::SpreadMethodInvokeInstruction;
+pub use string_join_instruction::StringJoinInstruction;
+pub use throw_instruction::ThrowInstruction;
+pub use trace_evaluated_instruction::TraceEvaluatedInstruction;
+pub use trace_peek_instruction::TracePeekInstruction;
+pub use try_catch_instruction::TryCatchInstruction;
+pub use unary_instruction::UnaryInstruction;
+pub use while_instruction::WhileInstruction;
 
-pub mod call;
-pub mod cast;
-pub mod const_inst;
-pub mod field_method;
-pub mod flow;
-pub mod index;
-pub mod new_instance;
-pub mod scope;
-pub mod string_join;
-pub mod trace;
-pub mod unary_binary;
-
-pub use call::{CallFunctionInstruction, CallInstruction, MethodInvokeInstruction, SpreadMethodInvokeInstruction};
-pub use cast::CastInstruction;
-pub use const_inst::{CallConstInstruction, ConstInstruction};
-pub use field_method::{GetFieldInstruction, GetMethodInstruction, SpreadGetFieldInstruction};
-pub use flow::{
-    BreakContinueInstruction, CheckTimeOutInstruction, ForEachInstruction, ForInstruction,
-    JumpIfInstruction, JumpIfPopInstruction, JumpInstruction, PopInstruction, ReturnInstruction,
-    ReturnResultType, ThrowInstruction, TryCatchInstruction, WhileInstruction,
-};
-pub use index::{IndexInstruction, SliceInstruction, SliceMode};
-pub use new_instance::{
-    MultiNewArrayInstruction, NewArrayInstruction, NewFilledInstanceInstruction,
-    NewInstanceInstruction, NewListInstruction, NewMapInstruction,
-};
-pub use scope::{
-    CloseScopeInstruction, DefineFunctionInstruction, DefineLocalInstruction, LoadInstruction,
-    LoadLambdaInstruction, NewScopeInstruction,
-};
-pub use string_join::StringJoinInstruction;
-pub use trace::{TraceEvaluatedInstruction, TracePeekInstruction};
-pub use unary_binary::{OperatorInstruction, UnaryInstruction};
-
-/// Base instruction contract, mirroring Java `QLInstruction`.
-///
-/// Instruction Specification (Java convention, kept per instruction):
-/// * Operation: What does it do?
-/// * Input: How many stack element it consumes? and their means
-/// * Output: How many stack element it push back? and their means
-pub trait QLInstruction {
-    /// Java `execute(QContext, QLOptions)`; errors are reported through the
-    /// instruction's [`ErrorReporter`] (Java: thrown `QLRuntimeException`).
-    fn execute(
-        &self,
-        q_context: &mut dyn QContext,
-        ql_options: &QLOptions,
-    ) -> Result<QResult, QLException>;
-
-    /// Java `stackInput()`: input size.
-    fn stack_input(&self) -> i32;
-
-    /// Java `stackOutput()`: output size.
-    fn stack_output(&self) -> i32;
-
-    /// Java `println(int index, int depth, Consumer<String> debug)`.
-    fn println(&self, index: usize, depth: usize, debug: &mut dyn FnMut(String));
-
-    /// Java `getErrorReporter()`.
-    fn error_reporter(&self) -> &Rc<dyn ErrorReporter>;
-}
-
-/// An owned instruction (Java `QLInstruction[]` element).
-pub type Instruction = Box<dyn QLInstruction>;
-
-/// Java shares instruction objects (e.g. a compiled macro body is inlined
-/// at every macro call site). The Rust port shares them through `Rc`; this
-/// blanket impl lets a shared instruction be boxed back into an
-/// [`Instruction`] without changing the `execute(&self)` semantics.
-impl<T: QLInstruction + ?Sized> QLInstruction for Rc<T> {
-    fn execute(
-        &self,
-        q_context: &mut dyn QContext,
-        ql_options: &QLOptions,
-    ) -> Result<QResult, QLException> {
-        (**self).execute(q_context, ql_options)
-    }
-
-    fn stack_input(&self) -> i32 {
-        (**self).stack_input()
-    }
-
-    fn stack_output(&self) -> i32 {
-        (**self).stack_output()
-    }
-
-    fn println(&self, index: usize, depth: usize, debug: &mut dyn FnMut(String)) {
-        (**self).println(index, depth, debug)
-    }
-
-    fn error_reporter(&self) -> &Rc<dyn ErrorReporter> {
-        (**self).error_reporter()
-    }
-}
-
-/// Shared trace-marking helper: Java
-/// `ExpressionTrace t = traces.getExpressionTraceByKey(key); if (t != null) { ... }`.
-pub(crate) fn with_trace(
-    q_context: &dyn QContext,
-    trace_key: Option<i32>,
-    f: impl FnOnce(&mut crate::runtime::trace::ExpressionTrace),
-) {
-    if let Some(trace) = q_context.traces().get_expression_trace_by_key(trace_key) {
-        f(&mut trace.borrow_mut());
-    }
-}
+pub(crate) use ql_instruction::with_trace;
