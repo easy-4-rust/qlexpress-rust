@@ -1,123 +1,146 @@
-//! Global scope, mirroring Java `com.alibaba.qlexpress4.runtime.QvmGlobalScope`.
+//! 全局作用域,对应 Java `com.alibaba.qlexpress4.runtime.QvmGlobalScope`。
 
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
+use crate::exception::QLException;
+use crate::ql_options::Attachments;
+use crate::runtime::context::{EmptyContext, ExpressContext, MapExpressContext};
 use crate::runtime::data::index_map::IndexMap;
-use crate::runtime::data::{AssignableDataValue, MapItemValue};
+use crate::runtime::data::AssignableDataValue;
 use crate::runtime::function::CustomFunction;
 use crate::runtime::left_value::LeftValue;
-use crate::runtime::value::DataValue;
+use crate::runtime::value::{DataValue, QValue};
 
-/// Root scope holding external variables/functions and variables created at
-/// global level, mirroring Java `QvmGlobalScope`.
+/// 根作用域:持有外部变量/函数与脚本全局级新建的变量。
+/// 对应 Java: com.alibaba.qlexpress4.runtime.QvmGlobalScope
 ///
-/// The Java version delegates external lookup to `ExpressContext`
-/// (`context/` is Stage 5); here the external context is represented by an
-/// ordered map shared by `Rc`, which behaves like Java's
-/// `MapExpressContext` (external entries are assignable `MapItemValue`s).
+/// Stage 5a 接线:外部变量查找走 [`ExpressContext`](Java `ExpressContext
+/// externalVariable`),替换 Stage 3a 的 `IndexMap` 占位;`new` 兼容构造器
+/// 内部以 [`MapExpressContext`] 包装传入的 Map,行为与 Stage 3a 一致
+/// (外部条目是可写穿的 `MapItemValue`)。
 pub struct QvmGlobalScope {
-    /// External variables (Java `ExpressContext externalVariable`).
-    external_variables: Rc<RefCell<IndexMap>>,
-    /// Variables first mentioned in the script (Java `newVariables`).
+    /// 外部变量上下文(Java `ExpressContext externalVariable`)。
+    external_variable: Rc<dyn ExpressContext>,
+    /// 脚本中首次提及的变量(Java `Map<String, LeftValue> newVariables`)。
     new_variables: HashMap<String, Rc<RefCell<dyn LeftValue>>>,
-    /// External (host-registered) functions (Java `externalFunction`).
+    /// 外部(宿主注册)函数(Java `Map<String, CustomFunction> externalFunction`)。
     external_functions: HashMap<String, Rc<dyn CustomFunction>>,
-    /// Java `qlOptions.isPolluteUserContext()`, consulted per lookup.
+    /// 用户附加数据(Java `qlOptions.getAttachments()`,每次查找时透传给上下文)。
+    attachments: Attachments,
+    /// Java `qlOptions.isPolluteUserContext()`,每次查找时判定。
     pollute_user_context: bool,
 }
 
 impl QvmGlobalScope {
+    /// Stage 3a 兼容构造器:以 `IndexMap` 为外部变量来源
+    /// (内部包装为 [`MapExpressContext`],对应 Java 以
+    /// `MapExpressContext` 作为 `externalVariable` 的用法)。
     pub fn new(
         external_variables: Rc<RefCell<IndexMap>>,
         external_functions: HashMap<String, Rc<dyn CustomFunction>>,
         pollute_user_context: bool,
     ) -> Self {
+        Self::with_context(
+            Rc::new(MapExpressContext::new(external_variables)),
+            external_functions,
+            HashMap::new(),
+            pollute_user_context,
+        )
+    }
+
+    /// 对应 Java 构造器 `QvmGlobalScope(ExpressContext, Map, QLOptions)`。
+    /// (`QLOptions` 在此展开为本作用域实际读取的两个字段:
+    /// `attachments` 与 `pollute_user_context`。)
+    pub fn with_context(
+        external_variable: Rc<dyn ExpressContext>,
+        external_functions: HashMap<String, Rc<dyn CustomFunction>>,
+        attachments: Attachments,
+        pollute_user_context: bool,
+    ) -> Self {
         QvmGlobalScope {
-            external_variables,
+            external_variable,
             new_variables: HashMap::new(),
             external_functions,
+            attachments,
             pollute_user_context,
         }
     }
 
-    /// An empty global scope (no external variables/functions).
+    /// 空全局作用域(无外部变量/函数)。
+    /// 对应 Java 以 `ExpressContext.EMPTY_CONTEXT` 构造的用法。
     pub fn empty() -> Self {
-        Self::new(
-            Rc::new(RefCell::new(IndexMap::new())),
-            HashMap::new(),
-            false,
-        )
+        Self::with_context(Rc::new(EmptyContext::new()), HashMap::new(), HashMap::new(), false)
     }
 
-    /// Java `getSymbol`: script-defined variables win; otherwise the
-    /// external variable is returned directly when `polluteUserContext`,
-    /// else its current value is copied into a new script variable.
-    pub fn get_symbol(&mut self, var_name: &str) -> Rc<RefCell<dyn LeftValue>> {
+    /// 对应 Java 方法 `getSymbol(String)`:
+    /// 脚本变量优先;否则查询外部上下文——`polluteUserContext` 时直接返回
+    /// 外部值(Java 靠引用别名实现写穿),否则把外部当前值拷贝为新的脚本变量;
+    /// 外部返回 `null`(`Ok(None)`)时新建初始化为 `null` 的脚本变量。
+    pub fn get_symbol(&mut self, var_name: &str) -> Result<Rc<RefCell<dyn LeftValue>>, QLException> {
         if let Some(new_variable) = self.new_variables.get(var_name) {
-            return Rc::clone(new_variable);
+            return Ok(Rc::clone(new_variable));
         }
-        let has_external = self
-            .external_variables
-            .borrow()
-            .contains_key(&DataValue::Str(var_name.to_string()));
-        let external_value = if has_external {
-            let map_item: Rc<RefCell<dyn LeftValue>> = Rc::new(RefCell::new(MapItemValue::new(
-                Rc::clone(&self.external_variables),
-                DataValue::Str(var_name.to_string()),
-            )));
-            Some(map_item)
-        } else {
-            None
-        };
+        // Java: Value externalValue = externalVariable.get(qlOptions.getAttachments(), varName);
+        let external_value = self.external_variable.get(&self.attachments, var_name)?;
         if let Some(external) = external_value {
             if self.pollute_user_context {
-                return external;
+                // Java 直接返回外部 Value:左值(MapItemValue)写穿宿主 Map;
+                // 不可变数据(Java DataValue)包一层可赋值壳,写操作落于壳内
+                // (Java 中 DataValue 本就不可写)。
+                let symbol: Rc<RefCell<dyn LeftValue>> = match external {
+                    QValue::Left(left) => left,
+                    QValue::Data(data) => Rc::new(RefCell::new(AssignableDataValue::new(
+                        var_name.to_string(),
+                        data,
+                    ))),
+                };
+                return Ok(symbol);
             }
-            let initial = external.borrow().get();
+            let initial = external.get();
             let new_variable: Rc<RefCell<dyn LeftValue>> =
                 Rc::new(RefCell::new(AssignableDataValue::new(var_name, initial)));
             self.new_variables
                 .insert(var_name.to_string(), Rc::clone(&new_variable));
-            new_variable
+            Ok(new_variable)
         } else {
             let new_variable: Rc<RefCell<dyn LeftValue>> = Rc::new(RefCell::new(
                 AssignableDataValue::new(var_name, DataValue::Null),
             ));
             self.new_variables
                 .insert(var_name.to_string(), Rc::clone(&new_variable));
-            new_variable
+            Ok(new_variable)
         }
     }
 
-    /// Java `defineLocalSymbol`: unsupported at global scope.
+    /// 对应 Java 方法 `defineLocalSymbol`:全局作用域不支持。
     pub fn define_local_symbol(&mut self, _var_name: &str) -> ! {
         panic!("UnsupportedOperationException: defineLocalSymbol on QvmGlobalScope")
     }
 
-    /// Java `defineFunction`: unsupported at global scope.
+    /// 对应 Java 方法 `defineFunction`:全局作用域不支持。
     pub fn define_function(&mut self, _function_name: &str) -> ! {
         panic!("UnsupportedOperationException: defineFunction on QvmGlobalScope")
     }
 
-    /// Java `getFunction`: only external functions are visible here.
+    /// 对应 Java 方法 `getFunction`:此处仅外部函数可见。
     pub fn get_function(&self, function_name: &str) -> Option<Rc<dyn CustomFunction>> {
         self.external_functions.get(function_name).cloned()
     }
 
-    /// Java `getFunctionTable`.
+    /// 对应 Java 方法 `getFunctionTable`。
     pub fn function_table(&self) -> &HashMap<String, Rc<dyn CustomFunction>> {
         &self.external_functions
     }
 
-    /// Script-created variables (Java `newVariables`).
+    /// 脚本自建变量表(Java `newVariables`)。
     pub fn new_variables(&self) -> &HashMap<String, Rc<RefCell<dyn LeftValue>>> {
         &self.new_variables
     }
 
-    /// The shared external variable context.
-    pub fn external_variables(&self) -> &Rc<RefCell<IndexMap>> {
-        &self.external_variables
+    /// 外部变量上下文(Java `externalVariable` 字段)。
+    pub fn external_variable(&self) -> &Rc<dyn ExpressContext> {
+        &self.external_variable
     }
 }
