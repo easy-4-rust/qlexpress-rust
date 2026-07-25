@@ -3,12 +3,13 @@
 
 use std::rc::Rc;
 
-use crate::aparser::syntax_tree::Node;
+use crate::aparser::syntax_tree_factory::Node;
 use crate::aparser::token::Token;
 use crate::exception::error_reporter::ErrorReporter;
 use crate::exception::ql_syntax_exception::QLSyntaxException;
 use crate::runtime::instruction::Instruction;
-use crate::runtime::qlambda::{Param, QLambdaDefinition};
+use crate::runtime::qlambda_definition::QLambdaDefinition;
+use crate::runtime::qlambda_definition_inner::Param;
 
 /// Java `CodeGenerator`: the tool `QvmInstructionVisitor` passes to a
 /// [`CompileTimeFunction`](super::compile_time_function::CompileTimeFunction)
