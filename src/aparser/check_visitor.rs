@@ -6,7 +6,9 @@
 //! the first violation; call [`CheckVisitor::check`] to get the
 //! `Result<(), QLSyntaxException>`.
 
-use super::syntax_tree::*;
+use super::qlparser_base_visitor::Visitor;
+use super::rule_context::HasChildren;
+use super::syntax_tree_factory::*;
 use crate::check_options::CheckOptions;
 use crate::exception::error_codes;
 use crate::exception::ql_syntax_exception::QLSyntaxException;
