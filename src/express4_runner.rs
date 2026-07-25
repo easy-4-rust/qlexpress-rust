@@ -934,5 +934,5 @@ fn map_to_index_map(context: HashMap<String, DataValue>) -> Rc<RefCell<IndexMap>
 /// 模板包成动态字符串字面量。对应 Java 私有方法
 /// `wrapAsDynamicString(String)`(`null` → `""`,转义双引号)。
 fn wrap_as_dynamic_string(template: &str) -> String {
-    format!("\"{}\"", template.replace('"', "\\\""))
+    format!("\"{}\"", template.replace('\"', "\\\""))
 }
