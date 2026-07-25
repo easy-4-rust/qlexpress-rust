@@ -5,6 +5,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
+use crate::exception::QLException;
 use crate::ql_options::Attachments;
 use crate::runtime::data::convert::obj_type_convertor::TargetType;
 use crate::runtime::function::CustomFunction;
@@ -44,11 +45,19 @@ pub trait QContext {
 
     /// Java `getSymbol`: assignable symbol by name; the global scope
     /// auto-creates it when absent.
-    fn get_symbol(&mut self, var_name: &str) -> Option<Rc<RefCell<dyn LeftValue>>>;
+    ///
+    /// Stage 5a 接线改动:返回 `Result`——外部变量查询走 `ExpressContext`,
+    /// 动态上下文求值失败与 Java 运行期异常上抛一致。
+    fn get_symbol(
+        &mut self,
+        var_name: &str,
+    ) -> Result<Option<Rc<RefCell<dyn LeftValue>>>, QLException>;
 
     /// Java default `getSymbolValue`.
-    fn get_symbol_value(&mut self, var_name: &str) -> Option<DataValue> {
-        self.get_symbol(var_name).map(|symbol| symbol.borrow().get())
+    fn get_symbol_value(&mut self, var_name: &str) -> Result<Option<DataValue>, QLException> {
+        Ok(self
+            .get_symbol(var_name)?
+            .map(|symbol| symbol.borrow().get()))
     }
 
     /// Java `defineLocalSymbol`.

@@ -1,75 +1,18 @@
-//! Scoped traversal base, mirroring Java `ScopeStackVisitor` + `ExistStack`.
+//! 带作用域的遍历基类,对应 Java `com.alibaba.qlexpress4.aparser.ScopeStackVisitor`。
+//! (`ExistStack`/`ExistVarStack` 已拆至 [`super::exist_stack`]。)
 //!
 //! Java `ScopeStackVisitor` is an abstract `QLParserBaseVisitor<Void>` that
 //! pushes/pops an [`ExistStack`] around block-like constructs. Rust models
 //! the "abstract class" as the [`ScopeStack`] state container plus the
 //! [`ScopedVisitor`] extension trait: concrete visitors
-//! ([`super::out_var_visitors`]) implement [`Visitor`] and delegate the
+//! ([`super::out_var_names_visitor`] 等) implement [`Visitor`] and delegate the
 //! scope-sensitive methods to the default implementations here.
 
-use std::collections::HashSet;
-use std::rc::Rc;
+use super::exist_stack::{ExistStack, ExistVarStack};
+use super::qlparser_base_visitor::Visitor;
+use super::syntax_tree_factory::*;
 
-use super::syntax_tree::*;
-
-/// Java `ExistStack` (with the `add` operation its implementations expose).
-pub trait ExistStack: Sized {
-    /// Java `push`: a child scope.
-    fn push(&self) -> Self;
-    /// Java `pop`: the parent scope; panics on the root (Java would NPE).
-    fn pop(&self) -> Self;
-    /// Java `exist`: is `var_name` visible in this scope chain?
-    fn exist(&self, var_name: &str) -> bool;
-    /// Declare `var_name` in the current (top) scope.
-    fn add(&mut self, var_name: String);
-}
-
-/// Persistent scope stack shared by the out-var/out-function visitors,
-/// mirroring the duplicated `ExistVarStack`/`ExistFunctionStack` private
-/// classes in the Java visitors.
-#[derive(Clone, Debug, Default)]
-pub struct ExistVarStack {
-    parent: Option<Rc<ExistVarStack>>,
-    exist_vars: HashSet<String>,
-}
-
-impl ExistVarStack {
-    /// Java `new ExistVarStack(null)` — a root scope.
-    pub fn root() -> Self {
-        ExistVarStack::default()
-    }
-}
-
-impl ExistStack for ExistVarStack {
-    fn push(&self) -> Self {
-        ExistVarStack {
-            parent: Some(Rc::new(self.clone())),
-            exist_vars: HashSet::new(),
-        }
-    }
-
-    fn pop(&self) -> Self {
-        match &self.parent {
-            Some(parent) => (**parent).clone(),
-            None => panic!("ExistStack.pop on root scope"),
-        }
-    }
-
-    fn exist(&self, var_name: &str) -> bool {
-        if self.exist_vars.contains(var_name) {
-            return true;
-        }
-        self.parent
-            .as_ref()
-            .map(|parent| parent.exist(var_name))
-            .unwrap_or(false)
-    }
-
-    fn add(&mut self, var_name: String) {
-        self.exist_vars.insert(var_name);
-    }
-}
-
+/// Java `ScopeStackVisitor` 的 `existStack` 字段。
 /// The `existStack` field of Java `ScopeStackVisitor`.
 #[derive(Clone, Debug)]
 pub struct ScopeStack<S: ExistStack> {

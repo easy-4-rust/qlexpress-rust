@@ -36,4 +36,10 @@ pub trait ErrorReporter {
         format: &str,
         args: &[String],
     ) -> QLException;
+
+    /// 向下转型支持(Java `instanceof DefaultErrReporter` 的 Rust 等价物),
+    /// 供 `api/parsecache` Exporter 读取源码位置。默认 `None`。
+    fn as_any(&self) -> Option<&dyn std::any::Any> {
+        None
+    }
 }

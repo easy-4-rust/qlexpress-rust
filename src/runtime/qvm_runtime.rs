@@ -1,3 +1,7 @@
+//! 根运行时与 VM 取指-执行循环,对应 Java `com.alibaba.qlexpress4.runtime.QvmRuntime`
+//! (上下文)与 `QLambdaInner.callInner`(指令循环)。
+//! (`QRuntime` trait 已拆至 [`crate::runtime::q_runtime`]。)
+//!
 //! Root runtime and the VM fetch-execute loop, mirroring Java
 //! `com.alibaba.qlexpress4.runtime.QvmRuntime` (context) and
 //! `QLambdaInner.callInner` (the instruction loop).
@@ -7,14 +11,15 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::exception::QLException;
 use crate::ql_options::{Attachments, QLOptions};
-use crate::ql_result::QResult;
+use crate::runtime::q_result::QResult;
 use crate::runtime::delegate_qcontext::DelegateQContext;
 use crate::runtime::instruction::Instruction;
 use crate::runtime::member::NativeRegistry;
+use crate::runtime::q_runtime::QRuntime;
 use crate::runtime::qcontext::QContext;
-use crate::runtime::qlambda::QLambdaDefinition;
+use crate::runtime::qlambda_definition::QLambdaDefinition;
 use crate::runtime::qvm_global_scope::QvmGlobalScope;
-use crate::runtime::scope::Scope;
+use crate::runtime::scope::QScope;
 use crate::runtime::trace::QTraces;
 
 /// Current time in milliseconds since the Unix epoch (Java
@@ -24,23 +29,6 @@ pub fn current_time_millis() -> i64 {
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_millis() as i64)
         .unwrap_or(0)
-}
-
-/// Runtime services shared by every context of one script execution,
-/// mirroring Java `QRuntime`.
-pub trait QRuntime {
-    /// Java `scriptStartTimeStamp()`: script start time (millis).
-    fn script_start_time_stamp(&self) -> i64;
-
-    /// Java `attachment()`.
-    fn attachment(&self) -> &Attachments;
-
-    /// Java `getReflectLoader()` — replaced by the explicit native registry
-    /// (SPEC §4).
-    fn registry(&self) -> &Rc<NativeRegistry>;
-
-    /// Java `getTraces()`.
-    fn traces(&self) -> &QTraces;
 }
 
 /// Root runtime with external variable and function, mirroring Java
@@ -91,7 +79,7 @@ impl QvmRuntime {
         ql_options: &QLOptions,
     ) -> Result<QResult, QLException> {
         let mut root_context =
-            DelegateQContext::new(Rc::clone(self), Scope::global(global_scope));
+            DelegateQContext::new(Rc::clone(self), QScope::global(global_scope));
         let root_lambda = root_definition.to_lambda(&mut root_context, ql_options, true);
         root_lambda.call(&[])
     }
@@ -103,7 +91,7 @@ impl QvmRuntime {
         instructions: &[Instruction],
         ql_options: &QLOptions,
     ) -> Result<QResult, QLException> {
-        let mut context = DelegateQContext::new(Rc::clone(self), Scope::global(QvmGlobalScope::empty()));
+        let mut context = DelegateQContext::new(Rc::clone(self), QScope::global(QvmGlobalScope::empty()));
         run_instructions(&mut context, instructions, ql_options)
     }
 }
@@ -140,10 +128,14 @@ pub fn run_instructions(
         let q_result = instructions[i as usize].execute(q_context, ql_options)?;
         match q_result {
             QResult::Jump(offset) => {
-                i += offset as i64;
+                // Java `callInner`: `case JUMP: i += position; continue;` —
+                // the `for` loop's `i++` still runs on `continue`, so the
+                // effective target is `i + position + 1`. The compiler's
+                // back-patch arithmetic (`size - jumpStart`) assumes this.
+                i += offset as i64 + 1;
                 continue;
             }
-            QResult::Return(_) | QResult::Break | QResult::Continue => return Ok(q_result),
+            QResult::Return(_) | QResult::Break | QResult::Continue(_) => return Ok(q_result),
             QResult::NextInstruction => {}
         }
         i += 1;

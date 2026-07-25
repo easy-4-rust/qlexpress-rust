@@ -2,7 +2,7 @@
 //! `compiletimefunction.CompileTimeFunction`.
 
 use crate::aparser::operator_factory::OperatorFactory;
-use crate::aparser::syntax_tree::Node;
+use crate::aparser::syntax_tree_factory::Node;
 
 use super::code_generator::CodeGenerator;
 

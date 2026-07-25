@@ -7,3 +7,7 @@ license = "Apache-2.0"
 description = "Rust port of Alibaba QLExpress4 dynamic script engine (full semantic migration)"
 
 [dependencies]
+# SPEC §5.5.5 依赖映射:Jackson → serde/serde_json。
+# 供 api/parsecache 编译缓存的导出/导入(JSON 序列化)使用,默认启用。
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

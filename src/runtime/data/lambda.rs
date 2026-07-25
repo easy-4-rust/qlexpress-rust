@@ -7,7 +7,7 @@ use crate::exception::error_codes;
 use crate::exception::pure_err_reporter::PureErrReporter;
 use crate::exception::error_reporter::ErrorReporter;
 use crate::exception::QLException;
-use crate::ql_result::QResult;
+use crate::runtime::q_result::QResult;
 use crate::runtime::member::{as_meta_class, find_method_and_invoke, NativeRegistry};
 use crate::runtime::value::DataValue;
 

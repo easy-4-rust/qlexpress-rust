@@ -24,11 +24,14 @@ impl ErrorReporter for PureErrReporter {
         format: &str,
         args: &[String],
     ) -> QLException {
-        QLException::for_test(
-            QLExceptionKind::Runtime,
-            format_msg(format, args),
-            error_code,
-        )
+        // Java maps a SCRIPT_TIME_OUT code to QLTimeOutException
+        // (`QLException.reportRuntimeErr*`); mirror the kind selection.
+        let kind = if error_code == super::error_codes::SCRIPT_TIME_OUT {
+            QLExceptionKind::Timeout
+        } else {
+            QLExceptionKind::Runtime
+        };
+        QLException::for_test(kind, format_msg(format, args), error_code)
     }
 }
 

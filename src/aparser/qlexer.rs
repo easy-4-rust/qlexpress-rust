@@ -93,7 +93,6 @@ impl<'a> QLexer<'a> {
             script,
             chars: script.chars().collect(),
             operator_manager,
-            interpolation_mode,
             selector_start: selector_start.chars().collect(),
             selector_end: selector_end.chars().collect(),
             strict_new_lines,

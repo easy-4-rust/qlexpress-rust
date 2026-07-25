@@ -1,61 +1,20 @@
-//! Script-callable functions, mirroring Java
-//! `com.alibaba.qlexpress4.runtime.function` (minimal surface for Stage 3a;
-//! `custom_function.rs`/`extension_function.rs` land in Stage 5).
+//! 脚本可调用函数,对应 Java `com.alibaba.qlexpress4.runtime.function` 包。
+//!
+//! 一类一文件(SPEC §5.5):本文件仅做 mod 声明与 re-export,不含实现。
+//! (Stage 3a 的 `function.rs` 骨架已按 Java 类边界拆入 `function/` 目录。)
 
-use std::rc::Rc;
+pub mod custom_function;
+pub mod extension_function;
+pub mod filter_extension_function;
+pub mod lazy_arg_custom_function;
+pub mod map_extension_function;
+pub mod qlambda_function;
+pub mod qmethod_function;
 
-use crate::exception::QLException;
-use crate::runtime::parameters::Parameters;
-use crate::runtime::qcontext::QContext;
-use crate::runtime::qlambda::QLambda;
-use crate::runtime::value::DataValue;
-
-/// A function callable from scripts, mirroring Java `CustomFunction`.
-pub trait CustomFunction {
-    /// Java `call(QContext, Parameters)`; returns the function result
-    /// (Java `Object`).
-    fn call(
-        &self,
-        q_context: &mut dyn QContext,
-        parameters: &Parameters,
-    ) -> Result<DataValue, QLException>;
-
-    /// Downcast hook for [`LazyArgCustomFunction`] (Java uses
-    /// `customFunction instanceof LazyArgCustomFunction` in
-    /// `QvmInstructionVisitor.visitCallFunction`).
-    fn as_lazy_arg(&self) -> Option<&dyn LazyArgCustomFunction> {
-        None
-    }
-}
-
-/// A custom function whose chosen arguments are compiled into lambdas
-/// (lazy evaluation), mirroring Java `LazyArgCustomFunction`.
-pub trait LazyArgCustomFunction: CustomFunction {
-    /// Java `isLazyArg(int)`: whether the `index`-th argument should be
-    /// compiled as a lambda instead of being evaluated eagerly.
-    fn is_lazy_arg(&self, index: usize) -> bool;
-}
-
-/// Adapts a [`QLambda`] into a [`CustomFunction`], mirroring Java
-/// `QLambdaFunction` (used by `DefineFunctionInstruction`).
-pub struct QLambdaFunction {
-    q_lambda: Rc<QLambda>,
-}
-
-impl QLambdaFunction {
-    pub fn new(q_lambda: Rc<QLambda>) -> Self {
-        QLambdaFunction { q_lambda }
-    }
-}
-
-impl CustomFunction for QLambdaFunction {
-    fn call(
-        &self,
-        _q_context: &mut dyn QContext,
-        parameters: &Parameters,
-    ) -> Result<DataValue, QLException> {
-        // Java: collect parameters.get(i).get() then qLambda.call(...).getResult().get()
-        let params_arr = parameters.values();
-        Ok(self.q_lambda.call(&params_arr)?.value())
-    }
-}
+pub use custom_function::CustomFunction;
+pub use extension_function::{as_native_method, ExtensionFunction};
+pub use filter_extension_function::FilterExtensionFunction;
+pub use lazy_arg_custom_function::LazyArgCustomFunction;
+pub use map_extension_function::MapExtensionFunction;
+pub use qlambda_function::QLambdaFunction;
+pub use qmethod_function::QMethodFunction;

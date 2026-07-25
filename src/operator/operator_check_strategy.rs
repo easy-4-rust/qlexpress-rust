@@ -1,5 +1,15 @@
 //! Operator restriction strategies, mirroring Java `OperatorCheckStrategy`
 //! and its `Default` / `White` / `Black` implementations.
+//!
+//! 类对照(语义已在 Stage 0 覆盖,此处标注 Java 全限定名):
+//! - [`OperatorCheckStrategy`] ↔ `com.alibaba.qlexpress4.operator.OperatorCheckStrategy`
+//!   (Java 接口 + 静态工厂 allowAll/whitelist/blacklist;Rust 以枚举对应);
+//! - [`DefaultOperatorCheckStrategy`] ↔ `com.alibaba.qlexpress4.operator.DefaultOperatorCheckStrategy`
+//!   (allow-all 单例,`isAllowed` 恒 true,`getOperators` 为空集);
+//! - [`WhiteOperatorCheckStrategy`] ↔ `com.alibaba.qlexpress4.operator.WhiteOperatorCheckStrategy`
+//!   (`isAllowed` = 白名单包含,`getOperators` 返回白名单);
+//! - [`BlackOperatorCheckStrategy`] ↔ `com.alibaba.qlexpress4.operator.BlackOperatorCheckStrategy`
+//!   (`isAllowed` = 不在黑名单,`getOperators` 返回黑名单)。
 
 use std::collections::HashSet;
 
