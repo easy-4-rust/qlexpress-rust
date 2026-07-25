@@ -1,9 +1,12 @@
-//! Execution results: public `QLResult` plus the VM-internal `QResult`,
-//! mirroring Java `QLResult` and `runtime/QResult`.
+//! 脚本执行的公开结果,对应 Java `com.alibaba.qlexpress4.QLResult`。
+//! (VM 内部的 `QResult` 已拆至 [`crate::runtime::q_result`]。)
 
 use crate::runtime::trace::ExpressionTrace;
 use crate::runtime::value::DataValue;
 
+/// `Express4Runner.execute` 的公开结果。对应 Java: com.alibaba.qlexpress4.QLResult
+/// (携带结果值与表达式 trace 列表)
+///
 /// Public result of `Express4Runner.execute`, mirroring Java `QLResult`.
 #[derive(Clone, Debug)]
 pub struct QLResult {
@@ -12,6 +15,7 @@ pub struct QLResult {
 }
 
 impl QLResult {
+    /// 构造执行结果。对应 Java 构造器 `QLResult(result, expressionTraces)`。
     pub fn new(result: DataValue, expression_traces: Vec<ExpressionTrace>) -> Self {
         QLResult {
             result,
@@ -19,80 +23,19 @@ impl QLResult {
         }
     }
 
+    /// 获取结果值。对应 Java 方法 `getResult`。
     pub fn result(&self) -> &DataValue {
         &self.result
     }
 
+    /// 获取表达式 trace 列表。对应 Java 方法 `getExpressionTraces`。
     pub fn expression_traces(&self) -> &[ExpressionTrace] {
         &self.expression_traces
     }
 
+    /// 便捷方法:消耗自身并仅返回结果值(Java 无同名方法,Rust 便捷方法)。
     /// Convenience: consume and return just the result value.
     pub fn into_result(self) -> DataValue {
         self.result
-    }
-}
-
-/// Internal result of executing one instruction, mirroring Java
-/// `runtime/QResult`. The five `ResultType` cases become enum variants; the
-/// jump target (Java: an int-valued `Value`) is carried by
-/// [`QResult::Jump`].
-#[derive(Clone, Debug, PartialEq)]
-pub enum QResult {
-    /// Java `ResultType.BREAK` (loop break).
-    Break,
-    /// Java `ResultType.CONTINUE` (loop continue; also "no return value").
-    Continue,
-    /// Java `ResultType.JUMP`: jump to this instruction position.
-    Jump(i32),
-    /// Java `ResultType.RETURN`: return from function/lambda/script.
-    Return(DataValue),
-    /// Java `ResultType.NEXT_INSTRUCTION`.
-    NextInstruction,
-}
-
-impl QResult {
-    /// Java `QResult.LOOP_BREAK_RESULT`.
-    pub const LOOP_BREAK_RESULT: QResult = QResult::Break;
-
-    /// Java `QResult.LOOP_CONTINUE_RESULT`.
-    pub const LOOP_CONTINUE_RESULT: QResult = QResult::Continue;
-
-    /// Java `QResult.NEXT_INSTRUCTION`.
-    pub const NEXT_INSTRUCTION: QResult = QResult::NextInstruction;
-
-    /// The value carried by this result, mirroring Java `getResult()`
-    /// (Java stores `Value.NULL_VALUE` for non-carrying results).
-    pub fn value(&self) -> DataValue {
-        match self {
-            QResult::Return(v) => v.clone(),
-            _ => DataValue::Null,
-        }
-    }
-
-    pub fn is_break(&self) -> bool {
-        matches!(self, QResult::Break)
-    }
-
-    pub fn is_continue(&self) -> bool {
-        matches!(self, QResult::Continue)
-    }
-
-    pub fn is_next_instruction(&self) -> bool {
-        matches!(self, QResult::NextInstruction)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn constants_match_java_result_types() {
-        assert_eq!(QResult::LOOP_BREAK_RESULT, QResult::Break);
-        assert_eq!(QResult::LOOP_CONTINUE_RESULT, QResult::Continue);
-        assert_eq!(QResult::NEXT_INSTRUCTION, QResult::NextInstruction);
-        assert_eq!(QResult::Break.value(), DataValue::Null);
-        assert_eq!(QResult::Return(DataValue::Int(3)).value(), DataValue::Int(3));
     }
 }

@@ -3,12 +3,23 @@
 //! `lib.rs` is a thin index: only `pub mod` declarations plus facade
 //! re-exports. No implementation lives here (see SPEC §2).
 
+// QLException 对齐 Java 单一异常类(携带完整诊断信息),Err 体积大是
+// 架构性选择;全库统一 `Result<_, QLException>`,此处豁免该 lint。
+#![allow(clippy::result_large_err)]
+
+pub mod annotation;
 pub mod aparser;
+pub mod api;
 pub mod check_options;
 pub mod class_supplier;
+pub mod default_class_supplier;
+pub mod enums;
 pub mod exception;
+pub mod express4_runner;
 pub mod init_options;
+pub mod member;
 pub mod operator;
+pub mod proxy;
 pub mod ql_options;
 pub mod ql_precedences;
 pub mod ql_result;
@@ -16,18 +27,37 @@ pub mod runtime;
 pub mod security;
 pub mod utils;
 
-// ---- Facade re-exports (SPEC §2) ----
-// Express4Runner is delivered in Stage 5; re-exported here once implemented.
-// `parse_to_syntax_tree` support (SPEC §3.6): the parser entry point and
-// the syntax tree model.
+// ---- Facade re-exports (SPEC §2):只 re-export 不定义 ----
+
+/// 引擎门面及顶层契约。对应 Java `com.alibaba.qlexpress4` 包顶层类。
+pub use express4_runner::Express4Runner;
+pub use init_options::InitOptions;
+pub use ql_options::{QLOptions, QLOptionsBuilder};
+pub use ql_result::QLResult;
+pub use check_options::CheckOptions;
+pub use class_supplier::ClassSupplier;
+pub use default_class_supplier::DefaultClassSupplier;
+
+/// 异常体系。对应 Java `com.alibaba.qlexpress4.exception` 公开类。
+pub use exception::{ErrorReporter, PureErrReporter, QLException, QLExceptionKind, QLSyntaxException};
+
+/// 值与上下文。对应 Java `runtime.Value` / `runtime.context.*`。
+pub use runtime::context::{ExpressContext, MapExpressContext, QLAliasContext};
+pub use runtime::value::{DataValue, NativeObject, QValue, Value};
+
+/// 宿主扩展契约:自定义函数、变参函数、批量注册结果、自定义操作符。
+/// 对应 Java `runtime.function.CustomFunction` / `api.*` /
+/// `runtime.operator.CustomBinaryOperator`。
+pub use api::{BatchAddFunctionResult, QLFunctionalVarargs};
+pub use runtime::function::CustomFunction;
+pub use runtime::operator::custom_binary_operator::CustomBinaryOperator;
+
+/// 安全策略。对应 Java `security.QLSecurityStrategy`。
+pub use security::{NativeMember, QLSecurityStrategy};
+
+/// 语法树/编译入口支撑(SPEC §3.6 `parse_to_syntax_tree` 的返回模型)。
 pub use aparser::{
     build_tree, ChildRef, CheckVisitor, CompileCache, GeneratorScope, HasChildren, ImportManager,
     MacroDefine, Node, OutFunctionVisitor, OutVarAttrsVisitor, OutVarNamesVisitor, QCompileCache,
     QLParser, TerminalNode, Token, Visitor,
 };
-pub use check_options::CheckOptions;
-pub use exception::{ErrorReporter, PureErrReporter, QLException, QLExceptionKind, QLSyntaxException};
-pub use init_options::InitOptions;
-pub use ql_options::{QLOptions, QLOptionsBuilder};
-pub use ql_result::QLResult;
-pub use runtime::value::{DataValue, NativeObject, Value};
