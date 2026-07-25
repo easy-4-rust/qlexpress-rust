@@ -54,47 +54,30 @@
       separable from, or merely link (or bind by name) to the interfaces of,
       the Work and Derivative Works thereof.
 
-      "Contribution" shall mean any work, whether in Source or Object form,
-      made available under the License, as indicated by a copyright notice
-      that is included in or attached to the work (an example is provided
-      in the Appendix below).
-
-      "Derivative Works" shall not include works that remain
-      separable from, or merely link (or bind by name) to the interfaces of,
-      the Work and Derivative Works thereof.
-
-      2. Grant of Copyright License. Subject to the terms and conditions of
+   2. Grant of Copyright License. Subject to the terms and conditions of
       this License, each Contributor hereby grants to You a perpetual,
       worldwide, non-exclusive, no-charge, royalty-free, irrevocable
       copyright license to reproduce, prepare Derivative Works of,
       publicly display, publicly perform, sublicense, and distribute the
-      Work and such Derivative Works in Source and Object form, made
-      available under the License is distributed on an "AS IS" BASIS,
-      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-      implied. See the License for the specific language governing
-      permissions and limitations under the License.
+      Work and such Derivative Works in Source and Object form, where such
+      license applies only to those copyright licenses granted to You under
+      this License.
 
    3. Grant of Patent License. Subject to the terms and conditions of
       this License, each Contributor hereby grants to You a perpetual,
       worldwide, non-exclusive, no-charge, royalty-free, irrevocable
-      copyright license to reproduce, prepare Derivative Works of,
-      publicly display, publicly perform, sublicense, and distribute the
-      Work and such Derivative Works in Source and Object form, made
-      available under the License is distributed on an "AS IS" BASIS,
-      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-      implied. See the License for the specific language governing
-      permissions and limitations under the License, (except as stated in
-      this section) patent license to make, have made, use, offer to sell,
-      sell, import, and otherwise transfer the Work, where such license
-      applies only to those patent claims licensable by such Contributor
-      that are necessarily infringed by their Contribution(s) alone or by
-      combination of their Contribution(s) with the Work to which such
-      Contribution(s) was submitted. If You institute patent litigation
-      against any entity (including a cross-claim or counterclaim in a
-      lawsuit) alleging that any patent or other intellectual property
-      right is infringed by the Work, then any patent licenses granted to
-      You under this License for that Work shall terminate as of the date
-      such litigation is filed.
+      (except as stated in this section) patent license to make, have made,
+      use, offer to sell, sell, import, and otherwise transfer the Work,
+      where such license applies only to those patent claims licensable
+      by such Contributor that are necessarily infringed by their
+      Contribution(s) alone or by combination of their Contribution(s)
+      with the Work to which such Contribution(s) was submitted. If You
+      institute patent litigation against any entity (including a
+      cross-claim or counterclaim in a lawsuit) alleging that the Work
+      or a Contribution incorporated within the Work constitutes direct
+      or contributory patent infringement, then any patent licenses
+      granted to You under this License for that Work shall terminate
+      as of the date such litigation is filed.
 
    4. Redistribution. You may reproduce and distribute copies of the
       Work or Derivative Works thereof in any medium, with or without
@@ -108,17 +91,23 @@
           stating that You changed the files; and
 
       (c) You must retain, in the Source form of any Derivative Works,
-          all copyright and patent notices within the Work and
-          Derivative Works thereof.
+          all copyright and other proprietary notices contained within
+          the Work.
 
       (d) If the Work includes a "NOTICE" text file as part of its
           distribution, then any Derivative Works that You distribute must
           include a readable copy of the attribution notices contained
           within such NOTICE file, excluding those notices that do not
-          pertain to any part of the Derivative Works. You may add Your
-          own copyright statement to Your modifications and may provide
-          that notices under this License or any other license terms,
-          provided that You also meet the above conditions.
+          pertain to any part of the Derivative Works, in at least one
+          of the following places: within a NOTICE text file distributed
+          as part of the Derivative Works, or within a display generated
+          as part of the Derivative Works.
+
+      You may add Your own copyright statement to Your modifications and
+      may provide additional or different license terms and conditions
+      for use, reproduction, or distribution of Your modifications, or
+      for any other purpose, provided that You comply with the terms of
+      this License.
 
    5. Submission of Contributions. Unless You explicitly state otherwise,
       any Contribution intentionally submitted for inclusion in the Work
@@ -146,13 +135,14 @@
       whether in tort (including negligence, contract, or otherwise,
       unless required by applicable law (such as deliberate, gross
       or negligent acts) or agreed to in writing, shall any Contributor
-      be liable for damages, including any direct, indirect, special,
-      incidental, or consequential damages of any character arising as a
-      result of this License or out of the use or inability to use, such
-      as costs, fees, and expenses, however caused and on any theory of
-      liability, whether in contract, strict liability, or tort (including
-      negligence or otherwise) arising in any way out of the use of this
-      software, even if advised of the possibility of such damage.
+      be liable to You for damages, including any direct, indirect,
+      special, incidental, or consequential damages of any character
+      arising as a result of this License or out of the use or inability
+      to use, such as costs and expenses, however caused and on any theory
+      of liability, whether in contract, strict liability, or tort
+      (including negligence or otherwise) arising in any way out of the
+      use of this software, even if advised of the possibility of such
+      damages.
 
    9. Accepting Warranty or Additional Liability. While redistributing
       the Work or Derivative Works thereof, You may choose to offer,
