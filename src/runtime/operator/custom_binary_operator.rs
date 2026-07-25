@@ -20,3 +20,15 @@ pub trait CustomBinaryOperator {
     /// `ThrowUtils.wrapThrowable`).
     fn execute(&self, left: &QValue, right: &QValue) -> Result<DataValue, QLException>;
 }
+
+/// 让闭包/函数指针直接充当自定义二元操作符,对应 Java 中以 lambda 实现
+/// `CustomBinaryOperator` 函数式接口的写法
+/// (`Express4Runner.addOperator(operator, (left, right) -> ...)`)。
+impl<F> CustomBinaryOperator for F
+where
+    F: Fn(&QValue, &QValue) -> Result<DataValue, QLException>,
+{
+    fn execute(&self, left: &QValue, right: &QValue) -> Result<DataValue, QLException> {
+        (self)(left, right)
+    }
+}
