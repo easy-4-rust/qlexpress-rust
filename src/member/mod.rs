@@ -1,0 +1,9 @@
+//! 成员处理,对应 Java `com.alibaba.qlexpress4.member` 包。
+//!
+//! 一类一文件(SPEC §5.5):本文件仅做 mod 声明与 re-export,不含实现。
+
+pub mod field_handler;
+pub mod method_handler;
+
+pub use field_handler::{FieldHandler, Preferred};
+pub use method_handler::{Access, MethodHandler};
