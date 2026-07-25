@@ -103,6 +103,10 @@ impl NativeObject for MetaClass {
     fn native_type_name(&self) -> &str {
         "com.alibaba.qlexpress4.runtime.MetaClass"
     }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
 }
 
 /// Extract the [`MetaClass`] from a stack datum (Java
