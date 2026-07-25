@@ -39,7 +39,7 @@ impl<L, T> QCompileCache<L, T> {
 /// `QLambdaDefinition` plus expression trace points
 /// (`TracePointTree` ≈ [`ExpressionTrace`]).
 pub type ScriptCompileCache = CompileCache<
-    std::rc::Rc<dyn crate::runtime::qlambda::QLambdaDefinition>,
+    std::rc::Rc<dyn crate::runtime::qlambda_definition::QLambdaDefinition>,
     std::rc::Rc<std::cell::RefCell<crate::runtime::trace::ExpressionTrace>>,
 >;
 
