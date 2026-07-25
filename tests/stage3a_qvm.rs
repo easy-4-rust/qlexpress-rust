@@ -9,10 +9,10 @@ use qlexpress_rust::exception::error_reporter::ErrorReporter;
 use qlexpress_rust::exception::pure_err_reporter::PureErrReporter;
 use qlexpress_rust::exception::QLException;
 use qlexpress_rust::ql_options::QLOptions;
-use qlexpress_rust::ql_result::QResult;
+use qlexpress_rust::runtime::q_result::QResult;
 use qlexpress_rust::runtime::data::convert::{math_domain, promote, MathDomain};
 use qlexpress_rust::runtime::delegate_qcontext::DelegateQContext;
-use qlexpress_rust::runtime::instruction::flow::ReturnResultType;
+use qlexpress_rust::runtime::instruction::ReturnResultType;
 use qlexpress_rust::runtime::instruction::{
     BreakContinueInstruction, CallFunctionInstruction, CheckTimeOutInstruction,
     ConstInstruction, DefineFunctionInstruction, DefineLocalInstruction, ForInstruction,
@@ -23,10 +23,11 @@ use qlexpress_rust::runtime::instruction::{
 use qlexpress_rust::runtime::member::NativeRegistry;
 use qlexpress_rust::runtime::operator::base::BinaryOperator;
 use qlexpress_rust::runtime::qcontext::QContext;
-use qlexpress_rust::runtime::qlambda::{Param, QLambdaDefinition, QLambdaDefinitionInner};
+use qlexpress_rust::runtime::qlambda_definition::QLambdaDefinition;
+use qlexpress_rust::runtime::qlambda_definition_inner::{Param, QLambdaDefinitionInner};
 use qlexpress_rust::runtime::qvm_global_scope::QvmGlobalScope;
 use qlexpress_rust::runtime::qvm_runtime::{current_time_millis, run_instructions, QvmRuntime};
-use qlexpress_rust::runtime::scope::Scope;
+use qlexpress_rust::runtime::scope::QScope;
 use qlexpress_rust::runtime::value::{DataValue, QValue};
 
 // ---- helpers -------------------------------------------------------------
@@ -63,7 +64,7 @@ fn run_with_ctx(
 ) -> Result<DelegateQContext, QLException> {
     let mut ctx = DelegateQContext::new(
         Rc::clone(runtime),
-        Scope::global(QvmGlobalScope::empty()),
+        QScope::global(QvmGlobalScope::empty()),
     );
     run_instructions(&mut ctx, instructions, &opts())?;
     Ok(ctx)
@@ -202,9 +203,9 @@ fn if_jump_selects_branch() {
         &runtime(),
         vec![
             konst(DataValue::Bool(false)),                     // 0
-            Box::new(JumpIfPopInstruction::new(reporter(), false, 3)), // 1 → 4
+            Box::new(JumpIfPopInstruction::new(reporter(), false, 2)), // 1 → 4
             konst(DataValue::Int(1)),                          // 2
-            Box::new(JumpInstruction::new(reporter(), 2)),     // 3 → 5
+            Box::new(JumpInstruction::new(reporter(), 1)),     // 3 → 5
             konst(DataValue::Int(2)),                          // 4
             ret(),                                             // 5
         ],
@@ -385,7 +386,7 @@ fn lambda_recursive_self_reference() {
             load("n"),                                             // 0
             konst(DataValue::Int(1)),                              // 1
             op(NumOp::Le),                                         // 2
-            Box::new(JumpIfPopInstruction::new(reporter(), false, 3)), // 3 → 6
+            Box::new(JumpIfPopInstruction::new(reporter(), false, 2)), // 3 → 6
             konst(DataValue::Int(1)),                              // 4
             ret(),                                                 // 5
             load("n"),                                             // 6
@@ -454,14 +455,14 @@ fn timeout_instruction_fires_and_is_disabled_by_zero() {
     ));
     let instructions: Vec<Instruction> =
         vec![Box::new(CheckTimeOutInstruction::new(reporter()))];
-    let mut ctx = DelegateQContext::new(Rc::clone(&rt), Scope::global(QvmGlobalScope::empty()));
+    let mut ctx = DelegateQContext::new(Rc::clone(&rt), QScope::global(QvmGlobalScope::empty()));
     let timeout_opts = QLOptions::builder().timeout_millis(1).build();
     let err = run_instructions(&mut ctx, &instructions, &timeout_opts).expect_err("timeout");
     assert_eq!(err.error_code(), error_codes::SCRIPT_TIME_OUT);
     assert!(err.is_timeout());
 
     // timeoutMillis <= 0 disables the check
-    let mut ctx2 = DelegateQContext::new(Rc::clone(&rt), Scope::global(QvmGlobalScope::empty()));
+    let mut ctx2 = DelegateQContext::new(Rc::clone(&rt), QScope::global(QvmGlobalScope::empty()));
     let no_timeout = QLOptions::builder().timeout_millis(0).build();
     assert!(run_instructions(&mut ctx2, &instructions, &no_timeout).is_ok());
 }

@@ -33,7 +33,7 @@ pub trait OperatorFactory {
     fn get_suffix_unary_operator(&self, operator_lexeme: &str) -> Option<Rc<dyn UnaryOperator>>;
 }
 
-/// Java `OperatorManager.adapt2BinOp`: wraps a [`CustomBinaryOperator]`
+/// Java `OperatorManager.adapt2BinOp`: wraps a [`CustomBinaryOperator`]
 /// into a [`BinaryOperator`], converting user errors into reported
 /// `OPERATOR_INNER_EXCEPTION` failures (Java `ThrowUtils.wrapThrowable`).
 struct CustomBinaryOperatorAdapter {
@@ -377,7 +377,7 @@ mod tests {
         let (runtime, opts) = test_ctx();
         let mut ctx = crate::runtime::delegate_qcontext::DelegateQContext::new(
             Rc::new(runtime),
-            crate::runtime::scope::Scope::global(crate::runtime::qvm_global_scope::QvmGlobalScope::empty()),
+            crate::runtime::scope::QScope::global(crate::runtime::qvm_global_scope::QvmGlobalScope::empty()),
         );
         let result = manager
             .get_binary_operator("**")
