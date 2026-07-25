@@ -4,7 +4,6 @@ use std::cell::RefCell;
 use std::fmt;
 use std::rc::Rc;
 
-use crate::exception::QLException;
 use crate::runtime::data::index_map::IndexMap;
 use crate::runtime::qlambda::QLambda;
 
@@ -18,32 +17,9 @@ pub trait Value {
     fn type_name(&self) -> &'static str;
 }
 
-/// Host (native) object stored in [`DataValue::Object`], replacing Java
-/// reflection access with explicit registration (SPEC §4/§6).
-///
-/// Full registry machinery lives in `class_supplier.rs` (later stage).
-pub trait NativeObject: std::any::Any {
-    /// Java reflective field read.
-    fn get_field(&self, name: &str) -> Option<DataValue>;
-
-    /// Java reflective method invocation.
-    fn call_method(&mut self, name: &str, args: &[DataValue]) -> Result<DataValue, QLException>;
-
-    /// Native type name, used in error messages like the Java class name.
-    fn native_type_name(&self) -> &str;
-
-    /// Downcast support (used e.g. by `CastInstruction` to recognise the
-    /// `MetaClass` wrapper, Java `instanceof MetaClass`).
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-}
-
-impl fmt::Debug for dyn NativeObject {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "NativeObject({})", self.native_type_name())
-    }
-}
+// `NativeObject` 已按 SPEC §5.5.6 迁至 `runtime/native_object.rs`
+// (一类一文件);此处 re-export 保持 `value::NativeObject` 路径兼容。
+pub use crate::runtime::native_object::NativeObject;
 
 /// Corresponds to Java `DataValue`: a `Value` holding concrete data.
 ///
