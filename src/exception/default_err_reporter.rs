@@ -52,6 +52,11 @@ impl DefaultErrReporter {
 }
 
 impl ErrorReporter for DefaultErrReporter {
+    /// 向下转型支持(Java `instanceof DefaultErrReporter`)。
+    fn as_any(&self) -> Option<&dyn std::any::Any> {
+        Some(self)
+    }
+
     fn report_format_with_catch(
         &self,
         catch_obj: Option<DataValue>,
