@@ -88,7 +88,8 @@ impl QConverted {
     }
 }
 
-/// 定义 `ObjTypeConvertor` 对象。对应 Java 源码 `com/alibaba/qlexpress4/runtime/data/convert/ObjTypeConvertor.java:1` 的 `ObjTypeConvertor`；该方法为 Rust 同职责适配接口。
+/// 执行单个脚本值到宿主目标类型的转换，并显式记录不可转换状态。
+/// 对应 Java: `com.alibaba.qlexpress4.runtime.data.convert.ObjTypeConvertor`。
 pub struct ObjTypeConvertor;
 
 impl ObjTypeConvertor {

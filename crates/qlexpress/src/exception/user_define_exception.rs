@@ -30,12 +30,14 @@ impl UserDefineException {
         }
     }
 
-    /// 执行 `exception_type` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/exception/UserDefineException.java:1` 的 `UserDefineException`；该方法为 Rust 同职责适配接口。
+    /// 返回脚本声明的用户异常类型。
+    /// 对应 Java: `UserDefineException#getExceptionType`。
     pub fn exception_type(&self) -> ExceptionType {
         self.exception_type
     }
 
-    /// 执行 `message` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/exception/UserDefineException.java:1` 的 `UserDefineException`；该方法为 Rust 同职责适配接口。
+    /// 返回用户异常消息。
+    /// 对应 Java: `UserDefineException#getMessage`。
     pub fn message(&self) -> &str {
         &self.message
     }

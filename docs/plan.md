@@ -1,191 +1,51 @@
-# qlexpress-rust 迁移计划
+# qlexpress-rust 迁移计划（历史入口）
 
-## 目标
-将 QLExpress 最新 Java 版(4.2.0-beta, com.alibaba.qlexpress4, commit 9065b9a)做**完整语义功能迁移**到 Rust,工程名 `qlexpress-rust`,输出到 /mnt/agents/output/qlexpress-rust。
+本文件保留为早期 Stage 0–7 计划的兼容入口。迁移已经完成，当前事实来源是：
 
-## 架构原则(与 Java 版对齐)
-- 执行模型:Lexer → Parser(语法树)→ QvmInstructionVisitor(编译为指令)→ QVM 栈式虚拟机执行。**不做 tree-walking**。
-- 模块结构镜像 Java 包结构,严禁把所有东西塞进 lib.rs:
-```
-src/
-  lib.rs                 (仅 re-export + Express4Runner 入口声明)
-  lib root:
-    check_options.rs  ql_options.rs  ql_result.rs  ql_precedences.rs
-    express4_runner.rs  class_supplier.rs  init_options.rs
-  exception/     (QLException, QLSyntaxException, QLErrorCodes, lsp/)
-  aparser/       (QLexer, Token, QLParser, SyntaxTreeFactory, RuleContext, ParseTree,
-                  QvmInstructionVisitor, ImportManager, MacroDefine, GeneratorScope,
-                  ParserOperatorManager, OperatorFactory, compiletimefunction/,
-                  CheckVisitor, OutVar*Visitor, ScopeStackVisitor, QCompileCache)
-  runtime/       (Value, QvmRuntime, QvmGlobalScope, QLambda*, ReflectLoader→NativeRegistry,
-    instruction/  (42 个指令,每个一个文件或按类别分组文件)
-    operator/     (base, arithmetic, assign, bit, collection, compare, logic, number, string, unary — 57 个操作符)
-    context/      (ExpressContext, MapExpressContext, QLAliasContext ...)
-    data/         (convert/, lambda/)
-    function/     (CustomFunction, ExtensionFunction, QMethodFunction)
-    scope/        trace/  util/
-  security/      (QLSecurityStrategy 等 5 个)
-  utils/         (BasicUtil, QLFunctionUtil ...)
-  api/           (QLFunctionalVarargs, BatchAddFunctionResult, parsecache/)
-  annotation/    (以 Rust attribute/doc 形式平移或标注)
-```
+1. [迁移路线图](迁移路线图.md)：阶段状态、架构决策和质量门禁；
+2. [对象级对照表](对象级对照表.md)：237 个 Java 对象逐项映射；
+3. [语义迁移对照表](语义迁移对照表.md)：运行时功能与 Java→Rust 技术映射；
+4. [对象名称一致性检查](对象名称一致性检查.md)：文件、包路径与一文件一对象验收。
 
-## Java 反射的替代策略(关键决策)
-Java 版靠反射调用宿主对象方法/字段(GetFieldInstruction, GetMethodInstruction, QMethodFunction, proxy/)。
-Rust 无运行时反射,采用:
-- 宿主类型通过注册表暴露:`ReflectLoader` → `NativeRegistry`(注册 struct/enum 的构造器、方法、字段 getter)
-- 提供 `qlexpress-rust` 内置的 `Value::Data(Map)` 动态对象路径 + 可选 derive macro(后续阶段)
-- 语义等价:脚本的 `obj.field`、`obj.method(args)`、`new X(...)` 行为保持一致
+## 最终状态（2026-07-26）
 
-## 阶段划分(stage-gate,每阶段验证后才进入下一阶段)
-
-### Stage 0 — 奠基(串行,1 个 coder)
-- cargo 工程初始化;exception 模块(错误码全量对齐 QLErrorCodes)
-- utils、enums、annotation 平移
-- runtime::Value 类型体系(DataValue 全系列:数字/字符串/布尔/null/数组/map/lambda)
-- 验收:cargo build + value/error 单测通过
-
-### Stage 1 — Lexer(串行,1 个 coder)
-- aparser::QLexer + Token + QLTokenType 全量 token 类型(含关键字表、操作符表、字符串插值模式 InterpolationMode)
-- 验收:对一批 Java 测试脚本做 token 序列对比测试
-
-### Stage 2 — Parser + 语法树(串行,1 个 coder)
-- QLParser(递归下降,对齐 Java 版优先级 QLPrecedences)、SyntaxTreeFactory、RuleContext/ParseTree 节点体系
-- ImportManager、MacroDefine、GeneratorScope、CheckVisitor 等编译期检查 visitor
-- 验收:语法合法/非法用例与 Java 版行为一致(错误信息含行列号)
-
-### Stage 3 — 指令编译 + QVM(可并行 2 个 coder)
-- 3a: instruction/ 42 个指令结构定义 + QvmInstructionVisitor(语法树→指令)
-- 3b: QvmRuntime(栈 VM、scope、QLambda、trace 骨架)
-- 依赖 Stage 2 输出的语法树契约;3a/3b 通过指令 trait 契约解耦
-- 验收:常量/算术脚本能端到端跑
-
-### Stage 4 — 操作符体系(并行,2 个 coder)
-- 4a: arithmetic/number/bit/compare/logic(数值提升规则对齐 Java)
-- 4b: string/collection/assign/unary + base + OperatorManager + 自定义操作符(CustomBinaryOperator)
-- 验收:操作符优先级/类型提升单测
-
-### Stage 5 — 函数/上下文/安全/Runner(并行 2 个 coder)
-- 5a: function/ + context/ + member/ + api/(自定义函数注册、扩展函数、别名上下文)
-- 5b: security/ + Express4Runner + QLOptions/CheckOptions + aparser/compiletimefunction + parsecache
-- 验收:Express4Runner API 端到端用例
-
-### Stage 6 — 对齐测试与收尾(1 个 verifier + 1 个 coder 修复)
-- 移植 Java 版 src/test 核心测试用例(算术、控制流、lambda、宏、函数、异常、沙箱)
-- cargo test 全绿 + clippy 无警告 + README
-
-## Stage 6 验收记录(2026-07-26)
-
-### 工作量
-- 294 文件 / 527 tests(基线) → 312 文件 / 605 tests / 16 ignored(完成态)
-- 分支:`feat/stage6-alignment`,共 6 个 commit
-
-### Phase 1 — Cargo workspace + #[derive(QLExpressType)]
-- `crates/qlexpress/`(原 crate 改名)+ `crates/qlexpress-derive/`(新 proc-macro crate)
-- 过程宏支持:name / skip / alias / no_native_object / 类型映射
-- 12 fixture 用例覆盖字段/skip/alias/registry/runner/script 执行
-
-### Phase 2 — 5 个缺失类
-- `runtime/exception_table.rs` - ExceptionTable + ExceptionTableEntry + 3 用例
-- `runtime/fixed_size_stack.rs` - 带容量上限的栈 + STACK_OVERFLOW 错误码 + 3 用例
-- `runtime/trace/trace_point_tree.rs` - re-export ExpressionTrace as TracePointTree
-- `aparser/trace_expression_visitor.rs` - v1 stub(运行时 ExpressionTrace 已完整)
-- `ReflectLoader` 语义合并到 native_registry.rs(doc 注明)
-
-### Phase 3 — Java 测试移植
-- `tests/alignment_runner_full.rs` - 29 用例(对应 Express4RunnerTest 核心路径)
-- `tests/alignment_parser.rs` - 16 用例(SyntaxTreeFactoryTest / MethodInvoke / GetField / NewInstance)
-- `tests/alignment_issue_regression.rs` - 5 用例(TryCatchBreakContinue / Issue427 / Issue318 / QL4Alias)
-- `tests/alignment_parsecache.rs` - 6 用例(SerializableParseCacheTest round-trip)
-
-### Phase 4 — 安全策略
-- `tests/alignment_security.rs` - 4 用例(open / white_list / black_list / check_options)
-
-### 已知引擎语义缺口(Stage 6 时)
-| 用例 | Stage 7 处理 |
+| 项目 | 结果 |
 |---|---|
-| interpolation_disable | ✅ 修测试期望（引擎正确，测试期望错） |
-| doc_try_catch_as_expr | ✅ 修 TryCatchInstruction.is_expression_form（表达式形式传播值） |
-| alignment_runner_full/multiple_declarators | ✅ 修 qvm_instruction_visitor 默认值 + 测试期望 |
-| alignment_runner_full/foreach_iterates_list | ✅ 修测试脚本为 `for (x : list)` |
-| alignment_runner_full/break_inside_for 等 3 个 | ✅ 修测试脚本加 `;` 分隔 |
-| alignment_parsecache/cross_runner | 🟡 仍 ignore（identity 校验行为待确认） |
-| 其他 (alignment_issue_regression 桩位 2 个) | ✅ 已补实际测试 |
+| Java 基线 | QLExpress 4.2.0-beta，237 个生产对象 |
+| Rust 生产对象文件 | 251（core 247 + derive 4） |
+| 对象职责覆盖 | 237/237 |
+| 合并待拆 / 缺失 / stub | 0 / 0 / 0 |
+| 测试 | 777 passed / 0 failed / 0 ignored |
+| 格式 | `cargo fmt --all -- --check` 通过 |
+| 静态检查 | `cargo clippy --workspace --all-targets --all-features -- -D warnings` 通过 |
 
-## Stage 7 验收记录(2026-07-26)
+## 已完成阶段
 
-### 工作量
-- **312 文件 / 605 tests / 16 ignored** → **350+ 文件 / 738 tests / 15 ignored**
-- 分支:`feat/stage7-full-alignment`,共 13 个 commit
+```mermaid
+flowchart LR
+    S0["S0 对照基线"] --> S1["S1 工程与基础对象"]
+    S1 --> S2["S2 Lexer / Parser / Visitor"]
+    S2 --> S3["S3 指令编译与 QVM"]
+    S3 --> S4["S4 操作符与数值"]
+    S4 --> S5["S5 函数 / 上下文 / 安全 / Runner"]
+    S5 --> S6["S6 Java 对齐测试"]
+    S6 --> S7["S7 对象拆分、trace、文档与严格门禁"]
+```
 
-### Phase 1 — 实现修复
+关键收尾包括：
 
-| 修复项 | 文件 | 影响 |
-|---|---|---|
-| try/catch 表达式语义 | `qvm_instruction_visitor.rs`, `try_catch_instruction.rs` | `1 + try{...}catch{...}` 通过 |
-| interpolation_disable 测试 | `alignment_string_template.rs` | 修测试期望(引擎正确) |
-| multiple_declarators 默认值 | `qvm_instruction_visitor.rs` | `default_value_for_target()` helper |
-| foreach 测试脚本 | `alignment_runner_full.rs` | 改 `for (x : list)` |
-| break/continue/return 脚本 | `alignment_runner_full.rs` | 加 `;` 分隔 |
-| OperatorCheckStrategy | 新建 `alignment_operator_limit.rs` | 14 用例全通过 |
-| method_invoke | 新建 `alignment_method_invoke.rs` | 8 用例(3 varargs ignore) |
-| expose_fields derive 属性 | `attrs.rs`, `native_type.rs` | 通过 get_field 路径 |
-| allow_private_access | 已存在 | 验证无新代码 |
+- `TraceExpressionVisitor` 完整遍历 AST，并与运行时 `ExpressionTrace`、
+  `TracePointTree`、`QTraces` 形成闭环；
+- `BigInteger` 使用 `num_bigint::BigInt`，不再受 `i128` 固定宽度限制；
+- Java `FixedSizeStack` 容量语义进入真实 QVM 作用域和 lambda 执行路径；
+- 构造器、内建兼容成员、宿主动态字段/方法统一执行安全策略；
+- `DataValue`、`Value`、`QValue` 和
+  `runtime.data.lambda.QLambdaMethod` 已拆分到独立职责文件；
+- 删除历史聚合指令文件，生产源码无 `compat.rs`、`todo!`、
+  `unimplemented!` 或忽略测试。
 
-### Phase 2 — Java 测试移植
+## 生产验收边界
 
-| 测试文件 | Java @Test | Rust 新增 |
-|---|---|---|
-| `alignment_trycatch_break_continue.rs` | 10 | 7 通过 + 3 ignore |
-| `alignment_issue427.rs` | 8 | 8 通过 |
-| `alignment_get_field.rs` | 12 | 5 通过 |
-| `alignment_import_manager.rs` | 2 | 2 通过 |
-| `alignment_new_instance.rs` | 10 | 6 通过 |
-| `alignment_ql4alias.rs` | 3 | 3 通过 |
-| `alignment_custom_items.rs` | 7 | 7 通过 |
-| `alignment_parsecache_extended.rs` | 8 | 7 通过 |
-| **Phase 2 合计** | **60** | **45 通过 + 3 ignore** |
-
-### Phase 3 — 多维覆盖 + Rust 独立测试
-
-| 测试文件 | 用例数 | 覆盖维度 |
-|---|---|---|
-| `rust_native_sandbox_matrix.rs` | 15 | 4 安全策略 × 5 宿主类型 + 策略切换 |
-| `rust_native_property_collections.rs` | 19 | empty/1/10k list + map + string + edge |
-| `rust_native_error_code_coverage.rs` | 18 | 13 个 error_codes 常量触发 |
-| `rust_native_perf_smoke.rs` | 8 | cache 加速 / 大脚本 / fib(20) / timeout |
-| **Phase 3 合计** | **60** | |
-
-### 已知引擎语义缺口(Stage 7)
-| 用例 | 状态 | 原因 |
-|---|---|---|
-| 3 个 TryCatchBreakContinue | 🟡 ignored | `is_expression_form=true` 吞 break/continue 信号;需要更细的 AST 分析来切换 |
-| 3 个 method_invoke varargs | 🟡 ignored | varargs method dispatch 未实现 |
-| 1 个 parsecache cross-runner | 🟡 ignored | identity 校验行为待确认 |
-| 2 个 BigInteger implicit | 🟡 ignored | 数值自动提升待补 |
-| **总计 9 ignore** | | 均有详细注释和跟踪路径 |
-
-### 收尾状态
-- `cargo test --workspace`: **738 passed, 0 failed, 15 ignored**
-- `cargo clippy --workspace --all-targets`: 0 errors, ~60 warnings(预存)
-- `cargo doc --workspace --no-deps`: 0 broken link
-
-### Rust 独立测试分布
-| 类别 | 测试数 | 说明 |
-|---|---|---|
-| Java 对齐(alignment_*) | ~160 | 1:1 对齐 Java @Test |
-| Rust 独立(rust_native_*) | ~60 | sandbox/property/error码/perf |
-| Stage 0-5 原有 | ~500 | 基线不变 |
-| 过程宏 fixture | 12 | stage6_derive_fixture |
-
-### 剩余工作
-- Phase 4 收尾:clippy / fmt / plan.md 更新 / README
-- 9 个 ignored 用例对应的引擎修复
-- varargs 分支实现
-- BigInteger/BigDecimal 自动提升
-- cross-runner identity 校验
-
-## 工具与技能
-- 每阶段加载 vibecoding-general-swarm 指导 coder subagent
-- Java 源码位于 /mnt/agents/qlexpress-java,coder 按需阅读原文对齐语义
-- 测试数据可复用 /mnt/agents/qlexpress-java/src/test 中的脚本用例
+仓库级源码、对象映射、静态门禁和测试已完成。具体业务宿主仍需验证其
+`NativeRegistry` 注册内容、真实数据、容量目标、部署拓扑、监控告警与回滚流程；
+这些环境事实不由本迁移仓库的单元/集成测试代替。

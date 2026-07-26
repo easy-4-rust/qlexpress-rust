@@ -25,17 +25,20 @@ impl QLRuntimeException {
         QLRuntimeException { inner }
     }
 
-    /// 执行 `inner` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/exception/QLRuntimeException.java:1` 的 `QLRuntimeException`；该方法为 Rust 同职责适配接口。
+    /// 返回内部通用 QL 异常。
+    /// 对应 Java: `QLRuntimeException` 继承 `QLException` 后暴露的基类状态。
     pub fn inner(&self) -> &QLException {
         &self.inner
     }
 
-    /// 执行 `catch_obj` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/exception/QLRuntimeException.java:1` 的 `QLRuntimeException`；该方法为 Rust 同职责适配接口。
+    /// 返回交给脚本 `catch` 变量的异常对象。
+    /// 对应 Java: `QLRuntimeException#getCatchObj`。
     pub fn catch_obj(&self) -> Option<&DataValue> {
         self.inner.catch_obj()
     }
 
-    /// 执行 `into_exception` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/exception/QLRuntimeException.java:1` 的 `QLRuntimeException`；该方法为 Rust 同职责适配接口。
+    /// 将运行时异常消费并转换为通用 QL 异常。
+    /// 对应 Java: `QLRuntimeException` 向 `QLException` 的继承转换。
     pub fn into_exception(self) -> QLException {
         self.inner
     }

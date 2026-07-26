@@ -61,7 +61,8 @@ pub fn trans_to_primitive(primitive: PrimitiveType) -> PrimitiveType {
     primitive
 }
 
-/// 定义 `BasicUtil` 对象。对应 Java 源码 `com/alibaba/qlexpress4/utils/BasicUtil.java:1` 的 `BasicUtil`；该方法为 Rust 同职责适配接口。
+/// 生成 Java Bean getter/setter 方法名。
+/// 对应 Java: `com.alibaba.qlexpress4.utils.BasicUtil`。
 pub struct BasicUtil;
 
 impl BasicUtil {

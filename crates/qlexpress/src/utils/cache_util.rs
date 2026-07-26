@@ -9,13 +9,15 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::hash::Hash;
 
-/// 定义 `CacheUtil` 对象。对应 Java 源码 `com/alibaba/qlexpress4/utils/CacheUtil.java:1` 的 `CacheUtil`；该方法为 Rust 同职责适配接口。
+/// 按键缓存一次性计算结果。
+/// 对应 Java: `com.alibaba.qlexpress4.utils.CacheUtil`，承接 `computeIfAbsent` 缓存语义。
 pub struct CacheUtil<K, V> {
     cache: RefCell<HashMap<K, V>>,
 }
 
 impl<K: Eq + Hash, V: Clone> CacheUtil<K, V> {
-    /// 构造实例。对应 Java 源码 `com/alibaba/qlexpress4/utils/CacheUtil.java:1` 的 `CacheUtil`；该方法为 Rust 同职责适配接口。
+    /// 创建空缓存；后续相同键只执行一次计算。
+    /// 对应 Java: `CacheUtil` 内部 `ConcurrentHashMap` 的初始化。
     pub fn new() -> Self {
         CacheUtil {
             cache: RefCell::new(HashMap::new()),

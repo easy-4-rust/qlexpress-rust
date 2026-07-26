@@ -33,7 +33,8 @@ impl ExMessage {
     }
 }
 
-/// 定义 `ExMessageUtil` 对象。对应 Java 源码 `com/alibaba/qlexpress4/exception/ExMessageUtil.java:1` 的 `ExMessageUtil`；该方法为 Rust 同职责适配接口。
+/// 根据脚本位置生成带上下文片段的错误消息。
+/// 对应 Java: `com.alibaba.qlexpress4.exception.ExMessageUtil`。
 pub struct ExMessageUtil;
 
 impl ExMessageUtil {

@@ -1,6 +1,7 @@
 //! String escape parsing, mirroring Java `QLStringUtils`.
 
-/// 定义 `QLStringUtils` 对象。对应 Java 源码 `com/alibaba/qlexpress4/utils/QLStringUtils.java:1` 的 `QLStringUtils`；该方法为 Rust 同职责适配接口。
+/// 按 QLExpress 字符串字面量规则解析引号和转义序列。
+/// 对应 Java: `com.alibaba.qlexpress4.utils.QLStringUtils`。
 pub struct QLStringUtils;
 
 impl QLStringUtils {

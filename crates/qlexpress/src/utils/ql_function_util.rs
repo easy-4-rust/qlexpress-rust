@@ -5,7 +5,8 @@
 //! registration time (SPEC §4), so this helper operates on an optional
 //! name list.
 
-/// 定义 `QLFunctionUtil` 对象。对应 Java 源码 `com/alibaba/qlexpress4/utils/QLFunctionUtil.java:1` 的 `QLFunctionUtil`；该方法为 Rust 同职责适配接口。
+/// 解析宿主方法声明的 QL 函数名。
+/// 对应 Java: `com.alibaba.qlexpress4.utils.QLFunctionUtil`；Rust 由注册阶段显式传入注解元数据。
 pub struct QLFunctionUtil;
 
 impl QLFunctionUtil {

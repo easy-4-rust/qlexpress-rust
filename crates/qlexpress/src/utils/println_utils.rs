@@ -1,6 +1,7 @@
 //! Indented debug printing helpers, mirroring Java `PrintlnUtils`.
 
-/// 定义 `PrintlnUtils` 对象。对应 Java 源码 `com/alibaba/qlexpress4/utils/PrintlnUtils.java:1` 的 `PrintlnUtils`；该方法为 Rust 同职责适配接口。
+/// 构造并输出带语法树层级缩进的调试文本。
+/// 对应 Java: `com.alibaba.qlexpress4.utils.PrintlnUtils`。
 pub struct PrintlnUtils;
 
 impl PrintlnUtils {

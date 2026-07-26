@@ -5,7 +5,8 @@ use crate::runtime::value::DataValue;
 
 use super::obj_type_convertor::{ObjTypeConvertor, TargetType};
 
-/// 定义 `ParametersTypeConvertor` 对象。对应 Java 源码 `com/alibaba/qlexpress4/runtime/data/convert/ParametersTypeConvertor.java:1` 的 `ParametersTypeConvertor`；该方法为 Rust 同职责适配接口。
+/// 将脚本参数逐项转换为宿主方法声明类型，并负责收集变长参数。
+/// 对应 Java: `com.alibaba.qlexpress4.runtime.data.convert.ParametersTypeConvertor`。
 pub struct ParametersTypeConvertor;
 
 impl ParametersTypeConvertor {

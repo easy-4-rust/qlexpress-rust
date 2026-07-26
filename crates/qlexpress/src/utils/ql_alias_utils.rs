@@ -3,7 +3,8 @@
 //! Java reads `@QLAlias` annotations via reflection; in Rust the alias
 //! values are supplied explicitly (SPEC §4 native-registration strategy).
 
-/// 定义 `QLAliasUtils` 对象。对应 Java 源码 `com/alibaba/qlexpress4/utils/QLAliasUtils.java:1` 的 `QLAliasUtils`；该方法为 Rust 同职责适配接口。
+/// 在显式注册的别名组中匹配脚本成员名。
+/// 对应 Java: `com.alibaba.qlexpress4.utils.QLAliasUtils`；替代运行时注解反射。
 pub struct QLAliasUtils;
 
 impl QLAliasUtils {

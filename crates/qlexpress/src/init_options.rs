@@ -51,7 +51,8 @@ impl InitOptions {
         &self.class_supplier
     }
 
-    /// 执行 `default_import` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/InitOptions.java:1` 的 `InitOptions`；该方法为 Rust 同职责适配接口。
+    /// 返回默认导入项列表。
+    /// 对应 Java: `InitOptions#getDefaultImport`；Rust 返回只读切片避免复制。
     pub fn default_import(&self) -> &[QLImport] {
         &self.default_import
     }
