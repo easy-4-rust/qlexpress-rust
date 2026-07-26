@@ -1830,6 +1830,7 @@ impl<'a> Visitor for QvmInstructionVisitor<'a> {
             .with_expression_form(true),
         ));
     }
+
     /// Java `visitExpression` (assignment).
     fn visit_expression(&mut self, ctx: &ExpressionContext) {
         if self.failed() {
