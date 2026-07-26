@@ -180,9 +180,12 @@ impl QLInstruction for TryCatchInstruction {
     ) -> Result<QResult, QLException> {
         let try_catch_result = self.try_catch_result(q_context, ql_options)?;
 
-        // 在表达式形式下,`Continue(value)` 必须作为表达式值留下,
-        // 而不是当作循环控制信号透传。这是 Java `TryCatchBreakContinueTest`
-        // 的核心约束:try/catch body 的 "Continue" 不应被误判为循环 continue。
+        // v1 保守行为:is_expression_form=true 时,Continue(value) 作为
+        // 块表达式结果压栈;Break/Return 作为控制信号透传。
+        // 这确保 `1 + try{100+1/0}catch{11}` 正确返回 12。
+        // 已知 v1 限制:while 循环内 try 的 continue/break 信号被
+        // is_expression_form=true 吞掉(因为 visit_try_catch_expr
+        // 始终设 true)。需要更精细的传播路径分析来同时满足两种场景。
         let signal_to_propagate: Option<QResult> = if self.is_expression_form {
             if Self::should_exit_try_catch(&try_catch_result)
                 && !matches!(&try_catch_result, QResult::Continue(_))
