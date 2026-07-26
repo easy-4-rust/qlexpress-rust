@@ -14,9 +14,11 @@ mod alignment_util;
 use std::rc::Rc;
 
 use qlexpress_rust::api::parsecache::SerializableParseCache;
+use qlexpress_rust::init_options::InitOptions;
 use qlexpress_rust::ql_options::QLOptions;
 use qlexpress_rust::runtime::context::map_express_context::MapExpressContext;
 use qlexpress_rust::runtime::value::DataValue;
+use qlexpress_rust::security::ql_security_strategy::QLSecurityStrategy;
 use qlexpress_rust::Express4Runner;
 
 fn empty_ctx() -> Rc<dyn qlexpress_rust::runtime::context::express_context::ExpressContext> {
@@ -83,7 +85,11 @@ fn function_and_loop_round_trip() {
 
 #[test]
 fn collection_round_trip() {
-    let runner = Express4Runner::new();
+    let runner = Express4Runner::with_init_options(
+        InitOptions::builder()
+            .security_strategy(QLSecurityStrategy::open())
+            .build(),
+    );
     let script = "m = {a: 1, b: 2}; l = [m.a, m.b, 3]; l.size() + m.a + m.b";
     let cache = runner.export_parse_cache(script).expect("export");
     let json = serde_json::to_string(&cache).expect("serialize");

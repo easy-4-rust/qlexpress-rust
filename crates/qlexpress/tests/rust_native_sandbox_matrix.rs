@@ -30,6 +30,7 @@ fn calc_with_mul() -> NativeType {
 fn runner_with(strategy: QLSecurityStrategy) -> Express4Runner {
     let mut supplier = DefaultClassSupplier::instance();
     supplier.register("com.example.Calc");
+    supplier.register("java.util.ArrayList");
     let mut runner = Express4Runner::with_init_options(
         InitOptions::builder()
             .class_supplier(std::rc::Rc::new(supplier))
@@ -95,15 +96,35 @@ fn isolation_blocks_registered_method() {
 }
 
 #[test]
-fn isolation_blocks_builtin_method_too_when_registered() {
-    // builtin String.length: 隔离策略在 v1 实际上对 builtin 不检查
-    // (参考 native_registry.rs:builtin_method 路径不过 security)。
-    // 我们只验证 isolation 对注册方法有阻断。
+fn isolation_blocks_builtin_string_method() {
     let runner = runner_with(QLSecurityStrategy::isolation());
-    let code = err_code(&runner, "Calc.add(1, 2)");
+    let code = err_code(&runner, "'hello'.length()");
     assert_eq!(
         code,
         qlexpress_rust::exception::error_codes::METHOD_NOT_FOUND
+    );
+}
+
+#[test]
+fn isolation_blocks_registered_constructor() {
+    let runner = runner_with(QLSecurityStrategy::isolation());
+    let code = err_code(&runner, "new ArrayList()");
+    assert_eq!(
+        code,
+        qlexpress_rust::exception::error_codes::NO_SUITABLE_CONSTRUCTOR
+    );
+}
+
+#[test]
+fn isolation_still_allows_java_default_extension_function() {
+    let runner = runner_with(QLSecurityStrategy::isolation());
+    let result = runner
+        .execute("[1, 2].map(x -> x + 1)", HashMap::new(), &opts())
+        .expect("Java resolves ExtensionFunction before isolation")
+        .into_result();
+    assert_eq!(
+        result,
+        DataValue::list(vec![DataValue::Int(2), DataValue::Int(3)])
     );
 }
 

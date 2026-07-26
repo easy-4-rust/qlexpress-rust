@@ -11,12 +11,22 @@ use qlexpress_rust::ql_options::QLOptions;
 use qlexpress_rust::runtime::value::DataValue;
 use qlexpress_rust::Express4Runner;
 
+fn open_runner() -> Express4Runner {
+    Express4Runner::with_init_options(
+        qlexpress_rust::init_options::InitOptions::builder()
+            .security_strategy(
+                qlexpress_rust::security::ql_security_strategy::QLSecurityStrategy::open(),
+            )
+            .build(),
+    )
+}
+
 fn opts() -> QLOptions {
     QLOptions::builder().build()
 }
 
 fn run_int(script: &str) -> i64 {
-    let runner = Express4Runner::new();
+    let runner = open_runner();
     let r = runner
         .execute(script, HashMap::new(), &opts())
         .expect("ok")
@@ -29,7 +39,7 @@ fn run_int(script: &str) -> i64 {
 }
 
 fn run_str(script: &str) -> String {
-    let runner = Express4Runner::new();
+    let runner = open_runner();
     let r = runner
         .execute(script, HashMap::new(), &opts())
         .expect("ok")
@@ -41,7 +51,7 @@ fn run_str(script: &str) -> String {
 }
 
 fn run_bool(script: &str) -> bool {
-    let runner = Express4Runner::new();
+    let runner = open_runner();
     let r = runner
         .execute(script, HashMap::new(), &opts())
         .expect("ok")

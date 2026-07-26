@@ -10,9 +10,11 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use qlexpress_derive::QLExpressType;
+use qlexpress_rust::init_options::InitOptions;
 use qlexpress_rust::ql_options::QLOptions;
 use qlexpress_rust::runtime::member::QLExpressNativeType;
 use qlexpress_rust::runtime::value::DataValue;
+use qlexpress_rust::security::ql_security_strategy::QLSecurityStrategy;
 use qlexpress_rust::Express4Runner;
 
 #[derive(QLExpressType)]
@@ -26,13 +28,21 @@ fn opts() -> QLOptions {
     QLOptions::builder().build()
 }
 
+fn open_runner() -> Express4Runner {
+    Express4Runner::with_init_options(
+        InitOptions::builder()
+            .security_strategy(QLSecurityStrategy::open())
+            .build(),
+    )
+}
+
 // ---------- Static field access ----------
 
 #[test]
 fn get_field_static_via_registry() {
     // 通过实例访问字段(Java 端 'Parent.staticGet' 是静态类字段访问;
     // Rust 端没有 MetaClass 静态路径,改用 instance 路径等价)。
-    let mut runner = Express4Runner::new();
+    let mut runner = open_runner();
     runner.register_qlexpress_type::<Holder>();
     let holder: Rc<RefCell<dyn qlexpress_rust::runtime::native_object::NativeObject>> = Holder {
         value: 1,
@@ -55,7 +65,7 @@ fn get_field_static_via_registry() {
 
 #[test]
 fn get_field_instance_with_assignment() {
-    let mut runner = Express4Runner::new();
+    let mut runner = open_runner();
     runner.register_qlexpress_type::<Holder>();
     let holder: Rc<RefCell<dyn qlexpress_rust::runtime::native_object::NativeObject>> = Holder {
         value: 35,

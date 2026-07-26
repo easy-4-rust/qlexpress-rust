@@ -134,7 +134,13 @@ fn deterministic_same_script_same_result() {
 
 #[test]
 fn list_iteration_performance() {
-    let runner = Express4Runner::new();
+    let runner = Express4Runner::with_init_options(
+        qlexpress_rust::init_options::InitOptions::builder()
+            .security_strategy(
+                qlexpress_rust::security::ql_security_strategy::QLSecurityStrategy::open(),
+            )
+            .build(),
+    );
     let script = "int total = 0;\n\
                    l = [1];\n\
                    for (int i = 0; i < 99; i = i + 1) { l.add(i); }\n\

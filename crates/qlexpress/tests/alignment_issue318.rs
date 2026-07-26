@@ -9,9 +9,11 @@ mod alignment_util;
 use std::collections::HashMap;
 
 use qlexpress_derive::QLExpressType;
+use qlexpress_rust::init_options::InitOptions;
 use qlexpress_rust::ql_options::QLOptions;
 use qlexpress_rust::runtime::member::QLExpressNativeType;
 use qlexpress_rust::runtime::value::DataValue;
+use qlexpress_rust::security::ql_security_strategy::QLSecurityStrategy;
 use qlexpress_rust::Express4Runner;
 
 #[derive(QLExpressType)]
@@ -24,9 +26,17 @@ fn opts() -> QLOptions {
     QLOptions::builder().build()
 }
 
+fn open_runner() -> Express4Runner {
+    Express4Runner::with_init_options(
+        InitOptions::builder()
+            .security_strategy(QLSecurityStrategy::open())
+            .build(),
+    )
+}
+
 #[test]
 fn direct_field_access_no_getter_needed() {
-    let mut runner = Express4Runner::new();
+    let mut runner = open_runner();
     runner.register_qlexpress_type::<Student>();
 
     let student = Student {
@@ -52,7 +62,7 @@ fn direct_field_access_no_getter_needed() {
 
 #[test]
 fn direct_field_access_in_boolean_expression() {
-    let mut runner = Express4Runner::new();
+    let mut runner = open_runner();
     runner.register_qlexpress_type::<Student>();
 
     let student = Student {

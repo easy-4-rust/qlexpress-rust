@@ -192,7 +192,13 @@ fn opts() -> QlOpts {
 
 #[test]
 fn script_can_read_field_of_derived_type() {
-    let mut runner = Express4Runner::new();
+    let mut runner = Express4Runner::with_init_options(
+        qlexpress_rust::init_options::InitOptions::builder()
+            .security_strategy(
+                qlexpress_rust::security::ql_security_strategy::QLSecurityStrategy::open(),
+            )
+            .build(),
+    );
     runner.register_qlexpress_type::<Box2D>();
     let bean: DataValue = Box2D { left: 10, top: 20 }.into_data_value();
     let mut ctx = std::collections::HashMap::new();

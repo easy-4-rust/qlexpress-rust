@@ -41,6 +41,9 @@ use crate::utils::basic_util;
 pub struct NativeRegistry {
     /// 类型名 -> 注册类型(Java 侧为 `ClassLoader` 可加载的所有类)。
     types: HashMap<String, NativeType>,
+    /// 扩展函数表。Java `ReflectLoader.loadMethod` 在隔离策略判断之前解析
+    /// `ExtensionFunction`，因此它必须与受安全策略约束的反射方法分开。
+    extension_methods: HashMap<(String, String), NativeMethod>,
     /// 成员访问安全策略(Java `ReflectLoader.securityStrategy`)。
     /// `RefCell`:注册表经 `Rc` 共享给 QVM,策略需在 runner 层可改。
     security_strategy: RefCell<QLSecurityStrategy>,
@@ -51,6 +54,7 @@ impl NativeRegistry {
     pub fn new() -> Self {
         NativeRegistry {
             types: HashMap::new(),
+            extension_methods: HashMap::new(),
             // 注册表裸用时默认放行;Express4Runner 构造时按
             // `InitOptions.securityStrategy` 覆盖(Java 默认 `isolation`)。
             security_strategy: RefCell::new(QLSecurityStrategy::open()),
@@ -74,6 +78,14 @@ impl NativeRegistry {
         self.security_strategy
             .borrow()
             .check(&NativeMember::new(type_name, member_name))
+    }
+
+    /// 判断原生成员是否被当前安全策略允许。
+    ///
+    /// 对应 Java 私有方法 `ReflectLoader#securityFilter(Member)`；供
+    /// `NativeObject` 动态分派在调用前执行与反射成员一致的检查。
+    pub fn is_member_allowed(&self, type_name: &str, member_name: &str) -> bool {
+        self.check_member(type_name, member_name)
     }
 }
 
@@ -102,22 +114,18 @@ impl NativeRegistry {
         self.types.get(name)
     }
 
-    /// 为指定类型追加(或覆盖)一个实例方法,对应 Java
-    /// `ReflectLoader.addExtendFunction` 的注册效果(扩展函数进入成员
-    /// 分派路径,脚本以 `target.method(...)` 调用)。
-    /// 类型未注册时先创建空注册项(Java 中任何可加载类天然存在)。
+    /// 为指定类型追加(或覆盖)一个扩展函数。
+    ///
+    /// 对应 Java 方法 `ReflectLoader#addExtendFunction`；扩展函数在
+    /// `StrategyIsolation` 判断之前解析，不属于受反射沙箱约束的成员。
     pub fn register_method(
         &mut self,
         type_name: impl Into<String>,
         method_name: impl Into<String>,
         method: NativeMethod,
     ) {
-        let type_name = type_name.into();
-        self.types
-            .entry(type_name.clone())
-            .or_insert_with(|| NativeType::named(type_name))
-            .methods
-            .insert(method_name.into(), method);
+        self.extension_methods
+            .insert((type_name.into(), method_name.into()), method);
     }
 
     // ---- 对应 Java ReflectLoader.loadConstructor ----
@@ -126,6 +134,9 @@ impl NativeRegistry {
     /// 参数匹配委托给构造器闭包自身(Java 由 `MemberResolver` 选重载,
     /// Rust 一个类型只注册一个构造入口)。
     pub fn load_constructor(&self, clz: &ClassRef) -> Option<NativeConstructor> {
+        if !self.check_member(clz.java_name(), "<init>") {
+            return None;
+        }
         self.types
             .get(clz.java_name())
             .and_then(|native_type| native_type.constructor.as_ref().map(Rc::clone))
@@ -136,6 +147,20 @@ impl NativeRegistry {
     /// 对应 Java 方法 `loadField(Object bean, String fieldName, boolean
     /// skipSecurity, ErrorReporter)`:字段不存在时返回 `None`(Java 返回 `null`)。
     pub fn load_field(&self, bean: &DataValue, field_name: &str) -> Option<QValue> {
+        self.load_field_with_security(bean, field_name, false)
+    }
+
+    /// 加载字段，并按 Java `skipSecurity` 参数决定是否跳过成员策略。
+    ///
+    /// 对应 Java 方法 `ReflectLoader#loadField(Object, String, boolean,
+    /// ErrorReporter)`；脚本指令传 `false`，`Express4Runner#loadField`
+    /// 宿主 API 传 `true`。
+    pub fn load_field_with_security(
+        &self,
+        bean: &DataValue,
+        field_name: &str,
+        skip_security: bool,
+    ) -> Option<QValue> {
         // Java 通用语义:任何对象都有 `.class`(`obj.getClass()`)。
         // 内建值按 `data_type_name` 还原类引用(原语名经
         // `ClassRef::from_name` 归一到与类字面量 `int` 等一致的
@@ -178,7 +203,7 @@ impl NativeRegistry {
                         let name = clz.java_name();
                         // 安全策略接线点(Java ReflectLoader.check):
                         // 静态字段访问前过 QLSecurityStrategy。
-                        if self.check_member(name, field_name) {
+                        if skip_security || self.check_member(name, field_name) {
                             if let Some(value) = self
                                 .types
                                 .get(name)
@@ -190,14 +215,21 @@ impl NativeRegistry {
                         None
                     }
                     // Java:bean 字段/getter 反射读取 → NativeObject 显式读取。
-                    None => obj.borrow().get_field(field_name).map(QValue::Data),
+                    None => {
+                        let borrowed = obj.borrow();
+                        let type_name = borrowed.native_type_name();
+                        if !skip_security && !self.check_member(type_name, field_name) {
+                            return None;
+                        }
+                        borrowed.get_field(field_name).map(QValue::Data)
+                    }
                 }
             }
             _ => {
                 // 注册的实例字段(按 Java 类型名)。
                 // 安全策略接线点:实例字段访问前过 QLSecurityStrategy。
                 let type_name = bean.data_type_name();
-                if !self.check_member(type_name, field_name) {
+                if !skip_security && !self.check_member(type_name, field_name) {
                     return None;
                 }
                 self.types
@@ -226,20 +258,26 @@ impl NativeRegistry {
                 .get(name)
                 .and_then(|t| t.static_methods.get(method_name).map(Rc::clone));
         }
-        // 内建方法子集(Java 中即 String/List/Map/Number 的真实方法)。
-        // 偏差:内建方法不过安全策略(Rust 语言内核;Java 默认 isolation
-        // 下这些方法也会被拦,见类型文档)。
+        let type_name = native_type_name(bean);
+        // Java 先解析扩展函数，再判断是否为隔离策略。
+        if let Some(method) = self
+            .extension_methods
+            .get(&(type_name.clone(), method_name.to_string()))
+            .map(Rc::clone)
+            .or_else(|| builtin_extension_method(bean, method_name))
+        {
+            return Some(method);
+        }
+        // Java 反射方法（含 Rust 内建 JDK 方法子集）统一通过安全策略。
+        if !self.check_member(&type_name, method_name) {
+            return None;
+        }
         if let Some(method) = builtin_method(bean, method_name) {
             return Some(method);
         }
-        let type_name = bean.data_type_name();
-        // 安全策略接线点:注册类型的实例方法访问前过 QLSecurityStrategy。
-        if !self.check_member(type_name, method_name) {
-            return None;
-        }
         if let Some(method) = self
             .types
-            .get(type_name)
+            .get(&type_name)
             .and_then(|t| t.methods.get(method_name).map(Rc::clone))
         {
             return Some(method);
@@ -343,6 +381,16 @@ impl NativeRegistry {
     }
 }
 
+/// 返回值的 Java 运行时类型名；宿主对象使用其显式注册的原生类名。
+///
+/// 对应 Java `bean.getClass().getName()`。
+fn native_type_name(bean: &DataValue) -> String {
+    match bean {
+        DataValue::Object(object) => object.borrow().native_type_name().to_string(),
+        _ => bean.data_type_name().to_string(),
+    }
+}
+
 // ---------------------------------------------------------------------------
 // 内建方法子集(SPEC §4:String/List/Map/数组/数值/布尔 常用方法,
 // 对齐 Java 版脚本可直接调用的 JDK 方法)。
@@ -382,6 +430,23 @@ fn builtin_method(bean: &DataValue, method_name: &str) -> Option<NativeMethod> {
         DataValue::Map(_) => map_method(method_name),
         v if v.is_number() => number_method(method_name),
         DataValue::Bool(_) => bool_method(method_name),
+        _ => None,
+    }
+}
+
+/// Java 默认扩展函数分派。`ReflectLoader` 在隔离策略判断之前解析
+/// `FilterExtensionFunction` / `MapExtensionFunction`。
+fn builtin_extension_method(bean: &DataValue, method_name: &str) -> Option<NativeMethod> {
+    if !matches!(bean, DataValue::List(_)) {
+        return None;
+    }
+    match method_name {
+        "filter" => Some(Rc::new(|bean, args| {
+            crate::runtime::function::FilterExtensionFunction::instance().invoke(bean, args)
+        })),
+        "map" => Some(Rc::new(|bean, args| {
+            crate::runtime::function::MapExtensionFunction::instance().invoke(bean, args)
+        })),
         _ => None,
     }
 }
@@ -483,17 +548,6 @@ fn string_method(name: &str) -> Option<NativeMethod> {
 /// `java.util.List` 的脚本可用方法子集。
 fn list_method(name: &str) -> Option<NativeMethod> {
     let f: NativeMethod = match name {
-        // Java `ReflectLoader.defaultExtendFunctions` 默认注册
-        // `FilterExtensionFunction.INSTANCE` / `MapExtensionFunction.INSTANCE`
-        // (声明类 `java.util.List`);Rust 在此挂接同一语义。
-        // (对齐测试 extensionfunction/extension_function.ql、
-        // doc/list_map_filter.ql 发现遗漏。)
-        "filter" => Rc::new(|bean, args| {
-            crate::runtime::function::FilterExtensionFunction::instance().invoke(bean, args)
-        }),
-        "map" => Rc::new(|bean, args| {
-            crate::runtime::function::MapExtensionFunction::instance().invoke(bean, args)
-        }),
         "size" => Rc::new(|bean, _| match bean {
             DataValue::List(l) => Ok(DataValue::Int(l.borrow().len() as i32)),
             _ => Err(wrong_args("size")),

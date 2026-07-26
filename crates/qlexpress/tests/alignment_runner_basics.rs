@@ -10,12 +10,22 @@
 use std::collections::HashMap;
 
 use qlexpress_rust::exception::error_codes;
+use qlexpress_rust::init_options::InitOptions;
 use qlexpress_rust::ql_options::QLOptions;
 use qlexpress_rust::runtime::value::DataValue;
+use qlexpress_rust::security::ql_security_strategy::QLSecurityStrategy;
 use qlexpress_rust::Express4Runner;
 
 fn opts() -> QLOptions {
     QLOptions::builder().build()
+}
+
+fn open_runner() -> Express4Runner {
+    Express4Runner::with_init_options(
+        InitOptions::builder()
+            .security_strategy(QLSecurityStrategy::open())
+            .build(),
+    )
 }
 
 fn ctx(pairs: &[(&str, DataValue)]) -> HashMap<String, DataValue> {
@@ -393,7 +403,7 @@ fn avoid_null_pointer() {
 /// (cache=true 下空列表字面量每次执行独立,add 不串扰)。
 #[test]
 fn empty_list_cache() {
-    let runner = Express4Runner::new();
+    let runner = open_runner();
     let cache = QLOptions::builder().cache(true).build();
     for _ in 0..10 {
         let result = runner
@@ -409,7 +419,7 @@ fn empty_list_cache() {
 /// 对应 Java `Express4RunnerTest#emptyMapCacheTest`。
 #[test]
 fn empty_map_cache() {
-    let runner = Express4Runner::new();
+    let runner = open_runner();
     let cache = QLOptions::builder().cache(true).build();
     for i in 0..10 {
         let result = runner

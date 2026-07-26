@@ -66,7 +66,8 @@ impl ReflectLoader {
 
     /// 加载对象字段。对应 Java 方法 `loadField`。
     pub fn load_field(&self, bean: &DataValue, field_name: &str) -> Option<QValue> {
-        self.registry.load_field(bean, field_name)
+        self.registry
+            .load_field_with_security(bean, field_name, true)
     }
 
     /// 加载对象方法。对应 Java 方法 `loadMethod`。

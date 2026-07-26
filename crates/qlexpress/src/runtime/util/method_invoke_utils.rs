@@ -87,6 +87,14 @@ pub fn find_method_and_invoke(
     // 宿主对象动态分派(NativeObject::call_method,对应 Java 反射调用)。
     if let DataValue::Object(obj) = bean {
         if as_meta_class(bean).is_none() {
+            let type_name = obj.borrow().native_type_name().to_string();
+            if !registry.is_member_allowed(&type_name, method_name) {
+                return Err(error_reporter.report_format(
+                    error_codes::METHOD_NOT_FOUND,
+                    error_codes::error_msg(error_codes::METHOD_NOT_FOUND),
+                    &[method_name.to_string(), format!("{params:?}")],
+                ));
+            }
             let result = obj.borrow_mut().call_method(method_name, params)?;
             return Ok(QValue::Data(result));
         }
