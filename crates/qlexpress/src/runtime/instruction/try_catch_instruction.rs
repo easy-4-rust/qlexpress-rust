@@ -79,11 +79,16 @@ impl TryCatchInstruction {
     }
 
     /// Java `shouldExitTryCatch`.
+    /// Java `shouldExitTryCatch`:仅传播循环控制信号(Return/Break/
+    /// Continue(null))。Continue(non-null)是块表达式结果,
+    /// 不应被当作循环控制信号透传(对齐 Java `LOOP_CONTINUE_RESULT`
+    /// 哨兵引用相等语义)。
     fn should_exit_try_catch(result: &QResult) -> bool {
-        matches!(
-            result,
-            QResult::Return(_) | QResult::Break | QResult::Continue(_)
-        )
+        match result {
+            QResult::Return(_) | QResult::Break => true,
+            QResult::Continue(v) => v.is_null(),
+            _ => false,
+        }
     }
 
     /// Java `getExceptionHandler(Class)`:
@@ -183,21 +188,13 @@ impl QLInstruction for TryCatchInstruction {
     ) -> Result<QResult, QLException> {
         let try_catch_result = self.try_catch_result(q_context, ql_options)?;
 
-        // v1 保守行为:is_expression_form=true 时,Continue(value) 作为
-        // 块表达式结果压栈;Break/Return 作为控制信号透传。
-        // 这确保 `1 + try{100+1/0}catch{11}` 正确返回 12。
-        // 已知 v1 限制:while 循环内 try 的 continue/break 信号被
-        // is_expression_form=true 吞掉(因为 visit_try_catch_expr
-        // 始终设 true)。需要更精细的传播路径分析来同时满足两种场景。
-        let signal_to_propagate: Option<QResult> = if self.is_expression_form {
-            if Self::should_exit_try_catch(&try_catch_result)
-                && !matches!(&try_catch_result, QResult::Continue(_))
-            {
-                Some(try_catch_result.clone())
-            } else {
-                None
-            }
-        } else if Self::should_exit_try_catch(&try_catch_result) {
+        // Java TryCatchInstruction.execute:始终压栈结果值,然后
+        // 用 should_exit_try_catch 判断是否传播控制信号。
+        // should_exit_try_catch 仅传播 Return / Break /
+        // Continue(null)(循环控制哨兵)。Continue(non-null)
+        // 是块表达式结果,不传播。
+        let signal_to_propagate: Option<QResult> = if Self::should_exit_try_catch(&try_catch_result)
+        {
             Some(try_catch_result.clone())
         } else {
             None

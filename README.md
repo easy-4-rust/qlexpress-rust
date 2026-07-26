@@ -76,12 +76,43 @@ cargo clippy --all-targets
   (默认 `isolation`)接线。
 - **并发编译缓存**:Java `ConcurrentHashMap<String, Future<QCompileCache>>`
   → 单线程 `Rc` 体系下的 `RefCell<HashMap>`(命中语义一致)。
-- **表达式 trace**:`TraceExpressionVisitor` 尚未迁移,
-  `QLResult::expression_traces` 暂恒为空;`get_expression_trace` 已留好门面。
+- **表达式 trace**:`TraceExpressionVisitor` 为 v1 stub(运行时 `ExpressionTrace`
+  已完整;编译期 visitor 待后续版本实现);`get_expression_trace` 已留好门面。
 - **动态代理**:`proxy.QLambdaInvocationHandler` 以显式闭包/trait 适配器
   替代 Java 运行时接口代理。
 - **运行时反射改注册表**:不支持(Rust 无运行时反射;注册在 `&mut runner`
   上进行)。
+- **#[derive(QLExpressType)]**:过程宏自动生成 `NativeType` 注册 +
+  `NativeObject` impl，支持字段 getter、alias、skip、name override。
+
+## 测试覆盖
+
+```
+cargo test --workspace: 742 passed / 0 failed / 11 ignored
+```
+
+| 类别 | 数量 | 说明 |
+|---|---|---|
+| Java 对齐测试 (`alignment_*`) | ~180 | 1:1 对齐 Java @Test |
+| Rust 独立测试 (`rust_native_*`) | ~60 | sandbox/property/error码/perf |
+| Stage 0-5 原有 | ~500 | 基线 |
+| 过程宏 fixture | 12 | `stage6_derive_fixture` |
+
+### 已知限制（11 个 ignored）
+
+| 用例 | 原因 |
+|---|---|
+| alignment_suite × 7 | Java 反射/BigInteger overflow/Java 测试类 |
+| try/catch while-loop × 3 | `is_expression_form=true` 吞 Continue 信号 |
+
+## 构建 / 测试
+
+```bash
+cargo build --workspace
+cargo test --workspace          # 全量:lib 单测 + tests/ 各 Stage 端到端
+cargo clippy --workspace --all-targets
+cargo doc --workspace --no-deps # 文档生成
+```
 
 ## License
 

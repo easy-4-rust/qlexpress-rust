@@ -1760,6 +1760,11 @@ impl<'a> Visitor for QvmInstructionVisitor<'a> {
         let final_body_definition =
             self.parse_final_body_definition(try_count, ctx.try_finally.as_deref());
 
+        // Java 行为:try-catch 始终作为表达式。控制信号(Return/Break/
+        // Continue(null))由 should_exit_try_catch 判断是否透传,
+        // 不依赖 is_expression_form。catch body 含控制信号时,
+        // 仍为表达式(is_expression_form=true),由 execute 内部
+        // should_exit_try_catch 处理传播。
         self.add_instruction(Box::new(
             TryCatchInstruction::new(
                 self.new_reporter_with_token(ctx.try_token.symbol()),

@@ -196,7 +196,6 @@ result";
 }
 
 #[test]
-#[ignore = "v1 limitation: is_expression_form=true swallows Continue signals in while-loop try; needs finer propagation path analysis"]
 fn normal_try_expression_inside_while_should_not_skip_following_statement() {
     let script = "\
 i = 0;\n\
@@ -212,7 +211,6 @@ result";
 }
 
 #[test]
-#[ignore = "v1 limitation: is_expression_form=true swallows Continue signals in while-loop try; needs finer propagation path analysis"]
 fn break_inside_while_try_should_exit_loop() {
     let script = "\
 i = 0;\n\
@@ -231,7 +229,6 @@ result";
 }
 
 #[test]
-#[ignore = "v1 limitation: is_expression_form=true swallows Continue signals in while-loop try; needs finer propagation path analysis"]
 fn continue_inside_while_try_should_skip_rest_of_body() {
     let script = "\
 i = 0;\n\
