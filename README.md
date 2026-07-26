@@ -84,6 +84,13 @@ cargo clippy --all-targets
   上进行)。
 - **#[derive(QLExpressType)]**:过程宏自动生成 `NativeType` 注册 +
   `NativeObject` impl，支持字段 getter、alias、skip、name override。
+- **Varargs**:Java 的 `Method.isVarArgs()` + 参数打包由 Rust 闭包切片
+  天然替代——注册的闭包接收 `&[DataValue]`，可自行处理变长参数。
+- **数值提升**:BigInteger(`i128`)/BigDecimal(十进制字符串)的双向转换
+  在构造器/方法闭包内部完成，无需修改 `ParametersTypeConvertor::cast`。
+- **try/catch 控制信号**:对齐 Java `shouldExitTryCatch` 语义——
+  仅传播 `Return` / `Break` / `Continue(null)`（循环控制哨兵），
+  `Continue(non-null)` 作为块表达式结果留在栈上。
 
 ## 测试覆盖
 
