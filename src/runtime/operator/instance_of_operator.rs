@@ -117,6 +117,20 @@ fn is_assignable_from(target: &ClassRef, source: &DataValue) -> bool {
                     "java.lang.String" | "java.lang.Boolean" | "java.lang.Character"
                 )
         }
+        // Java 集合接口层级:`new ArrayList() instanceof List` 为 true。
+        // (对齐测试 extensionfunction/extension_function.ql 发现。)
+        "java.util.List" | "java.util.Collection" | "java.lang.Iterable" => matches!(
+            source_name.as_str(),
+            "java.util.ArrayList" | "java.util.LinkedList" | "java.util.List"
+        ),
+        "java.util.Set" => matches!(
+            source_name.as_str(),
+            "java.util.HashSet" | "java.util.LinkedHashSet" | "java.util.TreeSet"
+        ),
+        "java.util.Map" => matches!(
+            source_name.as_str(),
+            "java.util.HashMap" | "java.util.LinkedHashMap" | "java.util.TreeMap"
+        ),
         _ => false,
     }
 }

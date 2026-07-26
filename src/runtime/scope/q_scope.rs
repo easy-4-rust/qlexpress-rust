@@ -94,7 +94,7 @@ impl QScope {
             let mut borrowed = this.borrow_mut();
             let local = match &mut borrowed.kind {
                 QScopeKind::Global(global) => Some(global.get_symbol(var_name)?),
-                QScopeKind::Block(block) => block.symbol_table.get(var_name).map(Rc::clone),
+                QScopeKind::Block(block) => block.symbol_table().get(var_name).map(Rc::clone),
             };
             (local, borrowed.parent.as_ref().map(Rc::clone))
         };
@@ -131,7 +131,7 @@ impl QScope {
                     ))),
                     None => Rc::new(RefCell::new(AssignableDataValue::new(var_name, value))),
                 };
-                block.symbol_table.insert(var_name.to_string(), slot);
+                block.symbol_table_mut().insert(var_name.to_string(), slot);
             }
         }
     }
@@ -146,7 +146,7 @@ impl QScope {
         match &mut borrowed.kind {
             QScopeKind::Global(global) => global.define_function(function_name),
             QScopeKind::Block(block) => {
-                block.function_table.insert(function_name.to_string(), function);
+                block.function_table_mut().insert(function_name.to_string(), function);
             }
         }
     }
@@ -157,7 +157,7 @@ impl QScope {
             let borrowed = this.borrow();
             let local = match &borrowed.kind {
                 QScopeKind::Global(global) => global.get_function(function_name),
-                QScopeKind::Block(block) => block.function_table.get(function_name).cloned(),
+                QScopeKind::Block(block) => block.function_table().get(function_name).cloned(),
             };
             (local, borrowed.parent.as_ref().map(Rc::clone))
         };
@@ -174,7 +174,7 @@ impl QScope {
         let borrowed = this.borrow();
         match &borrowed.kind {
             QScopeKind::Global(global) => global.function_table().clone(),
-            QScopeKind::Block(block) => block.function_table.clone(),
+            QScopeKind::Block(block) => block.function_table().clone(),
         }
     }
 

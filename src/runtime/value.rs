@@ -194,7 +194,22 @@ impl PartialEq for DataValue {
             (Array(a), Array(b)) => Rc::ptr_eq(a, b) || *a.borrow() == *b.borrow(),
             (Map(a), Map(b)) => Rc::ptr_eq(a, b) || *a.borrow() == *b.borrow(),
             (Lambda(a), Lambda(b)) => Rc::ptr_eq(a, b),
-            (Object(a), Object(b)) => Rc::ptr_eq(a, b),
+            (Object(a), Object(b)) => {
+                if Rc::ptr_eq(a, b) {
+                    true
+                } else {
+                    // Java 中 `Class` 对象是单例,`int.class == int.class` 为
+                    // true;Rust 每次构造新的 `MetaClass`,按类名比较对齐。
+                    // (对齐测试 cast/cast_express.ql 发现。)
+                    match (
+                        crate::runtime::meta_class::as_meta_class(self),
+                        crate::runtime::meta_class::as_meta_class(other),
+                    ) {
+                        (Some(clz_a), Some(clz_b)) => clz_a == clz_b,
+                        _ => false,
+                    }
+                }
+            }
             _ => {
                 if self.is_number() && other.is_number() {
                     crate::runtime::data::convert::number_compare(self, other)

@@ -66,6 +66,12 @@ impl CallFunctionInstruction {
         ql_options: &QLOptions,
     ) -> Result<(), QLException> {
         let lambda_symbol = q_context.get_symbol_value(&self.function_name)?;
+        // 对齐 Java:全局作用域对缺失变量返回 null 值(Java `null`),
+        // 与「符号不存在」同等处理 —— avoidNullPointer 下短路为 null,
+        // 否则报 FUNCTION_NOT_FOUND(而非 FUNCTION_TYPE_MISMATCH)。
+        // (对齐测试 avoidnullpointer/can_not_find_function.ql、
+        // avoid_null_pointer.ql 发现。)
+        let lambda_symbol = lambda_symbol.filter(|v| !v.is_null());
         let Some(lambda_symbol) = lambda_symbol else {
             if ql_options.is_avoid_null_pointer() {
                 q_context.pop_n(self.arg_num);

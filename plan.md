@@ -34,7 +34,7 @@ src/
 Java 版靠反射调用宿主对象方法/字段(GetFieldInstruction, GetMethodInstruction, QMethodFunction, proxy/)。
 Rust 无运行时反射,采用:
 - 宿主类型通过注册表暴露:`ReflectLoader` → `NativeRegistry`(注册 struct/enum 的构造器、方法、字段 getter)
-- 提供 `qlexpress-rust` 内置的 `Value::Data(Map)` 动态对象路径 + 可选 derive macro(后续阶段) 
+- 提供 `qlexpress-rust` 内置的 `Value::Data(Map)` 动态对象路径 + 可选 derive macro(后续阶段)
 - 语义等价:脚本的 `obj.field`、`obj.method(args)`、`new X(...)` 行为保持一致
 
 ## 阶段划分(stage-gate,每阶段验证后才进入下一阶段)

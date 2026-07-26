@@ -16,7 +16,8 @@ use super::import_manager::ImportManager;
 use super::interpolation_mode::InterpolationMode;
 use super::macro_define::MacroDefine;
 use super::operator_factory::OperatorFactory;
-use super::syntax_tree::*;
+use super::qlparser_base_visitor::Visitor;
+use super::syntax_tree_factory::*;
 use super::token::{self, Token};
 use crate::exception::error_codes;
 use crate::exception::error_reporter::ErrorReporter;
@@ -27,12 +28,12 @@ use crate::exception::QLException;
 use crate::init_options::InitOptions;
 use crate::runtime::data::convert::obj_type_convertor::TargetType;
 use crate::runtime::function::CustomFunction;
-use crate::runtime::instruction::flow::ReturnResultType;
+use crate::runtime::instruction::ReturnResultType;
 use crate::runtime::instruction::*;
 use crate::runtime::member::{ClassRef, MetaClass};
-use crate::runtime::qlambda::{
-    Param, QLambdaDefinition, QLambdaDefinitionEmpty, QLambdaDefinitionInner,
-};
+use crate::runtime::qlambda_definition::QLambdaDefinition;
+use crate::runtime::qlambda_definition_empty::QLambdaDefinitionEmpty;
+use crate::runtime::qlambda_definition_inner::{Param, QLambdaDefinitionInner};
 use crate::runtime::value::DataValue;
 use crate::utils::ql_string_utils::QLStringUtils;
 
@@ -141,6 +142,33 @@ impl<'a> QvmInstructionVisitor<'a> {
             Rc::new(GeneratorScope::new("main", global_scope)),
             operator_factory,
             Context::Block,
+            compile_time_functions,
+            user_define_functions,
+            init_options,
+        )
+    }
+
+    /// Java macro constructor: `new QvmInstructionVisitor(script,
+    /// importManager, generatorScope, operatorFactory, context,
+    /// compileTimeFunctions, userDefineFunctions, initOptions)` —
+    /// used by `Express4Runner.parseMacroDefine` with `Context.MACRO`.
+    #[allow(clippy::too_many_arguments)]
+    pub fn with_context(
+        script: &'a str,
+        import_manager: &'a RefCell<ImportManager<'a>>,
+        generator_scope: Rc<InstructionScope>,
+        operator_factory: &'a dyn OperatorFactory,
+        context: Context,
+        compile_time_functions: &'a CompileTimeFunctions,
+        user_define_functions: &'a UserDefineFunctions,
+        init_options: &'a InitOptions,
+    ) -> Self {
+        Self::for_recursion(
+            script,
+            import_manager,
+            generator_scope,
+            operator_factory,
+            context,
             compile_time_functions,
             user_define_functions,
             init_options,
@@ -1327,9 +1355,13 @@ impl<'a> Visitor for QvmInstructionVisitor<'a> {
             Rc::clone(&for_err_reporter),
         );
 
-        let init_size = for_init_lambda.map_or(0, |l| l.max_stack_size());
-        let condition_size = for_condition_lambda.map_or(0, |l| l.max_stack_size());
-        let update_size = for_update_lambda.map_or(0, |l| l.max_stack_size());
+        let init_size = for_init_lambda.as_ref().map_or(0, |l| l.max_stack_size());
+        let condition_size = for_condition_lambda
+            .as_ref()
+            .map_or(0, |l| l.max_stack_size());
+        let update_size = for_update_lambda
+            .as_ref()
+            .map_or(0, |l| l.max_stack_size());
         let for_scope_max_stack_size = init_size.max(condition_size).max(update_size);
 
         if self.init_options.is_trace_expression() {
@@ -1364,8 +1396,9 @@ impl<'a> Visitor for QvmInstructionVisitor<'a> {
             .unwrap_or_else(object_cls);
 
         let for_each_err_reporter = self.new_reporter_with_token(ctx.for_token.symbol());
+        let for_count = self.for_count();
         let body_scope_name =
-            self.child_scope_name(&format!("{FOR_PREFIX}{}{BODY_SUFFIX}", self.for_count()));
+            self.child_scope_name(&format!("{FOR_PREFIX}{for_count}{BODY_SUFFIX}"));
         let (body_definition, _) = self.loop_body_visitor_definition(
             ctx.block_statements.as_deref(),
             body_scope_name,
@@ -3464,15 +3497,15 @@ impl CodeGenerator for VisitorCodeGenerator<'_, '_> {
 /// Returns the instructions and the max operand-stack size (for
 /// `QLambdaDefinitionInner`), or the first syntax error.
 #[allow(clippy::too_many_arguments)]
-pub fn compile_script(
-    script: &str,
+pub fn compile_script<'a>(
+    script: &'a str,
     tree: &Node,
-    import_manager: &RefCell<ImportManager<'_>>,
+    import_manager: &'a RefCell<ImportManager<'a>>,
     global_scope: Option<Rc<InstructionScope>>,
-    operator_factory: &dyn OperatorFactory,
-    compile_time_functions: &CompileTimeFunctions,
-    user_define_functions: &UserDefineFunctions,
-    init_options: &InitOptions,
+    operator_factory: &'a dyn OperatorFactory,
+    compile_time_functions: &'a CompileTimeFunctions,
+    user_define_functions: &'a UserDefineFunctions,
+    init_options: &'a InitOptions,
 ) -> Result<(Vec<Instruction>, usize), QLSyntaxException> {
     let visitor = QvmInstructionVisitor::new(
         script,

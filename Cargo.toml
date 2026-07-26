@@ -1,8 +1,7 @@
 [package]
 name = "qlexpress_rust"
 version = "4.2.0-beta.1"
-edition = "2024"
-rust-version = "1.88"
+edition = "2021"
 license = "Apache-2.0"
 description = "Rust port of Alibaba QLExpress4 dynamic script engine (full semantic migration)"
 

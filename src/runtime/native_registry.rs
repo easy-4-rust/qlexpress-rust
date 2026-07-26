@@ -15,6 +15,7 @@ use crate::exception::QLException;
 use crate::runtime::class_ref::ClassRef;
 use crate::runtime::data::convert::number_compare;
 use crate::runtime::data::MapItemValue;
+use crate::runtime::function::ExtensionFunction;
 use crate::runtime::meta_class::{as_meta_class, MetaClass};
 use crate::runtime::native_type::{NativeConstructor, NativeMethod, NativeType};
 use crate::runtime::value::{DataValue, QValue};
@@ -139,6 +140,16 @@ impl NativeRegistry {
     /// 对应 Java 方法 `loadField(Object bean, String fieldName, boolean
     /// skipSecurity, ErrorReporter)`:字段不存在时返回 `None`(Java 返回 `null`)。
     pub fn load_field(&self, bean: &DataValue, field_name: &str) -> Option<QValue> {
+        // Java 通用语义:任何对象都有 `.class`(`obj.getClass()`)。
+        // 内建值按 `data_type_name` 还原类引用(原语名经
+        // `ClassRef::from_name` 归一到与类字面量 `int` 等一致的
+        // Primitive 目标,使 `c.class == int` 之类的比较成立);
+        // MetaClass/宿主对象的 `.class` 由下方 Object 分支处理。
+        // (对齐测试 cast/cast_express.ql 发现。)
+        if field_name == basic_util::CLASS && !matches!(bean, DataValue::Object(_)) {
+            let class_ref = ClassRef::from_name(bean.data_type_name());
+            return Some(QValue::Data(MetaClass::new(class_ref).into_data_value()));
+        }
         match bean {
             // Java 特殊分支:数组 length。
             DataValue::Array(arr) if field_name == basic_util::LENGTH => {
@@ -395,6 +406,17 @@ fn string_method(name: &str) -> Option<NativeMethod> {
 /// `java.util.List` 的脚本可用方法子集。
 fn list_method(name: &str) -> Option<NativeMethod> {
     let f: NativeMethod = match name {
+        // Java `ReflectLoader.defaultExtendFunctions` 默认注册
+        // `FilterExtensionFunction.INSTANCE` / `MapExtensionFunction.INSTANCE`
+        // (声明类 `java.util.List`);Rust 在此挂接同一语义。
+        // (对齐测试 extensionfunction/extension_function.ql、
+        // doc/list_map_filter.ql 发现遗漏。)
+        "filter" => Rc::new(|bean, args| {
+            crate::runtime::function::FilterExtensionFunction::instance().invoke(bean, args)
+        }),
+        "map" => Rc::new(|bean, args| {
+            crate::runtime::function::MapExtensionFunction::instance().invoke(bean, args)
+        }),
         "size" => Rc::new(|bean, _| match bean {
             DataValue::List(l) => Ok(DataValue::Int(l.borrow().len() as i32)),
             _ => Err(wrong_args("size")),

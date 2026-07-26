@@ -109,9 +109,19 @@ impl SpreadMethodInvokeInstruction {
         }
         // If item itself is traversable, try to invoke method on it first
         if let Some(method) = q_context.registry().resolve_method(item, &self.method_name) {
-            let invoke_res = invoke_native_method(item, &method, params)?;
-            result.push(invoke_res.get());
-            return Ok(());
+            match invoke_native_method(item, &method, params) {
+                Ok(invoke_res) => {
+                    result.push(invoke_res.get());
+                    return Ok(());
+                }
+                // Java 按参数匹配方法:`List.get("a")` 匹配不到 `get(int)`
+                // 时继续递归展平;Rust 按名解析后参数转换失败
+                // (INVOKE_METHOD_WITH_WRONG_ARGUMENTS)与之对应,落入递归。
+                // 其余错误原样上抛。(对齐测试 spread/nested_list_spread.ql 发现。)
+                Err(err)
+                    if err.error_code() == error_codes::INVOKE_METHOD_WITH_WRONG_ARGUMENTS => {}
+                Err(err) => return Err(err),
+            }
         }
         // Then recursively flatten and invoke on nested elements
         self.spread_recursive(item, params, q_context, ql_options, result)

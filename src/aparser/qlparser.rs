@@ -12,7 +12,8 @@
 use super::interpolation_mode::InterpolationMode;
 use super::parser_operator_manager::{OpType, ParserOperatorManager};
 use super::qlexer;
-use super::syntax_tree::*;
+use super::syntax_tree_factory::*;
+use super::terminal_node::TerminalNode;
 use super::token::{self, Token};
 use crate::exception::error_codes;
 use crate::exception::ql_syntax_exception::QLSyntaxException;
@@ -2355,7 +2356,7 @@ mod tests {
     use super::*;
     use crate::aparser::check_visitor::CheckVisitor;
     use crate::aparser::import_manager::ImportManager;
-    use crate::aparser::out_var_visitors::{
+    use crate::aparser::{
         OutFunctionVisitor, OutVarAttrsVisitor, OutVarNamesVisitor,
     };
     use crate::aparser::parser_operator_manager::{OpType, ParserOperatorManager};
