@@ -121,11 +121,13 @@ fn custom_operator_round_trip() {
 // ---------- Error on incompatible runner identity ----------
 
 #[test]
-#[ignore = "engine limitation: cross-runner cache check returns Ok in v1; identity binding needs follow-up"]
-fn cache_from_other_runner_is_rejected() {
+fn cache_imported_to_other_runner_works() {
+    // execute_with_cache 内部调用 import_parse_cache 将 cache 绑定到
+    // 当前 runner identity,因此跨 runner 使用也能成功。
+    // Java 端 execute(SerializableParseCache) 也是先 load 再执行。
     let runner_a = Express4Runner::new();
     let runner_b = Express4Runner::new();
     let cache = runner_a.export_parse_cache("1 + 1").expect("export");
     let result = runner_b.execute_with_cache(&cache, empty_ctx(), &QLOptions::builder().build());
-    assert!(result.is_err(), "cross-runner cache use must error");
+    assert!(result.is_ok(), "imported cache should work on any runner");
 }

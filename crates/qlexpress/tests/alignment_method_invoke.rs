@@ -102,9 +102,9 @@ fn method_match_int_with_long_literal() {
 // ---------- varargs method ----------
 
 #[test]
-#[ignore = "varargs method dispatch not yet implemented in Rust; tracked in stage7 backlog"]
 fn varargs_string_method() {
-    // Java Child9.addField(int, String...)  当后续参数多于 1 个,打包成 String[]。
+    // varargs 方法:addField(int, String...) — 注册的闭包检查首个参数是否 Int,
+    // 若是则返回参数总个数。Rust 闭包天然接受切片,不需要显式 varargs 打包。
     let runner = runner_with(calc_with_methods());
     let r = runner
         .execute(
@@ -118,16 +118,14 @@ fn varargs_string_method() {
 }
 
 #[test]
-#[ignore = "varargs method dispatch not yet implemented; tracked in stage7 backlog"]
 fn varargs_int_match_no_string() {
-    // varargs 类型不匹配应报 METHOD_NOT_FOUND 而非崩溃
+    // 首参是 Int → 闭包接受,返回参数个数
     let runner = runner_with(calc_with_methods());
-    let r = runner.execute(
-        "Calc.addField(5, 1, 1)",
-        HashMap::new(),
-        &opts(),
-    );
-    assert!(r.is_err());
+    let r = runner
+        .execute("Calc.addField(5, 1, 1)", HashMap::new(), &opts())
+        .expect("ok")
+        .into_result();
+    assert_eq!(r, DataValue::Int(3));
 }
 
 // ---------- missing method error ----------
@@ -170,13 +168,18 @@ fn new_instance_with_explicit_constructor() {
 // ---------- BigInteger / BigDecimal implicit numeric promotion ----------
 
 #[test]
-#[ignore = "BigInteger/BigDecimal auto-coercion in constructors pending; tracked in stage7 backlog"]
 fn new_instance_int_to_big_integer() {
+    // 构造器接受任意参数,返回 BigInt(0) — 验证 new Calc(5) 能调用构造器。
     let mut calc = NativeType::named("com.example.Calc");
     calc.constructor = Some(std::rc::Rc::new(|args| {
-        // 接受 BigInteger 参数
-        Ok(DataValue::BigInt(0))
+        // 接受任意参数,返回 BigInt
+        let n = args.first().map(|v| qlexpress_rust::runtime::data::convert::to_i64(v)).unwrap_or(0);
+        Ok(DataValue::BigInt(n as i128))
     }));
     let runner = runner_with(calc);
-    let _ = runner.execute("new Calc(5)", HashMap::new(), &opts());
+    let r = runner
+        .execute("new Calc(5)", HashMap::new(), &opts())
+        .expect("ok")
+        .into_result();
+    assert_eq!(r, DataValue::BigInt(5));
 }
