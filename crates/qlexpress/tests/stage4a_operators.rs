@@ -27,11 +27,13 @@ use qlexpress_rust::runtime::scope::QScope;
 use qlexpress_rust::runtime::value::{DataValue, QValue};
 
 fn ctx() -> DelegateQContext {
+    let global_scope = QScope::global(QvmGlobalScope::empty());
+    let instruction_scope = QScope::block_fresh_stack(&global_scope, Default::default(), 16);
     DelegateQContext::new(
         Rc::new(QvmRuntime::for_test(Rc::new(
             NativeRegistry::with_builtins(),
         ))),
-        QScope::global(QvmGlobalScope::empty()),
+        instruction_scope,
     )
 }
 

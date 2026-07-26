@@ -1,121 +1,127 @@
-//! Bounded-value stack, mirroring Java `runtime/FixedSizeStack`.
-//!
-//! Java uses a fixed-capacity stack for the QVM operand stack so that
-//! overruns are caught at run time (rather than corrupting the heap).
-//! The current Rust VM uses an unbounded `Vec<DataValue>` for the
-//! operand stack; this struct provides an opt-in bounded variant for
-//! future hardening and for tests that want to exercise stack-overflow
-//! behaviour explicitly.
-//!
-//! Usage:
-//! ```ignore
-//! let mut stack = FixedSizeStack::with_capacity(16);
-//! stack.push(DataValue::Int(1))?;   // Ok(1)
-//! stack.push(DataValue::Int(2))?;   // Ok(2)
-//! assert_eq!(stack.pop(), Some(DataValue::Int(2)));
-//! ```
+//! QVM 定长操作数栈。对应 Java
+//! `com.alibaba.qlexpress4.runtime.FixedSizeStack`。
 
-use crate::exception::{QLException, QLExceptionKind};
-use crate::runtime::value::DataValue;
+use crate::runtime::parameters::Parameters;
+use crate::runtime::value::QValue;
 
-/// A bounded stack with explicit overflow / underflow detection.
+/// 按编译期最大栈深限制容量的 QVM 操作数栈。
+///
+/// 对应 Java: `com.alibaba.qlexpress4.runtime.FixedSizeStack`。Java 使用
+/// `Value[]` 与游标保存元素；Rust 使用 `Vec<QValue>` 保存同样的有效区间，
+/// 并在 `push` 时显式执行数组边界检查。
 #[derive(Clone, Debug)]
 pub struct FixedSizeStack {
-    data: Vec<DataValue>,
+    elements: Vec<QValue>,
     capacity: usize,
 }
 
 impl FixedSizeStack {
-    pub fn with_capacity(capacity: usize) -> Self {
+    /// 创建指定容量的操作数栈。
+    ///
+    /// 对应 Java 构造器 `FixedSizeStack(int size)`。
+    pub fn new(size: usize) -> Self {
         Self {
-            data: Vec::with_capacity(capacity),
-            capacity,
+            elements: Vec::with_capacity(size),
+            capacity: size,
         }
     }
 
+    /// 返回固定容量。Rust 侧诊断方法，用于验证 Java `elements.length` 语义。
     pub fn capacity(&self) -> usize {
         self.capacity
     }
 
+    /// 返回当前元素数。Rust 侧诊断方法，对应 Java 私有游标 `cursor`。
     pub fn len(&self) -> usize {
-        self.data.len()
+        self.elements.len()
     }
 
+    /// 判断栈是否为空。Rust 侧诊断方法，对应 Java `cursor == 0`。
     pub fn is_empty(&self) -> bool {
-        self.data.is_empty()
+        self.elements.is_empty()
     }
 
+    /// 判断栈是否已达到编译期容量。Rust 侧诊断方法，对应 Java 数组边界。
     pub fn is_full(&self) -> bool {
-        self.data.len() >= self.capacity
+        self.len() == self.capacity
     }
 
-    /// Push a value; returns an `Runtime` exception on overflow.
-    pub fn push(&mut self, value: DataValue) -> Result<(), QLException> {
-        if self.is_full() {
-            return Err(QLException::for_test(
-                QLExceptionKind::Runtime,
-                format!("FixedSizeStack overflow (capacity = {})", self.capacity),
-                crate::exception::error_codes::STACK_OVERFLOW,
-            ));
-        }
-        self.data.push(value);
-        Ok(())
+    /// 将值压入栈顶。
+    ///
+    /// 对应 Java 方法 `FixedSizeStack#push(Value)`。容量不足时触发边界
+    /// panic，与 Java `elements[cursor++]` 抛出的数组越界异常一致；正常编译
+    /// 的指令序列不会超过 `QvmInstructionVisitor#getMaxStackSize`。
+    pub fn push(&mut self, ele: QValue) {
+        assert!(
+            !self.is_full(),
+            "operand stack overflow (capacity = {})",
+            self.capacity
+        );
+        self.elements.push(ele);
     }
 
-    /// Pop the top value; returns `None` when the stack is empty.
-    pub fn pop(&mut self) -> Option<DataValue> {
-        self.data.pop()
+    /// 弹出栈顶值。
+    ///
+    /// 对应 Java 方法 `FixedSizeStack#pop()`；空栈时触发边界 panic。
+    pub fn pop(&mut self) -> QValue {
+        self.elements.pop().expect("operand stack underflow")
     }
 
-    /// Peek at the top value without popping.
-    pub fn peek(&self) -> Option<&DataValue> {
-        self.data.last()
+    /// 读取但不弹出栈顶值。
+    ///
+    /// 对应 Java 方法 `FixedSizeStack#peak()`（Java 原方法名即 `peak`）。
+    pub fn peak(&self) -> QValue {
+        self.elements
+            .last()
+            .cloned()
+            .expect("operand stack underflow")
     }
 
-    /// Read the value at depth `n` from the top (`n = 0` is the top).
-    pub fn peek_at(&self, depth: usize) -> Option<&DataValue> {
-        if depth >= self.data.len() {
-            return None;
-        }
-        Some(&self.data[self.data.len() - 1 - depth])
+    /// 一次弹出栈顶 `n` 个参数，并保持从深到浅的参数顺序。
+    ///
+    /// 对应 Java 方法 `FixedSizeStack#pop(int)` 及其内部类
+    /// `StackSwapParameters`。Rust 的 [`Parameters`] 拥有弹出值，避免跨
+    /// `RefCell` 借用，同时保持 `get(i)` 与 `size()` 的可观察语义。
+    pub fn pop_n(&mut self, n: usize) -> Parameters {
+        let len = self.elements.len();
+        assert!(n <= len, "operand stack underflow");
+        Parameters::new(self.elements.split_off(len - n))
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::exception::error_codes;
+    use crate::runtime::value::DataValue;
 
     #[test]
-    fn push_pop_basic() {
-        let mut s = FixedSizeStack::with_capacity(4);
-        assert!(s.push(DataValue::Int(1)).is_ok());
-        assert!(s.push(DataValue::Int(2)).is_ok());
-        assert_eq!(s.peek(), Some(&DataValue::Int(2)));
-        assert_eq!(s.pop(), Some(DataValue::Int(2)));
-        assert_eq!(s.pop(), Some(DataValue::Int(1)));
-        assert_eq!(s.pop(), None);
+    fn push_pop_and_peak_match_java_cursor_semantics() {
+        let mut stack = FixedSizeStack::new(2);
+        stack.push(DataValue::Int(1).into());
+        stack.push(DataValue::Int(2).into());
+        assert_eq!(stack.peak().get(), DataValue::Int(2));
+        assert_eq!(stack.pop().get(), DataValue::Int(2));
+        assert_eq!(stack.pop().get(), DataValue::Int(1));
+        assert!(stack.is_empty());
     }
 
     #[test]
-    fn overflow_returns_error() {
-        let mut s = FixedSizeStack::with_capacity(2);
-        assert!(s.push(DataValue::Int(1)).is_ok());
-        assert!(s.push(DataValue::Int(2)).is_ok());
-        let err = s.push(DataValue::Int(3)).unwrap_err();
-        assert!(matches!(err.kind(), QLExceptionKind::Runtime));
-        assert_eq!(err.error_code(), error_codes::STACK_OVERFLOW);
+    #[should_panic(expected = "operand stack overflow")]
+    fn push_beyond_compiled_capacity_panics_like_java_array_access() {
+        let mut stack = FixedSizeStack::new(1);
+        stack.push(DataValue::Int(1).into());
+        stack.push(DataValue::Int(2).into());
     }
 
     #[test]
-    fn peek_at_walks_from_top() {
-        let mut s = FixedSizeStack::with_capacity(4);
-        s.push(DataValue::Int(10)).unwrap();
-        s.push(DataValue::Int(20)).unwrap();
-        s.push(DataValue::Int(30)).unwrap();
-        assert_eq!(s.peek_at(0), Some(&DataValue::Int(30)));
-        assert_eq!(s.peek_at(1), Some(&DataValue::Int(20)));
-        assert_eq!(s.peek_at(2), Some(&DataValue::Int(10)));
-        assert_eq!(s.peek_at(3), None);
+    fn pop_n_preserves_java_parameter_order() {
+        let mut stack = FixedSizeStack::new(3);
+        stack.push(DataValue::Int(10).into());
+        stack.push(DataValue::Int(20).into());
+        stack.push(DataValue::Int(30).into());
+        let parameters = stack.pop_n(2);
+        assert_eq!(parameters.get_value(0), DataValue::Int(20));
+        assert_eq!(parameters.get_value(1), DataValue::Int(30));
+        assert_eq!(stack.peak().get(), DataValue::Int(10));
     }
 }

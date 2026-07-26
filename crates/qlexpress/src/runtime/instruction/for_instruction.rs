@@ -141,7 +141,11 @@ impl QLInstruction for ForInstruction {
         ql_options: &QLOptions,
     ) -> Result<QResult, QLException> {
         let mut for_scope_context = if self.need_for_scope() {
-            child_fresh_scope_context(q_context, HashMap::with_capacity(1))
+            child_fresh_scope_context(
+                q_context,
+                HashMap::with_capacity(1),
+                self.for_scope_max_stack_size,
+            )
         } else {
             delegate_current(q_context)
         };
@@ -235,8 +239,9 @@ impl QLInstruction for ForInstruction {
 fn child_fresh_scope_context(
     q_context: &mut dyn QContext,
     symbols: crate::runtime::scope::SymbolTable,
+    max_stack_size: usize,
 ) -> DelegateQContext {
-    let scope = QScope::block_fresh_stack(&q_context.current_scope(), symbols);
+    let scope = QScope::block_fresh_stack(&q_context.current_scope(), symbols, max_stack_size);
     DelegateQContext::new(Rc::clone(q_context.q_runtime()), scope)
 }
 

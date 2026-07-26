@@ -90,8 +90,17 @@ impl QvmRuntime {
         instructions: &[Instruction],
         ql_options: &QLOptions,
     ) -> Result<QResult, QLException> {
-        let mut context =
-            DelegateQContext::new(Rc::clone(self), QScope::global(QvmGlobalScope::empty()));
+        let global_scope = QScope::global(QvmGlobalScope::empty());
+        // 此入口仅供底层测试/支持代码直接执行指令。Java 正常入口会由
+        // QLambdaInner 按编译结果创建定长栈；这里以所有正栈输出之和作为
+        // 保守上界，确保同样使用 FixedSizeStack 而不绕过容量模型。
+        let max_stack_size = instructions
+            .iter()
+            .map(|instruction| instruction.stack_output().max(0) as usize)
+            .sum();
+        let instruction_scope =
+            QScope::block_fresh_stack(&global_scope, Default::default(), max_stack_size);
+        let mut context = DelegateQContext::new(Rc::clone(self), instruction_scope);
         run_instructions(&mut context, instructions, ql_options)
     }
 }

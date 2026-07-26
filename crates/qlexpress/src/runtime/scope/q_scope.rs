@@ -10,6 +10,7 @@ use std::rc::Rc;
 use crate::exception::QLException;
 use crate::runtime::data::convert::obj_type_convertor::TargetType;
 use crate::runtime::data::AssignableDataValue;
+use crate::runtime::fixed_size_stack::FixedSizeStack;
 use crate::runtime::function::CustomFunction;
 use crate::runtime::left_value::LeftValue;
 use crate::runtime::parameters::Parameters;
@@ -26,12 +27,12 @@ pub type SymbolTable = HashMap<String, Rc<RefCell<dyn LeftValue>>>;
 
 /// 作用域链上的一个节点。对应 Java: com.alibaba.qlexpress4.runtime.scope.QScope
 /// (Java 为接口体系,操作数栈 `FixedSizeStack` 在作用域与其 `newScope()` 子作用域间共享;
-/// Rust 以 `Rc<RefCell<Vec<QValue>>>` 复现该共享语义)
+/// Rust 以 `Rc<RefCell<FixedSizeStack>>` 复现该共享语义)
 /// One node of the scope chain.
 pub struct QScope {
     parent: Option<ScopeRef>,
     /// Operand stack; shared with `new_scope` children (Java `reuseStack`).
-    stack: Rc<RefCell<Vec<QValue>>>,
+    stack: Option<Rc<RefCell<FixedSizeStack>>>,
     kind: QScopeKind,
 }
 
@@ -43,12 +44,12 @@ pub enum QScopeKind {
 }
 
 impl QScope {
-    /// 创建带全新操作数栈的根(全局)作用域节点。对应 Java `QvmGlobalScope` 作为根作用域。
-    /// Create the root (global) scope node with a fresh operand stack.
+    /// 创建根(全局)作用域节点。对应 Java `QvmGlobalScope`；Java 全局作用域
+    /// 不拥有操作数栈，实际执行由其上的 `QvmBlockScope` 承担。
     pub fn global(global: QvmGlobalScope) -> ScopeRef {
         Rc::new(RefCell::new(QScope {
             parent: None,
-            stack: Rc::new(RefCell::new(Vec::new())),
+            stack: None,
             kind: QScopeKind::Global(global),
         }))
     }
@@ -56,10 +57,14 @@ impl QScope {
     /// Java `new QvmBlockScope(parent, symbolTable, maxStackSize, ...)`:
     /// child scope with a **fresh** operand stack (used by lambda
     /// invocation and for/while scopes).
-    pub fn block_fresh_stack(parent: &ScopeRef, symbol_table: SymbolTable) -> ScopeRef {
+    pub fn block_fresh_stack(
+        parent: &ScopeRef,
+        symbol_table: SymbolTable,
+        max_stack_size: usize,
+    ) -> ScopeRef {
         Rc::new(RefCell::new(QScope {
             parent: Some(Rc::clone(parent)),
-            stack: Rc::new(RefCell::new(Vec::new())),
+            stack: Some(Rc::new(RefCell::new(FixedSizeStack::new(max_stack_size)))),
             kind: QScopeKind::Block(QvmBlockScope::new(symbol_table)),
         }))
     }
@@ -67,10 +72,15 @@ impl QScope {
     /// Java `QvmBlockScope.newScope()`: child scope **reusing** the parent
     /// operand stack.
     pub fn new_scope(this: &ScopeRef) -> ScopeRef {
-        let stack = Rc::clone(&this.borrow().stack);
+        let stack = this
+            .borrow()
+            .stack
+            .as_ref()
+            .map(Rc::clone)
+            .expect("QvmGlobalScope.newScope is unsupported");
         Rc::new(RefCell::new(QScope {
             parent: Some(Rc::clone(this)),
-            stack,
+            stack: Some(stack),
             kind: QScopeKind::Block(QvmBlockScope::new(HashMap::new())),
         }))
     }
@@ -177,8 +187,12 @@ impl QScope {
     }
 
     /// The shared operand stack handle.
-    pub fn stack(this: &ScopeRef) -> Rc<RefCell<Vec<QValue>>> {
-        Rc::clone(&this.borrow().stack)
+    pub fn stack(this: &ScopeRef) -> Rc<RefCell<FixedSizeStack>> {
+        this.borrow()
+            .stack
+            .as_ref()
+            .map(Rc::clone)
+            .expect("QvmGlobalScope operand stack operation is unsupported")
     }
 
     /// Java `push(Value)`.
@@ -189,29 +203,18 @@ impl QScope {
     /// Java `pop()`: top element. Panics on empty stack, like Java's
     /// `FixedSizeStack` array access.
     pub fn pop(this: &ScopeRef) -> QValue {
-        Self::stack(this)
-            .borrow_mut()
-            .pop()
-            .expect("operand stack underflow")
+        Self::stack(this).borrow_mut().pop()
     }
 
     /// Java `pop(int number)`: the top `number` elements in stack order
     /// (deepest first).
     pub fn pop_n(this: &ScopeRef, number: usize) -> Parameters {
-        let stack = Self::stack(this);
-        let mut stack = stack.borrow_mut();
-        let len = stack.len();
-        assert!(number <= len, "operand stack underflow");
-        Parameters::new(stack.split_off(len - number))
+        Self::stack(this).borrow_mut().pop_n(number)
     }
 
     /// Java `peek()`: top element without popping.
     pub fn peek(this: &ScopeRef) -> QValue {
-        Self::stack(this)
-            .borrow()
-            .last()
-            .cloned()
-            .expect("operand stack underflow")
+        Self::stack(this).borrow().peak()
     }
 
     /// Whether the operand stack is empty.
@@ -228,37 +231,42 @@ mod tests {
         QScope::global(QvmGlobalScope::empty())
     }
 
+    fn stack_scope() -> ScopeRef {
+        QScope::block_fresh_stack(&root(), HashMap::new(), 8)
+    }
+
     #[test]
     fn symbol_defined_in_child_is_invisible_in_parent() {
-        let global = root();
-        let child = QScope::new_scope(&global);
+        let parent = stack_scope();
+        let child = QScope::new_scope(&parent);
         QScope::define_local_symbol(&child, "x", None, DataValue::Int(1));
         assert_eq!(
             QScope::get_symbol_value(&child, "x").unwrap(),
             Some(DataValue::Int(1))
         );
-        // Parent (global) auto-creates an independent slot (Java behavior).
+        // Parent chain reaches the global scope, which auto-creates an
+        // independent slot (Java behavior).
         assert_eq!(
-            QScope::get_symbol_value(&global, "x").unwrap(),
+            QScope::get_symbol_value(&parent, "x").unwrap(),
             Some(DataValue::Null)
         );
     }
 
     #[test]
     fn new_scope_shares_operand_stack_like_java() {
-        let global = root();
-        let child = QScope::new_scope(&global);
-        QScope::push(&global, DataValue::Int(7).into());
+        let parent = stack_scope();
+        let child = QScope::new_scope(&parent);
+        QScope::push(&parent, DataValue::Int(7).into());
         assert_eq!(QScope::peek(&child).get(), DataValue::Int(7));
         assert_eq!(QScope::pop(&child).get(), DataValue::Int(7));
-        assert!(QScope::stack_is_empty(&global));
+        assert!(QScope::stack_is_empty(&parent));
     }
 
     #[test]
     fn fresh_stack_child_does_not_share() {
-        let global = root();
-        let child = QScope::block_fresh_stack(&global, HashMap::new());
-        QScope::push(&global, DataValue::Int(1).into());
+        let parent = stack_scope();
+        let child = QScope::block_fresh_stack(&parent, HashMap::new(), 1);
+        QScope::push(&parent, DataValue::Int(1).into());
         assert!(QScope::stack_is_empty(&child));
     }
 
@@ -275,13 +283,13 @@ mod tests {
 
     #[test]
     fn pop_n_preserves_stack_order() {
-        let global = root();
-        QScope::push(&global, DataValue::Int(1).into());
-        QScope::push(&global, DataValue::Int(2).into());
-        QScope::push(&global, DataValue::Int(3).into());
-        let params = QScope::pop_n(&global, 2);
+        let scope = stack_scope();
+        QScope::push(&scope, DataValue::Int(1).into());
+        QScope::push(&scope, DataValue::Int(2).into());
+        QScope::push(&scope, DataValue::Int(3).into());
+        let params = QScope::pop_n(&scope, 2);
         assert_eq!(params.get_value(0), DataValue::Int(2));
         assert_eq!(params.get_value(1), DataValue::Int(3));
-        assert_eq!(QScope::peek(&global).get(), DataValue::Int(1));
+        assert_eq!(QScope::peek(&scope).get(), DataValue::Int(1));
     }
 }

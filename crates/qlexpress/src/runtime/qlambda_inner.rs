@@ -163,8 +163,11 @@ impl QLambdaInner {
             };
             init_symbol_table.insert(param_definition.name().to_string(), slot);
         }
-        let new_scope =
-            QScope::block_fresh_stack(&self.q_context.current_scope(), init_symbol_table);
+        let new_scope = QScope::block_fresh_stack(
+            &self.q_context.current_scope(),
+            init_symbol_table,
+            self.lambda_definition.max_stack_size(),
+        );
         Ok(DelegateQContext::new(
             Rc::clone(self.q_context.q_runtime()),
             new_scope,

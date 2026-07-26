@@ -95,7 +95,8 @@ impl QLInstruction for WhileInstruction {
         q_context: &mut dyn QContext,
         ql_options: &QLOptions,
     ) -> Result<QResult, QLException> {
-        let mut while_scope_context = child_fresh_scope_context(q_context, HashMap::new());
+        let mut while_scope_context =
+            child_fresh_scope_context(q_context, HashMap::new(), self.while_scope_max_stack_size);
         let condition_lambda =
             Rc::clone(&self.condition).to_lambda(&mut while_scope_context, ql_options, false);
         let body_lambda =
@@ -150,7 +151,8 @@ impl QLInstruction for WhileInstruction {
 fn child_fresh_scope_context(
     q_context: &mut dyn QContext,
     symbols: crate::runtime::scope::SymbolTable,
+    max_stack_size: usize,
 ) -> DelegateQContext {
-    let scope = QScope::block_fresh_stack(&q_context.current_scope(), symbols);
+    let scope = QScope::block_fresh_stack(&q_context.current_scope(), symbols, max_stack_size);
     DelegateQContext::new(Rc::clone(q_context.q_runtime()), scope)
 }

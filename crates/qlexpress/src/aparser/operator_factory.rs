@@ -377,11 +377,14 @@ mod tests {
         assert!(!manager.add_binary_operator("**", Rc::new(Pow), 300));
 
         let (runtime, opts) = test_ctx();
+        let global_scope = crate::runtime::scope::QScope::global(
+            crate::runtime::qvm_global_scope::QvmGlobalScope::empty(),
+        );
+        let instruction_scope =
+            crate::runtime::scope::QScope::block_fresh_stack(&global_scope, Default::default(), 4);
         let mut ctx = crate::runtime::delegate_qcontext::DelegateQContext::new(
             Rc::new(runtime),
-            crate::runtime::scope::QScope::global(
-                crate::runtime::qvm_global_scope::QvmGlobalScope::empty(),
-            ),
+            instruction_scope,
         );
         let result = manager
             .get_binary_operator("**")

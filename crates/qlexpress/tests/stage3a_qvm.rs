@@ -69,8 +69,10 @@ fn run_with_ctx(
     runtime: &Rc<QvmRuntime>,
     instructions: &[Instruction],
 ) -> Result<DelegateQContext, QLException> {
-    let mut ctx =
-        DelegateQContext::new(Rc::clone(runtime), QScope::global(QvmGlobalScope::empty()));
+    let global_scope = QScope::global(QvmGlobalScope::empty());
+    let instruction_scope =
+        QScope::block_fresh_stack(&global_scope, Default::default(), instructions.len() * 2);
+    let mut ctx = DelegateQContext::new(Rc::clone(runtime), instruction_scope);
     run_instructions(&mut ctx, instructions, &opts())?;
     Ok(ctx)
 }
