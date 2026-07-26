@@ -32,7 +32,10 @@ fn empty_for_loop_should_not_affect_subsequent_expression() {
 
 #[test]
 fn empty_for_loop_condition_never_met_should_not_affect_subsequent_expression() {
-    assert_eq!(run_int("for (int i = 0; i < 0; i = i + 1) {i = i + 1;} 1;"), 1);
+    assert_eq!(
+        run_int("for (int i = 0; i < 0; i = i + 1) {i = i + 1;} 1;"),
+        1
+    );
 }
 
 #[test]

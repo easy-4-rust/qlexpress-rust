@@ -90,12 +90,8 @@ fn run_with_scope(
 ) -> DataValue {
     let operator_manager = operator_manager();
     let supplier = DefaultClassSupplier::instance();
-    let (instructions, max_stack) = compile(
-        script,
-        &operator_manager,
-        &supplier,
-        &user_define_functions,
-    );
+    let (instructions, max_stack) =
+        compile(script, &operator_manager, &supplier, &user_define_functions);
     let root: Rc<dyn QLambdaDefinition> = Rc::new(QLambdaDefinitionInner::new(
         "main",
         instructions,
@@ -136,7 +132,15 @@ fn map_express_context_read_and_isolated_write() {
     // QvmGlobalScope 把外部值拷贝为脚本变量,脚本写不回宿主 Map。
     let external = map_context(vec![("x", DataValue::Int(40))]);
     let scope = QvmGlobalScope::new(Rc::clone(&external), HashMap::new(), false);
-    assert_eq!(run_with_scope("x = 1; x", scope, NativeRegistry::with_builtins(), UserDefineFunctions::new()), DataValue::Int(1));
+    assert_eq!(
+        run_with_scope(
+            "x = 1; x",
+            scope,
+            NativeRegistry::with_builtins(),
+            UserDefineFunctions::new()
+        ),
+        DataValue::Int(1)
+    );
     assert_eq!(
         external.borrow().get(&DataValue::Str("x".to_string())),
         Some(&DataValue::Int(40)),
@@ -150,7 +154,15 @@ fn map_express_context_pollute_writes_through() {
     // 脚本赋值写穿宿主 Map。
     let external = map_context(vec![("x", DataValue::Int(40))]);
     let scope = QvmGlobalScope::new(Rc::clone(&external), HashMap::new(), true);
-    assert_eq!(run_with_scope("x = x + 2; x", scope, NativeRegistry::with_builtins(), UserDefineFunctions::new()), DataValue::Int(42));
+    assert_eq!(
+        run_with_scope(
+            "x = x + 2; x",
+            scope,
+            NativeRegistry::with_builtins(),
+            UserDefineFunctions::new()
+        ),
+        DataValue::Int(42)
+    );
     assert_eq!(
         external.borrow().get(&DataValue::Str("x".to_string())),
         Some(&DataValue::Int(42)),
@@ -171,7 +183,10 @@ fn map_express_context_get_returns_map_item_left_value() {
         panic!("MapExpressContext must yield a LeftValue (MapItemValue)");
     }
     assert_eq!(
-        context.source().borrow().get(&DataValue::Str("a".to_string())),
+        context
+            .source()
+            .borrow()
+            .get(&DataValue::Str("a".to_string())),
         Some(&DataValue::Int(8))
     );
 }
@@ -181,12 +196,16 @@ fn map_express_context_get_returns_map_item_left_value() {
 #[test]
 fn ql_alias_context_resolves_every_alias() {
     // Java:@QLAlias({"a", "b"}) 的对象以每个别名注册进同一上下文。
-    let context: Rc<dyn ExpressContext> = Rc::new(QLAliasContext::new(&[
-        (&["a", "b"], DataValue::Int(5)),
-    ]));
+    let context: Rc<dyn ExpressContext> =
+        Rc::new(QLAliasContext::new(&[(&["a", "b"], DataValue::Int(5))]));
     let scope = QvmGlobalScope::with_context(context, HashMap::new(), HashMap::new(), false);
     assert_eq!(
-        run_with_scope("a + b", scope, NativeRegistry::with_builtins(), UserDefineFunctions::new()),
+        run_with_scope(
+            "a + b",
+            scope,
+            NativeRegistry::with_builtins(),
+            UserDefineFunctions::new()
+        ),
         DataValue::Int(10)
     );
 }
@@ -198,7 +217,10 @@ fn empty_context_yields_null_value_not_absent() {
     // Java EmptyContext.get 返回 Value.NULL_VALUE(非 null)。
     let context = EmptyContext::new();
     let attachments = HashMap::new();
-    let value = context.get(&attachments, "anything").unwrap().expect("NULL_VALUE");
+    let value = context
+        .get(&attachments, "anything")
+        .unwrap()
+        .expect("NULL_VALUE");
     assert_eq!(value.get(), DataValue::Null);
     // 经 QVM:未定义变量读为 null(而不是报错)。
     assert_eq!(run("foo"), DataValue::Null);
@@ -220,10 +242,20 @@ fn dynamic_variable_context_runs_script_lazily_per_get() {
     context.put("dyn", "1 + 2");
     let attachments = HashMap::new();
     // 动态变量:取值时执行脚本。
-    assert_eq!(context.get(&attachments, "dyn").unwrap().expect("hit").get(), DataValue::Int(99));
+    assert_eq!(
+        context
+            .get(&attachments, "dyn")
+            .unwrap()
+            .expect("hit")
+            .get(),
+        DataValue::Int(99)
+    );
     assert_eq!(*calls.borrow(), 1);
     // 静态变量:回退 MapItemValue。
-    assert_eq!(context.get(&attachments, "s").unwrap().expect("hit").get(), DataValue::Int(3));
+    assert_eq!(
+        context.get(&attachments, "s").unwrap().expect("hit").get(),
+        DataValue::Int(3)
+    );
     assert_eq!(*calls.borrow(), 1, "static lookup must not run any script");
 }
 
@@ -256,7 +288,11 @@ fn extension_function_map_and_filter_end_to_end() {
             registry_with_extensions(),
             UserDefineFunctions::new(),
         ),
-        DataValue::list(vec![DataValue::Int(2), DataValue::Int(4), DataValue::Int(6)])
+        DataValue::list(vec![
+            DataValue::Int(2),
+            DataValue::Int(4),
+            DataValue::Int(6)
+        ])
     );
     assert_eq!(
         run_with_scope(
@@ -292,7 +328,9 @@ fn extension_function_contract_matches_java() {
     assert_eq!(as_method.name(), "filter");
     // Java:obj instanceof List 不成立时 invoke 返回 null。
     assert_eq!(
-        as_method.invoke(&DataValue::Str("not a list".into()), &[]).unwrap(),
+        as_method
+            .invoke(&DataValue::Str("not a list".into()), &[])
+            .unwrap(),
         DataValue::Null
     );
 }
@@ -308,7 +346,10 @@ impl CustomFunction for Greet {
         _q_context: &mut dyn QContext,
         parameters: &Parameters,
     ) -> Result<DataValue, QLException> {
-        Ok(DataValue::Str(format!("hi {}", parameters.get_value(0).string_value_of())))
+        Ok(DataValue::Str(format!(
+            "hi {}",
+            parameters.get_value(0).string_value_of()
+        )))
     }
 }
 
@@ -317,14 +358,22 @@ fn custom_function_registered_and_called_via_qvm() {
     let mut external_functions: HashMap<String, Rc<dyn CustomFunction>> = HashMap::new();
     external_functions.insert("greet".to_string(), Rc::new(Greet));
     let mut user_functions = UserDefineFunctions::new();
-    user_functions.insert("greet".to_string(), Rc::new(Greet) as Rc<dyn CustomFunction>);
+    user_functions.insert(
+        "greet".to_string(),
+        Rc::new(Greet) as Rc<dyn CustomFunction>,
+    );
     let scope = QvmGlobalScope::new(
         Rc::new(RefCell::new(IndexMap::new())),
         external_functions,
         false,
     );
     assert_eq!(
-        run_with_scope("greet('ql') + '!'", scope, NativeRegistry::with_builtins(), user_functions),
+        run_with_scope(
+            "greet('ql') + '!'",
+            scope,
+            NativeRegistry::with_builtins(),
+            user_functions
+        ),
         DataValue::Str("hi ql!".into())
     );
 }
@@ -342,9 +391,7 @@ impl CustomFunction for Pick {
     ) -> Result<DataValue, QLException> {
         let values = parameters.values();
         match &values[..] {
-            [DataValue::Bool(true), DataValue::Lambda(lambda), _] => {
-                Ok(lambda.call(&[])?.value())
-            }
+            [DataValue::Bool(true), DataValue::Lambda(lambda), _] => Ok(lambda.call(&[])?.value()),
             [DataValue::Bool(false), _, fallback] => Ok(fallback.clone()),
             _ => Ok(DataValue::Null),
         }
@@ -408,16 +455,16 @@ fn qmethod_function_invokes_wrapped_native_method() {
         }),
     );
     let function = QMethodFunction::new(Some(DataValue::Int(0)), method);
-    let params = Parameters::new(vec![
-        DataValue::Int(19).into(),
-        DataValue::Int(23).into(),
-    ]);
+    let params = Parameters::new(vec![DataValue::Int(19).into(), DataValue::Int(23).into()]);
     let runtime = QvmRuntime::for_test(Rc::new(NativeRegistry::with_builtins()));
     let mut context = qlexpress_rust::runtime::delegate_qcontext::DelegateQContext::new(
         Rc::new(runtime),
         qlexpress_rust::runtime::scope::QScope::global(QvmGlobalScope::empty()),
     );
-    assert_eq!(function.call(&mut context, &params).unwrap(), DataValue::Int(42));
+    assert_eq!(
+        function.call(&mut context, &params).unwrap(),
+        DataValue::Int(42)
+    );
 }
 
 #[test]
@@ -448,15 +495,23 @@ fn method_dispatch_via_method_invoke_utils() {
     let reporter = PureErrReporter::INSTANCE;
     // String.length()
     assert_eq!(
-        find_method_and_invoke(&DataValue::Str("abc".into()), "length", &[], &registry, &reporter)
-            .unwrap()
-            .get(),
+        find_method_and_invoke(
+            &DataValue::Str("abc".into()),
+            "length",
+            &[],
+            &registry,
+            &reporter
+        )
+        .unwrap()
+        .get(),
         DataValue::Int(3)
     );
     // List.size()
     let list = DataValue::list(vec![DataValue::Int(1), DataValue::Int(2)]);
     assert_eq!(
-        find_method_and_invoke(&list, "size", &[], &registry, &reporter).unwrap().get(),
+        find_method_and_invoke(&list, "size", &[], &registry, &reporter)
+            .unwrap()
+            .get(),
         DataValue::Int(2)
     );
     // Map 中的 Lambda 可作为方法调用(Java findQLambdaInstance)。

@@ -2,14 +2,14 @@
 //! 职责:弹出并丢弃栈顶元素。
 //! 本文件由 `flow.rs` 拆分而来(SPEC §5.5 一类一文件),仅移动代码与补充中文注释,行为完全一致。
 
-use std::rc::Rc;
 use crate::exception::error_reporter::ErrorReporter;
 use crate::exception::QLException;
 use crate::ql_options::QLOptions;
-use crate::runtime::q_result::QResult;
 use crate::runtime::instruction::QLInstruction;
+use crate::runtime::q_result::QResult;
 use crate::runtime::qcontext::QContext;
 use crate::utils::println_utils::PrintlnUtils;
+use std::rc::Rc;
 
 /// 弹栈指令。对应 Java: com.alibaba.qlexpress4.runtime.instruction.PopInstruction(职责:弹出并丢弃栈顶元素)
 /// Operation: pop top element
@@ -59,4 +59,3 @@ impl QLInstruction for PopInstruction {
         &self.error_reporter
     }
 }
-

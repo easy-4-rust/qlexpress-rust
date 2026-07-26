@@ -99,7 +99,12 @@ impl ExpressionTrace {
         };
         let mut result = PrintlnUtils::build_indent_string(
             indent,
-            &format!("{} {} {}", java_name(self.trace_type), self.token, value_part),
+            &format!(
+                "{} {} {}",
+                java_name(self.trace_type),
+                self.token,
+                value_part
+            ),
         );
         result.push('\n');
         for child in &self.children {

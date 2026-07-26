@@ -26,17 +26,23 @@ impl LongMath {
 
     /// Java `addImpl`(long 溢出回绕)。
     pub fn add_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
-        Ok(DataValue::Long(long_value(left).wrapping_add(long_value(right))))
+        Ok(DataValue::Long(
+            long_value(left).wrapping_add(long_value(right)),
+        ))
     }
 
     /// Java `subtractImpl`。
     pub fn subtract_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
-        Ok(DataValue::Long(long_value(left).wrapping_sub(long_value(right))))
+        Ok(DataValue::Long(
+            long_value(left).wrapping_sub(long_value(right)),
+        ))
     }
 
     /// Java `multiplyImpl`。
     pub fn multiply_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
-        Ok(DataValue::Long(long_value(left).wrapping_mul(long_value(right))))
+        Ok(DataValue::Long(
+            long_value(left).wrapping_mul(long_value(right)),
+        ))
     }
 
     /// Java `divideImpl`:委托 BigDecimalMath。
@@ -73,9 +79,13 @@ impl LongMath {
     pub fn mod_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
         let modulus = convert::to_i128(right);
         if modulus <= 0 {
-            return Err(number_math::arithmetic_exception("BigInteger: modulus not positive"));
+            return Err(number_math::arithmetic_exception(
+                "BigInteger: modulus not positive",
+            ));
         }
-        Ok(DataValue::Long(convert::to_i128(left).rem_euclid(modulus) as i64))
+        Ok(DataValue::Long(
+            convert::to_i128(left).rem_euclid(modulus) as i64
+        ))
     }
 
     /// Java `unaryMinusImpl`。
@@ -110,12 +120,16 @@ impl LongMath {
 
     /// Java `leftShiftImpl`(距离按 63 掩码)。
     pub fn left_shift_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
-        Ok(DataValue::Long(long_value(left).wrapping_shl(long_value(right) as u32)))
+        Ok(DataValue::Long(
+            long_value(left).wrapping_shl(long_value(right) as u32),
+        ))
     }
 
     /// Java `rightShiftImpl`(算术右移,符号扩展)。
     pub fn right_shift_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
-        Ok(DataValue::Long(long_value(left).wrapping_shr(long_value(right) as u32)))
+        Ok(DataValue::Long(
+            long_value(left).wrapping_shr(long_value(right) as u32),
+        ))
     }
 
     /// Java `rightShiftUnsignedImpl`(逻辑右移,高位补零)。
@@ -152,8 +166,7 @@ mod tests {
 
     #[test]
     fn long_remainder_by_zero() {
-        let err =
-            LongMath::remainder_impl(&DataValue::Long(1), &DataValue::Long(0)).unwrap_err();
+        let err = LongMath::remainder_impl(&DataValue::Long(1), &DataValue::Long(0)).unwrap_err();
         assert_eq!(err.reason(), "/ by zero");
     }
 }

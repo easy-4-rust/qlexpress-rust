@@ -9,19 +9,19 @@ use qlexpress_rust::exception::error_reporter::ErrorReporter;
 use qlexpress_rust::exception::pure_err_reporter::PureErrReporter;
 use qlexpress_rust::exception::QLException;
 use qlexpress_rust::ql_options::QLOptions;
-use qlexpress_rust::runtime::q_result::QResult;
 use qlexpress_rust::runtime::data::convert::{math_domain, promote, MathDomain};
 use qlexpress_rust::runtime::delegate_qcontext::DelegateQContext;
 use qlexpress_rust::runtime::instruction::ReturnResultType;
 use qlexpress_rust::runtime::instruction::{
-    BreakContinueInstruction, CallFunctionInstruction, CheckTimeOutInstruction,
-    ConstInstruction, DefineFunctionInstruction, DefineLocalInstruction, ForInstruction,
-    GetFieldInstruction, IndexInstruction, Instruction, JumpIfPopInstruction, JumpInstruction,
-    LoadInstruction, MethodInvokeInstruction, NewListInstruction, OperatorInstruction,
-    PopInstruction, QLInstruction, ReturnInstruction, WhileInstruction,
+    BreakContinueInstruction, CallFunctionInstruction, CheckTimeOutInstruction, ConstInstruction,
+    DefineFunctionInstruction, DefineLocalInstruction, ForInstruction, GetFieldInstruction,
+    IndexInstruction, Instruction, JumpIfPopInstruction, JumpInstruction, LoadInstruction,
+    MethodInvokeInstruction, NewListInstruction, OperatorInstruction, PopInstruction,
+    QLInstruction, ReturnInstruction, WhileInstruction,
 };
 use qlexpress_rust::runtime::member::NativeRegistry;
 use qlexpress_rust::runtime::operator::base::BinaryOperator;
+use qlexpress_rust::runtime::q_result::QResult;
 use qlexpress_rust::runtime::qcontext::QContext;
 use qlexpress_rust::runtime::qlambda_definition::QLambdaDefinition;
 use qlexpress_rust::runtime::qlambda_definition_inner::{Param, QLambdaDefinitionInner};
@@ -37,7 +37,9 @@ fn reporter() -> Rc<dyn ErrorReporter> {
 }
 
 fn runtime() -> Rc<QvmRuntime> {
-    Rc::new(QvmRuntime::for_test(Rc::new(NativeRegistry::with_builtins())))
+    Rc::new(QvmRuntime::for_test(Rc::new(
+        NativeRegistry::with_builtins(),
+    )))
 }
 
 fn opts() -> QLOptions {
@@ -46,7 +48,10 @@ fn opts() -> QLOptions {
 
 /// Run instructions as a top-level script (Java: root lambda with
 /// `newEnv=true` over the global scope).
-fn run_top(runtime: &Rc<QvmRuntime>, instructions: Vec<Instruction>) -> Result<QResult, QLException> {
+fn run_top(
+    runtime: &Rc<QvmRuntime>,
+    instructions: Vec<Instruction>,
+) -> Result<QResult, QLException> {
     let root: Rc<dyn QLambdaDefinition> = Rc::new(QLambdaDefinitionInner::new(
         "root",
         instructions,
@@ -62,10 +67,8 @@ fn run_with_ctx(
     runtime: &Rc<QvmRuntime>,
     instructions: &[Instruction],
 ) -> Result<DelegateQContext, QLException> {
-    let mut ctx = DelegateQContext::new(
-        Rc::clone(runtime),
-        QScope::global(QvmGlobalScope::empty()),
-    );
+    let mut ctx =
+        DelegateQContext::new(Rc::clone(runtime), QScope::global(QvmGlobalScope::empty()));
     run_instructions(&mut ctx, instructions, &opts())?;
     Ok(ctx)
 }
@@ -79,7 +82,11 @@ fn def(
 }
 
 fn ret() -> Instruction {
-    Box::new(ReturnInstruction::new(reporter(), ReturnResultType::Return, None))
+    Box::new(ReturnInstruction::new(
+        reporter(),
+        ReturnResultType::Return,
+        None,
+    ))
 }
 
 fn konst(v: DataValue) -> Instruction {
@@ -174,7 +181,12 @@ fn const_arithmetic_return() {
     // 常量加载 + 二元算术 + 返回: 1 + 2 → 3
     let result = run_top(
         &runtime(),
-        vec![konst(DataValue::Int(1)), konst(DataValue::Int(2)), op(NumOp::Add), ret()],
+        vec![
+            konst(DataValue::Int(1)),
+            konst(DataValue::Int(2)),
+            op(NumOp::Add),
+            ret(),
+        ],
     )
     .expect("run");
     assert_eq!(result, QResult::Return(DataValue::Int(3)));
@@ -202,12 +214,12 @@ fn if_jump_selects_branch() {
     let result = run_top(
         &runtime(),
         vec![
-            konst(DataValue::Bool(false)),                     // 0
+            konst(DataValue::Bool(false)),                             // 0
             Box::new(JumpIfPopInstruction::new(reporter(), false, 2)), // 1 → 4
-            konst(DataValue::Int(1)),                          // 2
-            Box::new(JumpInstruction::new(reporter(), 1)),     // 3 → 5
-            konst(DataValue::Int(2)),                          // 4
-            ret(),                                             // 5
+            konst(DataValue::Int(1)),                                  // 2
+            Box::new(JumpInstruction::new(reporter(), 1)),             // 3 → 5
+            konst(DataValue::Int(2)),                                  // 4
+            ret(),                                                     // 5
         ],
     )
     .expect("run");
@@ -367,7 +379,11 @@ fn lambda_define_and_call() {
     let result = run_top(
         &runtime(),
         vec![
-            Box::new(DefineFunctionInstruction::new(reporter(), "addOne", lambda_def)),
+            Box::new(DefineFunctionInstruction::new(
+                reporter(),
+                "addOne",
+                lambda_def,
+            )),
             konst(DataValue::Int(41)),
             Box::new(CallFunctionInstruction::new(reporter(), "addOne", 1, None)),
             ret(),
@@ -383,26 +399,30 @@ fn lambda_recursive_self_reference() {
     let fact_body = def(
         "fact",
         vec![
-            load("n"),                                             // 0
-            konst(DataValue::Int(1)),                              // 1
-            op(NumOp::Le),                                         // 2
-            Box::new(JumpIfPopInstruction::new(reporter(), false, 2)), // 3 → 6
-            konst(DataValue::Int(1)),                              // 4
-            ret(),                                                 // 5
-            load("n"),                                             // 6
-            konst(DataValue::Int(1)),                              // 7
-            op(NumOp::Sub),                                        // 8
+            load("n"),                                                           // 0
+            konst(DataValue::Int(1)),                                            // 1
+            op(NumOp::Le),                                                       // 2
+            Box::new(JumpIfPopInstruction::new(reporter(), false, 2)),           // 3 → 6
+            konst(DataValue::Int(1)),                                            // 4
+            ret(),                                                               // 5
+            load("n"),                                                           // 6
+            konst(DataValue::Int(1)),                                            // 7
+            op(NumOp::Sub),                                                      // 8
             Box::new(CallFunctionInstruction::new(reporter(), "fact", 1, None)), // 9
-            load("n"),                                             // 10
-            op(NumOp::Mul),                                        // 11
-            ret(),                                                 // 12
+            load("n"),                                                           // 10
+            op(NumOp::Mul),                                                      // 11
+            ret(),                                                               // 12
         ],
         vec![Param::new("n", None)],
     );
     let result = run_top(
         &runtime(),
         vec![
-            Box::new(DefineFunctionInstruction::new(reporter(), "fact", fact_body)),
+            Box::new(DefineFunctionInstruction::new(
+                reporter(),
+                "fact",
+                fact_body,
+            )),
             konst(DataValue::Int(5)),
             Box::new(CallFunctionInstruction::new(reporter(), "fact", 1, None)),
             ret(),
@@ -419,15 +439,17 @@ fn method_invoke_dispatches_to_native_registry() {
         &runtime(),
         vec![
             konst(DataValue::Str("hello".to_string())),
-            Box::new(MethodInvokeInstruction::new(reporter(), "toUpperCase", 0, false)),
+            Box::new(MethodInvokeInstruction::new(
+                reporter(),
+                "toUpperCase",
+                0,
+                false,
+            )),
             ret(),
         ],
     )
     .expect("run");
-    assert_eq!(
-        result,
-        QResult::Return(DataValue::Str("HELLO".to_string()))
-    );
+    assert_eq!(result, QResult::Return(DataValue::Str("HELLO".to_string())));
 }
 
 #[test]
@@ -436,7 +458,12 @@ fn method_not_found_error_code() {
         &runtime(),
         vec![
             konst(DataValue::Str("hello".to_string())),
-            Box::new(MethodInvokeInstruction::new(reporter(), "noSuchMethod", 0, false)),
+            Box::new(MethodInvokeInstruction::new(
+                reporter(),
+                "noSuchMethod",
+                0,
+                false,
+            )),
             ret(),
         ],
     )
@@ -453,8 +480,7 @@ fn timeout_instruction_fires_and_is_disabled_by_zero() {
         Rc::new(NativeRegistry::with_builtins()),
         current_time_millis() - 10_000,
     ));
-    let instructions: Vec<Instruction> =
-        vec![Box::new(CheckTimeOutInstruction::new(reporter()))];
+    let instructions: Vec<Instruction> = vec![Box::new(CheckTimeOutInstruction::new(reporter()))];
     let mut ctx = DelegateQContext::new(Rc::clone(&rt), QScope::global(QvmGlobalScope::empty()));
     let timeout_opts = QLOptions::builder().timeout_millis(1).build();
     let err = run_instructions(&mut ctx, &instructions, &timeout_opts).expect_err("timeout");
@@ -523,13 +549,28 @@ fn index_pushes_aliased_left_value() {
 fn stack_input_output_matches_java() {
     // 抽查 stack_input()/stack_output() 与 Java 一致
     let r = reporter();
-    assert_eq!(ConstInstruction::new(Rc::clone(&r), DataValue::Null, None).stack_input(), 0);
-    assert_eq!(ConstInstruction::new(r.clone(), DataValue::Null, None).stack_output(), 1);
+    assert_eq!(
+        ConstInstruction::new(Rc::clone(&r), DataValue::Null, None).stack_input(),
+        0
+    );
+    assert_eq!(
+        ConstInstruction::new(r.clone(), DataValue::Null, None).stack_output(),
+        1
+    );
     assert_eq!(IndexInstruction::new(r.clone()).stack_input(), 2);
-    assert_eq!(JumpIfPopInstruction::new(r.clone(), true, 0).stack_input(), 1);
+    assert_eq!(
+        JumpIfPopInstruction::new(r.clone(), true, 0).stack_input(),
+        1
+    );
     assert_eq!(JumpInstruction::new(r.clone(), 0).stack_output(), 0);
-    assert_eq!(CallFunctionInstruction::new(r.clone(), "f", 3, None).stack_input(), 3);
-    assert_eq!(MethodInvokeInstruction::new(r.clone(), "m", 2, false).stack_input(), 3);
+    assert_eq!(
+        CallFunctionInstruction::new(r.clone(), "f", 3, None).stack_input(),
+        3
+    );
+    assert_eq!(
+        MethodInvokeInstruction::new(r.clone(), "m", 2, false).stack_input(),
+        3
+    );
     assert_eq!(CheckTimeOutInstruction::new(r.clone()).stack_input(), 0);
 }
 
@@ -540,5 +581,8 @@ fn println_debug_output_migrated() {
     ConstInstruction::new(r.clone(), DataValue::Int(7), None).println(3, 0, &mut |s| out.push(s));
     JumpIfPopInstruction::new(r.clone(), false, 5).println(1, 0, &mut |s| out.push(s));
     LoadInstruction::new(r.clone(), "abc", None).println(0, 0, &mut |s| out.push(s));
-    assert_eq!(out, vec!["3: LoadConst 7", "1: JumpIfPop false 5", "0: Load abc"]);
+    assert_eq!(
+        out,
+        vec!["3: LoadConst 7", "1: JumpIfPop false 5", "0: Load abc"]
+    );
 }

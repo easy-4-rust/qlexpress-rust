@@ -15,8 +15,8 @@ use std::collections::HashMap;
 use qlexpress_rust::aparser::import_manager::QLImport;
 use qlexpress_rust::default_class_supplier::DefaultClassSupplier;
 use qlexpress_rust::init_options::InitOptions;
-use qlexpress_rust::runtime::value::DataValue;
 use qlexpress_rust::ql_options::QLOptions;
+use qlexpress_rust::runtime::value::DataValue;
 use qlexpress_rust::security::ql_security_strategy::QLSecurityStrategy;
 use qlexpress_rust::Express4Runner;
 
@@ -48,7 +48,10 @@ fn runner() -> Express4Runner {
     // 注册 RuntimeException(String) 构造器——Java `new RuntimeException("msg")`
     let mut runtime_exc = NativeType::named("java.lang.RuntimeException");
     runtime_exc.constructor = Some(Rc::new(|args| {
-        let msg = args.first().map(|v| v.string_value_of()).unwrap_or_default();
+        let msg = args
+            .first()
+            .map(|v| v.string_value_of())
+            .unwrap_or_default();
         Ok(DataValue::Str(format!("RuntimeException({msg})")))
     }));
     runner.register_native_type(runtime_exc);
@@ -56,7 +59,10 @@ fn runner() -> Express4Runner {
     // 也注册 Exception(String) 构造器
     let mut exc = NativeType::named("java.lang.Exception");
     exc.constructor = Some(Rc::new(|args| {
-        let msg = args.first().map(|v| v.string_value_of()).unwrap_or_default();
+        let msg = args
+            .first()
+            .map(|v| v.string_value_of())
+            .unwrap_or_default();
         Ok(DataValue::Str(format!("Exception({msg})")))
     }));
     runner.register_native_type(exc);
@@ -68,7 +74,9 @@ fn opts() -> QLOptions {
     QLOptions::builder().timeout_millis(2000).build()
 }
 
-fn run(script: &str) -> Result<qlexpress_rust::runtime::value::DataValue, qlexpress_rust::exception::QLException> {
+fn run(
+    script: &str,
+) -> Result<qlexpress_rust::runtime::value::DataValue, qlexpress_rust::exception::QLException> {
     let r = runner().execute(script, HashMap::new(), &opts())?;
     Ok(r.into_result())
 }

@@ -160,7 +160,11 @@ pub fn to_big_dec_string(value: &DataValue) -> String {
 pub fn big_dec_to_i128(dec: &str) -> i128 {
     let (negative, int_part, _) = split_decimal(dec);
     let digits: String = int_part.trim_start_matches('0').to_string();
-    let magnitude: i128 = if digits.is_empty() { 0 } else { digits.parse().unwrap_or(0) };
+    let magnitude: i128 = if digits.is_empty() {
+        0
+    } else {
+        digits.parse().unwrap_or(0)
+    };
     if negative {
         -magnitude
     } else {
@@ -182,7 +186,11 @@ pub fn big_dec_compare(a: &str, b: &str) -> Ordering {
         return Ordering::Equal;
     }
     if neg_a != neg_b {
-        return if neg_a { Ordering::Less } else { Ordering::Greater };
+        return if neg_a {
+            Ordering::Less
+        } else {
+            Ordering::Greater
+        };
     }
     let magnitude = compare_magnitude(int_a, &frac_a, int_b, &frac_b);
     if neg_a {
@@ -261,7 +269,10 @@ mod tests {
             math_domain(&DataValue::Byte(1), &DataValue::Short(2)),
             Some(MathDomain::Integer)
         );
-        assert_eq!(math_domain(&DataValue::Bool(true), &DataValue::Int(1)), None);
+        assert_eq!(
+            math_domain(&DataValue::Bool(true), &DataValue::Int(1)),
+            None
+        );
     }
 
     #[test]
@@ -271,7 +282,10 @@ mod tests {
             Some(Ordering::Equal)
         );
         assert_eq!(
-            number_compare(&DataValue::BigDec("1.0".into()), &DataValue::BigDec("1.00".into())),
+            number_compare(
+                &DataValue::BigDec("1.0".into()),
+                &DataValue::BigDec("1.00".into())
+            ),
             Some(Ordering::Equal)
         );
         assert_eq!(
@@ -283,10 +297,16 @@ mod tests {
             Some(Ordering::Greater)
         );
         assert_eq!(
-            number_compare(&DataValue::BigDec("-0.5".into()), &DataValue::BigDec("0.25".into())),
+            number_compare(
+                &DataValue::BigDec("-0.5".into()),
+                &DataValue::BigDec("0.25".into())
+            ),
             Some(Ordering::Less)
         );
-        assert_eq!(number_compare(&DataValue::Str("1".into()), &DataValue::Int(1)), None);
+        assert_eq!(
+            number_compare(&DataValue::Str("1".into()), &DataValue::Int(1)),
+            None
+        );
     }
 
     #[test]

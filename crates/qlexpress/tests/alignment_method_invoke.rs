@@ -25,7 +25,10 @@ use qlexpress_rust::runtime::value::DataValue;
 use qlexpress_rust::Express4Runner;
 
 fn runner_with(calc: NativeType) -> Express4Runner {
-    runner_with_strategy(calc, qlexpress_rust::security::ql_security_strategy::QLSecurityStrategy::open())
+    runner_with_strategy(
+        calc,
+        qlexpress_rust::security::ql_security_strategy::QLSecurityStrategy::open(),
+    )
 }
 
 fn runner_with_strategy(
@@ -96,7 +99,10 @@ fn method_match_int_with_long_literal() {
     let runner = runner_with(calc);
     // 5 是 Int,Long.abs 期望 Long
     let r = runner.execute("Calc.abs(5)", HashMap::new(), &opts());
-    assert!(r.is_ok(), "implicit int→long coercion should succeed: {r:?}");
+    assert!(
+        r.is_ok(),
+        "implicit int→long coercion should succeed: {r:?}"
+    );
 }
 
 // ---------- varargs method ----------
@@ -107,11 +113,7 @@ fn varargs_string_method() {
     // 若是则返回参数总个数。Rust 闭包天然接受切片,不需要显式 varargs 打包。
     let runner = runner_with(calc_with_methods());
     let r = runner
-        .execute(
-            "Calc.addField(5, '5.0', '5.0')",
-            HashMap::new(),
-            &opts(),
-        )
+        .execute("Calc.addField(5, '5.0', '5.0')", HashMap::new(), &opts())
         .expect("ok")
         .into_result();
     assert_eq!(r, DataValue::Int(3)); // 1 int + 2 string-varargs
@@ -145,11 +147,7 @@ fn missing_method_returns_error_code() {
 fn new_instance_no_matching_constructor_returns_error() {
     // 没有 2 参构造器
     let runner = runner_with(calc_with_methods());
-    let r = runner.execute(
-        "new Calc(1, 2)",
-        HashMap::new(),
-        &opts(),
-    );
+    let r = runner.execute("new Calc(1, 2)", HashMap::new(), &opts());
     assert!(r.is_err());
 }
 
@@ -173,7 +171,10 @@ fn new_instance_int_to_big_integer() {
     let mut calc = NativeType::named("com.example.Calc");
     calc.constructor = Some(std::rc::Rc::new(|args| {
         // 接受任意参数,返回 BigInt
-        let n = args.first().map(|v| qlexpress_rust::runtime::data::convert::to_i64(v)).unwrap_or(0);
+        let n = args
+            .first()
+            .map(|v| qlexpress_rust::runtime::data::convert::to_i64(v))
+            .unwrap_or(0);
         Ok(DataValue::BigInt(n as i128))
     }));
     let runner = runner_with(calc);

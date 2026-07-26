@@ -9,12 +9,12 @@
 use super::qlparser_base_visitor::Visitor;
 use super::rule_context::HasChildren;
 use super::syntax_tree_factory::*;
+use crate::aparser::token::Token;
 use crate::check_options::CheckOptions;
 use crate::exception::error_codes;
 use crate::exception::ql_syntax_exception::QLSyntaxException;
 use crate::exception::QLException;
 use crate::operator::operator_check_strategy::OperatorCheckStrategy;
-use crate::aparser::token::Token;
 
 /// Java `CheckVisitor`.
 pub struct CheckVisitor<'a> {

@@ -254,8 +254,17 @@ mod tests {
     fn defaults_match_java() {
         let opts = InitOptions::default();
         assert_eq!(
-            opts.default_import().iter().map(|i| i.target()).collect::<Vec<_>>(),
-            vec!["java.lang", "java.util", "java.math", "java.util.stream", "java.util.function"]
+            opts.default_import()
+                .iter()
+                .map(|i| i.target())
+                .collect::<Vec<_>>(),
+            vec![
+                "java.lang",
+                "java.util",
+                "java.math",
+                "java.util.stream",
+                "java.util.function"
+            ]
         );
         assert!(!opts.is_debug());
         assert_eq!(opts.security_strategy(), &QLSecurityStrategy::Isolation);

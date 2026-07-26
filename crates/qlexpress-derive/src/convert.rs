@@ -14,20 +14,34 @@ pub fn target_type_tokens(ty: &syn::Type) -> Option<TokenStream> {
     let ident = &path.ident;
     let name = ident.to_string();
     let variant = match name.as_str() {
-        "bool" => quote!(::qlexpress_rust::runtime::data::convert::obj_type_convertor::TargetType::Boolean),
-        "i8" | "u8" => quote!(::qlexpress_rust::runtime::data::convert::obj_type_convertor::TargetType::Byte),
-        "i16" | "u16" => quote!(::qlexpress_rust::runtime::data::convert::obj_type_convertor::TargetType::Short),
-        "i32" | "u32" => quote!(::qlexpress_rust::runtime::data::convert::obj_type_convertor::TargetType::Int),
+        "bool" => quote!(
+            ::qlexpress_rust::runtime::data::convert::obj_type_convertor::TargetType::Boolean
+        ),
+        "i8" | "u8" => {
+            quote!(::qlexpress_rust::runtime::data::convert::obj_type_convertor::TargetType::Byte)
+        }
+        "i16" | "u16" => {
+            quote!(::qlexpress_rust::runtime::data::convert::obj_type_convertor::TargetType::Short)
+        }
+        "i32" | "u32" => {
+            quote!(::qlexpress_rust::runtime::data::convert::obj_type_convertor::TargetType::Int)
+        }
         "i64" | "u64" | "isize" | "usize" => {
             quote!(::qlexpress_rust::runtime::data::convert::obj_type_convertor::TargetType::Long)
         }
-        "f32" => quote!(::qlexpress_rust::runtime::data::convert::obj_type_convertor::TargetType::Float),
-        "f64" => quote!(::qlexpress_rust::runtime::data::convert::obj_type_convertor::TargetType::Double),
+        "f32" => {
+            quote!(::qlexpress_rust::runtime::data::convert::obj_type_convertor::TargetType::Float)
+        }
+        "f64" => {
+            quote!(::qlexpress_rust::runtime::data::convert::obj_type_convertor::TargetType::Double)
+        }
         "i128" | "u128" => {
             quote!(::qlexpress_rust::runtime::data::convert::obj_type_convertor::TargetType::BigInteger)
         }
         "char" => {
-            quote!(::qlexpress_rust::runtime::data::convert::obj_type_convertor::TargetType::Character)
+            quote!(
+                ::qlexpress_rust::runtime::data::convert::obj_type_convertor::TargetType::Character
+            )
         }
         "String" | "str" => {
             quote!(::qlexpress_rust::runtime::data::convert::obj_type_convertor::TargetType::Any)

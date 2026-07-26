@@ -107,7 +107,10 @@ impl<'a> QLexer<'a> {
     /// Java `lexDefault`: the main scan loop. With
     /// `stop_at_string_expression_brace` it scans one `${...}` interpolation
     /// expression, tracking nested `{...}` depth.
-    fn lex_default(&mut self, stop_at_string_expression_brace: bool) -> Result<(), QLSyntaxException> {
+    fn lex_default(
+        &mut self,
+        stop_at_string_expression_brace: bool,
+    ) -> Result<(), QLSyntaxException> {
         let mut brace_depth = 1;
         while !self.eof() {
             let c = self.ch();
@@ -354,7 +357,14 @@ impl<'a> QLexer<'a> {
                         );
                     }
                     let (p, line, col) = (self.p as i32, self.line, self.col);
-                    self.add(token::DOUBLE_QUOTE as i32, "\"".to_string(), p, p, line, col);
+                    self.add(
+                        token::DOUBLE_QUOTE as i32,
+                        "\"".to_string(),
+                        p,
+                        p,
+                        line,
+                        col,
+                    );
                     self.advance();
                     return Ok(());
                 }
@@ -396,7 +406,14 @@ impl<'a> QLexer<'a> {
             }
             if self.ch() == '"' {
                 let (p, line, col) = (self.p as i32, self.line, self.col);
-                self.add(token::DOUBLE_QUOTE as i32, "\"".to_string(), p, p, line, col);
+                self.add(
+                    token::DOUBLE_QUOTE as i32,
+                    "\"".to_string(),
+                    p,
+                    p,
+                    line,
+                    col,
+                );
                 self.advance();
                 return Ok(());
             }
@@ -533,7 +550,14 @@ impl<'a> QLexer<'a> {
             ty = token::FLOATING_POINT_LITERAL;
         }
         let text: String = self.chars[start..self.p].iter().collect();
-        self.add(ty as i32, text, start as i32, self.p as i32 - 1, start_line, start_col);
+        self.add(
+            ty as i32,
+            text,
+            start as i32,
+            self.p as i32 - 1,
+            start_line,
+            start_col,
+        );
     }
 
     /// Java `shouldConsumeDecimalDot`: `1.toString` must not swallow the
@@ -617,7 +641,14 @@ impl<'a> QLexer<'a> {
                 }
             }
         }
-        self.add(ty, text, start as i32, self.p as i32 - 1, start_line, start_col);
+        self.add(
+            ty,
+            text,
+            start as i32,
+            self.p as i32 - 1,
+            start_line,
+            start_col,
+        );
     }
 
     /// Java `readOperatorOrPunctuation`: longest match first
@@ -981,7 +1012,8 @@ mod tests {
 
     #[test]
     fn keywords_and_identifiers() {
-        let tokens = lex("for if else while break continue return function macro import static new");
+        let tokens =
+            lex("for if else while break continue return function macro import static new");
         assert_eq!(
             types(&tokens),
             vec![
@@ -1065,7 +1097,12 @@ mod tests {
         .unwrap();
         assert_eq!(
             types(&tokens),
-            vec![token::ID as i32, token::OPID as i32, token::ID as i32, token::EOF]
+            vec![
+                token::ID as i32,
+                token::OPID as i32,
+                token::ID as i32,
+                token::EOF
+            ]
         );
         assert_eq!(tokens[1].text(), "and");
     }
@@ -1122,23 +1159,14 @@ mod tests {
         assert_eq!(texts(&tokens)[..2], ["1.", "e"]);
         // malformed exponent backtracks: `1e+` -> `1` `e` `+`
         let tokens = lex("1e+");
-        assert_eq!(
-            texts(&tokens)[..4],
-            ["1", "e", "+", "<EOF>"]
-        );
+        assert_eq!(texts(&tokens)[..4], ["1", "e", "+", "<EOF>"]);
     }
 
     #[test]
     fn single_quote_string() {
         let tokens = lex("'abc' 'it\\'s' ''");
-        assert_eq!(
-            texts(&tokens)[..4],
-            ["'abc'", "'it\\'s'", "''", "<EOF>"]
-        );
-        assert_eq!(
-            types(&tokens)[..3],
-            [token::QUOTE_STRING_LITERAL as i32; 3]
-        );
+        assert_eq!(texts(&tokens)[..4], ["'abc'", "'it\\'s'", "''", "<EOF>"]);
+        assert_eq!(types(&tokens)[..3], [token::QUOTE_STRING_LITERAL as i32; 3]);
     }
 
     #[test]
@@ -1152,10 +1180,7 @@ mod tests {
             true,
         )
         .unwrap();
-        assert_eq!(
-            texts(&tokens)[..4],
-            ["\"", "a ${x} b", "\"", "<EOF>"]
-        );
+        assert_eq!(texts(&tokens)[..4], ["\"", "a ${x} b", "\"", "<EOF>"]);
         assert_eq!(
             types(&tokens)[..3],
             [
@@ -1185,12 +1210,12 @@ mod tests {
                 token::DOUBLE_QUOTE as i32,
                 token::DY_STR_TEXT as i32,
                 token::DY_STR_EXPR_START as i32,
-                token::ID as i32,       // x
-                token::ADD as i32,      // +
-                token::LBRACE as i32,   // {
+                token::ID as i32,                          // x
+                token::ADD as i32,                         // +
+                token::LBRACE as i32,                      // {
                 token::INTEGER_OR_FLOATING_LITERAL as i32, // 1
-                token::RBRACE as i32,   // }
-                token::RBRACE as i32,   // } closing interpolation
+                token::RBRACE as i32,                      // }
+                token::RBRACE as i32,                      // } closing interpolation
                 token::DY_STR_TEXT as i32,
                 token::DOUBLE_QUOTE as i32,
                 token::EOF,
@@ -1247,7 +1272,8 @@ mod tests {
 
     #[test]
     fn operator_longest_match() {
-        let tokens = lex(">>>= >>> >>= <<= -> :: <> >> << >= <= ?. *. .* += -= &= |= *= %= /= ^= ++ --");
+        let tokens =
+            lex(">>>= >>> >>= <<= -> :: <> >> << >= <= ?. *. .* += -= &= |= *= %= /= ^= ++ --");
         assert_eq!(
             types(&tokens)[..24],
             [
@@ -1389,7 +1415,12 @@ mod tests {
     fn token_positions_are_tracked() {
         let tokens = lex("ab 12\ncd");
         assert_eq!(
-            (tokens[0].line(), tokens[0].char_position_in_line(), tokens[0].start_index(), tokens[0].stop_index()),
+            (
+                tokens[0].line(),
+                tokens[0].char_position_in_line(),
+                tokens[0].start_index(),
+                tokens[0].stop_index()
+            ),
             (1, 0, 0, 1)
         );
         assert_eq!(
@@ -1431,17 +1462,31 @@ mod tests {
 
     #[test]
     fn unterminated_interpolation_reports_mismatched_eof() {
-        let err = tokenize("\"a ${x + 1", None, InterpolationMode::Script, "${", "}", true)
-            .unwrap_err()
-            .into_exception();
+        let err = tokenize(
+            "\"a ${x + 1",
+            None,
+            InterpolationMode::Script,
+            "${",
+            "}",
+            true,
+        )
+        .unwrap_err()
+        .into_exception();
         assert_eq!(err.reason(), "mismatched input '<EOF>' expecting '}'");
     }
 
     #[test]
     fn unterminated_block_comment_reports_start_line() {
-        let err = tokenize("1\n/* oops\n2", None, InterpolationMode::Script, "${", "}", true)
-            .unwrap_err()
-            .into_exception();
+        let err = tokenize(
+            "1\n/* oops\n2",
+            None,
+            InterpolationMode::Script,
+            "${",
+            "}",
+            true,
+        )
+        .unwrap_err()
+        .into_exception();
         assert_eq!(err.reason(), "unterminated comment");
         assert_eq!(err.line_no(), 2);
         assert_eq!(err.col_no(), 1);
@@ -1463,9 +1508,16 @@ mod tests {
 
     #[test]
     fn variable_mode_unterminated_selector() {
-        let err = tokenize("\"a ${x\n\"", None, InterpolationMode::Variable, "${", "}", true)
-            .unwrap_err()
-            .into_exception();
+        let err = tokenize(
+            "\"a ${x\n\"",
+            None,
+            InterpolationMode::Variable,
+            "${",
+            "}",
+            true,
+        )
+        .unwrap_err()
+        .into_exception();
         assert_eq!(err.reason(), "unterminated selector");
     }
 

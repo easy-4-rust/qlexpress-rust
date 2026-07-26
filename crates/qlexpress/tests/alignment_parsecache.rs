@@ -34,9 +34,7 @@ fn empty_ctx() -> Rc<dyn qlexpress_rust::runtime::context::express_context::Expr
 fn export_then_import_yields_identical_result() {
     let runner = Express4Runner::new();
     let script = "int a = 1; int b = 2; a + b";
-    let cache = runner
-        .export_parse_cache(script)
-        .expect("export ok");
+    let cache = runner.export_parse_cache(script).expect("export ok");
     let json = serde_json::to_string(&cache).expect("serialize");
     let cache2: SerializableParseCache = serde_json::from_str(&json).expect("deserialize");
     assert_eq!(cache.script.as_deref(), cache2.script.as_deref());

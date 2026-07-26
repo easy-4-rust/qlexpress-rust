@@ -80,7 +80,8 @@ mod tests {
     #[test]
     fn untyped_set_accepts_anything() {
         let mut var = AssignableDataValue::new("a", DataValue::Int(1));
-        var.set(DataValue::Str("s".into()), &PureErrReporter::INSTANCE).unwrap();
+        var.set(DataValue::Str("s".into()), &PureErrReporter::INSTANCE)
+            .unwrap();
         assert_eq!(var.get(), DataValue::Str("s".into()));
         assert_eq!(var.symbol_name(), Some("a"));
         assert_eq!(var.defined_type(), None);
@@ -89,7 +90,8 @@ mod tests {
     #[test]
     fn typed_set_converts_compatible_value() {
         let mut var = AssignableDataValue::with_type("n", DataValue::Int(0), TargetType::Long);
-        var.set(DataValue::Int(7), &PureErrReporter::INSTANCE).unwrap();
+        var.set(DataValue::Int(7), &PureErrReporter::INSTANCE)
+            .unwrap();
         assert_eq!(var.get(), DataValue::Long(7));
     }
 

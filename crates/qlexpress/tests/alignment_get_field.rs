@@ -95,11 +95,8 @@ fn get_field_with_derive_native_object_directly() {
         static_set: 0,
         static_get: 0,
     };
-    let cell: Rc<RefCell<dyn qlexpress_rust::runtime::native_object::NativeObject>> = holder
-        .into_data_value()
-        .as_object_ref()
-        .unwrap()
-        .clone();
+    let cell: Rc<RefCell<dyn qlexpress_rust::runtime::native_object::NativeObject>> =
+        holder.into_data_value().as_object_ref().unwrap().clone();
     let bean = DataValue::Object(cell);
     let native: &dyn qlexpress_rust::runtime::native_object::NativeObject =
         &*bean.as_object_ref().unwrap().borrow();
@@ -116,11 +113,8 @@ fn get_field_no_access_returns_none() {
         static_set: 0,
         static_get: 0,
     };
-    let cell: Rc<RefCell<dyn qlexpress_rust::runtime::native_object::NativeObject>> = holder
-        .into_data_value()
-        .as_object_ref()
-        .unwrap()
-        .clone();
+    let cell: Rc<RefCell<dyn qlexpress_rust::runtime::native_object::NativeObject>> =
+        holder.into_data_value().as_object_ref().unwrap().clone();
     let bean = DataValue::Object(cell);
     let native: &dyn qlexpress_rust::runtime::native_object::NativeObject =
         &*bean.as_object_ref().unwrap().borrow();
@@ -134,11 +128,8 @@ fn get_field_returns_correct_typename() {
         static_set: 200,
         static_get: 300,
     };
-    let cell: Rc<RefCell<dyn qlexpress_rust::runtime::native_object::NativeObject>> = holder
-        .into_data_value()
-        .as_object_ref()
-        .unwrap()
-        .clone();
+    let cell: Rc<RefCell<dyn qlexpress_rust::runtime::native_object::NativeObject>> =
+        holder.into_data_value().as_object_ref().unwrap().clone();
     let bean = DataValue::Object(cell);
     let native: &dyn qlexpress_rust::runtime::native_object::NativeObject =
         &*bean.as_object_ref().unwrap().borrow();

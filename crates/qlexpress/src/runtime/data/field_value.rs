@@ -82,7 +82,9 @@ mod tests {
         let mut field = FieldValue::new(Box::new(getter), Box::new(setter), Some(TargetType::Int));
         assert_eq!(field.get(), DataValue::Int(1));
         // Typed set converts Long -> Int through ObjTypeConvertor.
-        field.set(DataValue::Long(5), &PureErrReporter::INSTANCE).unwrap();
+        field
+            .set(DataValue::Long(5), &PureErrReporter::INSTANCE)
+            .unwrap();
         assert_eq!(*cell.borrow(), DataValue::Int(5));
     }
 }

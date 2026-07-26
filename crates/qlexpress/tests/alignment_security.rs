@@ -39,7 +39,11 @@ fn open_strategy_allows_builtin_method() {
             .build(),
     );
     let result = runner
-        .execute("'hello'.length()", HashMap::new(), &QLOptions::builder().build())
+        .execute(
+            "'hello'.length()",
+            HashMap::new(),
+            &QLOptions::builder().build(),
+        )
         .unwrap()
         .into_result();
     assert_eq!(result, DataValue::Int(5));
@@ -86,7 +90,11 @@ fn white_list_allows_listed_members_only() {
 
     // mul on the white-list → allowed.
     let r = runner
-        .execute("Calc.mul(3, 4)", HashMap::new(), &QLOptions::builder().build())
+        .execute(
+            "Calc.mul(3, 4)",
+            HashMap::new(),
+            &QLOptions::builder().build(),
+        )
         .unwrap()
         .into_result();
     assert_eq!(r, DataValue::Int(12));

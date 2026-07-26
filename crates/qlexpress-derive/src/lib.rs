@@ -64,8 +64,7 @@ fn expand(ast: &syn::DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
     let item = attrs::ItemSpec::from_ast(ast)?;
 
     let native_type_impl = native_type::generate(ast, &item, &struct_attrs, &qlexpress_path);
-    let native_object_impl =
-        native_object::generate(ast, &item, &struct_attrs, &qlexpress_path);
+    let native_object_impl = native_object::generate(ast, &item, &struct_attrs, &qlexpress_path);
 
     // Always emit both impls. `no_native_object` is currently a no-op
     // reserved for future expansion; v1 requires the derive to provide

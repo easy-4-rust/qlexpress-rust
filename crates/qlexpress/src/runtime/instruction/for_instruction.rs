@@ -2,15 +2,13 @@
 //! 职责:经典 for 循环执行体。
 //! 本文件由 `flow.rs` 拆分而来(SPEC §5.5 一类一文件),仅移动代码与补充中文注释,行为完全一致。
 
-use std::collections::HashMap;
-use std::rc::Rc;
 use crate::exception::error_codes;
 use crate::exception::error_reporter::ErrorReporter;
 use crate::exception::QLException;
 use crate::ql_options::QLOptions;
-use crate::runtime::q_result::QResult;
 use crate::runtime::delegate_qcontext::DelegateQContext;
 use crate::runtime::instruction::QLInstruction;
+use crate::runtime::q_result::QResult;
 use crate::runtime::qcontext::QContext;
 use crate::runtime::qlambda::QLambda;
 use crate::runtime::qlambda_definition::QLambdaDefinition;
@@ -18,6 +16,8 @@ use crate::runtime::scope::QScope;
 use crate::runtime::util::throw_utils::wrap_throwable;
 use crate::runtime::value::DataValue;
 use crate::utils::println_utils::PrintlnUtils;
+use std::collections::HashMap;
+use std::rc::Rc;
 
 /// for 循环指令。对应 Java: com.alibaba.qlexpress4.runtime.instruction.ForInstruction(职责:经典 for 循环执行体)
 /// Operation: traditional for loop
@@ -146,7 +146,8 @@ impl QLInstruction for ForInstruction {
             delegate_current(q_context)
         };
         if let Some(for_init) = &self.for_init {
-            let init_lambda = Rc::clone(for_init).to_lambda(&mut for_scope_context, ql_options, false);
+            let init_lambda =
+                Rc::clone(for_init).to_lambda(&mut for_scope_context, ql_options, false);
             init_lambda.call(&[]).map_err(|err| {
                 wrap_throwable(
                     err,
@@ -166,7 +167,8 @@ impl QLInstruction for ForInstruction {
             .for_update
             .as_ref()
             .map(|u| Rc::clone(u).to_lambda(&mut for_scope_context, ql_options, false));
-        let body_lambda = Rc::clone(&self.for_body).to_lambda(&mut for_scope_context, ql_options, true);
+        let body_lambda =
+            Rc::clone(&self.for_body).to_lambda(&mut for_scope_context, ql_options, true);
 
         // forBody:
         while match &condition_lambda {
@@ -241,9 +243,5 @@ fn child_fresh_scope_context(
 /// Helper: delegate context sharing the current scope (Java
 /// `new DelegateQContext(qContext, qContext.getCurrentScope())`).
 fn delegate_current(q_context: &mut dyn QContext) -> DelegateQContext {
-    DelegateQContext::new(
-        Rc::clone(q_context.q_runtime()),
-        q_context.current_scope(),
-    )
+    DelegateQContext::new(Rc::clone(q_context.q_runtime()), q_context.current_scope())
 }
-

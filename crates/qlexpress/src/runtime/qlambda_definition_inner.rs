@@ -111,10 +111,7 @@ impl QLambdaDefinition for QLambdaDefinitionInner {
     ) -> Rc<QLambda> {
         Rc::new(QLambda::Inner(QLambdaInner::new(
             self,
-            DelegateQContext::new(
-                Rc::clone(q_context.q_runtime()),
-                q_context.current_scope(),
-            ),
+            DelegateQContext::new(Rc::clone(q_context.q_runtime()), q_context.current_scope()),
             ql_options.clone(),
             new_env,
         )))

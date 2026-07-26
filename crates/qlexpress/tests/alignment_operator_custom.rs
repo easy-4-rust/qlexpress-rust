@@ -140,10 +140,7 @@ fn add_operator_with_group_precedence() {
         .into_result()
     {
         DataValue::List(list) => {
-            assert_eq!(
-                *list.borrow(),
-                vec![DataValue::Int(1), DataValue::Int(5)]
-            );
+            assert_eq!(*list.borrow(), vec![DataValue::Int(1), DataValue::Int(5)]);
         }
         other => panic!("期望 List,实际为 {other:?}"),
     }
@@ -158,10 +155,7 @@ fn add_operator_with_group_precedence() {
         .into_result()
     {
         DataValue::List(list) => {
-            assert_eq!(
-                *list.borrow(),
-                vec![DataValue::Int(5), DataValue::Int(10)]
-            );
+            assert_eq!(*list.borrow(), vec![DataValue::Int(5), DataValue::Int(10)]);
         }
         other => panic!("期望 List,实际为 {other:?}"),
     }

@@ -27,17 +27,23 @@ impl IntegerMath {
 
     /// Java `addImpl`(int 溢出回绕)。
     pub fn add_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
-        Ok(DataValue::Int(int_value(left).wrapping_add(int_value(right))))
+        Ok(DataValue::Int(
+            int_value(left).wrapping_add(int_value(right)),
+        ))
     }
 
     /// Java `subtractImpl`。
     pub fn subtract_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
-        Ok(DataValue::Int(int_value(left).wrapping_sub(int_value(right))))
+        Ok(DataValue::Int(
+            int_value(left).wrapping_sub(int_value(right)),
+        ))
     }
 
     /// Java `multiplyImpl`。
     pub fn multiply_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
-        Ok(DataValue::Int(int_value(left).wrapping_mul(int_value(right))))
+        Ok(DataValue::Int(
+            int_value(left).wrapping_mul(int_value(right)),
+        ))
     }
 
     /// Java `divideImpl`:委托 BigDecimalMath(整型除法结果是 BigDecimal)。
@@ -82,7 +88,9 @@ impl IntegerMath {
     pub fn mod_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
         let modulus = convert::to_i128(right);
         if modulus <= 0 {
-            return Err(number_math::arithmetic_exception("BigInteger: modulus not positive"));
+            return Err(number_math::arithmetic_exception(
+                "BigInteger: modulus not positive",
+            ));
         }
         let v = convert::to_i128(left).rem_euclid(modulus);
         Ok(DataValue::Int(v as i32))
@@ -113,12 +121,16 @@ impl IntegerMath {
 
     /// Java `leftShiftImpl`(距离按 31 掩码,`wrapping_shl` 同语义)。
     pub fn left_shift_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
-        Ok(DataValue::Int(int_value(left).wrapping_shl(int_value(right) as u32)))
+        Ok(DataValue::Int(
+            int_value(left).wrapping_shl(int_value(right) as u32),
+        ))
     }
 
     /// Java `rightShiftImpl`(算术右移,符号扩展)。
     pub fn right_shift_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
-        Ok(DataValue::Int(int_value(left).wrapping_shr(int_value(right) as u32)))
+        Ok(DataValue::Int(
+            int_value(left).wrapping_shr(int_value(right) as u32),
+        ))
     }
 
     /// Java `rightShiftUnsignedImpl`(逻辑右移,高位补零)。
@@ -157,7 +169,8 @@ mod tests {
     fn unsigned_right_shift_fills_zero() {
         // Java 语义要点:-1 >>> 1 = 2147483647(逻辑右移不符号扩展)。
         assert_eq!(
-            IntegerMath::right_shift_unsigned_impl(&DataValue::Int(-1), &DataValue::Int(1)).unwrap(),
+            IntegerMath::right_shift_unsigned_impl(&DataValue::Int(-1), &DataValue::Int(1))
+                .unwrap(),
             DataValue::Int(0x7FFF_FFFF)
         );
         // 算术右移保持符号:-1 >> 1 = -1。

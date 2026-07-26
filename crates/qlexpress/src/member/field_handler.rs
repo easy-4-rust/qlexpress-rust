@@ -33,10 +33,7 @@ impl Preferred {
 
     /// 对应 Java 方法 `Preferred.gatherFieldRecursive(Class<?>, String)`:
     /// 按真名或别名命中字段名,未命中返回 `None`(Java 返回 `null`)。
-    pub fn gather_field_recursive(
-        native_type: &NativeType,
-        property_name: &str,
-    ) -> Option<String> {
+    pub fn gather_field_recursive(native_type: &NativeType, property_name: &str) -> Option<String> {
         // 真名命中(Java: propertyName.equals(field.getName()))。
         if native_type.fields.contains_key(property_name)
             || native_type.static_fields.contains_key(property_name)

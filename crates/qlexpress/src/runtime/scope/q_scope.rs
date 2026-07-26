@@ -137,16 +137,14 @@ impl QScope {
     }
 
     /// Java `QvmBlockScope.defineFunction`.
-    pub fn define_function(
-        this: &ScopeRef,
-        function_name: &str,
-        function: Rc<dyn CustomFunction>,
-    ) {
+    pub fn define_function(this: &ScopeRef, function_name: &str, function: Rc<dyn CustomFunction>) {
         let mut borrowed = this.borrow_mut();
         match &mut borrowed.kind {
             QScopeKind::Global(global) => global.define_function(function_name),
             QScopeKind::Block(block) => {
-                block.function_table_mut().insert(function_name.to_string(), function);
+                block
+                    .function_table_mut()
+                    .insert(function_name.to_string(), function);
             }
         }
     }
@@ -269,7 +267,9 @@ mod tests {
         let global = root();
         let a = QScope::get_symbol(&global, "a").unwrap().expect("created");
         a.borrow_mut().set_inner(DataValue::Long(5));
-        let b = QScope::get_symbol(&global, "a").unwrap().expect("same slot");
+        let b = QScope::get_symbol(&global, "a")
+            .unwrap()
+            .expect("same slot");
         assert_eq!(b.borrow().get(), DataValue::Long(5));
     }
 

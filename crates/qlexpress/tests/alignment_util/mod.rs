@@ -259,6 +259,5 @@ pub fn expect_err_code_with(script: &str, options: &QLOptions, expected_code: &s
 
 /// 指定选项 + 期望成功。
 pub fn expect_ok_with(script: &str, options: &QLOptions) -> DataValue {
-    run_script_with(script, options)
-        .unwrap_or_else(|err| panic!("脚本应执行成功但失败: {err:?}"))
+    run_script_with(script, options).unwrap_or_else(|err| panic!("脚本应执行成功但失败: {err:?}"))
 }

@@ -28,8 +28,13 @@ mod tests {
     #[test]
     fn presence_and_values() {
         let names = vec!["add".to_string(), "sum".to_string()];
-        assert!(QLFunctionUtil::contains_ql_function_for_method(Some(&names)));
-        assert_eq!(QLFunctionUtil::get_ql_function_value(Some(&names)), Some(&names[..]));
+        assert!(QLFunctionUtil::contains_ql_function_for_method(Some(
+            &names
+        )));
+        assert_eq!(
+            QLFunctionUtil::get_ql_function_value(Some(&names)),
+            Some(&names[..])
+        );
         assert!(!QLFunctionUtil::contains_ql_function_for_method(None));
         assert_eq!(QLFunctionUtil::get_ql_function_value(None), None);
     }

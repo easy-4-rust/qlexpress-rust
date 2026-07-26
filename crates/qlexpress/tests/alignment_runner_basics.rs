@@ -71,7 +71,10 @@ fn dollar_variable() {
 fn chinese_paren_as_var_name() {
     let result = run_with(
         "客户（年龄）+ 客户（等级）",
-        ctx(&[("客户（年龄）", DataValue::Int(21)), ("客户（等级）", DataValue::Int(3))]),
+        ctx(&[
+            ("客户（年龄）", DataValue::Int(21)),
+            ("客户（等级）", DataValue::Int(3)),
+        ]),
     );
     assert_eq!(result, DataValue::Int(24));
 }
@@ -119,7 +122,11 @@ fn not_strict_new_lines() {
         .unwrap();
     assert_eq!(result.into_result(), DataValue::Int(12));
     let result1 = runner
-        .execute("if (价格>5) {\n return 10;\n}\nreturn 100;", context, &opts())
+        .execute(
+            "if (价格>5) {\n return 10;\n}\nreturn 100;",
+            context,
+            &opts(),
+        )
         .unwrap();
     assert_eq!(result1.into_result(), DataValue::Int(10));
 }
@@ -428,9 +435,10 @@ fn pollute_user_context() {
 
     let runner = Express4Runner::new();
     let pollute = QLOptions::builder().pollute_user_context(true).build();
-    let source = std::rc::Rc::new(std::cell::RefCell::new(IndexMap::from_entries(
-        vec![(DataValue::Str("b".to_string()), DataValue::Int(10))],
-    )));
+    let source = std::rc::Rc::new(std::cell::RefCell::new(IndexMap::from_entries(vec![(
+        DataValue::Str("b".to_string()),
+        DataValue::Int(10),
+    )])));
     let context = MapExpressContext::new(std::rc::Rc::clone(&source));
     runner
         .execute_with_context("a = 11;b = a", std::rc::Rc::new(context), &pollute)
@@ -451,11 +459,14 @@ fn pollute_user_context() {
     runner
         .execute_with_context("a = 11", std::rc::Rc::new(context2), &opts())
         .unwrap();
-    assert!(!source2.borrow().contains_key(&DataValue::Str("a".to_string())));
+    assert!(!source2
+        .borrow()
+        .contains_key(&DataValue::Str("a".to_string())));
 
-    let source3 = std::rc::Rc::new(std::cell::RefCell::new(IndexMap::from_entries(
-        vec![(DataValue::Str("a".to_string()), DataValue::Int(10))],
-    )));
+    let source3 = std::rc::Rc::new(std::cell::RefCell::new(IndexMap::from_entries(vec![(
+        DataValue::Str("a".to_string()),
+        DataValue::Int(10),
+    )])));
     let context3 = MapExpressContext::new(std::rc::Rc::clone(&source3));
     let result = runner
         .execute_with_context("a = 19;a", std::rc::Rc::new(context3), &opts())

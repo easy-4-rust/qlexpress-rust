@@ -24,10 +24,12 @@ fn ok(runner: &Express4Runner, script: &str, opts: CheckOptions) {
     runner.check(script, &opts).expect("check should pass");
 }
 
-fn err(runner: &Express4Runner, script: &str, opts: CheckOptions) -> qlexpress_rust::exception::QLSyntaxException {
-    runner
-        .check(script, &opts)
-        .expect_err("check should fail")
+fn err(
+    runner: &Express4Runner,
+    script: &str,
+    opts: CheckOptions,
+) -> qlexpress_rust::exception::QLSyntaxException {
+    runner.check(script, &opts).expect_err("check should fail")
 }
 
 // ---------- Whitelist ----------
@@ -150,16 +152,16 @@ fn multi_line_error_points_at_correct_line() {
             ["+"].into_iter().map(String::from).collect(),
         ))
         .build();
-    let e = err(
-        &runner(),
-        "a + b\nc = d\ne + f",
-        opts,
-    );
+    let e = err(&runner(), "a + b\nc = d\ne + f", opts);
     assert_eq!(e.error_code(), error_codes::OPERATOR_NOT_ALLOWED);
     assert!(e.reason().contains('='));
     let diag = e.diagnostic();
     // Position 是 0-based;`=` 在 line 2 (1-based) → 1 (0-based)。
-    assert_eq!(diag.range().start().line(), 1, "error should point at line 2 (1-based) / 1 (0-based)");
+    assert_eq!(
+        diag.range().start().line(),
+        1,
+        "error should point at line 2 (1-based) / 1 (0-based)"
+    );
     assert!(diag.message().contains('='));
 }
 
@@ -182,7 +184,9 @@ fn complex_expression_blocks_inner_assignment() {
 #[test]
 fn error_message_includes_operator() {
     let opts = CheckOptions::builder()
-        .operator_check_strategy(OperatorCheckStrategy::Whitelist(["+"].into_iter().map(String::from).collect()))
+        .operator_check_strategy(OperatorCheckStrategy::Whitelist(
+            ["+"].into_iter().map(String::from).collect(),
+        ))
         .build();
     let e = err(&runner(), "a * b", opts);
     assert_eq!(e.error_code(), error_codes::OPERATOR_NOT_ALLOWED);

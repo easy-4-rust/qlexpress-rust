@@ -55,8 +55,22 @@ mod tests {
     #[test]
     fn precedence_order_is_strictly_increasing() {
         let ordered = [
-            ASSIGN, TERNARY, OR, AND, BIT_OR, XOR, BIT_AND, EQUAL, COMPARE, BIT_MOVE, IN_LIKE,
-            ADD, MULTI, UNARY, UNARY_SUFFIX, GROUP,
+            ASSIGN,
+            TERNARY,
+            OR,
+            AND,
+            BIT_OR,
+            XOR,
+            BIT_AND,
+            EQUAL,
+            COMPARE,
+            BIT_MOVE,
+            IN_LIKE,
+            ADD,
+            MULTI,
+            UNARY,
+            UNARY_SUFFIX,
+            GROUP,
         ];
         for (i, window) in ordered.windows(2).enumerate() {
             assert!(window[0] < window[1], "precedence broke at index {i}");

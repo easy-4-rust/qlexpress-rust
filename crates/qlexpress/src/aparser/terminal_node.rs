@@ -4,7 +4,6 @@
 
 use super::token::Token;
 
-
 /// 终结符节点:语法树的叶子,包装一个词法 [`Token`]。
 /// 对应 Java: com.alibaba.qlexpress4.aparser.TerminalNode(语法树叶子节点)
 #[derive(Clone, Debug, PartialEq, Eq)]

@@ -67,7 +67,10 @@ impl BinaryOperator for InstanceOfOperator {
         if source_object.is_null() {
             return Ok(DataValue::Bool(false));
         }
-        Ok(DataValue::Bool(is_assignable_from(&class_ref, &source_object)))
+        Ok(DataValue::Bool(is_assignable_from(
+            &class_ref,
+            &source_object,
+        )))
     }
 
     /// 对应 Java 方法: `getOperator()` —— `"instanceof"`。
@@ -144,7 +147,8 @@ mod tests {
     #[test]
     fn instanceof_semantics() {
         let int_class = MetaClass::new(ClassRef::from_name("java.lang.Integer")).into_data_value();
-        let number_class = MetaClass::new(ClassRef::from_name("java.lang.Number")).into_data_value();
+        let number_class =
+            MetaClass::new(ClassRef::from_name("java.lang.Number")).into_data_value();
         // 1 instanceof Integer == true。
         assert_eq!(
             ctx_assert_check(DataValue::Int(1), int_class.clone()).unwrap(),
@@ -169,9 +173,9 @@ mod tests {
     fn ctx_assert_check(l: DataValue, r: DataValue) -> Result<DataValue, QLException> {
         let op = InstanceOfOperator::get_instance();
         let mut ctx = crate::runtime::delegate_qcontext::DelegateQContext::new(
-            std::rc::Rc::new(crate::runtime::qvm_runtime::QvmRuntime::for_test(std::rc::Rc::new(
-                crate::runtime::member::NativeRegistry::with_builtins(),
-            ))),
+            std::rc::Rc::new(crate::runtime::qvm_runtime::QvmRuntime::for_test(
+                std::rc::Rc::new(crate::runtime::member::NativeRegistry::with_builtins()),
+            )),
             crate::runtime::scope::QScope::global(
                 crate::runtime::qvm_global_scope::QvmGlobalScope::empty(),
             ),

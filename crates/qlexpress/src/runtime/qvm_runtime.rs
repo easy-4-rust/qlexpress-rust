@@ -11,10 +11,10 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::exception::QLException;
 use crate::ql_options::{Attachments, QLOptions};
-use crate::runtime::q_result::QResult;
 use crate::runtime::delegate_qcontext::DelegateQContext;
 use crate::runtime::instruction::Instruction;
 use crate::runtime::member::NativeRegistry;
+use crate::runtime::q_result::QResult;
 use crate::runtime::q_runtime::QRuntime;
 use crate::runtime::qcontext::QContext;
 use crate::runtime::qlambda_definition::QLambdaDefinition;
@@ -78,8 +78,7 @@ impl QvmRuntime {
         root_definition: Rc<dyn QLambdaDefinition>,
         ql_options: &QLOptions,
     ) -> Result<QResult, QLException> {
-        let mut root_context =
-            DelegateQContext::new(Rc::clone(self), QScope::global(global_scope));
+        let mut root_context = DelegateQContext::new(Rc::clone(self), QScope::global(global_scope));
         let root_lambda = root_definition.to_lambda(&mut root_context, ql_options, true);
         root_lambda.call(&[])
     }
@@ -91,7 +90,8 @@ impl QvmRuntime {
         instructions: &[Instruction],
         ql_options: &QLOptions,
     ) -> Result<QResult, QLException> {
-        let mut context = DelegateQContext::new(Rc::clone(self), QScope::global(QvmGlobalScope::empty()));
+        let mut context =
+            DelegateQContext::new(Rc::clone(self), QScope::global(QvmGlobalScope::empty()));
         run_instructions(&mut context, instructions, ql_options)
     }
 }

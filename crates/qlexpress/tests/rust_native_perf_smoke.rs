@@ -39,7 +39,10 @@ fn compile_cache_hit_speedup() {
     let t1 = std::time::Instant::now();
     let _ = run_int(&runner, script);
     let hot = t1.elapsed();
-    assert!(hot < cold * 3, "cache hit ({hot:?}) should be at most 3x cold ({cold:?})");
+    assert!(
+        hot < cold * 3,
+        "cache hit ({hot:?}) should be at most 3x cold ({cold:?})"
+    );
 }
 
 #[test]
@@ -51,7 +54,10 @@ fn run_100_times_under_1s() {
         let _ = run_int(&runner, script);
     }
     let elapsed = t0.elapsed();
-    assert!(elapsed.as_secs() < 1, "100 runs should < 1s, took {elapsed:?}");
+    assert!(
+        elapsed.as_secs() < 1,
+        "100 runs should < 1s, took {elapsed:?}"
+    );
 }
 
 #[test]
@@ -66,7 +72,10 @@ fn medium_script_under_500ms() {
     let r = run_int(&runner, script);
     let elapsed = t0.elapsed();
     assert_eq!(r, 499500);
-    assert!(elapsed.as_millis() < 500, "medium script should < 500ms, took {elapsed:?}");
+    assert!(
+        elapsed.as_millis() < 500,
+        "medium script should < 500ms, took {elapsed:?}"
+    );
 }
 
 #[test]
@@ -82,7 +91,10 @@ fn large_script_under_1s() {
     let r = run_int(&runner, &script);
     let elapsed = t0.elapsed();
     assert!(r > 0);
-    assert!(elapsed.as_secs() < 1, "large script should < 1s, took {elapsed:?}");
+    assert!(
+        elapsed.as_secs() < 1,
+        "large script should < 1s, took {elapsed:?}"
+    );
 }
 
 #[test]
@@ -97,7 +109,10 @@ fn recursive_fibonacci_20_under_100ms() {
     let r = run_int(&runner, script);
     let elapsed = t0.elapsed();
     assert_eq!(r, 6765);
-    assert!(elapsed.as_millis() < 100, "fib(20) should < 100ms, took {elapsed:?}");
+    assert!(
+        elapsed.as_millis() < 100,
+        "fib(20) should < 100ms, took {elapsed:?}"
+    );
 }
 
 #[test]
@@ -126,7 +141,10 @@ fn list_iteration_performance() {
     let t0 = std::time::Instant::now();
     let _ = run_int(&runner, script);
     let elapsed = t0.elapsed();
-    assert!(elapsed.as_millis() < 200, "list iteration should < 200ms, took {elapsed:?}");
+    assert!(
+        elapsed.as_millis() < 200,
+        "list iteration should < 200ms, took {elapsed:?}"
+    );
 }
 
 #[test]
@@ -141,9 +159,19 @@ fn timeout_works_under_1s() {
     let opts = QLOptions::builder().timeout_millis(100).build();
     let t0 = std::time::Instant::now();
     let e = runner
-        .execute("int i = 0;\nwhile (true) { i = i + 1; }", HashMap::new(), &opts)
+        .execute(
+            "int i = 0;\nwhile (true) { i = i + 1; }",
+            HashMap::new(),
+            &opts,
+        )
         .expect_err("should timeout");
     let elapsed = t0.elapsed();
-    assert_eq!(e.error_code(), qlexpress_rust::exception::error_codes::SCRIPT_TIME_OUT);
-    assert!(elapsed.as_millis() < 1000, "timeout should fire in < 1s, took {elapsed:?}");
+    assert_eq!(
+        e.error_code(),
+        qlexpress_rust::exception::error_codes::SCRIPT_TIME_OUT
+    );
+    assert!(
+        elapsed.as_millis() < 1000,
+        "timeout should fire in < 1s, took {elapsed:?}"
+    );
 }

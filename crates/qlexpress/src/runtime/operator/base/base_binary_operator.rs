@@ -137,7 +137,12 @@ impl BaseBinaryOperator {
                 &Self::char2number(&right_value),
             );
         }
-        Err(Self::build_invalid_operand_type_exception(operator, left, right, error_reporter))
+        Err(Self::build_invalid_operand_type_exception(
+            operator,
+            left,
+            right,
+            error_reporter,
+        ))
     }
 
     /// Java `private Number add(...)`:precise 模式转 BigDecimal 相加。
@@ -176,7 +181,12 @@ impl BaseBinaryOperator {
                 &Self::char2number(&right_value),
             );
         }
-        Err(Self::build_invalid_operand_type_exception(operator, left, right, error_reporter))
+        Err(Self::build_invalid_operand_type_exception(
+            operator,
+            left,
+            right,
+            error_reporter,
+        ))
     }
 
     /// Java `private Number subtract(...)`。
@@ -216,7 +226,12 @@ impl BaseBinaryOperator {
             };
             return result;
         }
-        Err(Self::build_invalid_operand_type_exception(operator, left, right, error_reporter))
+        Err(Self::build_invalid_operand_type_exception(
+            operator,
+            left,
+            right,
+            error_reporter,
+        ))
     }
 
     /// Java `divide(...)`。
@@ -244,7 +259,12 @@ impl BaseBinaryOperator {
             };
             return result.map_err(|e| Self::rethrow_arithmetic(e, error_reporter));
         }
-        Err(Self::build_invalid_operand_type_exception(operator, left, right, error_reporter))
+        Err(Self::build_invalid_operand_type_exception(
+            operator,
+            left,
+            right,
+            error_reporter,
+        ))
     }
 
     /// Java `remainder(...)`(Java 不 catch ArithmeticException,原样上抛)。
@@ -268,7 +288,12 @@ impl BaseBinaryOperator {
             };
             return result;
         }
-        Err(Self::build_invalid_operand_type_exception(operator, left, right, error_reporter))
+        Err(Self::build_invalid_operand_type_exception(
+            operator,
+            left,
+            right,
+            error_reporter,
+        ))
     }
 
     /// Java `bitwiseAnd(...)`:Boolean 操作数按逻辑与(null 视为 false),
@@ -288,7 +313,12 @@ impl BaseBinaryOperator {
         if Self::is_both_number(left, right) {
             return NumberMath::and(&left.get(), &right.get());
         }
-        Err(Self::build_invalid_operand_type_exception(operator, left, right, error_reporter))
+        Err(Self::build_invalid_operand_type_exception(
+            operator,
+            left,
+            right,
+            error_reporter,
+        ))
     }
 
     /// Java `bitwiseOr(...)`。
@@ -306,7 +336,12 @@ impl BaseBinaryOperator {
         if Self::is_both_number(left, right) {
             return NumberMath::or(&left.get(), &right.get());
         }
-        Err(Self::build_invalid_operand_type_exception(operator, left, right, error_reporter))
+        Err(Self::build_invalid_operand_type_exception(
+            operator,
+            left,
+            right,
+            error_reporter,
+        ))
     }
 
     /// Java `bitwiseXor(...)`。
@@ -324,7 +359,12 @@ impl BaseBinaryOperator {
         if Self::is_both_number(left, right) {
             return NumberMath::xor(&left.get(), &right.get());
         }
-        Err(Self::build_invalid_operand_type_exception(operator, left, right, error_reporter))
+        Err(Self::build_invalid_operand_type_exception(
+            operator,
+            left,
+            right,
+            error_reporter,
+        ))
     }
 
     /// Java `leftShift(...)`。
@@ -337,7 +377,12 @@ impl BaseBinaryOperator {
         if Self::is_both_number(left, right) {
             return NumberMath::left_shift(&left.get(), &right.get());
         }
-        Err(Self::build_invalid_operand_type_exception(operator, left, right, error_reporter))
+        Err(Self::build_invalid_operand_type_exception(
+            operator,
+            left,
+            right,
+            error_reporter,
+        ))
     }
 
     /// Java `rightShift(...)`。
@@ -350,7 +395,12 @@ impl BaseBinaryOperator {
         if Self::is_both_number(left, right) {
             return NumberMath::right_shift(&left.get(), &right.get());
         }
-        Err(Self::build_invalid_operand_type_exception(operator, left, right, error_reporter))
+        Err(Self::build_invalid_operand_type_exception(
+            operator,
+            left,
+            right,
+            error_reporter,
+        ))
     }
 
     /// Java `rightShiftUnsigned(...)`。
@@ -363,7 +413,12 @@ impl BaseBinaryOperator {
         if Self::is_both_number(left, right) {
             return NumberMath::right_shift_unsigned(&left.get(), &right.get());
         }
-        Err(Self::build_invalid_operand_type_exception(operator, left, right, error_reporter))
+        Err(Self::build_invalid_operand_type_exception(
+            operator,
+            left,
+            right,
+            error_reporter,
+        ))
     }
 
     /// Java `compare(left, right, errorReporter)`。
@@ -408,7 +463,12 @@ impl BaseBinaryOperator {
                 }
             });
         }
-        Err(Self::build_invalid_operand_type_exception(operator, left, right, error_reporter))
+        Err(Self::build_invalid_operand_type_exception(
+            operator,
+            left,
+            right,
+            error_reporter,
+        ))
     }
 
     /// Java `equals(left, right, errorReporter)`。
@@ -456,8 +516,12 @@ impl BaseBinaryOperator {
                 // Java: for (Object rightElement : rightCollection)
                 //         if (equals(left, new DataValue(rightElement), ...))
                 for element in list.borrow().iter() {
-                    if Self::equals(operator, left, &QValue::Data(element.clone()), error_reporter)?
-                    {
+                    if Self::equals(
+                        operator,
+                        left,
+                        &QValue::Data(element.clone()),
+                        error_reporter,
+                    )? {
                         return Ok(true);
                     }
                 }
@@ -465,17 +529,24 @@ impl BaseBinaryOperator {
             }
             DataValue::Array(array) => {
                 for element in array.borrow().iter() {
-                    if Self::equals(operator, left, &QValue::Data(element.clone()), error_reporter)?
-                    {
+                    if Self::equals(
+                        operator,
+                        left,
+                        &QValue::Data(element.clone()),
+                        error_reporter,
+                    )? {
                         return Ok(true);
                     }
                 }
                 Ok(false)
             }
-            DataValue::Str(s) => {
-                Ok(s.contains(&number_math::java_value_string(&left_operand)))
-            }
-            _ => Err(Self::build_invalid_operand_type_exception(operator, left, right, error_reporter)),
+            DataValue::Str(s) => Ok(s.contains(&number_math::java_value_string(&left_operand))),
+            _ => Err(Self::build_invalid_operand_type_exception(
+                operator,
+                left,
+                right,
+                error_reporter,
+            )),
         }
     }
 
@@ -643,25 +714,21 @@ mod tests {
                 BaseBinaryOperator::equals("==", &v(l), &v(r), &PureErrReporter::INSTANCE).unwrap()
             );
         }
-        assert!(
-            !BaseBinaryOperator::equals(
-                "==",
-                &v(DataValue::Int(1)),
-                &v(DataValue::Double(1.5)),
-                &PureErrReporter::INSTANCE
-            )
-            .unwrap()
-        );
+        assert!(!BaseBinaryOperator::equals(
+            "==",
+            &v(DataValue::Int(1)),
+            &v(DataValue::Double(1.5)),
+            &PureErrReporter::INSTANCE
+        )
+        .unwrap());
         // 非 Comparable 走 Objects.equals:"a" == "a"。
-        assert!(
-            BaseBinaryOperator::equals(
-                "==",
-                &v(DataValue::Str("a".into())),
-                &v(DataValue::Str("a".into())),
-                &PureErrReporter::INSTANCE
-            )
-            .unwrap()
-        );
+        assert!(BaseBinaryOperator::equals(
+            "==",
+            &v(DataValue::Str("a".into())),
+            &v(DataValue::Str("a".into())),
+            &PureErrReporter::INSTANCE
+        )
+        .unwrap());
     }
 
     #[test]
@@ -720,7 +787,8 @@ mod tests {
     #[test]
     fn like_pattern_matching() {
         assert!(match_pattern("abc", "a%"));
-        assert!(match_pattern("abc", "%b%"));        assert!(!match_pattern("abc", "a%d"));
+        assert!(match_pattern("abc", "%b%"));
+        assert!(!match_pattern("abc", "a%d"));
         assert!(match_pattern("abc", "abc"));
         assert!(match_pattern("abc", "%"));
     }

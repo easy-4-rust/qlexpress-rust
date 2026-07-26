@@ -87,7 +87,8 @@ mod tests {
         let array = Rc::new(RefCell::new(vec![DataValue::Int(1), DataValue::Int(2)]));
         let mut item = ArrayItemValue::new(Rc::clone(&array), 1);
         assert_eq!(item.get(), DataValue::Int(2));
-        item.set(DataValue::Str("s".into()), &PureErrReporter::INSTANCE).unwrap();
+        item.set(DataValue::Str("s".into()), &PureErrReporter::INSTANCE)
+            .unwrap();
         assert_eq!(array.borrow()[1], DataValue::Str("s".into()));
     }
 
@@ -95,8 +96,11 @@ mod tests {
     fn component_type_is_checked() {
         let array = Rc::new(RefCell::new(vec![DataValue::Int(1)]));
         let mut item = ArrayItemValue::with_component_type(Rc::clone(&array), 0, TargetType::Int);
-        item.set(DataValue::Long(9), &PureErrReporter::INSTANCE).unwrap();
+        item.set(DataValue::Long(9), &PureErrReporter::INSTANCE)
+            .unwrap();
         assert_eq!(array.borrow()[0], DataValue::Int(9));
-        assert!(item.set(DataValue::Str("x".into()), &PureErrReporter::INSTANCE).is_err());
+        assert!(item
+            .set(DataValue::Str("x".into()), &PureErrReporter::INSTANCE)
+            .is_err());
     }
 }

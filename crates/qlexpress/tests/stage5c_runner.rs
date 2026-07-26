@@ -14,11 +14,11 @@
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
-use qlexpress_rust::api::parsecache::LoadedParseCache;
 use qlexpress_rust::aparser::compile_time_function::{CodeGenerator, CompileTimeFunction};
 use qlexpress_rust::aparser::import_manager::QLImport;
 use qlexpress_rust::aparser::operator_factory::OperatorFactory;
 use qlexpress_rust::aparser::syntax_tree_factory::Node;
+use qlexpress_rust::api::parsecache::LoadedParseCache;
 use qlexpress_rust::check_options::CheckOptions;
 use qlexpress_rust::default_class_supplier::DefaultClassSupplier;
 use qlexpress_rust::exception::error_codes;
@@ -116,41 +116,47 @@ fn execute_template_wraps_dynamic_string() {
 fn add_function_closure_and_varargs() {
     let runner = Express4Runner::new();
     // Java: addFunction(name, (qContext, parameters) -> ...)
-    assert!(runner.add_function("dbl", |_ctx: &mut dyn QContext, params: &Parameters| {
-        match params.get_value(0) {
-            DataValue::Int(v) => Ok(DataValue::Int(v * 2)),
-            _ => Ok(DataValue::Null),
-        }
-    }));
+    assert!(
+        runner.add_function("dbl", |_ctx: &mut dyn QContext, params: &Parameters| {
+            match params.get_value(0) {
+                DataValue::Int(v) => Ok(DataValue::Int(v * 2)),
+                _ => Ok(DataValue::Null),
+            }
+        })
+    );
     // 同名再注册失败(Java putIfAbsent 语义)。
-    assert!(!runner.add_function("dbl", |_ctx: &mut dyn QContext, _params: &Parameters| {
-        Ok(DataValue::Null)
-    }));
+    assert!(
+        !runner.add_function("dbl", |_ctx: &mut dyn QContext, _params: &Parameters| {
+            Ok(DataValue::Null)
+        })
+    );
     assert_eq!(run_with(&runner, "dbl(21)"), DataValue::Int(42));
 
     // Java: addVarArgsFunction(name, params -> ...)
-    assert!(runner.add_varargs_function("sumAll", |params: &[DataValue]| {
-        let sum = params.iter().fold(0i32, |acc, v| match v {
-            DataValue::Int(i) => acc + i,
-            _ => acc,
-        });
-        Ok(DataValue::Int(sum))
-    }));
+    assert!(
+        runner.add_varargs_function("sumAll", |params: &[DataValue]| {
+            let sum = params.iter().fold(0i32, |acc, v| match v {
+                DataValue::Int(i) => acc + i,
+                _ => acc,
+            });
+            Ok(DataValue::Int(sum))
+        })
+    );
     assert_eq!(run_with(&runner, "sumAll(1, 2, 3, 4)"), DataValue::Int(10));
 }
 
 #[test]
 fn batch_add_function_partial_failure() {
     let runner = Express4Runner::new();
-    assert!(runner.add_function("existing", |_ctx: &mut dyn QContext, _p: &Parameters| {
-        Ok(DataValue::Int(1))
-    }));
-    let dup: Rc<dyn CustomFunction> = Rc::new(|_ctx: &mut dyn QContext, _p: &Parameters| {
-        Ok(DataValue::Int(2))
-    });
-    let fresh: Rc<dyn CustomFunction> = Rc::new(|_ctx: &mut dyn QContext, _p: &Parameters| {
-        Ok(DataValue::Int(3))
-    });
+    assert!(
+        runner.add_function("existing", |_ctx: &mut dyn QContext, _p: &Parameters| {
+            Ok(DataValue::Int(1))
+        })
+    );
+    let dup: Rc<dyn CustomFunction> =
+        Rc::new(|_ctx: &mut dyn QContext, _p: &Parameters| Ok(DataValue::Int(2)));
+    let fresh: Rc<dyn CustomFunction> =
+        Rc::new(|_ctx: &mut dyn QContext, _p: &Parameters| Ok(DataValue::Int(3)));
     let result = runner.batch_add_function(vec![
         ("existing".to_string(), dup),
         ("fresh".to_string(), fresh),
@@ -167,16 +173,11 @@ fn batch_add_function_partial_failure() {
 #[test]
 fn add_functions_defined_in_script_registers_them() {
     let runner = Express4Runner::new();
-    let context: Rc<dyn qlexpress_rust::ExpressContext> =
-        Rc::new(MapExpressContext::new(Rc::new(std::cell::RefCell::new(
-            qlexpress_rust::runtime::data::index_map::IndexMap::new(),
-        ))));
+    let context: Rc<dyn qlexpress_rust::ExpressContext> = Rc::new(MapExpressContext::new(Rc::new(
+        std::cell::RefCell::new(qlexpress_rust::runtime::data::index_map::IndexMap::new()),
+    )));
     let result = runner
-        .add_functions_defined_in_script(
-            "function triple(x) { return x * 3; }",
-            context,
-            &opts(),
-        )
+        .add_functions_defined_in_script("function triple(x) { return x * 3; }", context, &opts())
         .unwrap();
     assert_eq!(result.get_succ(), &vec!["triple".to_string()]);
     assert_eq!(run_with(&runner, "triple(14)"), DataValue::Int(42));
@@ -226,10 +227,12 @@ fn add_static_method_resolves_from_registry() {
 fn add_operator_and_alias() {
     let mut runner = Express4Runner::new();
     // Java: addOperatorBiFunction("**", (a, b) -> Math.pow(a, b))
-    assert!(runner.add_operator_bi("**", |left, right| match (left, right) {
-        (DataValue::Int(a), DataValue::Int(b)) => DataValue::Int(a.pow(b as u32)),
-        _ => DataValue::Null,
-    }));
+    assert!(
+        runner.add_operator_bi("**", |left, right| match (left, right) {
+            (DataValue::Int(a), DataValue::Int(b)) => DataValue::Int(a.pow(b as u32)),
+            _ => DataValue::Null,
+        })
+    );
     assert_eq!(run_with(&runner, "2 ** 3"), DataValue::Int(8));
     // 内建操作符名冲突 → false。
     assert!(!runner.add_operator_bi("+", |l, _r| l));
@@ -245,19 +248,16 @@ fn replace_default_operator() {
     // Java: replaceDefaultOperator("+", (l, r) -> 拼接)
     assert!(runner.replace_operator(
         "+",
-        Rc::new(|left: &qlexpress_rust::QValue, right: &qlexpress_rust::QValue| {
-            match (left.get(), right.get()) {
-                (DataValue::Int(a), DataValue::Int(b)) => {
-                    Ok(DataValue::Str(format!("{a}{b}")))
+        Rc::new(
+            |left: &qlexpress_rust::QValue, right: &qlexpress_rust::QValue| {
+                match (left.get(), right.get()) {
+                    (DataValue::Int(a), DataValue::Int(b)) => Ok(DataValue::Str(format!("{a}{b}"))),
+                    _ => Ok(DataValue::Null),
                 }
-                _ => Ok(DataValue::Null),
             }
-        })
+        )
     ));
-    assert_eq!(
-        run_with(&runner, "1 + 2"),
-        DataValue::Str("12".to_string())
-    );
+    assert_eq!(run_with(&runner, "1 + 2"), DataValue::Str("12".to_string()));
 }
 
 #[test]
@@ -265,7 +265,11 @@ fn check_rejects_blacklisted_operator() {
     let runner = Express4Runner::new();
     let forbidden: HashSet<String> = ["+".to_string()].into_iter().collect();
     let check_options = CheckOptions::builder()
-        .operator_check_strategy(qlexpress_rust::operator::operator_check_strategy::OperatorCheckStrategy::blacklist(forbidden))
+        .operator_check_strategy(
+            qlexpress_rust::operator::operator_check_strategy::OperatorCheckStrategy::blacklist(
+                forbidden,
+            ),
+        )
         .build();
     // 黑名单拒绝 `+`。
     let err = runner.check("1 + 2", &check_options).unwrap_err();
@@ -318,8 +322,9 @@ fn security_isolation_blocks_method_call() {
 
 #[test]
 fn security_white_list_allows_and_rejects() {
-    let white: HashSet<NativeMember> =
-        [NativeMember::new("com.example.Calc", "mul")].into_iter().collect();
+    let white: HashSet<NativeMember> = [NativeMember::new("com.example.Calc", "mul")]
+        .into_iter()
+        .collect();
     let runner = runner_with_calc(QLSecurityStrategy::white_list(white));
     // 白名单命中 → 放行。
     assert_eq!(run_with(&runner, "Calc.mul(6, 7)"), DataValue::Int(42));
@@ -334,8 +339,9 @@ fn security_white_list_allows_and_rejects() {
 
 #[test]
 fn security_black_list_intercepts_method_call() {
-    let black: HashSet<NativeMember> =
-        [NativeMember::new("com.example.Calc", "mul")].into_iter().collect();
+    let black: HashSet<NativeMember> = [NativeMember::new("com.example.Calc", "mul")]
+        .into_iter()
+        .collect();
     let runner = runner_with_calc(QLSecurityStrategy::black_list(black));
     let err = runner
         .execute("Calc.mul(6, 7)", HashMap::new(), &opts())
@@ -456,10 +462,9 @@ fn parse_cache_export_import_execute_consistent() {
 fn execute_with_serializable_cache() {
     let runner = Express4Runner::new();
     let cache = runner.export_parse_cache("6 * 7").unwrap();
-    let empty: Rc<dyn qlexpress_rust::ExpressContext> =
-        Rc::new(MapExpressContext::new(Rc::new(std::cell::RefCell::new(
-            qlexpress_rust::runtime::data::index_map::IndexMap::new(),
-        ))));
+    let empty: Rc<dyn qlexpress_rust::ExpressContext> = Rc::new(MapExpressContext::new(Rc::new(
+        std::cell::RefCell::new(qlexpress_rust::runtime::data::index_map::IndexMap::new()),
+    )));
     let result = runner.execute_with_cache(&cache, empty, &opts()).unwrap();
     assert_eq!(result.into_result(), DataValue::Int(42));
 }
@@ -471,7 +476,11 @@ fn timeout_triggers_ql_timeout_exception() {
     let runner = Express4Runner::new();
     let ql_options = QLOptions::builder().timeout_millis(1).build();
     let err = runner
-        .execute("x = 0; while (true) { x = x + 1 }", HashMap::new(), &ql_options)
+        .execute(
+            "x = 0; while (true) { x = x + 1 }",
+            HashMap::new(),
+            &ql_options,
+        )
         .unwrap_err();
     assert_eq!(err.kind(), QLExceptionKind::Timeout);
     assert_eq!(err.error_code(), error_codes::SCRIPT_TIME_OUT);

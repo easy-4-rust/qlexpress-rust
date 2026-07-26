@@ -35,7 +35,12 @@ impl BinaryOperator for EqualOperator {
         _ql_options: &QLOptions,
         error_reporter: &dyn ErrorReporter,
     ) -> Result<DataValue, QLException> {
-        Ok(DataValue::Bool(BaseBinaryOperator::equals("==", left, right, error_reporter)?))
+        Ok(DataValue::Bool(BaseBinaryOperator::equals(
+            "==",
+            left,
+            right,
+            error_reporter,
+        )?))
     }
 
     /// 对应 Java 方法: `getOperator()` —— `"=="`。

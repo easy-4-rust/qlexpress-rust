@@ -440,7 +440,9 @@ mod tests {
     #[test]
     fn shift_distance_must_be_integral() {
         let err = NumberMath::left_shift(&DataValue::Int(1), &DataValue::Double(1.0)).unwrap_err();
-        assert!(err.reason().contains("Shift distance must be an integral type"));
+        assert!(err
+            .reason()
+            .contains("Shift distance must be an integral type"));
     }
 
     #[test]

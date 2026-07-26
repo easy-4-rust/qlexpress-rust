@@ -96,7 +96,8 @@ mod tests {
         let map = Rc::new(RefCell::new(IndexMap::new()));
         let mut item =
             MapItemValue::with_symbol_name("m.k", Rc::clone(&map), DataValue::Str("k".into()));
-        item.set(DataValue::Int(42), &PureErrReporter::INSTANCE).unwrap();
+        item.set(DataValue::Int(42), &PureErrReporter::INSTANCE)
+            .unwrap();
         assert_eq!(
             map.borrow().get(&DataValue::Str("k".into())),
             Some(&DataValue::Int(42))

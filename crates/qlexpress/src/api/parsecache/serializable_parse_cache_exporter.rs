@@ -68,8 +68,12 @@ impl<'a> SerializableParseCacheExporter<'a> {
     ///
     /// producerVersion 说明:Java 取包实现版本(IDE 运行时为 null);
     /// Rust 取 crate 版本(`CARGO_PKG_VERSION`)。
-    pub fn export(&self, compile_cache: &LoadedCompileCache) -> ExportResult<SerializableParseCache> {
-        let main = self.export_lambda_definition(compile_cache.q_lambda_definition().as_ref(), None)?;
+    pub fn export(
+        &self,
+        compile_cache: &LoadedCompileCache,
+    ) -> ExportResult<SerializableParseCache> {
+        let main =
+            self.export_lambda_definition(compile_cache.q_lambda_definition().as_ref(), None)?;
         let trace_points = if self.include_trace_points {
             Some(self.export_trace_points(compile_cache.expression_trace_points()))
         } else {
@@ -121,7 +125,10 @@ impl<'a> SerializableParseCacheExporter<'a> {
     }
 
     /// 对应 Java 私有方法 `exportParams`。
-    fn export_params(&self, params: &[crate::runtime::qlambda_definition_inner::Param]) -> Vec<SerializableParam> {
+    fn export_params(
+        &self,
+        params: &[crate::runtime::qlambda_definition_inner::Param],
+    ) -> Vec<SerializableParam> {
         params
             .iter()
             .map(|param| SerializableParam {
@@ -142,10 +149,16 @@ impl<'a> SerializableParseCacheExporter<'a> {
     /// 对应 Java 私有方法 `exportInstruction`:按具体指令类型分派导出
     /// (Java `instanceof` 链 ↔ Rust `as_any().downcast_ref()` 链),
     /// opcode 与操作数键名与 Java 完全一致。
-    fn export_instruction(&self, instruction: &Instruction) -> ExportResult<SerializableInstruction> {
+    fn export_instruction(
+        &self,
+        instruction: &Instruction,
+    ) -> ExportResult<SerializableInstruction> {
         let any = instruction.as_any();
         // Java: CallConstInstruction 不可序列化(编译期常量 Lambda 调用)
-        if any.and_then(|a| a.downcast_ref::<CallConstInstruction>()).is_some() {
+        if any
+            .and_then(|a| a.downcast_ref::<CallConstInstruction>())
+            .is_some()
+        {
             return Err(self.unsupported_instruction(Some(instruction), "CallConstInstruction"));
         }
         let mut operands = Map::new();
@@ -154,13 +167,19 @@ impl<'a> SerializableParseCacheExporter<'a> {
         if let Some(inst) = any.and_then(|a| a.downcast_ref::<ConstInstruction>()) {
             opcode = "CONST";
             let constant = self.export_constant(inst.const_obj(), Some(instruction))?;
-            operands.insert("constant".to_string(), serde_json::to_value(constant).unwrap());
+            operands.insert(
+                "constant".to_string(),
+                serde_json::to_value(constant).unwrap(),
+            );
             put_optional(&mut operands, "traceKey", inst.trace_key().map(Value::from));
         } else if let Some(inst) = any.and_then(|a| a.downcast_ref::<LoadInstruction>()) {
             opcode = "LOAD";
             operands.insert("name".to_string(), Value::from(inst.name()));
             put_optional(&mut operands, "traceKey", inst.trace_key().map(Value::from));
-        } else if any.and_then(|a| a.downcast_ref::<PopInstruction>()).is_some() {
+        } else if any
+            .and_then(|a| a.downcast_ref::<PopInstruction>())
+            .is_some()
+        {
             opcode = "POP";
         } else if let Some(inst) = any.and_then(|a| a.downcast_ref::<ReturnInstruction>()) {
             opcode = "RETURN";
@@ -175,9 +194,15 @@ impl<'a> SerializableParseCacheExporter<'a> {
                 "resultType".to_string(),
                 Value::from(if inst.is_break() { "BREAK" } else { "CONTINUE" }),
             );
-        } else if any.and_then(|a| a.downcast_ref::<ThrowInstruction>()).is_some() {
+        } else if any
+            .and_then(|a| a.downcast_ref::<ThrowInstruction>())
+            .is_some()
+        {
             opcode = "THROW";
-        } else if any.and_then(|a| a.downcast_ref::<CheckTimeOutInstruction>()).is_some() {
+        } else if any
+            .and_then(|a| a.downcast_ref::<CheckTimeOutInstruction>())
+            .is_some()
+        {
             opcode = "CHECK_TIMEOUT";
         } else if let Some(inst) = any.and_then(|a| a.downcast_ref::<JumpInstruction>()) {
             opcode = "JUMP";
@@ -193,7 +218,10 @@ impl<'a> SerializableParseCacheExporter<'a> {
             operands.insert("position".to_string(), Value::from(inst.position()));
         } else if let Some(inst) = any.and_then(|a| a.downcast_ref::<OperatorInstruction>()) {
             opcode = "BINARY_OP";
-            operands.insert("operator".to_string(), Value::from(inst.operator().operator()));
+            operands.insert(
+                "operator".to_string(),
+                Value::from(inst.operator().operator()),
+            );
             put_optional(&mut operands, "traceKey", inst.trace_key().map(Value::from));
         } else if let Some(inst) = any.and_then(|a| a.downcast_ref::<UnaryInstruction>()) {
             // Java unaryOpcode:依 OperatorManager 判定前缀/后缀(引用比较 ↔ Rc::ptr_eq)
@@ -213,16 +241,21 @@ impl<'a> SerializableParseCacheExporter<'a> {
             {
                 "SUFFIX_UNARY_OP"
             } else {
-                return Err(self.unsupported_instruction(
-                    Some(instruction),
-                    "unknown unary operator",
-                ));
+                return Err(
+                    self.unsupported_instruction(Some(instruction), "unknown unary operator")
+                );
             };
-            operands.insert("operator".to_string(), Value::from(unary_operator.operator()));
+            operands.insert(
+                "operator".to_string(),
+                Value::from(unary_operator.operator()),
+            );
             put_optional(&mut operands, "traceKey", inst.trace_key().map(Value::from));
         } else if let Some(inst) = any.and_then(|a| a.downcast_ref::<CallFunctionInstruction>()) {
             opcode = "CALL_FUNCTION";
-            operands.insert("functionName".to_string(), Value::from(inst.function_name()));
+            operands.insert(
+                "functionName".to_string(),
+                Value::from(inst.function_name()),
+            );
             operands.insert("argNum".to_string(), Value::from(inst.arg_num() as i64));
             put_optional(&mut operands, "traceKey", inst.trace_key().map(Value::from));
         } else if let Some(inst) = any.and_then(|a| a.downcast_ref::<CallInstruction>()) {
@@ -230,18 +263,14 @@ impl<'a> SerializableParseCacheExporter<'a> {
             operands.insert("argNum".to_string(), Value::from(inst.arg_num() as i64));
         } else if let Some(inst) = any.and_then(|a| a.downcast_ref::<LoadLambdaInstruction>()) {
             opcode = "LOAD_LAMBDA";
-            let lambda = self.export_lambda_definition(
-                inst.lambda_definition().as_ref(),
-                Some(instruction),
-            )?;
+            let lambda = self
+                .export_lambda_definition(inst.lambda_definition().as_ref(), Some(instruction))?;
             operands.insert("lambda".to_string(), serde_json::to_value(lambda).unwrap());
         } else if let Some(inst) = any.and_then(|a| a.downcast_ref::<DefineFunctionInstruction>()) {
             opcode = "DEFINE_FUNCTION";
             operands.insert("name".to_string(), Value::from(inst.name()));
-            let lambda = self.export_lambda_definition(
-                inst.lambda_definition().as_ref(),
-                Some(instruction),
-            )?;
+            let lambda = self
+                .export_lambda_definition(inst.lambda_definition().as_ref(), Some(instruction))?;
             operands.insert("lambda".to_string(), serde_json::to_value(lambda).unwrap());
         } else if let Some(inst) = any.and_then(|a| a.downcast_ref::<NewScopeInstruction>()) {
             opcode = "NEW_SCOPE";
@@ -251,36 +280,50 @@ impl<'a> SerializableParseCacheExporter<'a> {
             operands.insert("scopeName".to_string(), Value::from(inst.scope_name()));
         } else if let Some(inst) = any.and_then(|a| a.downcast_ref::<DefineLocalInstruction>()) {
             opcode = "DEFINE_LOCAL";
-            operands.insert("variableName".to_string(), Value::from(inst.variable_name()));
+            operands.insert(
+                "variableName".to_string(),
+                Value::from(inst.variable_name()),
+            );
             operands.insert(
                 "className".to_string(),
-                Value::from(
-                    inst.define_clz()
-                        .unwrap_or(TargetType::Any)
-                        .java_name(),
-                ),
+                Value::from(inst.define_clz().unwrap_or(TargetType::Any).java_name()),
             );
         } else if let Some(inst) = any.and_then(|a| a.downcast_ref::<NewInstanceInstruction>()) {
             opcode = "NEW_INSTANCE";
-            operands.insert("className".to_string(), Value::from(inst.new_clz().java_name()));
+            operands.insert(
+                "className".to_string(),
+                Value::from(inst.new_clz().java_name()),
+            );
             operands.insert("argNum".to_string(), Value::from(inst.arg_num() as i64));
         } else if let Some(inst) =
             any.and_then(|a| a.downcast_ref::<NewFilledInstanceInstruction>())
         {
             opcode = "NEW_FILLED_INSTANCE";
-            operands.insert("className".to_string(), Value::from(inst.new_cls().java_name()));
+            operands.insert(
+                "className".to_string(),
+                Value::from(inst.new_cls().java_name()),
+            );
             operands.insert("keys".to_string(), Value::from(inst.keys().to_vec()));
         } else if let Some(inst) = any.and_then(|a| a.downcast_ref::<NewArrayInstruction>()) {
             opcode = "NEW_ARRAY";
-            operands.insert("componentClassName".to_string(), Value::from(inst.clz().java_name()));
+            operands.insert(
+                "componentClassName".to_string(),
+                Value::from(inst.clz().java_name()),
+            );
             operands.insert("length".to_string(), Value::from(inst.length() as i64));
         } else if let Some(inst) = any.and_then(|a| a.downcast_ref::<MultiNewArrayInstruction>()) {
             opcode = "MULTI_NEW_ARRAY";
-            operands.insert("componentClassName".to_string(), Value::from(inst.clz().java_name()));
+            operands.insert(
+                "componentClassName".to_string(),
+                Value::from(inst.clz().java_name()),
+            );
             operands.insert("dims".to_string(), Value::from(inst.dims() as i64));
         } else if let Some(inst) = any.and_then(|a| a.downcast_ref::<NewListInstruction>()) {
             opcode = "NEW_LIST";
-            operands.insert("initLength".to_string(), Value::from(inst.init_length() as i64));
+            operands.insert(
+                "initLength".to_string(),
+                Value::from(inst.init_length() as i64),
+            );
         } else if let Some(inst) = any.and_then(|a| a.downcast_ref::<NewMapInstruction>()) {
             opcode = "NEW_MAP";
             operands.insert("keys".to_string(), Value::from(inst.keys().to_vec()));
@@ -305,19 +348,31 @@ impl<'a> SerializableParseCacheExporter<'a> {
         } else if let Some(inst) = any.and_then(|a| a.downcast_ref::<GetMethodInstruction>()) {
             opcode = "GET_METHOD";
             operands.insert("methodName".to_string(), Value::from(inst.method_name()));
-        } else if any.and_then(|a| a.downcast_ref::<IndexInstruction>()).is_some() {
+        } else if any
+            .and_then(|a| a.downcast_ref::<IndexInstruction>())
+            .is_some()
+        {
             opcode = "INDEX";
         } else if let Some(inst) = any.and_then(|a| a.downcast_ref::<SliceInstruction>()) {
             opcode = "SLICE";
-            operands.insert("mode".to_string(), Value::from(slice_mode_name(inst.mode())));
-        } else if any.and_then(|a| a.downcast_ref::<CastInstruction>()).is_some() {
+            operands.insert(
+                "mode".to_string(),
+                Value::from(slice_mode_name(inst.mode())),
+            );
+        } else if any
+            .and_then(|a| a.downcast_ref::<CastInstruction>())
+            .is_some()
+        {
             opcode = "CAST";
         } else if let Some(inst) = any.and_then(|a| a.downcast_ref::<WhileInstruction>()) {
             opcode = "WHILE";
             let condition =
                 self.export_lambda_definition(inst.condition().as_ref(), Some(instruction))?;
             let body = self.export_lambda_definition(inst.body().as_ref(), Some(instruction))?;
-            operands.insert("condition".to_string(), serde_json::to_value(condition).unwrap());
+            operands.insert(
+                "condition".to_string(),
+                serde_json::to_value(condition).unwrap(),
+            );
             operands.insert("body".to_string(), serde_json::to_value(body).unwrap());
             operands.insert(
                 "whileScopeMaxStackSize".to_string(),
@@ -330,8 +385,12 @@ impl<'a> SerializableParseCacheExporter<'a> {
                 operands.insert("forInit".to_string(), serde_json::to_value(lambda).unwrap());
             }
             if let Some(condition) = inst.condition() {
-                let lambda = self.export_lambda_definition(condition.as_ref(), Some(instruction))?;
-                operands.insert("condition".to_string(), serde_json::to_value(lambda).unwrap());
+                let lambda =
+                    self.export_lambda_definition(condition.as_ref(), Some(instruction))?;
+                operands.insert(
+                    "condition".to_string(),
+                    serde_json::to_value(lambda).unwrap(),
+                );
             }
             put_optional(
                 &mut operands,
@@ -339,20 +398,31 @@ impl<'a> SerializableParseCacheExporter<'a> {
                 Some(serde_json::to_value(source_of(inst.condition_error_reporter())).unwrap()),
             );
             if let Some(for_update) = inst.for_update() {
-                let lambda = self.export_lambda_definition(for_update.as_ref(), Some(instruction))?;
-                operands.insert("forUpdate".to_string(), serde_json::to_value(lambda).unwrap());
+                let lambda =
+                    self.export_lambda_definition(for_update.as_ref(), Some(instruction))?;
+                operands.insert(
+                    "forUpdate".to_string(),
+                    serde_json::to_value(lambda).unwrap(),
+                );
             }
             operands.insert(
                 "forScopeMaxStackSize".to_string(),
                 Value::from(inst.for_scope_max_stack_size() as i64),
             );
-            let for_body = self.export_lambda_definition(inst.for_body().as_ref(), Some(instruction))?;
-            operands.insert("forBody".to_string(), serde_json::to_value(for_body).unwrap());
+            let for_body =
+                self.export_lambda_definition(inst.for_body().as_ref(), Some(instruction))?;
+            operands.insert(
+                "forBody".to_string(),
+                serde_json::to_value(for_body).unwrap(),
+            );
         } else if let Some(inst) = any.and_then(|a| a.downcast_ref::<ForEachInstruction>()) {
             opcode = "FOR_EACH";
             let body = self.export_lambda_definition(inst.body().as_ref(), Some(instruction))?;
             operands.insert("body".to_string(), serde_json::to_value(body).unwrap());
-            operands.insert("itemClassName".to_string(), Value::from(inst.it_cls().java_name()));
+            operands.insert(
+                "itemClassName".to_string(),
+                Value::from(inst.it_cls().java_name()),
+            );
             operands.insert(
                 "targetSource".to_string(),
                 serde_json::to_value(source_of(inst.target_error_reporter())).unwrap(),
@@ -367,8 +437,12 @@ impl<'a> SerializableParseCacheExporter<'a> {
                 serde_json::to_value(exception_table).unwrap(),
             );
             if let Some(final_body) = inst.final_body() {
-                let lambda = self.export_lambda_definition(final_body.as_ref(), Some(instruction))?;
-                operands.insert("finalBody".to_string(), serde_json::to_value(lambda).unwrap());
+                let lambda =
+                    self.export_lambda_definition(final_body.as_ref(), Some(instruction))?;
+                operands.insert(
+                    "finalBody".to_string(),
+                    serde_json::to_value(lambda).unwrap(),
+                );
             }
         } else if let Some(inst) = any.and_then(|a| a.downcast_ref::<TracePeekInstruction>()) {
             opcode = "TRACE_PEEK";
@@ -475,7 +549,9 @@ impl<'a> SerializableParseCacheExporter<'a> {
     ) -> SerializableParseCacheException {
         SerializableParseCacheException::new(
             Some(&self.script),
-            instruction.map(|inst| source_of(inst.error_reporter())).as_ref(),
+            instruction
+                .map(|inst| source_of(inst.error_reporter()))
+                .as_ref(),
             error_codes::SERIALIZABLE_PARSE_CACHE_UNSUPPORTED_INSTRUCTION,
             &crate::exception::error_codes::format_msg(
                 error_codes::error_msg(
@@ -503,7 +579,13 @@ fn export_trace_point(trace_point: &ExpressionTrace) -> SerializableTracePoint {
         line: trace_point.line(),
         col: trace_point.col(),
         position: trace_point.position(),
-        children: Some(trace_point.children().iter().map(export_trace_point).collect()),
+        children: Some(
+            trace_point
+                .children()
+                .iter()
+                .map(export_trace_point)
+                .collect(),
+        ),
     }
 }
 

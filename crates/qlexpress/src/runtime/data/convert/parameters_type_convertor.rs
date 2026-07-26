@@ -32,7 +32,9 @@ impl ParametersTypeConvertor {
         }
 
         debug_assert!(!param_types.is_empty());
-        let item_type = *param_types.last().expect("vararg param types must be non-empty");
+        let item_type = *param_types
+            .last()
+            .expect("vararg param types must be non-empty");
         let var_arg_start = param_types.len() - 1;
 
         let var_args: Vec<DataValue> = arguments[var_arg_start.min(arguments.len())..]
@@ -59,11 +61,8 @@ mod tests {
     #[test]
     fn non_vararg_casts_elementwise() {
         let args = vec![DataValue::Int(1), DataValue::Double(2.5)];
-        let result = ParametersTypeConvertor::cast(
-            &args,
-            &[TargetType::Long, TargetType::Int],
-            false,
-        );
+        let result =
+            ParametersTypeConvertor::cast(&args, &[TargetType::Long, TargetType::Int], false);
         assert_eq!(result, vec![DataValue::Long(1), DataValue::Int(2)]);
     }
 
@@ -76,12 +75,9 @@ mod tests {
 
     #[test]
     fn vararg_tail_is_collected_into_array() {
-        let args = vec![
-            DataValue::Int(1),
-            DataValue::Int(2),
-            DataValue::Int(3),
-        ];
-        let result = ParametersTypeConvertor::cast(&args, &[TargetType::Long, TargetType::Int], true);
+        let args = vec![DataValue::Int(1), DataValue::Int(2), DataValue::Int(3)];
+        let result =
+            ParametersTypeConvertor::cast(&args, &[TargetType::Long, TargetType::Int], true);
         assert_eq!(
             result,
             vec![
@@ -94,7 +90,8 @@ mod tests {
     #[test]
     fn vararg_with_no_tail_arguments() {
         let args = vec![DataValue::Int(1)];
-        let result = ParametersTypeConvertor::cast(&args, &[TargetType::Long, TargetType::Int], true);
+        let result =
+            ParametersTypeConvertor::cast(&args, &[TargetType::Long, TargetType::Int], true);
         assert_eq!(result, vec![DataValue::Long(1), DataValue::array(vec![])]);
     }
 }

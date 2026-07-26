@@ -2,17 +2,17 @@
 //! 职责:以固定参数个数调用 Lambda。
 //! 本文件由 `call.rs` 拆分而来(SPEC §5.5 一类一文件),仅移动代码与补充中文注释,行为完全一致。
 
-use std::rc::Rc;
 use crate::exception::error_codes;
 use crate::exception::error_reporter::ErrorReporter;
 use crate::exception::QLException;
 use crate::ql_options::QLOptions;
-use crate::runtime::q_result::QResult;
 use crate::runtime::instruction::QLInstruction;
+use crate::runtime::q_result::QResult;
 use crate::runtime::qcontext::QContext;
 use crate::runtime::util::throw_utils::{report_user_defined_exception, wrap_throwable};
 use crate::runtime::value::{DataValue, QValue};
 use crate::utils::println_utils::PrintlnUtils;
+use std::rc::Rc;
 
 /// 定参 Lambda 调用指令。对应 Java: com.alibaba.qlexpress4.runtime.instruction.CallInstruction(职责:以固定参数个数调用 Lambda)
 /// Operation: call a lambda with fixed number of arguments
@@ -52,10 +52,7 @@ impl QLInstruction for CallInstruction {
         ql_options: &QLOptions,
     ) -> Result<QResult, QLException> {
         let parameters = q_context.pop_n(self.arg_num + 1);
-        let bean = parameters
-            .get(0)
-            .expect("lambda slot popped")
-            .get();
+        let bean = parameters.get(0).expect("lambda slot popped").get();
         if bean.is_null() {
             if ql_options.is_avoid_null_pointer() {
                 q_context.push(QValue::Data(DataValue::NULL_VALUE));
@@ -134,4 +131,3 @@ fn rethrow_call_error(
         wrap_throwable(err, &**error_reporter, wrap_code, wrap_msg, wrap_args)
     }
 }
-

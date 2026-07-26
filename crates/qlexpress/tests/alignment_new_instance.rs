@@ -37,7 +37,9 @@ fn opts() -> QLOptions {
     QLOptions::builder().build()
 }
 
-fn calc_with_constructor(ctor: impl Fn(&[DataValue]) -> Result<DataValue, qlexpress_rust::exception::QLException> + 'static) -> NativeType {
+fn calc_with_constructor(
+    ctor: impl Fn(&[DataValue]) -> Result<DataValue, qlexpress_rust::exception::QLException> + 'static,
+) -> NativeType {
     let mut calc = NativeType::named("com.example.Calc");
     calc.constructor = Some(Rc::new(ctor));
     calc
@@ -109,11 +111,9 @@ fn new_instance_no_constructor_returns_error() {
 
 #[test]
 fn new_instance_with_string_arg() {
-    let runner = runner_with(calc_with_constructor(|args| {
-        match args.first() {
-            Some(DataValue::Str(s)) => Ok(DataValue::Str(format!("Calc({s})"))),
-            _ => Ok(DataValue::Null),
-        }
+    let runner = runner_with(calc_with_constructor(|args| match args.first() {
+        Some(DataValue::Str(s)) => Ok(DataValue::Str(format!("Calc({s})"))),
+        _ => Ok(DataValue::Null),
     }));
     let r = runner
         .execute("new Calc(\"hello\")", HashMap::new(), &opts())

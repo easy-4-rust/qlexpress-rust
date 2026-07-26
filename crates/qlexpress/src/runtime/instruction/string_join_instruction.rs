@@ -2,15 +2,15 @@
 //! 职责:将多个栈顶元素拼接为字符串。
 //! 本文件由 `string_join.rs` 拆分而来(SPEC §5.5 一类一文件),仅移动代码与补充中文注释,行为完全一致。
 
-use std::rc::Rc;
 use crate::exception::error_reporter::ErrorReporter;
 use crate::exception::QLException;
 use crate::ql_options::QLOptions;
-use crate::runtime::q_result::QResult;
 use crate::runtime::instruction::QLInstruction;
+use crate::runtime::q_result::QResult;
 use crate::runtime::qcontext::QContext;
 use crate::runtime::value::{DataValue, QValue};
 use crate::utils::println_utils::PrintlnUtils;
+use std::rc::Rc;
 
 /// 字符串拼接指令。对应 Java: com.alibaba.qlexpress4.runtime.instruction.StringJoinInstruction(职责:将多个栈顶元素拼接为字符串)
 /// Operation: concat n string on the top of stack
@@ -76,4 +76,3 @@ impl QLInstruction for StringJoinInstruction {
         &self.error_reporter
     }
 }
-

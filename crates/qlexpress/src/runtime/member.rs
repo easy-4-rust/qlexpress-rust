@@ -26,9 +26,7 @@ pub use crate::runtime::native_registry::NativeRegistry;
 pub use crate::runtime::native_type::{
     NativeConstructor, NativeFieldGetter, NativeMethod, NativeType,
 };
-pub use crate::runtime::util::method_invoke_utils::{
-    find_method_and_invoke, invoke_native_method,
-};
+pub use crate::runtime::util::method_invoke_utils::{find_method_and_invoke, invoke_native_method};
 
 /// Trait auto-derivable via `#[derive(QLExpressType)]`
 /// (proc-macro crate `qlexpress-derive`).
@@ -64,8 +62,7 @@ pub trait QLExpressNativeType: NativeObject + 'static {
         Self: Sized,
     {
         use std::cell::RefCell;
-        let cell: Rc<RefCell<dyn NativeObject>> =
-            Rc::new(RefCell::new(self));
+        let cell: Rc<RefCell<dyn NativeObject>> = Rc::new(RefCell::new(self));
         crate::runtime::value::DataValue::Object(cell)
     }
 }

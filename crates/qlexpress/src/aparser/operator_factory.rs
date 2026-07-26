@@ -57,11 +57,14 @@ impl BinaryOperator for CustomBinaryOperatorAdapter {
                 // Java: UserDefineException -> reportUserDefinedException;
                 // other Throwable -> OPERATOR_INNER_EXCEPTION. The Rust
                 // port carries the user message in the QLException reason.
-                error_reporter.report("OPERATOR_INNER_EXCEPTION", &format!(
-                    "custom operator '{}' inner exception: {}",
-                    self.operator_name,
-                    err.reason()
-                ))
+                error_reporter.report(
+                    "OPERATOR_INNER_EXCEPTION",
+                    &format!(
+                        "custom operator '{}' inner exception: {}",
+                        self.operator_name,
+                        err.reason()
+                    ),
+                )
             })
     }
 
@@ -157,7 +160,10 @@ impl OperatorManager {
         priority: i32,
     ) -> bool {
         let operator_name = operator_name.into();
-        if self.default_binary_operator_map.contains_key(&operator_name) {
+        if self
+            .default_binary_operator_map
+            .contains_key(&operator_name)
+        {
             return false;
         }
         if self.custom_binary_operator_map.contains_key(&operator_name) {
@@ -286,12 +292,8 @@ impl ParserOperatorManager for OperatorManager {
     fn is_op_type(&self, lexeme: &str, op_type: OpType) -> bool {
         match op_type {
             OpType::Middle => self.get_binary_operator(lexeme).is_some(),
-            OpType::Prefix => self
-                .default_prefix_unary_operator_map
-                .contains_key(lexeme),
-            OpType::Suffix => self
-                .default_suffix_unary_operator_map
-                .contains_key(lexeme),
+            OpType::Prefix => self.default_prefix_unary_operator_map.contains_key(lexeme),
+            OpType::Suffix => self.default_suffix_unary_operator_map.contains_key(lexeme),
         }
     }
 
@@ -310,8 +312,8 @@ impl ParserOperatorManager for OperatorManager {
 mod tests {
     use super::*;
     use crate::exception::pure_err_reporter::PureErrReporter;
-    use crate::runtime::qvm_runtime::QvmRuntime;
     use crate::runtime::member::NativeRegistry;
+    use crate::runtime::qvm_runtime::QvmRuntime;
 
     struct Add;
 
@@ -377,7 +379,9 @@ mod tests {
         let (runtime, opts) = test_ctx();
         let mut ctx = crate::runtime::delegate_qcontext::DelegateQContext::new(
             Rc::new(runtime),
-            crate::runtime::scope::QScope::global(crate::runtime::qvm_global_scope::QvmGlobalScope::empty()),
+            crate::runtime::scope::QScope::global(
+                crate::runtime::qvm_global_scope::QvmGlobalScope::empty(),
+            ),
         );
         let result = manager
             .get_binary_operator("**")

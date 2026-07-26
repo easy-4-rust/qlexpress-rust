@@ -41,7 +41,11 @@ struct Decimal {
 
 impl Decimal {
     fn zero(scale: usize) -> Decimal {
-        Decimal { neg: false, digits: Vec::new(), scale }
+        Decimal {
+            neg: false,
+            digits: Vec::new(),
+            scale,
+        }
     }
 
     fn is_zero(&self) -> bool {
@@ -54,16 +58,28 @@ impl Decimal {
     }
 
     fn negate(&self) -> Decimal {
-        Decimal { neg: !self.neg, digits: self.digits.clone(), scale: self.scale }
+        Decimal {
+            neg: !self.neg,
+            digits: self.digits.clone(),
+            scale: self.scale,
+        }
     }
 
     fn abs(&self) -> Decimal {
-        Decimal { neg: false, digits: self.digits.clone(), scale: self.scale }
+        Decimal {
+            neg: false,
+            digits: self.digits.clone(),
+            scale: self.scale,
+        }
     }
 
     /// 去掉前导零(零规范为空 vec)。
     fn normalized(mut self) -> Decimal {
-        let first_nz = self.digits.iter().position(|&d| d != 0).unwrap_or(self.digits.len());
+        let first_nz = self
+            .digits
+            .iter()
+            .position(|&d| d != 0)
+            .unwrap_or(self.digits.len());
         self.digits.drain(..first_nz);
         if self.digits.is_empty() {
             self.neg = false;
@@ -123,7 +139,11 @@ fn parse_dec(s: &str) -> Decimal {
     let scale = frac_part.chars().filter(|c| c.is_ascii_digit()).count();
     let first_nz = digits.iter().position(|&d| d != 0).unwrap_or(digits.len());
     digits.drain(..first_nz);
-    Decimal { neg: neg && !digits.is_empty(), digits, scale }
+    Decimal {
+        neg: neg && !digits.is_empty(),
+        digits,
+        scale,
+    }
 }
 
 /// Java `NumberMath.toBigDecimal(n)` 后取内部表示。
@@ -160,7 +180,11 @@ fn sub_mag(a: &[u8], b: &[u8]) -> Vec<u8> {
     let mut borrow = 0i8;
     for i in 0..a.len() {
         let da = a[a.len() - 1 - i] as i8;
-        let db = if i < b.len() { b[b.len() - 1 - i] as i8 } else { 0 };
+        let db = if i < b.len() {
+            b[b.len() - 1 - i] as i8
+        } else {
+            0
+        };
         let mut d = da - db - borrow;
         if d < 0 {
             d += 10;
@@ -236,7 +260,10 @@ fn divmod_mag(a: &[u8], b: &[u8]) -> (Vec<u8>, Vec<u8>) {
         }
         quotient.push(lo);
     }
-    let first_nz = quotient.iter().position(|&d| d != 0).unwrap_or(quotient.len());
+    let first_nz = quotient
+        .iter()
+        .position(|&d| d != 0)
+        .unwrap_or(quotient.len());
     quotient.drain(..first_nz);
     (quotient, rem)
 }
@@ -251,16 +278,27 @@ fn add_sub(l: &Decimal, r: &Decimal, subtract: bool) -> Decimal {
     let r_neg = r.neg ^ subtract;
     if l.neg == r_neg {
         // 同号:幅值相加。
-        Decimal { neg: l.neg, digits: add_mag(&lm, &rm), scale }.normalized()
+        Decimal {
+            neg: l.neg,
+            digits: add_mag(&lm, &rm),
+            scale,
+        }
+        .normalized()
     } else {
         match cmp_mag(&lm, &rm) {
             std::cmp::Ordering::Equal => Decimal::zero(scale),
-            std::cmp::Ordering::Greater => {
-                Decimal { neg: l.neg, digits: sub_mag(&lm, &rm), scale }.normalized()
+            std::cmp::Ordering::Greater => Decimal {
+                neg: l.neg,
+                digits: sub_mag(&lm, &rm),
+                scale,
             }
-            std::cmp::Ordering::Less => {
-                Decimal { neg: r_neg, digits: sub_mag(&rm, &lm), scale }.normalized()
+            .normalized(),
+            std::cmp::Ordering::Less => Decimal {
+                neg: r_neg,
+                digits: sub_mag(&rm, &lm),
+                scale,
             }
+            .normalized(),
         }
     }
 }
@@ -299,7 +337,14 @@ fn divide_exact(l: &Decimal, r: &Decimal) -> Option<Decimal> {
         let num = mul_pow10(&l.digits, exp);
         let (q, rem) = divmod_mag(&num, &r.digits);
         if rem.is_empty() {
-            return Some(Decimal { neg: l.neg != r.neg, digits: q, scale }.normalized());
+            return Some(
+                Decimal {
+                    neg: l.neg != r.neg,
+                    digits: q,
+                    scale,
+                }
+                .normalized(),
+            );
         }
         scale += 1;
     }
@@ -312,8 +357,16 @@ fn divide_with_precision(l: &Decimal, r: &Decimal, precision: usize) -> Decimal 
     let mut e = precision as i64 - base;
     let (mut q, rem);
     loop {
-        let num = if e >= 0 { mul_pow10(&l.digits, e as usize) } else { l.digits.clone() };
-        let den = if e >= 0 { r.digits.clone() } else { mul_pow10(&r.digits, (-e) as usize) };
+        let num = if e >= 0 {
+            mul_pow10(&l.digits, e as usize)
+        } else {
+            l.digits.clone()
+        };
+        let den = if e >= 0 {
+            r.digits.clone()
+        } else {
+            mul_pow10(&r.digits, (-e) as usize)
+        };
         let (qq, rr) = divmod_mag(&num, &den);
         let len = qq.len().max(1);
         if len > precision {
@@ -327,8 +380,11 @@ fn divide_with_precision(l: &Decimal, r: &Decimal, precision: usize) -> Decimal 
         }
     }
     // HALF_UP:余数 ×2 >= 除数则进位。注意 e<0 时除数已放大,比较口径一致。
-    let den_for_round =
-        if e >= 0 { r.digits.clone() } else { mul_pow10(&r.digits, (-e) as usize) };
+    let den_for_round = if e >= 0 {
+        r.digits.clone()
+    } else {
+        mul_pow10(&r.digits, (-e) as usize)
+    };
     if cmp_mag(&mul_mag(&rem, &[2]), &den_for_round) != std::cmp::Ordering::Less {
         q = add_mag(&q, &[1]);
     }
@@ -349,7 +405,12 @@ fn divide_with_precision(l: &Decimal, r: &Decimal, precision: usize) -> Decimal 
     } else {
         q
     };
-    Decimal { neg: l.neg != r.neg, digits, scale: scale.max(0) as usize }.normalized()
+    Decimal {
+        neg: l.neg != r.neg,
+        digits,
+        scale: scale.max(0) as usize,
+    }
+    .normalized()
 }
 
 /// Java `setScale(newScale, RoundingMode.HALF_UP)`(仅缩 scale 场景)。
@@ -365,7 +426,12 @@ fn set_scale_half_up(d: &Decimal, new_scale: usize) -> Decimal {
     } else {
         q
     };
-    Decimal { neg: d.neg, digits: rounded, scale: new_scale }.normalized()
+    Decimal {
+        neg: d.neg,
+        digits: rounded,
+        scale: new_scale,
+    }
+    .normalized()
 }
 
 impl BigDecimalMath {
@@ -376,17 +442,23 @@ impl BigDecimalMath {
 
     /// Java `addImpl`(精确,scale 取两边较大)。
     pub fn add_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
-        Ok(DataValue::BigDec(add_sub(&dec_of(left), &dec_of(right), false).to_plain_string()))
+        Ok(DataValue::BigDec(
+            add_sub(&dec_of(left), &dec_of(right), false).to_plain_string(),
+        ))
     }
 
     /// Java `subtractImpl`。
     pub fn subtract_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
-        Ok(DataValue::BigDec(add_sub(&dec_of(left), &dec_of(right), true).to_plain_string()))
+        Ok(DataValue::BigDec(
+            add_sub(&dec_of(left), &dec_of(right), true).to_plain_string(),
+        ))
     }
 
     /// Java `multiplyImpl`(精确,scale 相加)。
     pub fn multiply_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
-        Ok(DataValue::BigDec(mul_dec(&dec_of(left), &dec_of(right)).to_plain_string()))
+        Ok(DataValue::BigDec(
+            mul_dec(&dec_of(left), &dec_of(right)).to_plain_string(),
+        ))
     }
 
     /// Java `divideImpl`(精度与舍入语义见文件头注释)。
@@ -459,7 +531,13 @@ impl BigDecimalMath {
         };
         // 余数符号跟被除数(BigDecimal.remainder 语义)。
         Ok(DataValue::BigDec(
-            Decimal { neg: l.neg, digits: rem_mag, scale }.normalized().to_plain_string(),
+            Decimal {
+                neg: l.neg,
+                digits: rem_mag,
+                scale,
+            }
+            .normalized()
+            .to_plain_string(),
         ))
     }
 
@@ -509,7 +587,10 @@ mod tests {
         // 2 / 3 → 末位进位。
         assert_eq!(div("2", "3"), DataValue::BigDec("0.6666666667".to_string()));
         // 10 / 3 → 3.3333333333。
-        assert_eq!(div("10", "3"), DataValue::BigDec("3.3333333333".to_string()));
+        assert_eq!(
+            div("10", "3"),
+            DataValue::BigDec("3.3333333333".to_string())
+        );
     }
 
     #[test]
@@ -572,8 +653,11 @@ mod tests {
         );
         // mod:负余数加除数 → 非负。
         assert_eq!(
-            BigDecimalMath::mod_impl(&DataValue::BigDec("-7".into()), &DataValue::BigDec("3".into()))
-                .unwrap(),
+            BigDecimalMath::mod_impl(
+                &DataValue::BigDec("-7".into()),
+                &DataValue::BigDec("3".into())
+            )
+            .unwrap(),
             DataValue::BigDec("2".to_string())
         );
     }

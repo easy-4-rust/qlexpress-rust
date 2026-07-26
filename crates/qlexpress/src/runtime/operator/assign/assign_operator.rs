@@ -4,9 +4,9 @@
 use crate::exception::error_codes;
 use crate::exception::error_reporter::ErrorReporter;
 use crate::exception::QLException;
-use crate::runtime::left_value::LeftValue;
 use crate::ql_options::QLOptions;
 use crate::ql_precedences;
+use crate::runtime::left_value::LeftValue;
 use crate::runtime::operator::base::BinaryOperator;
 use crate::runtime::qcontext::QContext;
 use crate::runtime::value::{DataValue, QValue};
@@ -81,12 +81,14 @@ pub(crate) fn assign(
                 error_codes::error_msg(error_codes::INVALID_ASSIGNMENT),
                 // Java 原文实参:"on the left side"
                 &["on the left side".to_string()],
-            ))
+            ));
         }
     };
     let new_value = right.get();
     // Java:leftValue.set(newValue, errorReporter) — 声明类型转换在 set 内
-    left_value.borrow_mut().set(new_value.clone(), error_reporter)?;
+    left_value
+        .borrow_mut()
+        .set(new_value.clone(), error_reporter)?;
     // Java:return newValue(转换前的右值)
     Ok(new_value)
 }
@@ -96,8 +98,8 @@ mod tests {
     use super::*;
     use crate::exception::pure_err_reporter::PureErrReporter;
     use crate::runtime::data::assignable_data_value::AssignableDataValue;
-    use crate::runtime::value::Value;
     use crate::runtime::data::convert::obj_type_convertor::TargetType;
+    use crate::runtime::value::Value;
     use std::cell::RefCell;
     use std::rc::Rc;
 

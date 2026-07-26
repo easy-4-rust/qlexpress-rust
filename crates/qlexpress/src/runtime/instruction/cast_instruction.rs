@@ -2,18 +2,18 @@
 //! 职责:将栈顶值转换为目标类型。
 //! 本文件由 `cast.rs` 拆分而来(SPEC §5.5 一类一文件),仅移动代码与补充中文注释,行为完全一致。
 
-use std::rc::Rc;
 use crate::exception::error_codes;
 use crate::exception::error_reporter::ErrorReporter;
 use crate::exception::QLException;
 use crate::ql_options::QLOptions;
-use crate::runtime::q_result::QResult;
 use crate::runtime::data::convert::obj_type_convertor::ObjTypeConvertor;
 use crate::runtime::instruction::QLInstruction;
 use crate::runtime::member::{as_meta_class, ClassRef};
+use crate::runtime::q_result::QResult;
 use crate::runtime::qcontext::QContext;
 use crate::runtime::value::{DataValue, QValue};
 use crate::utils::println_utils::PrintlnUtils;
+use std::rc::Rc;
 
 /// 类型转换指令。对应 Java: com.alibaba.qlexpress4.runtime.instruction.CastInstruction(职责:将栈顶值转换为目标类型)
 /// Operation: force cast value to specified type
@@ -124,4 +124,3 @@ impl QLInstruction for CastInstruction {
         &self.error_reporter
     }
 }
-

@@ -101,8 +101,7 @@ mod tests {
     use crate::exception::pure_err_reporter::PureErrReporter;
 
     fn run(value: DataValue) -> Result<DataValue, QLException> {
-        PlusUnaryOperator::get_instance()
-            .execute(&QValue::from(value), &PureErrReporter::INSTANCE)
+        PlusUnaryOperator::get_instance().execute(&QValue::from(value), &PureErrReporter::INSTANCE)
     }
 
     #[test]

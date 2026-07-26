@@ -100,7 +100,9 @@ mod tests {
 
         let child = GeneratorScope::<i32>::new("child", Some(Rc::clone(&root)));
         assert_eq!(
-            child.get_macro_instructions("m").map(|d| d.macro_instructions().to_vec()),
+            child
+                .get_macro_instructions("m")
+                .map(|d| d.macro_instructions().to_vec()),
             Some(vec![1])
         );
         assert!(child.get_macro_instructions("missing").is_none());
@@ -115,7 +117,9 @@ mod tests {
         let child = GeneratorScope::<i32>::new("child", Some(root));
         child.define_macro("m", MacroDefine::new(vec![2], true));
         assert_eq!(
-            child.get_macro_instructions("m").map(|d| d.macro_instructions().to_vec()),
+            child
+                .get_macro_instructions("m")
+                .map(|d| d.macro_instructions().to_vec()),
             Some(vec![2])
         );
     }

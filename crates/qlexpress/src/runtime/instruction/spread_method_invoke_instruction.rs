@@ -2,17 +2,17 @@
 //! 职责:对集合元素逐个调用方法并收集结果。
 //! 本文件由 `call.rs` 拆分而来(SPEC §5.5 一类一文件),仅移动代码与补充中文注释,行为完全一致。
 
-use std::rc::Rc;
 use crate::exception::error_codes;
 use crate::exception::error_reporter::ErrorReporter;
 use crate::exception::QLException;
 use crate::ql_options::QLOptions;
-use crate::runtime::q_result::QResult;
 use crate::runtime::instruction::QLInstruction;
 use crate::runtime::member::{find_method_and_invoke, invoke_native_method};
+use crate::runtime::q_result::QResult;
 use crate::runtime::qcontext::QContext;
 use crate::runtime::value::{DataValue, QValue};
 use crate::utils::println_utils::PrintlnUtils;
+use std::rc::Rc;
 
 /// 展开方法调用指令。对应 Java: com.alibaba.qlexpress4.runtime.instruction.SpreadMethodInvokeInstruction(职责:对集合元素逐个调用方法并收集结果)
 /// Operation: Invoke specified method of each object in the list
@@ -118,8 +118,8 @@ impl SpreadMethodInvokeInstruction {
                 // 时继续递归展平;Rust 按名解析后参数转换失败
                 // (INVOKE_METHOD_WITH_WRONG_ARGUMENTS)与之对应,落入递归。
                 // 其余错误原样上抛。(对齐测试 spread/nested_list_spread.ql 发现。)
-                Err(err)
-                    if err.error_code() == error_codes::INVOKE_METHOD_WITH_WRONG_ARGUMENTS => {}
+                Err(err) if err.error_code() == error_codes::INVOKE_METHOD_WITH_WRONG_ARGUMENTS => {
+                }
                 Err(err) => return Err(err),
             }
         }
@@ -190,4 +190,3 @@ impl QLInstruction for SpreadMethodInvokeInstruction {
         &self.error_reporter
     }
 }
-

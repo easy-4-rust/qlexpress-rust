@@ -60,7 +60,13 @@ impl NativeIMethod {
         parameter_types: Vec<ClassRef>,
         method: NativeMethod,
     ) -> Rc<dyn IMethod> {
-        Rc::new(Self::new(name, declaring_class, parameter_types, false, method))
+        Rc::new(Self::new(
+            name,
+            declaring_class,
+            parameter_types,
+            false,
+            method,
+        ))
     }
 }
 

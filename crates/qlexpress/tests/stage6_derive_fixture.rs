@@ -178,7 +178,10 @@ fn derive_handles_mixed_scalar_kinds() {
     assert_eq!(native.get_field("n"), Some(DataValue::Long(5)));
     assert_eq!(native.get_field("f"), Some(DataValue::Double(1.5)));
     assert_eq!(native.get_field("b"), Some(DataValue::Bool(true)));
-    assert_eq!(native.get_field("s"), Some(DataValue::Str("hi".to_string())));
+    assert_eq!(
+        native.get_field("s"),
+        Some(DataValue::Str("hi".to_string()))
+    );
 }
 
 // ---------------- Fixture 6: round-trip execute via runner ----------------

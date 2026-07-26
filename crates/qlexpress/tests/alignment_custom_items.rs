@@ -36,7 +36,9 @@ fn add_function_with_function_signature() {
     let mut runner = Express4Runner::new();
     runner.add_function(
         "inc",
-        |_ctx: &mut dyn QContext, params: &Parameters| -> Result<DataValue, qlexpress_rust::exception::QLException> {
+        |_ctx: &mut dyn QContext,
+         params: &Parameters|
+         -> Result<DataValue, qlexpress_rust::exception::QLException> {
             let n = qlexpress_rust::runtime::data::convert::to_i64(&params.get_value(0));
             Ok(DataValue::Long(n + 1))
         },
@@ -48,14 +50,11 @@ fn add_function_with_function_signature() {
 fn add_function_with_predicate() {
     // Java addFunction(String, Predicate<T>)
     let mut runner = Express4Runner::new();
-    runner.add_function_unary(
-        "is_pos",
-        |v: DataValue| -> DataValue {
-            // 接受任意 numeric,通过 to_i64 统一处理
-            let n = qlexpress_rust::runtime::data::convert::to_i64(&v);
-            DataValue::Bool(n > 0)
-        },
-    );
+    runner.add_function_unary("is_pos", |v: DataValue| -> DataValue {
+        // 接受任意 numeric,通过 to_i64 统一处理
+        let n = qlexpress_rust::runtime::data::convert::to_i64(&v);
+        DataValue::Bool(n > 0)
+    });
     let r = runner
         .execute("is_pos(5)", HashMap::new(), &opts())
         .expect("ok")
@@ -69,7 +68,9 @@ fn add_function_with_runnable_returns_null() {
     let mut runner = Express4Runner::new();
     runner.add_function(
         "do_nothing",
-        |_ctx: &mut dyn QContext, _params: &Parameters| -> Result<DataValue, qlexpress_rust::exception::QLException> {
+        |_ctx: &mut dyn QContext,
+         _params: &Parameters|
+         -> Result<DataValue, qlexpress_rust::exception::QLException> {
             Ok(DataValue::Null)
         },
     );
@@ -83,13 +84,10 @@ fn add_function_with_runnable_returns_null() {
 #[test]
 fn add_function_with_consumer() {
     let mut runner = Express4Runner::new();
-    runner.add_function_unary(
-        "double_str",
-        |v: DataValue| -> DataValue {
-            let s = v.string_value_of();
-            DataValue::Str(format!("{s}{s}"))
-        },
-    );
+    runner.add_function_unary("double_str", |v: DataValue| -> DataValue {
+        let s = v.string_value_of();
+        DataValue::Str(format!("{s}{s}"))
+    });
     let r = runner
         .execute("double_str(\"ab\")", HashMap::new(), &opts())
         .expect("ok")
@@ -104,7 +102,10 @@ fn add_varargs_function() {
     runner.add_varargs_function(
         "join_with",
         |params: &[DataValue]| -> Result<DataValue, qlexpress_rust::exception::QLException> {
-            let sep = params.first().map(|p| p.string_value_of()).unwrap_or_default();
+            let sep = params
+                .first()
+                .map(|p| p.string_value_of())
+                .unwrap_or_default();
             let rest: Vec<String> = params[1..].iter().map(|p| p.string_value_of()).collect();
             Ok(DataValue::Str(rest.join(&sep)))
         },
@@ -123,7 +124,11 @@ fn add_operator_bifunction() {
     // Java addOperatorBiFunction
     let mut runner = Express4Runner::new();
     runner.add_operator_bi("join_str", |left: DataValue, right: DataValue| {
-        DataValue::Str(format!("{}|{}", left.string_value_of(), right.string_value_of()))
+        DataValue::Str(format!(
+            "{}|{}",
+            left.string_value_of(),
+            right.string_value_of()
+        ))
     });
     let r = runner
         .execute("'a' join_str 'b'", HashMap::new(), &opts())
@@ -138,7 +143,9 @@ fn replace_default_operator() {
     let mut runner = Express4Runner::new();
     runner.add_function(
         "add_one",
-        |_ctx: &mut dyn QContext, params: &Parameters| -> Result<DataValue, qlexpress_rust::exception::QLException> {
+        |_ctx: &mut dyn QContext,
+         params: &Parameters|
+         -> Result<DataValue, qlexpress_rust::exception::QLException> {
             let a = qlexpress_rust::runtime::data::convert::to_i64(&params.get_value(0));
             let b = qlexpress_rust::runtime::data::convert::to_i64(&params.get_value(1));
             Ok(DataValue::Long(a + b + 1)) // adds an extra 1

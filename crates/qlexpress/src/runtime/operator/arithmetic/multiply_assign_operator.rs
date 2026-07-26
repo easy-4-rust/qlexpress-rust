@@ -44,7 +44,9 @@ impl BinaryOperator for MultiplyAssignOperator {
         let result = BaseBinaryOperator::multiply("*=", left, right, ql_options, error_reporter)?;
         // Java: ((LeftValue)left).set(result, errorReporter)
         let left_value = left.as_left().expect("assert_left_value 已校验");
-        left_value.borrow_mut().set(result.clone(), error_reporter)?;
+        left_value
+            .borrow_mut()
+            .set(result.clone(), error_reporter)?;
         Ok(result)
     }
 

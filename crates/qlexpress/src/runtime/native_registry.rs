@@ -84,7 +84,6 @@ impl Default for NativeRegistry {
 }
 
 impl NativeRegistry {
-
     /// 预置内建类型的注册表(SPEC §4:String/List/Map/数值 常用方法子集)。
     pub fn with_builtins() -> Self {
         let mut registry = NativeRegistry::new();
@@ -160,9 +159,10 @@ impl NativeRegistry {
                 Some(QValue::Data(DataValue::Int(list.borrow().len() as i32)))
             }
             // Java 特殊分支:Map 的字段访问即按 key 取条目(可写左值)。
-            DataValue::Map(map) => Some(QValue::Left(Rc::new(RefCell::new(
-                MapItemValue::new(Rc::clone(map), DataValue::Str(field_name.to_string())),
-            )))),
+            DataValue::Map(map) => Some(QValue::Left(Rc::new(RefCell::new(MapItemValue::new(
+                Rc::clone(map),
+                DataValue::Str(field_name.to_string()),
+            ))))),
             DataValue::Object(obj) => {
                 // Java 的 MetaClass 分支:`.class` 与静态字段。
                 let meta_clz = {
@@ -345,9 +345,9 @@ fn string_method(name: &str) -> Option<NativeMethod> {
             _ => Err(wrong_args("endsWith")),
         }),
         "indexOf" => Rc::new(|bean, args| match (bean, str_arg(args, 0)) {
-            (DataValue::Str(s), Some(sub)) => Ok(DataValue::Int(
-                s.find(&sub).map(|i| i as i32).unwrap_or(-1),
-            )),
+            (DataValue::Str(s), Some(sub)) => {
+                Ok(DataValue::Int(s.find(&sub).map(|i| i as i32).unwrap_or(-1)))
+            }
             _ => Err(wrong_args("indexOf")),
         }),
         "toUpperCase" => Rc::new(|bean, _| match bean {
@@ -376,12 +376,14 @@ fn string_method(name: &str) -> Option<NativeMethod> {
             }
             _ => Err(wrong_args("substring")),
         }),
-        "replace" => Rc::new(|bean, args| match (bean, str_arg(args, 0), str_arg(args, 1)) {
-            (DataValue::Str(s), Some(from), Some(to)) => {
-                Ok(DataValue::Str(s.replace(&from, &to)))
-            }
-            _ => Err(wrong_args("replace")),
-        }),
+        "replace" => Rc::new(
+            |bean, args| match (bean, str_arg(args, 0), str_arg(args, 1)) {
+                (DataValue::Str(s), Some(from), Some(to)) => {
+                    Ok(DataValue::Str(s.replace(&from, &to)))
+                }
+                _ => Err(wrong_args("replace")),
+            },
+        ),
         "equals" => Rc::new(|bean, args| match (bean, args.first()) {
             (DataValue::Str(s), Some(DataValue::Str(o))) => Ok(DataValue::Bool(s == o)),
             (DataValue::Str(_), Some(_)) => Ok(DataValue::Bool(false)),
@@ -393,7 +395,9 @@ fn string_method(name: &str) -> Option<NativeMethod> {
         }),
         "split" => Rc::new(|bean, args| match (bean, str_arg(args, 0)) {
             (DataValue::Str(s), Some(sep)) => Ok(DataValue::list(
-                s.split(&sep).map(|p| DataValue::Str(p.to_string())).collect(),
+                s.split(&sep)
+                    .map(|p| DataValue::Str(p.to_string()))
+                    .collect(),
             )),
             _ => Err(wrong_args("split")),
         }),
@@ -437,7 +441,8 @@ fn list_method(name: &str) -> Option<NativeMethod> {
         }),
         "add" => Rc::new(|bean, args| match bean {
             DataValue::List(l) => {
-                l.borrow_mut().push(args.first().cloned().unwrap_or(DataValue::Null));
+                l.borrow_mut()
+                    .push(args.first().cloned().unwrap_or(DataValue::Null));
                 Ok(DataValue::Bool(true))
             }
             _ => Err(wrong_args("add")),
@@ -506,17 +511,19 @@ fn list_method(name: &str) -> Option<NativeMethod> {
             }
             _ => Err(wrong_args("clear")),
         }),
-        "subList" => Rc::new(|bean, args| match (bean, int_arg(args, 0), int_arg(args, 1)) {
-            (DataValue::List(l), Some(a), Some(b)) => {
-                let list = l.borrow();
-                let (a, b) = (a.max(0) as usize, (b.max(0) as usize).min(list.len()));
-                if a > b {
-                    return Err(wrong_args("subList"));
+        "subList" => Rc::new(
+            |bean, args| match (bean, int_arg(args, 0), int_arg(args, 1)) {
+                (DataValue::List(l), Some(a), Some(b)) => {
+                    let list = l.borrow();
+                    let (a, b) = (a.max(0) as usize, (b.max(0) as usize).min(list.len()));
+                    if a > b {
+                        return Err(wrong_args("subList"));
+                    }
+                    Ok(DataValue::list(list[a..b].to_vec()))
                 }
-                Ok(DataValue::list(list[a..b].to_vec()))
-            }
-            _ => Err(wrong_args("subList")),
-        }),
+                _ => Err(wrong_args("subList")),
+            },
+        ),
         "toString" => Rc::new(|bean, _| Ok(DataValue::Str(bean.string_value_of()))),
         _ => return None,
     };
@@ -535,7 +542,9 @@ fn map_method(name: &str) -> Option<NativeMethod> {
             _ => Err(wrong_args("isEmpty")),
         }),
         "get" => Rc::new(|bean, args| match (bean, args.first()) {
-            (DataValue::Map(m), Some(k)) => Ok(m.borrow().get(k).cloned().unwrap_or(DataValue::Null)),
+            (DataValue::Map(m), Some(k)) => {
+                Ok(m.borrow().get(k).cloned().unwrap_or(DataValue::Null))
+            }
             _ => Err(wrong_args("get")),
         }),
         "put" => Rc::new(|bean, args| match (bean, args.first(), args.get(1)) {
@@ -556,9 +565,7 @@ fn map_method(name: &str) -> Option<NativeMethod> {
             _ => Err(wrong_args("containsValue")),
         }),
         "remove" => Rc::new(|bean, args| match (bean, args.first()) {
-            (DataValue::Map(m), Some(k)) => {
-                Ok(m.borrow_mut().remove(k).unwrap_or(DataValue::Null))
-            }
+            (DataValue::Map(m), Some(k)) => Ok(m.borrow_mut().remove(k).unwrap_or(DataValue::Null)),
             _ => Err(wrong_args("remove")),
         }),
         "keySet" => Rc::new(|bean, _| match bean {

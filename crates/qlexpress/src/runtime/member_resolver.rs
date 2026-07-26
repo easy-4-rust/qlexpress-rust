@@ -140,9 +140,10 @@ impl MemberResolver {
         // `Primitive`,故该情形已被上面的 EQUAL 覆盖。
 
         // 数值提升/窄化(Java: BasicUtil.numberPromoteLevel 双侧可比)。
-        if let (Some(param_level), Some(arg_level)) =
-            (number_promote_level(param_type), number_promote_level(arg_type))
-        {
+        if let (Some(param_level), Some(arg_level)) = (
+            number_promote_level(param_type),
+            number_promote_level(arg_type),
+        ) {
             return if param_level >= arg_level {
                 MatchPriority::NumberPromotion.priority() + arg_level as i32 - param_level as i32
             } else {

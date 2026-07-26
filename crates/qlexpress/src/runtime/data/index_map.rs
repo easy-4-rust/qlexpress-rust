@@ -24,10 +24,7 @@ impl IndexMap {
 
     /// Java `Map.get`.
     pub fn get(&self, key: &DataValue) -> Option<&DataValue> {
-        self.entries
-            .iter()
-            .find(|(k, _)| k == key)
-            .map(|(_, v)| v)
+        self.entries.iter().find(|(k, _)| k == key).map(|(_, v)| v)
     }
 
     /// Java `Map.containsKey`.
@@ -91,8 +88,14 @@ mod tests {
         map.insert(DataValue::Str("a".into()), DataValue::Int(1));
         map.insert(DataValue::Str("b".into()), DataValue::Int(3));
         let keys: Vec<_> = map.keys().cloned().collect();
-        assert_eq!(keys, vec![DataValue::Str("b".into()), DataValue::Str("a".into())]);
-        assert_eq!(map.get(&DataValue::Str("b".into())), Some(&DataValue::Int(3)));
+        assert_eq!(
+            keys,
+            vec![DataValue::Str("b".into()), DataValue::Str("a".into())]
+        );
+        assert_eq!(
+            map.get(&DataValue::Str("b".into())),
+            Some(&DataValue::Int(3))
+        );
         assert_eq!(map.len(), 2);
     }
 
@@ -101,7 +104,10 @@ mod tests {
         let mut map = IndexMap::new();
         map.insert(DataValue::Int(1), DataValue::Str("one".into()));
         // 1L == 1 under QLExpress numeric equality.
-        assert_eq!(map.get(&DataValue::Long(1)), Some(&DataValue::Str("one".into())));
+        assert_eq!(
+            map.get(&DataValue::Long(1)),
+            Some(&DataValue::Str("one".into()))
+        );
     }
 
     #[test]

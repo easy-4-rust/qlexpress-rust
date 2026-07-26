@@ -29,17 +29,19 @@ pub mod utils;
 
 // ---- Facade re-exports (SPEC §2):只 re-export 不定义 ----
 
+pub use check_options::CheckOptions;
+pub use class_supplier::ClassSupplier;
+pub use default_class_supplier::DefaultClassSupplier;
 /// 引擎门面及顶层契约。对应 Java `com.alibaba.qlexpress4` 包顶层类。
 pub use express4_runner::Express4Runner;
 pub use init_options::InitOptions;
 pub use ql_options::{QLOptions, QLOptionsBuilder};
 pub use ql_result::QLResult;
-pub use check_options::CheckOptions;
-pub use class_supplier::ClassSupplier;
-pub use default_class_supplier::DefaultClassSupplier;
 
 /// 异常体系。对应 Java `com.alibaba.qlexpress4.exception` 公开类。
-pub use exception::{ErrorReporter, PureErrReporter, QLException, QLExceptionKind, QLSyntaxException};
+pub use exception::{
+    ErrorReporter, PureErrReporter, QLException, QLExceptionKind, QLSyntaxException,
+};
 
 /// 值与上下文。对应 Java `runtime.Value` / `runtime.context.*`。
 pub use runtime::context::{ExpressContext, MapExpressContext, QLAliasContext};
@@ -57,7 +59,7 @@ pub use security::{NativeMember, QLSecurityStrategy};
 
 /// 语法树/编译入口支撑(SPEC §3.6 `parse_to_syntax_tree` 的返回模型)。
 pub use aparser::{
-    build_tree, ChildRef, CheckVisitor, CompileCache, GeneratorScope, HasChildren, ImportManager,
+    build_tree, CheckVisitor, ChildRef, CompileCache, GeneratorScope, HasChildren, ImportManager,
     MacroDefine, Node, OutFunctionVisitor, OutVarAttrsVisitor, OutVarNamesVisitor, QCompileCache,
     QLParser, TerminalNode, Token, Visitor,
 };

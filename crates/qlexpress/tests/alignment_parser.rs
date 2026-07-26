@@ -11,7 +11,7 @@ mod alignment_util;
 
 use qlexpress_rust::runtime::value::DataValue;
 
-use alignment_util::{expect_ok, expect_err_code};
+use alignment_util::{expect_err_code, expect_ok};
 
 // ---------- Parser / syntax tree ----------
 

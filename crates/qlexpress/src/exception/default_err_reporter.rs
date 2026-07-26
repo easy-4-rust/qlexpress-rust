@@ -89,6 +89,8 @@ mod tests {
         assert_eq!(err.line_no(), 1);
         assert_eq!(err.col_no(), 3);
         assert_eq!(err.err_lexeme(), "b");
-        assert!(err.to_string().contains("[Error FIELD_NOT_FOUND: 'b' field not found]"));
+        assert!(err
+            .to_string()
+            .contains("[Error FIELD_NOT_FOUND: 'b' field not found]"));
     }
 }

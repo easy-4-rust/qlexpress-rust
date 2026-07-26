@@ -54,10 +54,7 @@ impl FixedSizeStack {
         if self.is_full() {
             return Err(QLException::for_test(
                 QLExceptionKind::Runtime,
-                format!(
-                    "FixedSizeStack overflow (capacity = {})",
-                    self.capacity
-                ),
+                format!("FixedSizeStack overflow (capacity = {})", self.capacity),
                 crate::exception::error_codes::STACK_OVERFLOW,
             ));
         }

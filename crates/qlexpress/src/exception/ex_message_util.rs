@@ -120,6 +120,9 @@ mod tests {
         let caret_line = ex.message().lines().nth(2).unwrap();
         assert_eq!(caret_line.len(), 7 + 3 + 20 + 1);
         assert!(caret_line.ends_with('^'));
-        assert!(caret_line.chars().take(caret_line.len() - 1).all(|c| c == ' '));
+        assert!(caret_line
+            .chars()
+            .take(caret_line.len() - 1)
+            .all(|c| c == ' '));
     }
 }

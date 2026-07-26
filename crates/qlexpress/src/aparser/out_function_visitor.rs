@@ -4,8 +4,8 @@
 
 use std::collections::HashSet;
 
-use super::qlparser_base_visitor::Visitor;
 use super::exist_stack::{ExistStack, ExistVarStack};
+use super::qlparser_base_visitor::Visitor;
 use super::scope_stack_visitor::{ScopeStack, ScopedVisitor};
 use super::syntax_tree_factory::*;
 

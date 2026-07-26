@@ -2,17 +2,17 @@
 //! 职责:创建多维数组。
 //! 本文件由 `new_instance.rs` 拆分而来(SPEC §5.5 一类一文件),仅移动代码与补充中文注释,行为完全一致。
 
-use std::rc::Rc;
 use crate::exception::error_codes;
 use crate::exception::error_reporter::ErrorReporter;
 use crate::exception::QLException;
 use crate::ql_options::QLOptions;
-use crate::runtime::q_result::QResult;
 use crate::runtime::data::convert::obj_type_convertor::TargetType;
 use crate::runtime::instruction::QLInstruction;
+use crate::runtime::q_result::QResult;
 use crate::runtime::qcontext::QContext;
 use crate::runtime::value::{DataValue, QValue};
 use crate::utils::println_utils::PrintlnUtils;
+use std::rc::Rc;
 
 /// 多维数组创建指令。对应 Java: com.alibaba.qlexpress4.runtime.instruction.MultiNewArrayInstruction(职责:创建多维数组)
 /// new int[1][2][][]
@@ -54,9 +54,9 @@ impl MultiNewArrayInstruction {
     fn build_array(dims: &[i64]) -> DataValue {
         match dims.split_first() {
             None => DataValue::Null,
-            Some((&len, rest)) => DataValue::array(
-                (0..len.max(0)).map(|_| Self::build_array(rest)).collect(),
-            ),
+            Some((&len, rest)) => {
+                DataValue::array((0..len.max(0)).map(|_| Self::build_array(rest)).collect())
+            }
         }
     }
 }
@@ -87,10 +87,7 @@ impl QLInstruction for MultiNewArrayInstruction {
                 return Err(self.error_reporter.report_format(
                     error_codes::EXCEED_MAX_ARR_LENGTH,
                     error_codes::error_msg(error_codes::EXCEED_MAX_ARR_LENGTH),
-                    &[
-                        dim_len.to_string(),
-                        ql_options.max_arr_length().to_string(),
-                    ],
+                    &[dim_len.to_string(), ql_options.max_arr_length().to_string()],
                 ));
             }
             dim_array.push(dim_len);
@@ -119,4 +116,3 @@ impl QLInstruction for MultiNewArrayInstruction {
         &self.error_reporter
     }
 }
-

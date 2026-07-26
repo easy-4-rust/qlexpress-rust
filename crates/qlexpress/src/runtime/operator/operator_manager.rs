@@ -14,7 +14,9 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::aparser::operator_factory::{OperatorFactory, OperatorManager as AParserOperatorManager};
+use crate::aparser::operator_factory::{
+    OperatorFactory, OperatorManager as AParserOperatorManager,
+};
 use crate::aparser::parser_operator_manager::{OpType, ParserOperatorManager};
 use crate::aparser::token;
 use crate::exception::error_reporter::ErrorReporter;
@@ -59,16 +61,18 @@ impl BinaryOperator for CustomBinaryOperatorAdapter {
         _ql_options: &QLOptions,
         error_reporter: &dyn ErrorReporter,
     ) -> Result<DataValue, QLException> {
-        self.custom_binary_operator.execute(left, right).map_err(|err| {
-            error_reporter.report(
-                "OPERATOR_INNER_EXCEPTION",
-                &format!(
-                    "custom operator '{}' inner exception: {}",
-                    self.operator_name,
-                    err.reason()
-                ),
-            )
-        })
+        self.custom_binary_operator
+            .execute(left, right)
+            .map_err(|err| {
+                error_reporter.report(
+                    "OPERATOR_INNER_EXCEPTION",
+                    &format!(
+                        "custom operator '{}' inner exception: {}",
+                        self.operator_name,
+                        err.reason()
+                    ),
+                )
+            })
     }
 
     fn operator(&self) -> &str {
@@ -96,7 +100,8 @@ impl BinaryOperator for AliasedBinaryOperator {
         ql_options: &QLOptions,
         error_reporter: &dyn ErrorReporter,
     ) -> Result<DataValue, QLException> {
-        self.origin.execute(left, right, q_context, ql_options, error_reporter)
+        self.origin
+            .execute(left, right, q_context, ql_options, error_reporter)
     }
 
     fn operator(&self) -> &str {
@@ -155,7 +160,10 @@ impl OperatorManager {
         priority: i32,
     ) -> bool {
         let operator_name = operator_name.into();
-        if self.default_binary_operator_map.contains_key(&operator_name) {
+        if self
+            .default_binary_operator_map
+            .contains_key(&operator_name)
+        {
             return false;
         }
         if self.custom_binary_operator_map.contains_key(&operator_name) {
@@ -212,7 +220,10 @@ impl OperatorManager {
         }
         self.custom_binary_operator_map.insert(
             lexeme.clone(),
-            Rc::new(AliasedBinaryOperator { lexeme, origin: Rc::clone(origin) }),
+            Rc::new(AliasedBinaryOperator {
+                lexeme,
+                origin: Rc::clone(origin),
+            }),
         );
         true
     }
@@ -269,17 +280,23 @@ impl OperatorFactory for OperatorManager {
         if let Some(custom) = self.custom_binary_operator_map.get(operator_lexeme) {
             return Some(Rc::clone(custom));
         }
-        self.default_binary_operator_map.get(operator_lexeme).map(Rc::clone)
+        self.default_binary_operator_map
+            .get(operator_lexeme)
+            .map(Rc::clone)
     }
 
     /// Java `getPrefixUnaryOperator`(`--1 ++1 !true ~1 ^1`)。
     fn get_prefix_unary_operator(&self, operator_lexeme: &str) -> Option<Rc<dyn UnaryOperator>> {
-        self.default_prefix_unary_operator_map.get(operator_lexeme).map(Rc::clone)
+        self.default_prefix_unary_operator_map
+            .get(operator_lexeme)
+            .map(Rc::clone)
     }
 
     /// Java `getSuffixUnaryOperator`(`1-- 1++`)。
     fn get_suffix_unary_operator(&self, operator_lexeme: &str) -> Option<Rc<dyn UnaryOperator>> {
-        self.default_suffix_unary_operator_map.get(operator_lexeme).map(Rc::clone)
+        self.default_suffix_unary_operator_map
+            .get(operator_lexeme)
+            .map(Rc::clone)
     }
 }
 
@@ -443,7 +460,9 @@ mod tests {
             ("instanceof", ql_precedences::COMPARE),
         ];
         for (lexeme, priority) in cases {
-            let op = manager.get_binary_operator(lexeme).unwrap_or_else(|| panic!("缺少 {lexeme}"));
+            let op = manager
+                .get_binary_operator(lexeme)
+                .unwrap_or_else(|| panic!("缺少 {lexeme}"));
             assert_eq!(op.priority(), *priority, "{lexeme} 优先级");
             assert!(manager.is_op_type(lexeme, OpType::Middle));
             assert_eq!(manager.precedence(lexeme), Some(*priority));
@@ -457,7 +476,10 @@ mod tests {
         assert!(!manager.is_op_type("*", OpType::Prefix));
         // assign/collection/string 包的词素(其他 agent 交付)同样在册。
         for lexeme in ["=", "in", "not_in", "like", "not_like"] {
-            assert!(manager.get_binary_operator(lexeme).is_some(), "缺少 {lexeme}");
+            assert!(
+                manager.get_binary_operator(lexeme).is_some(),
+                "缺少 {lexeme}"
+            );
         }
         // 后缀一元:++/--。
         assert!(manager.is_op_type("++", OpType::Suffix));
@@ -475,7 +497,10 @@ mod tests {
         assert_eq!(manager.get_binary_operator("**").unwrap().priority(), 100);
         // replace:仅内建可替换,沿用原优先级。
         assert!(manager.replace_default_operator("+", Rc::new(Pow)));
-        assert_eq!(manager.get_binary_operator("+").unwrap().priority(), ql_precedences::ADD);
+        assert_eq!(
+            manager.get_binary_operator("+").unwrap().priority(),
+            ql_precedences::ADD
+        );
         assert!(!manager.replace_default_operator("??", Rc::new(Pow)));
         // alias:新词素委托原操作符。
         assert!(manager.add_operator_alias("plus", "-"));

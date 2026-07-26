@@ -5,9 +5,9 @@
 
 use std::collections::HashSet;
 
+use super::exist_stack::{ExistStack, ExistVarStack};
 use super::import_manager::ImportManager;
 use super::qlparser_base_visitor::Visitor;
-use super::exist_stack::{ExistStack, ExistVarStack};
 use super::scope_stack_visitor::{ScopeStack, ScopedVisitor};
 use super::syntax_tree_factory::*;
 use super::token as tk;
@@ -170,7 +170,10 @@ impl Visitor for OutVarNamesVisitor<'_> {
         handle_import_pack(&mut self.import_manager, ctx);
     }
 
-    fn visit_formal_or_inferred_parameter(&mut self, ctx: &FormalOrInferredParameterContext) -> Self::T {
+    fn visit_formal_or_inferred_parameter(
+        &mut self,
+        ctx: &FormalOrInferredParameterContext,
+    ) -> Self::T {
         self.stack.stack_mut().add(var_id_text(&ctx.var_id));
     }
 

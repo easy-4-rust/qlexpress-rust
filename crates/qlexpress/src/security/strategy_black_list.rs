@@ -57,7 +57,10 @@ mod tests {
         // 黑名单内:拒绝
         assert!(!strategy.check(&dangerous));
         // 黑名单外:放行(同类型不同成员、不同类型均不受限)
-        assert!(strategy.check(&NativeMember::new("java.lang.Runtime", "availableProcessors")));
+        assert!(strategy.check(&NativeMember::new(
+            "java.lang.Runtime",
+            "availableProcessors"
+        )));
         assert!(strategy.check(&NativeMember::new("java.lang.String", "length")));
         let as_enum: QLSecurityStrategy = strategy.into();
         assert!(!as_enum.check(&dangerous));

@@ -48,9 +48,7 @@ fn export_cache_for_function_defining_script() {
     // 包含 function 定义的脚本可导出
     let runner = runner();
     let script = "function addOne(int x) { return x + 1; } addOne(4);";
-    let cache = runner
-        .export_parse_cache(script)
-        .expect("export ok");
+    let cache = runner.export_parse_cache(script).expect("export ok");
     assert!(!cache.script.as_deref().unwrap_or("").is_empty());
 }
 
@@ -58,9 +56,7 @@ fn export_cache_for_function_defining_script() {
 fn cache_survives_json_round_trip_function() {
     let runner = runner();
     let script = "function mul(int x) { return x * 2; } mul(5);";
-    let cache = runner
-        .export_parse_cache(script)
-        .expect("export");
+    let cache = runner.export_parse_cache(script).expect("export");
     let json = serde_json::to_string(&cache).expect("serialize");
     let cache2: qlexpress_rust::api::parsecache::SerializableParseCache =
         serde_json::from_str(&json).expect("deserialize");
@@ -74,7 +70,8 @@ fn cache_survives_json_round_trip_function() {
 #[test]
 fn cache_with_loop_and_function() {
     let runner = runner();
-    let script = "int total = 0;\nfor (int i = 1; i <= 3; i = i + 1) {\ntotal = total + i;\n}\ntotal;";
+    let script =
+        "int total = 0;\nfor (int i = 1; i <= 3; i = i + 1) {\ntotal = total + i;\n}\ntotal;";
     let cache = runner.export_parse_cache(script).expect("export");
     let json = serde_json::to_string(&cache).expect("ser");
     let cache2: qlexpress_rust::api::parsecache::SerializableParseCache =
@@ -128,7 +125,10 @@ fn cache_size_grows_with_complexity() {
         )
         .expect("e");
     // 复杂脚本应比简单脚本 token 更多(简化:用 ScriptParseCache 长度做粗略比较)
-    assert!(complex.script.as_deref().unwrap_or("").len() > simple.script.as_deref().unwrap_or("").len());
+    assert!(
+        complex.script.as_deref().unwrap_or("").len()
+            > simple.script.as_deref().unwrap_or("").len()
+    );
 }
 
 #[test]

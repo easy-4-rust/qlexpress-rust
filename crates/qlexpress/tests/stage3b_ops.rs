@@ -21,9 +21,7 @@ use qlexpress_rust::ql_options::QLOptions;
 use qlexpress_rust::ql_precedences;
 use qlexpress_rust::runtime::data::index_map::IndexMap;
 use qlexpress_rust::runtime::function::{CustomFunction, LazyArgCustomFunction};
-use qlexpress_rust::runtime::instruction::{
-    ConstInstruction, Instruction, QLInstruction,
-};
+use qlexpress_rust::runtime::instruction::{ConstInstruction, Instruction, QLInstruction};
 use qlexpress_rust::runtime::member::{NativeRegistry, NativeType};
 use qlexpress_rust::runtime::operator::base::{BinaryOperator, UnaryOperator};
 use qlexpress_rust::runtime::operator::custom_binary_operator::CustomBinaryOperator;
@@ -110,11 +108,7 @@ impl BinaryOperator for MockBin {
             }
             BinKind::Add => {
                 if matches!(l, DataValue::Str(_)) || matches!(r, DataValue::Str(_)) {
-                    DataValue::Str(format!(
-                        "{}{}",
-                        l.string_value_of(),
-                        r.string_value_of()
-                    ))
+                    DataValue::Str(format!("{}{}", l.string_value_of(), r.string_value_of()))
                 } else {
                     num_bin(&l, &r, |a, b| a + b)
                 }
@@ -125,18 +119,10 @@ impl BinaryOperator for MockBin {
             BinKind::Rem => num_bin(&l, &r, |a, b| a % b),
             BinKind::Eq => DataValue::Bool(l == r),
             BinKind::Ne => DataValue::Bool(l != r),
-            BinKind::Lt => {
-                DataValue::Bool(as_f64(&l).zip(as_f64(&r)).is_some_and(|(a, b)| a < b))
-            }
-            BinKind::Le => {
-                DataValue::Bool(as_f64(&l).zip(as_f64(&r)).is_some_and(|(a, b)| a <= b))
-            }
-            BinKind::Gt => {
-                DataValue::Bool(as_f64(&l).zip(as_f64(&r)).is_some_and(|(a, b)| a > b))
-            }
-            BinKind::Ge => {
-                DataValue::Bool(as_f64(&l).zip(as_f64(&r)).is_some_and(|(a, b)| a >= b))
-            }
+            BinKind::Lt => DataValue::Bool(as_f64(&l).zip(as_f64(&r)).is_some_and(|(a, b)| a < b)),
+            BinKind::Le => DataValue::Bool(as_f64(&l).zip(as_f64(&r)).is_some_and(|(a, b)| a <= b)),
+            BinKind::Gt => DataValue::Bool(as_f64(&l).zip(as_f64(&r)).is_some_and(|(a, b)| a > b)),
+            BinKind::Ge => DataValue::Bool(as_f64(&l).zip(as_f64(&r)).is_some_and(|(a, b)| a >= b)),
             BinKind::And => match (&l, &r) {
                 (DataValue::Bool(a), DataValue::Bool(b)) => DataValue::Bool(*a && *b),
                 _ => return Err(reporter.report("INVALID_BINARY_OPERAND", "not booleans")),

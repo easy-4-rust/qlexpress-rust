@@ -4,11 +4,11 @@
 use std::rc::Rc;
 
 use crate::exception::error_codes;
-use crate::exception::pure_err_reporter::PureErrReporter;
 use crate::exception::error_reporter::ErrorReporter;
+use crate::exception::pure_err_reporter::PureErrReporter;
 use crate::exception::QLException;
-use crate::runtime::q_result::QResult;
 use crate::runtime::member::{as_meta_class, find_method_and_invoke, NativeRegistry};
+use crate::runtime::q_result::QResult;
 use crate::runtime::value::DataValue;
 
 /// A bound method (`obj.method` / `Cls.method`) usable as a lambda,
@@ -20,7 +20,11 @@ pub struct QLambdaMethod {
 }
 
 impl QLambdaMethod {
-    pub fn new(method_name: impl Into<String>, registry: Rc<NativeRegistry>, bean: DataValue) -> Self {
+    pub fn new(
+        method_name: impl Into<String>,
+        registry: Rc<NativeRegistry>,
+        bean: DataValue,
+    ) -> Self {
         QLambdaMethod {
             method_name: method_name.into(),
             registry,
@@ -37,7 +41,8 @@ impl QLambdaMethod {
         if let Some(meta_clz) = as_meta_class(&self.bean) {
             // Static method path (Java `bean instanceof MetaClass`).
             if let Some(method) = self.registry.resolve_method(&self.bean, &self.method_name) {
-                let value = crate::runtime::member::invoke_native_method(&self.bean, &method, params)?;
+                let value =
+                    crate::runtime::member::invoke_native_method(&self.bean, &method, params)?;
                 return Ok(QResult::Return(value.get()));
             }
             if params.is_empty() {

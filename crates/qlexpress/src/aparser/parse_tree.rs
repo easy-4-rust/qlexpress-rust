@@ -37,7 +37,10 @@ impl Node {
     /// 节点覆盖的最后一个 token。对应 Java 方法 `RuleContext.getStop`。
     /// Last token covered by this node (Java `RuleContext.getStop`).
     pub fn stop_token(&self) -> Option<&Token> {
-        self.children().into_iter().rev().find_map(|c| c.stop_token())
+        self.children()
+            .into_iter()
+            .rev()
+            .find_map(|c| c.stop_token())
     }
 
     /// 第一个 token 的 1 起始行号(若有)。Java 无同名方法(Rust 便捷方法)。

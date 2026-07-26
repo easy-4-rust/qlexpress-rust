@@ -133,12 +133,10 @@ fn op_equals(left: &DataValue, right: &DataValue) -> bool {
     // Java:isNumberCharacter → char2Number 后 NumberMath.compareTo
     match (left, right) {
         (DataValue::Char(c), num) if num.is_number() => {
-            number_compare(&DataValue::Int(*c as i32), num)
-                == Some(std::cmp::Ordering::Equal)
+            number_compare(&DataValue::Int(*c as i32), num) == Some(std::cmp::Ordering::Equal)
         }
         (num, DataValue::Char(c)) if num.is_number() => {
-            number_compare(num, &DataValue::Int(*c as i32))
-                == Some(std::cmp::Ordering::Equal)
+            number_compare(num, &DataValue::Int(*c as i32)) == Some(std::cmp::Ordering::Equal)
         }
         _ => false,
     }

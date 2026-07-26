@@ -4,8 +4,8 @@
 use crate::exception::error_codes;
 use crate::exception::error_reporter::ErrorReporter;
 use crate::exception::QLException;
-use crate::runtime::left_value::LeftValue;
 use crate::ql_precedences;
+use crate::runtime::left_value::LeftValue;
 use crate::runtime::operator::base::UnaryOperator;
 use crate::runtime::value::{DataValue, QValue};
 
@@ -98,14 +98,16 @@ mod tests {
     use std::rc::Rc;
 
     fn run(value: QValue) -> Result<DataValue, QLException> {
-        PlusPlusSuffixUnaryOperator::get_instance()
-            .execute(&value, &PureErrReporter::INSTANCE)
+        PlusPlusSuffixUnaryOperator::get_instance().execute(&value, &PureErrReporter::INSTANCE)
     }
 
     #[test]
     fn suffix_plus_plus_returns_original_and_writes_back() {
         // Java:a++ → 表达式值是自增前的 1,槽内变 2(与前缀的关键差异)
-        let slot = Rc::new(RefCell::new(AssignableDataValue::new("a", DataValue::Int(1))));
+        let slot = Rc::new(RefCell::new(AssignableDataValue::new(
+            "a",
+            DataValue::Int(1),
+        )));
         let result = run(QValue::Left(slot.clone())).unwrap();
         assert_eq!(result, DataValue::Int(1));
         assert_eq!(slot.borrow().get(), DataValue::Int(2));

@@ -5,12 +5,12 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use qlexpress_rust::aparser::compile_cache::QCompileCache;
+use qlexpress_rust::aparser::operator_factory::OperatorFactory;
 use qlexpress_rust::api::parsecache::{
     LoadedCompileCache, SerializableParseCache, SerializableParseCacheExporter,
     SerializableParseCacheImporter, MODEL_VERSION,
 };
-use qlexpress_rust::aparser::compile_cache::QCompileCache;
-use qlexpress_rust::aparser::operator_factory::OperatorFactory;
 use qlexpress_rust::class_supplier::DefaultClassSupplier;
 use qlexpress_rust::exception::default_err_reporter::DefaultErrReporter;
 use qlexpress_rust::exception::error_codes;
@@ -22,11 +22,11 @@ use qlexpress_rust::runtime::instruction::{
     WhileInstruction,
 };
 use qlexpress_rust::runtime::member::{as_meta_class, ClassRef, MetaClass};
+use qlexpress_rust::runtime::operator::operator_manager::OperatorManager;
 use qlexpress_rust::runtime::qlambda_definition::QLambdaDefinition;
 use qlexpress_rust::runtime::qlambda_definition_inner::{Param, QLambdaDefinitionInner};
 use qlexpress_rust::runtime::trace::{ExpressionTrace, TraceType};
 use qlexpress_rust::runtime::value::DataValue;
-use qlexpress_rust::runtime::operator::operator_manager::OperatorManager;
 
 const SCRIPT: &str = "a + 2";
 
@@ -41,7 +41,11 @@ fn build_main_definition(manager: &OperatorManager) -> Rc<dyn QLambdaDefinition>
         Box::new(LoadInstruction::new(reporter(), "a", None)),
         Box::new(ConstInstruction::new(reporter(), DataValue::Int(2), None)),
         Box::new(OperatorInstruction::new(reporter(), plus, None)),
-        Box::new(ReturnInstruction::new(reporter(), ReturnResultType::Return, None)),
+        Box::new(ReturnInstruction::new(
+            reporter(),
+            ReturnResultType::Return,
+            None,
+        )),
     ];
     Rc::new(QLambdaDefinitionInner::new(
         "main",
@@ -113,7 +117,10 @@ fn export_json_import_round_trip() {
     assert_eq!(restored_inner.instructions().len(), 4);
     assert_eq!(restored_inner.max_stack_size(), 2);
     assert_eq!(restored_inner.params_type()[0].name(), "a");
-    assert_eq!(restored_inner.params_type()[0].clazz(), Some(TargetType::Int));
+    assert_eq!(
+        restored_inner.params_type()[0].clazz(),
+        Some(TargetType::Int)
+    );
     let const_inst = restored_inner.instructions()[1]
         .as_any()
         .and_then(|any| any.downcast_ref::<ConstInstruction>())
@@ -128,7 +135,9 @@ fn export_json_import_round_trip() {
 
     // 二次导出与首次导出一致(幂等)
     let re_exporter = SerializableParseCacheExporter::new(SCRIPT, &manager, true);
-    let re_exported = re_exporter.export(loaded.get_compile_cache()).expect("二次导出");
+    let re_exported = re_exporter
+        .export(loaded.get_compile_cache())
+        .expect("二次导出");
     assert_eq!(re_exported.main, exported.main);
 }
 
@@ -149,10 +158,16 @@ fn constant_round_trip_all_types() {
         (DataValue::Char('x'), "CHAR"),
         (DataValue::Int(-7), "INT"),
         (DataValue::Long(9_000_000_000), "LONG"),
-        (DataValue::BigInt(123456789012345678901234567890i128), "BIG_INTEGER"),
+        (
+            DataValue::BigInt(123456789012345678901234567890i128),
+            "BIG_INTEGER",
+        ),
         (DataValue::Float(1.5), "FLOAT"),
         (DataValue::Double(-2.25), "DOUBLE"),
-        (DataValue::BigDec("3.141592653589793238462643".to_string()), "BIG_DECIMAL"),
+        (
+            DataValue::BigDec("3.141592653589793238462643".to_string()),
+            "BIG_DECIMAL",
+        ),
         (
             MetaClass::new(ClassRef::Named("com.example.Widget".to_string())).into_data_value(),
             "META_CLASS",
@@ -162,7 +177,11 @@ fn constant_round_trip_all_types() {
     for (value, expected_type) in cases {
         let instructions: Vec<Instruction> = vec![
             Box::new(ConstInstruction::new(reporter(), value.clone(), None)),
-            Box::new(ReturnInstruction::new(reporter(), ReturnResultType::Return, None)),
+            Box::new(ReturnInstruction::new(
+                reporter(),
+                ReturnResultType::Return,
+                None,
+            )),
         ];
         let cache: LoadedCompileCache = QCompileCache::new(
             Rc::new(QLambdaDefinitionInner::new("main", instructions, vec![], 1)),
@@ -213,17 +232,16 @@ fn nested_lambda_definitions_round_trip() {
     let manager = OperatorManager::new();
     let cond: Rc<dyn QLambdaDefinition> = Rc::new(QLambdaDefinitionInner::new(
         "while$condition",
-        vec![Box::new(ConstInstruction::new(reporter(), DataValue::Bool(true), None))
-            as Instruction],
+        vec![Box::new(ConstInstruction::new(
+            reporter(),
+            DataValue::Bool(true),
+            None,
+        )) as Instruction],
         vec![],
         1,
     ));
-    let body: Rc<dyn QLambdaDefinition> = Rc::new(QLambdaDefinitionInner::new(
-        "while$body",
-        vec![],
-        vec![],
-        0,
-    ));
+    let body: Rc<dyn QLambdaDefinition> =
+        Rc::new(QLambdaDefinitionInner::new("while$body", vec![], vec![], 0));
     let func_lambda: Rc<dyn QLambdaDefinition> = Rc::new(QLambdaDefinitionInner::new(
         "f",
         vec![Box::new(LoadInstruction::new(reporter(), "x", None)) as Instruction],
@@ -233,7 +251,11 @@ fn nested_lambda_definitions_round_trip() {
     let instructions: Vec<Instruction> = vec![
         Box::new(DefineFunctionInstruction::new(reporter(), "f", func_lambda)),
         Box::new(WhileInstruction::new(reporter(), cond, body, 1)),
-        Box::new(ReturnInstruction::new(reporter(), ReturnResultType::Return, None)),
+        Box::new(ReturnInstruction::new(
+            reporter(),
+            ReturnResultType::Return,
+            None,
+        )),
     ];
     let cache: LoadedCompileCache = QCompileCache::new(
         Rc::new(QLambdaDefinitionInner::new("main", instructions, vec![], 1)),
@@ -277,7 +299,11 @@ fn nested_lambda_definitions_round_trip() {
                     reporter(),
                     Rc::new(QLambdaDefinitionInner::new("g", vec![], vec![], 0)),
                 )) as Instruction,
-                Box::new(ReturnInstruction::new(reporter(), ReturnResultType::Return, None)),
+                Box::new(ReturnInstruction::new(
+                    reporter(),
+                    ReturnResultType::Return,
+                    None,
+                )),
             ],
             vec![],
             1,
@@ -326,8 +352,14 @@ fn import_error_branches() {
 
     // 未知 opcode → UNSUPPORTED_INSTRUCTION
     let mut bad_opcode = exported.clone();
-    bad_opcode.main.as_mut().unwrap().instructions.as_mut().unwrap()[0].opcode =
-        Some("NO_SUCH_OP".to_string());
+    bad_opcode
+        .main
+        .as_mut()
+        .unwrap()
+        .instructions
+        .as_mut()
+        .unwrap()[0]
+        .opcode = Some("NO_SUCH_OP".to_string());
     let mut importer = SerializableParseCacheImporter::new(&manager, &supplier);
     let err = importer.load(&bad_opcode, 0).err().unwrap();
     assert_eq!(
@@ -337,7 +369,13 @@ fn import_error_branches() {
 
     // 未知操作符 → OPERATOR_NOT_FOUND
     let mut bad_operator = exported.clone();
-    let operands = bad_operator.main.as_mut().unwrap().instructions.as_mut().unwrap()[2]
+    let operands = bad_operator
+        .main
+        .as_mut()
+        .unwrap()
+        .instructions
+        .as_mut()
+        .unwrap()[2]
         .operands
         .as_mut()
         .unwrap();
@@ -354,7 +392,13 @@ fn import_error_branches() {
 
     // 未注册类型(META_CLASS)→ CLASS_NOT_FOUND
     let mut bad_class = exported.clone();
-    let const_operands = bad_class.main.as_mut().unwrap().instructions.as_mut().unwrap()[1]
+    let const_operands = bad_class
+        .main
+        .as_mut()
+        .unwrap()
+        .instructions
+        .as_mut()
+        .unwrap()[1]
         .operands
         .as_mut()
         .unwrap();

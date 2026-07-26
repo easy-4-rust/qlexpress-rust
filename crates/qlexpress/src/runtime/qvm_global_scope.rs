@@ -71,14 +71,22 @@ impl QvmGlobalScope {
     /// 空全局作用域(无外部变量/函数)。
     /// 对应 Java 以 `ExpressContext.EMPTY_CONTEXT` 构造的用法。
     pub fn empty() -> Self {
-        Self::with_context(Rc::new(EmptyContext::new()), HashMap::new(), HashMap::new(), false)
+        Self::with_context(
+            Rc::new(EmptyContext::new()),
+            HashMap::new(),
+            HashMap::new(),
+            false,
+        )
     }
 
     /// 对应 Java 方法 `getSymbol(String)`:
     /// 脚本变量优先;否则查询外部上下文——`polluteUserContext` 时直接返回
     /// 外部值(Java 靠引用别名实现写穿),否则把外部当前值拷贝为新的脚本变量;
     /// 外部返回 `null`(`Ok(None)`)时新建初始化为 `null` 的脚本变量。
-    pub fn get_symbol(&mut self, var_name: &str) -> Result<Rc<RefCell<dyn LeftValue>>, QLException> {
+    pub fn get_symbol(
+        &mut self,
+        var_name: &str,
+    ) -> Result<Rc<RefCell<dyn LeftValue>>, QLException> {
         if let Some(new_variable) = self.new_variables.get(var_name) {
             return Ok(Rc::clone(new_variable));
         }

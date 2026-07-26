@@ -2,17 +2,17 @@
 //! 职责:弹出栈顶布尔值,满足期望时跳转。
 //! 本文件由 `flow.rs` 拆分而来(SPEC §5.5 一类一文件),仅移动代码与补充中文注释,行为完全一致。
 
-use std::cell::Cell;
-use std::rc::Rc;
 use crate::exception::error_codes;
 use crate::exception::error_reporter::ErrorReporter;
 use crate::exception::QLException;
 use crate::ql_options::QLOptions;
-use crate::runtime::q_result::QResult;
 use crate::runtime::instruction::QLInstruction;
+use crate::runtime::q_result::QResult;
 use crate::runtime::qcontext::QContext;
 use crate::runtime::value::DataValue;
 use crate::utils::println_utils::PrintlnUtils;
+use std::cell::Cell;
+use std::rc::Rc;
 
 /// 条件跳转弹栈指令。对应 Java: com.alibaba.qlexpress4.runtime.instruction.JumpIfPopInstruction(职责:弹出栈顶布尔值,满足期望时跳转)
 /// Operation: pop the top of stack, if the element is ${expect}, jump to
@@ -97,7 +97,12 @@ impl QLInstruction for JumpIfPopInstruction {
     fn println(&self, index: usize, depth: usize, debug: &mut dyn FnMut(String)) {
         PrintlnUtils::println_by_cur_depth(
             depth as i32,
-            &format!("{}: JumpIfPop {} {}", index, self.expect, self.position.get()),
+            &format!(
+                "{}: JumpIfPop {} {}",
+                index,
+                self.expect,
+                self.position.get()
+            ),
             debug,
         );
     }
@@ -110,4 +115,3 @@ impl QLInstruction for JumpIfPopInstruction {
         &self.error_reporter
     }
 }
-

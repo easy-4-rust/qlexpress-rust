@@ -204,7 +204,9 @@ mod tests {
             &DataValue::Int(3)
         );
         assert!(ObjTypeConvertor::cast(&DataValue::Null, TargetType::Int).is_convertible());
-        assert!(ObjTypeConvertor::cast(&DataValue::Str("s".into()), TargetType::Any).is_convertible());
+        assert!(
+            ObjTypeConvertor::cast(&DataValue::Str("s".into()), TargetType::Any).is_convertible()
+        );
         assert!(ObjTypeConvertor::cast_opt(&DataValue::Int(1), None).is_convertible());
     }
 
@@ -223,20 +225,20 @@ mod tests {
             &DataValue::BigDec("5".into())
         );
         assert_eq!(
-            ObjTypeConvertor::cast(&DataValue::Double(3.9), TargetType::BigInteger)
-                .get_converted(),
+            ObjTypeConvertor::cast(&DataValue::Double(3.9), TargetType::BigInteger).get_converted(),
             &DataValue::BigInt(3)
         );
     }
 
     #[test]
     fn unconvertible_cases() {
-        assert!(!ObjTypeConvertor::cast(&DataValue::Str("x".into()), TargetType::Int)
-            .is_convertible());
-        assert!(!ObjTypeConvertor::cast(&DataValue::Int(1), TargetType::Boolean)
-            .is_convertible());
-        assert!(!ObjTypeConvertor::cast(&DataValue::Bool(true), TargetType::Double)
-            .is_convertible());
+        assert!(
+            !ObjTypeConvertor::cast(&DataValue::Str("x".into()), TargetType::Int).is_convertible()
+        );
+        assert!(!ObjTypeConvertor::cast(&DataValue::Int(1), TargetType::Boolean).is_convertible());
+        assert!(
+            !ObjTypeConvertor::cast(&DataValue::Bool(true), TargetType::Double).is_convertible()
+        );
     }
 
     #[test]
@@ -246,8 +248,10 @@ mod tests {
                 .get_converted(),
             &DataValue::Char('a')
         );
-        assert!(!ObjTypeConvertor::cast(&DataValue::Str("ab".into()), TargetType::Character)
-            .is_convertible());
+        assert!(
+            !ObjTypeConvertor::cast(&DataValue::Str("ab".into()), TargetType::Character)
+                .is_convertible()
+        );
         assert_eq!(
             ObjTypeConvertor::cast(&DataValue::Int(97), TargetType::Character).get_converted(),
             &DataValue::Char('a')

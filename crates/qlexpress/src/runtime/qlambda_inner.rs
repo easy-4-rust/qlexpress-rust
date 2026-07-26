@@ -96,7 +96,11 @@ impl QLambdaInner {
     /// 取指-执行循环。对应 Java 方法 `callInner`(见 [`run_instructions`])。
     /// Java `callInner`: the fetch-execute loop (see [`run_instructions`]).
     fn call_inner(&self, runtime: &mut dyn QContext) -> Result<QResult, QLException> {
-        run_instructions(runtime, self.lambda_definition.instructions(), &self.ql_options)
+        run_instructions(
+            runtime,
+            self.lambda_definition.instructions(),
+            &self.ql_options,
+        )
     }
 
     /// 绑定参数并构造继承作用域。对应 Java 方法 `inheritScope`:
@@ -126,7 +130,9 @@ impl QLambdaInner {
                         origin_param_i.data_type_name().to_string()
                     }
                 );
-                return Err(PureErrReporter::INSTANCE.report(error_codes::INVALID_ARGUMENT, &message));
+                return Err(
+                    PureErrReporter::INSTANCE.report(error_codes::INVALID_ARGUMENT, &message)
+                );
             }
             let slot: Rc<std::cell::RefCell<dyn LeftValue>> = match target_cls {
                 Some(clz) => Rc::new(std::cell::RefCell::new(AssignableDataValue::with_type(
@@ -157,10 +163,8 @@ impl QLambdaInner {
             };
             init_symbol_table.insert(param_definition.name().to_string(), slot);
         }
-        let new_scope = QScope::block_fresh_stack(
-            &self.q_context.current_scope(),
-            init_symbol_table,
-        );
+        let new_scope =
+            QScope::block_fresh_stack(&self.q_context.current_scope(), init_symbol_table);
         Ok(DelegateQContext::new(
             Rc::clone(self.q_context.q_runtime()),
             new_scope,

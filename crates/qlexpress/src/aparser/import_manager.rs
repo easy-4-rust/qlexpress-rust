@@ -232,7 +232,8 @@ impl<'a> ImportManager<'a> {
                                 ImportScope::InnerCls => {
                                     let candidate =
                                         format!("{}${}", imported_pack.target(), field_id);
-                                    if let Some(inner_cls) = self.class_supplier.load_cls(&candidate)
+                                    if let Some(inner_cls) =
+                                        self.class_supplier.load_cls(&candidate)
                                     {
                                         qualified_cls = Some(inner_cls);
                                         state = PRE_LOAD_INNER_CLS;
@@ -279,9 +280,11 @@ impl<'a> ImportManager<'a> {
                 }
                 LOAD_INNER_CLS => {
                     let base = qualified_cls.clone().unwrap_or_default();
-                    let inner = self
-                        .class_supplier
-                        .load_cls(&format!("{}${}", base, inner_cls_id.clone().unwrap_or_default()));
+                    let inner = self.class_supplier.load_cls(&format!(
+                        "{}${}",
+                        base,
+                        inner_cls_id.clone().unwrap_or_default()
+                    ));
                     let Some(inner) = inner else {
                         return LoadPartQualifiedResult::new(qualified_cls, i.saturating_sub(1));
                     };
@@ -309,9 +312,11 @@ impl<'a> ImportManager<'a> {
             PRE_LOAD_INNER_CLS => LoadPartQualifiedResult::new(qualified_cls, field_ids.len()),
             LOAD_INNER_CLS => {
                 let base = qualified_cls.clone().unwrap_or_default();
-                let inner = self
-                    .class_supplier
-                    .load_cls(&format!("{}${}", base, inner_cls_id.unwrap_or_default()));
+                let inner = self.class_supplier.load_cls(&format!(
+                    "{}${}",
+                    base,
+                    inner_cls_id.unwrap_or_default()
+                ));
                 match inner {
                     None => LoadPartQualifiedResult::new(qualified_cls, field_ids.len() - 1),
                     Some(cls) => LoadPartQualifiedResult::new(Some(cls), field_ids.len()),

@@ -85,6 +85,9 @@ mod tests {
         );
         assert_eq!(QResult::NEXT_INSTRUCTION, QResult::NextInstruction);
         assert_eq!(QResult::Break.value(), DataValue::Null);
-        assert_eq!(QResult::Return(DataValue::Int(3)).value(), DataValue::Int(3));
+        assert_eq!(
+            QResult::Return(DataValue::Int(3)).value(),
+            DataValue::Int(3)
+        );
     }
 }

@@ -28,17 +28,23 @@ impl BigIntegerMath {
 
     /// Java `addImpl`。
     pub fn add_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
-        Ok(DataValue::BigInt(big_value(left).wrapping_add(big_value(right))))
+        Ok(DataValue::BigInt(
+            big_value(left).wrapping_add(big_value(right)),
+        ))
     }
 
     /// Java `subtractImpl`。
     pub fn subtract_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
-        Ok(DataValue::BigInt(big_value(left).wrapping_sub(big_value(right))))
+        Ok(DataValue::BigInt(
+            big_value(left).wrapping_sub(big_value(right)),
+        ))
     }
 
     /// Java `multiplyImpl`。
     pub fn multiply_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
-        Ok(DataValue::BigInt(big_value(left).wrapping_mul(big_value(right))))
+        Ok(DataValue::BigInt(
+            big_value(left).wrapping_mul(big_value(right)),
+        ))
     }
 
     /// Java `divideImpl`:委托 BigDecimalMath。
@@ -68,7 +74,9 @@ impl BigIntegerMath {
     pub fn mod_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
         let modulus = big_value(right);
         if modulus <= 0 {
-            return Err(number_math::arithmetic_exception("BigInteger: modulus not positive"));
+            return Err(number_math::arithmetic_exception(
+                "BigInteger: modulus not positive",
+            ));
         }
         Ok(DataValue::BigInt(big_value(left).rem_euclid(modulus)))
     }
@@ -118,7 +126,9 @@ impl BigIntegerMath {
         if distance < 0 {
             return Self::right_shift_with(left, distance.unsigned_abs());
         }
-        Ok(DataValue::BigInt(big_value(left).wrapping_shl(distance as u32)))
+        Ok(DataValue::BigInt(
+            big_value(left).wrapping_shl(distance as u32),
+        ))
     }
 
     /// Java `rightShiftImpl`(`BigInteger.shiftRight(int)`,算术右移)。

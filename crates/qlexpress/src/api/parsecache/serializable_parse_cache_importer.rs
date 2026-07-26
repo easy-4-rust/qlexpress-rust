@@ -107,9 +107,7 @@ impl<'a> SerializableParseCacheImporter<'a> {
                     None,
                     error_codes::SERIALIZABLE_PARSE_CACHE_INVALID_MODEL,
                     &error_codes::format_msg(
-                        error_codes::error_msg(
-                            error_codes::SERIALIZABLE_PARSE_CACHE_INVALID_MODEL,
-                        ),
+                        error_codes::error_msg(error_codes::SERIALIZABLE_PARSE_CACHE_INVALID_MODEL),
                         &["main lambda is required".to_string()],
                     ),
                 ))
@@ -256,12 +254,18 @@ impl<'a> SerializableParseCacheImporter<'a> {
             )),
             "PREFIX_UNARY_OP" => Box::new(UnaryInstruction::new(
                 Rc::clone(&reporter),
-                self.prefix_unary_operator(&self.required_string(operands, "operator", inst)?, inst)?,
+                self.prefix_unary_operator(
+                    &self.required_string(operands, "operator", inst)?,
+                    inst,
+                )?,
                 self.optional_int(operands, "traceKey", inst)?,
             )),
             "SUFFIX_UNARY_OP" => Box::new(UnaryInstruction::new(
                 Rc::clone(&reporter),
-                self.suffix_unary_operator(&self.required_string(operands, "operator", inst)?, inst)?,
+                self.suffix_unary_operator(
+                    &self.required_string(operands, "operator", inst)?,
+                    inst,
+                )?,
                 self.optional_int(operands, "traceKey", inst)?,
             )),
             "CALL_FUNCTION" => Box::new(CallFunctionInstruction::new(
@@ -366,19 +370,35 @@ impl<'a> SerializableParseCacheImporter<'a> {
                     &self.required_lambda(operands, "condition", inst)?,
                     inst,
                 )?,
-                self.import_lambda_definition(&self.required_lambda(operands, "body", inst)?, inst)?,
+                self.import_lambda_definition(
+                    &self.required_lambda(operands, "body", inst)?,
+                    inst,
+                )?,
                 self.required_int(operands, "whileScopeMaxStackSize", inst)? as usize,
             )),
             "FOR" => self.import_for_instruction(reporter, operands, instruction)?,
             "FOR_EACH" => Box::new(ForEachInstruction::new(
                 Rc::clone(&reporter),
-                self.import_lambda_definition(&self.required_lambda(operands, "body", inst)?, inst)?,
-                self.load_class(&self.required_string(operands, "itemClassName", inst)?, inst)?,
-                self.reporter(Some(&self.required_source(operands, "targetSource", inst)?)),
+                self.import_lambda_definition(
+                    &self.required_lambda(operands, "body", inst)?,
+                    inst,
+                )?,
+                self.load_class(
+                    &self.required_string(operands, "itemClassName", inst)?,
+                    inst,
+                )?,
+                self.reporter(Some(&self.required_source(
+                    operands,
+                    "targetSource",
+                    inst,
+                )?)),
             )),
             "TRY_CATCH" => Box::new(TryCatchInstruction::new(
                 Rc::clone(&reporter),
-                self.import_lambda_definition(&self.required_lambda(operands, "body", inst)?, inst)?,
+                self.import_lambda_definition(
+                    &self.required_lambda(operands, "body", inst)?,
+                    inst,
+                )?,
                 self.import_exception_table(operands, inst)?,
                 self.optional_lambda(operands, "finalBody", inst)?,
             )),
@@ -426,7 +446,10 @@ impl<'a> SerializableParseCacheImporter<'a> {
         let for_update = self.optional_lambda(operands, "forUpdate", inst)?;
         // Java: conditionSource 存在则以其构造 condition 的 reporter,否则复用本指令 reporter
         let condition_reporter = if operands.contains_key("conditionSource") {
-            self.reporter(self.optional_source(operands, "conditionSource", inst)?.as_ref())
+            self.reporter(
+                self.optional_source(operands, "conditionSource", inst)?
+                    .as_ref(),
+            )
         } else {
             Rc::clone(&reporter)
         };
@@ -481,18 +504,37 @@ impl<'a> SerializableParseCacheImporter<'a> {
         let value = constant.value.unwrap_or(Value::Null);
         match const_type {
             "NULL" => Ok(DataValue::Null),
-            "BOOLEAN" => Ok(DataValue::Bool(self.as_boolean(&value, owner, "constant.value")?)),
-            "STRING" => Ok(DataValue::Str(self.as_string(&value, owner, "constant.value")?)),
+            "BOOLEAN" => Ok(DataValue::Bool(self.as_boolean(
+                &value,
+                owner,
+                "constant.value",
+            )?)),
+            "STRING" => Ok(DataValue::Str(self.as_string(
+                &value,
+                owner,
+                "constant.value",
+            )?)),
             "CHAR" => {
                 let char_value = self.as_string(&value, owner, "constant.value")?;
                 let mut chars = char_value.chars();
                 match (chars.next(), chars.next()) {
                     (Some(c), None) => Ok(DataValue::Char(c)),
-                    _ => Err(self.invalid(owner, "CHAR constant value must contain exactly one character")),
+                    _ => Err(self.invalid(
+                        owner,
+                        "CHAR constant value must contain exactly one character",
+                    )),
                 }
             }
-            "INT" => Ok(DataValue::Int(self.as_int(&value, owner, "constant.value")?)),
-            "LONG" => Ok(DataValue::Long(self.as_long(&value, owner, "constant.value")?)),
+            "INT" => Ok(DataValue::Int(self.as_int(
+                &value,
+                owner,
+                "constant.value",
+            )?)),
+            "LONG" => Ok(DataValue::Long(self.as_long(
+                &value,
+                owner,
+                "constant.value",
+            )?)),
             "BIG_INTEGER" => {
                 let decimal = self.as_decimal_string(&value, owner, "constant.value")?;
                 decimal
@@ -500,8 +542,14 @@ impl<'a> SerializableParseCacheImporter<'a> {
                     .map(DataValue::BigInt)
                     .map_err(|_| self.invalid(owner, "constant.value must be a decimal string"))
             }
-            "FLOAT" => Ok(DataValue::Float(self.as_f64(&value, owner, "constant.value")? as f32)),
-            "DOUBLE" => Ok(DataValue::Double(self.as_f64(&value, owner, "constant.value")?)),
+            "FLOAT" => Ok(DataValue::Float(
+                self.as_f64(&value, owner, "constant.value")? as f32,
+            )),
+            "DOUBLE" => Ok(DataValue::Double(self.as_f64(
+                &value,
+                owner,
+                "constant.value",
+            )?)),
             "BIG_DECIMAL" => Ok(DataValue::BigDec(self.as_decimal_string(
                 &value,
                 owner,
@@ -535,18 +583,16 @@ impl<'a> SerializableParseCacheImporter<'a> {
         trace_point: &SerializableTracePoint,
         owner: Option<&SerializableInstruction>,
     ) -> ImportResult<ExpressionTrace> {
-        let trace_type = trace_type_from_java_name(
-            trace_point.trace_type.as_deref().unwrap_or(""),
-        )
-        .ok_or_else(|| {
-            self.invalid(
-                owner,
-                &format!(
-                    "invalid trace point type: {}",
-                    trace_point.trace_type.as_deref().unwrap_or("")
-                ),
-            )
-        })?;
+        let trace_type = trace_type_from_java_name(trace_point.trace_type.as_deref().unwrap_or(""))
+            .ok_or_else(|| {
+                self.invalid(
+                    owner,
+                    &format!(
+                        "invalid trace point type: {}",
+                        trace_point.trace_type.as_deref().unwrap_or("")
+                    ),
+                )
+            })?;
         let children = match &trace_point.children {
             Some(children) => self.import_trace_points(children, owner)?,
             None => Vec::new(),
@@ -725,7 +771,11 @@ impl<'a> SerializableParseCacheImporter<'a> {
     fn reporter(&self, source: Option<&SerializableSource>) -> Rc<dyn ErrorReporter> {
         let default_source = SerializableSource::default();
         let normalized = source.unwrap_or(&default_source);
-        let line = if normalized.line <= 0 { 1 } else { normalized.line };
+        let line = if normalized.line <= 0 {
+            1
+        } else {
+            normalized.line
+        };
         let col = normalized.col.max(0) + 1;
         Rc::new(DefaultErrReporter::new(
             self.script.clone(),
@@ -758,7 +808,11 @@ impl<'a> SerializableParseCacheImporter<'a> {
         name: &str,
         owner: Option<&SerializableInstruction>,
     ) -> ImportResult<String> {
-        self.as_string(self.required(operands, name, owner)?, owner, &format!("operand '{name}'"))
+        self.as_string(
+            self.required(operands, name, owner)?,
+            owner,
+            &format!("operand '{name}'"),
+        )
     }
 
     /// 对应 Java `requiredBoolean`。
@@ -768,7 +822,11 @@ impl<'a> SerializableParseCacheImporter<'a> {
         name: &str,
         owner: Option<&SerializableInstruction>,
     ) -> ImportResult<bool> {
-        self.as_boolean(self.required(operands, name, owner)?, owner, &format!("operand '{name}'"))
+        self.as_boolean(
+            self.required(operands, name, owner)?,
+            owner,
+            &format!("operand '{name}'"),
+        )
     }
 
     /// 对应 Java `requiredInt`。
@@ -778,7 +836,11 @@ impl<'a> SerializableParseCacheImporter<'a> {
         name: &str,
         owner: Option<&SerializableInstruction>,
     ) -> ImportResult<i32> {
-        self.as_int(self.required(operands, name, owner)?, owner, &format!("operand '{name}'"))
+        self.as_int(
+            self.required(operands, name, owner)?,
+            owner,
+            &format!("operand '{name}'"),
+        )
     }
 
     /// 对应 Java `optionalInt`。
@@ -790,7 +852,11 @@ impl<'a> SerializableParseCacheImporter<'a> {
     ) -> ImportResult<Option<i32>> {
         match operands.get(name) {
             None | Some(Value::Null) => Ok(None),
-            Some(value) => Ok(Some(self.as_int(value, owner, &format!("operand '{name}'"))?)),
+            Some(value) => Ok(Some(self.as_int(
+                value,
+                owner,
+                &format!("operand '{name}'"),
+            )?)),
         }
     }
 

@@ -80,14 +80,21 @@ mod tests {
     fn not_semantics() {
         let op = LogicNotOperator::get_instance();
         assert_eq!(
-            op.execute(&QValue::Data(DataValue::Bool(true)), &PureErrReporter::INSTANCE).unwrap(),
+            op.execute(
+                &QValue::Data(DataValue::Bool(true)),
+                &PureErrReporter::INSTANCE
+            )
+            .unwrap(),
             DataValue::Bool(false)
         );
         // Java 语义要点:!null == true(null 视为 false)。
         assert_eq!(
-            op.execute(&QValue::Data(DataValue::Null), &PureErrReporter::INSTANCE).unwrap(),
+            op.execute(&QValue::Data(DataValue::Null), &PureErrReporter::INSTANCE)
+                .unwrap(),
             DataValue::Bool(true)
         );
-        assert!(op.execute(&QValue::Data(DataValue::Int(1)), &PureErrReporter::INSTANCE).is_err());
+        assert!(op
+            .execute(&QValue::Data(DataValue::Int(1)), &PureErrReporter::INSTANCE)
+            .is_err());
     }
 }

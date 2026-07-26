@@ -64,7 +64,11 @@ mod tests {
     fn set_accepts_any_type_like_java_object_component() {
         let list = Rc::new(RefCell::new(vec![DataValue::Int(1)]));
         let mut item = ListItemValue::new(Rc::clone(&list), 0);
-        item.set(DataValue::Str("anything".into()), &PureErrReporter::INSTANCE).unwrap();
+        item.set(
+            DataValue::Str("anything".into()),
+            &PureErrReporter::INSTANCE,
+        )
+        .unwrap();
         assert_eq!(list.borrow()[0], DataValue::Str("anything".into()));
         assert_eq!(item.symbol_name(), None);
     }

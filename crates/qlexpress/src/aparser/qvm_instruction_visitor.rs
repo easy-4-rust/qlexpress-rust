@@ -19,10 +19,10 @@ use super::operator_factory::OperatorFactory;
 use super::qlparser_base_visitor::Visitor;
 use super::syntax_tree_factory::*;
 use super::token::{self, Token};
+use crate::exception::default_err_reporter::DefaultErrReporter;
 use crate::exception::error_codes;
 use crate::exception::error_reporter::ErrorReporter;
 use crate::exception::pure_err_reporter::PureErrReporter;
-use crate::exception::default_err_reporter::DefaultErrReporter;
 use crate::exception::ql_syntax_exception::QLSyntaxException;
 use crate::exception::QLException;
 use crate::init_options::InitOptions;
@@ -602,11 +602,8 @@ impl<'a> QvmInstructionVisitor<'a> {
         operator_id: &str,
         trace_key: Option<i32>,
     ) {
-        let right_visitor = self.parse_with_sub_visitor(
-            right,
-            Rc::clone(&self.generator_scope),
-            Context::Macro,
-        );
+        let right_visitor =
+            self.parse_with_sub_visitor(right, Rc::clone(&self.generator_scope), Context::Macro);
         let right_instructions = right_visitor.take_instructions();
 
         let jump_if = Rc::new(JumpIfInstruction::new(
@@ -710,8 +707,7 @@ impl<'a> QvmInstructionVisitor<'a> {
             return ClassRef::Primitive(TargetType::Any);
         };
         let base_cls = if let Some(primitive) = &ctx.primitive_type {
-            Self::built_in_cls(&primitive.text())
-                .unwrap_or(ClassRef::Primitive(TargetType::Any))
+            Self::built_in_cls(&primitive.text()).unwrap_or(ClassRef::Primitive(TargetType::Any))
         } else if let Some(cls_type) = &ctx.cls_type {
             self.parse_cls_ids(cls_type_children(cls_type))
         } else {
@@ -725,14 +721,9 @@ impl<'a> QvmInstructionVisitor<'a> {
     /// manager, reporting `CLASS_NOT_FOUND` when unresolvable.
     fn parse_cls_ids(&mut self, var_ids: &[Node]) -> ClassRef {
         let field_ids: Vec<String> = var_ids.iter().map(|id| id.text()).collect();
-        let result = self
-            .import_manager
-            .borrow()
-            .load_part_qualified(&field_ids);
+        let result = self.import_manager.borrow().load_part_qualified(&field_ids);
         match result.cls() {
-            Some(cls) if result.rest_index() == field_ids.len() => {
-                ClassRef::from_name(cls)
-            }
+            Some(cls) if result.rest_index() == field_ids.len() => ClassRef::from_name(cls),
             _ => {
                 let last_id = var_ids.last().expect("class ids non-empty");
                 let reason = error_codes::format_msg(
@@ -875,10 +866,7 @@ impl<'a> QvmInstructionVisitor<'a> {
                 .map(Token::text)
                 .unwrap_or_default()
                 .to_string();
-            if let Some(macro_define) = self
-                .generator_scope
-                .get_macro_instructions(&macro_name)
-            {
+            if let Some(macro_define) = self.generator_scope.get_macro_instructions(&macro_name) {
                 for instruction in macro_define.macro_instructions() {
                     self.pure_add_shared(Rc::clone(instruction));
                 }
@@ -897,8 +885,7 @@ impl<'a> QvmInstructionVisitor<'a> {
             return false;
         };
         let expression = &expr_stmt.expression;
-        let (Some(start), Some(stop)) = (expression.start_token(), expression.stop_token())
-        else {
+        let (Some(start), Some(stop)) = (expression.start_token(), expression.stop_token()) else {
             return false;
         };
         std::ptr::eq(start, stop) && start.token_type() == token::ID as i32
@@ -917,11 +904,8 @@ impl<'a> QvmInstructionVisitor<'a> {
             let scope_name =
                 self.child_scope_name(&format!("{FOR_PREFIX}{for_count}{INIT_SUFFIX}"));
             let scope = self.child_scope(scope_name.clone());
-            let sub = self.parse_with_sub_visitor(
-                local_variable_declaration,
-                scope,
-                Context::Macro,
-            );
+            let sub =
+                self.parse_with_sub_visitor(local_variable_declaration, scope, Context::Macro);
             let max_stack_size = sub.max_stack_size();
             let instructions = sub.take_instructions();
             Some(Rc::new(QLambdaDefinitionInner::new(
@@ -944,8 +928,7 @@ impl<'a> QvmInstructionVisitor<'a> {
         scope_suffix: &str,
         expression: &Node,
     ) -> Option<Rc<QLambdaDefinitionInner>> {
-        let scope_name =
-            self.child_scope_name(&format!("{FOR_PREFIX}{for_count}{scope_suffix}"));
+        let scope_name = self.child_scope_name(&format!("{FOR_PREFIX}{for_count}{scope_suffix}"));
         let scope = self.child_scope(scope_name.clone());
         let sub = self.parse_expr_body_with_sub_visitor(expression, scope, Context::Block);
         let max_stack_size = sub.max_stack_size();
@@ -1052,27 +1035,20 @@ impl<'a> QvmInstructionVisitor<'a> {
             // compiled instructions into the first handler and recompiles
             // the body for each additional declared type (identical
             // instruction sequences, fresh objects).
-            let mut compiled = catch_sub.map(|sub| {
-                (sub.max_stack_size(), sub.take_instructions())
-            });
-            let mut handler_for = |visitor: &mut Self,
-                                   param: Param|
-             -> Rc<dyn QLambdaDefinition> {
+            let mut compiled = catch_sub.map(|sub| (sub.max_stack_size(), sub.take_instructions()));
+            let mut handler_for = |visitor: &mut Self, param: Param| -> Rc<dyn QLambdaDefinition> {
                 match compiled.take() {
-                    Some((max_stack, instructions)) => {
-                        Rc::new(QLambdaDefinitionInner::new(
-                            catch_body_name.clone(),
-                            instructions,
-                            vec![param],
-                            max_stack,
-                        ))
-                    }
+                    Some((max_stack, instructions)) => Rc::new(QLambdaDefinitionInner::new(
+                        catch_body_name.clone(),
+                        instructions,
+                        vec![param],
+                        max_stack,
+                    )),
                     None => match &try_catch_ctx.block_statements {
                         None => Rc::new(QLambdaDefinitionEmpty::INSTANCE),
                         Some(block) => {
                             let scope = visitor.child_scope(catch_body_name.clone());
-                            let sub =
-                                visitor.parse_with_sub_visitor(block, scope, Context::Block);
+                            let sub = visitor.parse_with_sub_visitor(block, scope, Context::Block);
                             let max_stack = sub.max_stack_size();
                             Rc::new(QLambdaDefinitionInner::new(
                                 catch_body_name.clone(),
@@ -1141,9 +1117,9 @@ impl<'a> QvmInstructionVisitor<'a> {
                     .iter()
                     .filter(|bs| !matches!(bs, Node::EmptyStatement(_)))
                     .collect();
-                return statements.last().map_or(true, |last| {
-                    Self::block_stmt_fill_const(last)
-                });
+                return statements
+                    .last()
+                    .map_or(true, |last| Self::block_stmt_fill_const(last));
             }
             return true;
         }
@@ -1169,9 +1145,7 @@ impl<'a> QvmInstructionVisitor<'a> {
 
     /// Java `getMacroLastStmt`: whether the macro's last statement is an
     /// expression statement.
-    fn macro_last_stmt_is_expression<'b>(
-        macro_block_statements: Option<&'b Node>,
-    ) -> bool {
+    fn macro_last_stmt_is_expression<'b>(macro_block_statements: Option<&'b Node>) -> bool {
         let Some(Node::BlockStatements(ctx)) = macro_block_statements else {
             return false;
         };
@@ -1193,10 +1167,7 @@ impl<'a> QvmInstructionVisitor<'a> {
         let scope_name = self.macro_scope_name();
         let scope = self.child_scope(scope_name);
         let sub = self.parse_with_sub_visitor(block_statements, scope, Context::Macro);
-        sub.take_instructions()
-            .into_iter()
-            .map(Rc::from)
-            .collect()
+        sub.take_instructions().into_iter().map(Rc::from).collect()
     }
 
     /// Java `parseInitializer`.
@@ -1215,11 +1186,7 @@ impl<'a> QvmInstructionVisitor<'a> {
     }
 
     /// Java `newArrWithInitializers`.
-    fn new_arr_with_initializers(
-        &mut self,
-        component_cls: TargetType,
-        array_initializer: &Node,
-    ) {
+    fn new_arr_with_initializers(&mut self, component_cls: TargetType, array_initializer: &Node) {
         let Node::ArrayInitializer(ctx) = array_initializer else {
             return;
         };
@@ -1267,10 +1234,7 @@ impl<'a> Visitor for QvmInstructionVisitor<'a> {
             return;
         };
         let last_text = last.text();
-        let is_inner_cls = last_text
-            .chars()
-            .next()
-            .is_some_and(|c| !c.is_lowercase());
+        let is_inner_cls = last_text.chars().next().is_some_and(|c| !c.is_lowercase());
         let import_path = ctx
             .var_ids
             .iter()
@@ -1319,10 +1283,7 @@ impl<'a> Visitor for QvmInstructionVisitor<'a> {
             if self.failed() {
                 return;
             }
-            if !matches!(
-                child,
-                Node::FunctionStatement(_) | Node::MacroStatement(_)
-            ) {
+            if !matches!(child, Node::FunctionStatement(_) | Node::MacroStatement(_)) {
                 if is_pre_express {
                     self.add_instruction(Box::new(PopInstruction::new(Rc::new(
                         PureErrReporter::INSTANCE,
@@ -1384,9 +1345,7 @@ impl<'a> Visitor for QvmInstructionVisitor<'a> {
         let condition_size = for_condition_lambda
             .as_ref()
             .map_or(0, |l| l.max_stack_size());
-        let update_size = for_update_lambda
-            .as_ref()
-            .map_or(0, |l| l.max_stack_size());
+        let update_size = for_update_lambda.as_ref().map_or(0, |l| l.max_stack_size());
         let for_scope_max_stack_size = init_size.max(condition_size).max(update_size);
 
         if self.init_options.is_trace_expression() {
@@ -1427,10 +1386,7 @@ impl<'a> Visitor for QvmInstructionVisitor<'a> {
         let (body_definition, _) = self.loop_body_visitor_definition(
             ctx.block_statements.as_deref(),
             body_scope_name,
-            vec![Param::new(
-                ctx.var_id.text(),
-                decl_target_type(&it_var_cls),
-            )],
+            vec![Param::new(ctx.var_id.text(), decl_target_type(&it_var_cls))],
             Rc::clone(&for_each_err_reporter),
         );
 
@@ -1464,13 +1420,12 @@ impl<'a> Visitor for QvmInstructionVisitor<'a> {
             self.parse_expr_body_with_sub_visitor(&ctx.expression, scope, Context::Block);
         let condition_max_stack = condition_sub.max_stack_size();
         let condition_instructions = condition_sub.take_instructions();
-        let condition_lambda: Rc<QLambdaDefinitionInner> =
-            Rc::new(QLambdaDefinitionInner::new(
-                while_condition_scope,
-                condition_instructions,
-                vec![],
-                condition_max_stack,
-            ));
+        let condition_lambda: Rc<QLambdaDefinitionInner> = Rc::new(QLambdaDefinitionInner::new(
+            while_condition_scope,
+            condition_instructions,
+            vec![],
+            condition_max_stack,
+        ));
 
         let while_err_reporter = self.new_reporter_with_token(ctx.while_token.symbol());
         let body_scope_name =
@@ -1548,11 +1503,8 @@ impl<'a> Visitor for QvmInstructionVisitor<'a> {
             .map(|p| self.parse_formal_or_inferred_parameter_list(p))
             .unwrap_or_default();
         let function_name = ctx.var_id.text();
-        let function_definition = self.parse_function_definition(
-            &function_name,
-            ctx.block_statements.as_deref(),
-            params,
-        );
+        let function_definition =
+            self.parse_function_definition(&function_name, ctx.block_statements.as_deref(), params);
 
         let error_reporter = ctx
             .var_id
@@ -1617,11 +1569,9 @@ impl<'a> Visitor for QvmInstructionVisitor<'a> {
         )));
 
         // then branch
-        let then_scope_name =
-            self.child_scope_name(&format!("{IF_PREFIX}{if_count}{THEN_SUFFIX}"));
+        let then_scope_name = self.child_scope_name(&format!("{IF_PREFIX}{if_count}{THEN_SUFFIX}"));
         let then_scope = self.child_scope(then_scope_name);
-        let then_visitor =
-            self.parse_with_sub_visitor(&ctx.then_body, then_scope, Context::Macro);
+        let then_visitor = self.parse_with_sub_visitor(&ctx.then_body, then_scope, Context::Macro);
         let mut then_instructions = then_visitor.take_instructions();
         if let Node::ThenBody(then_body) = &*ctx.then_body {
             if Self::if_body_fill_const(
@@ -1644,8 +1594,7 @@ impl<'a> Visitor for QvmInstructionVisitor<'a> {
         };
 
         // else branch
-        let else_scope_name =
-            self.child_scope_name(&format!("{IF_PREFIX}{if_count}{ELSE_SUFFIX}"));
+        let else_scope_name = self.child_scope_name(&format!("{IF_PREFIX}{if_count}{ELSE_SUFFIX}"));
         let mut else_instructions = match &ctx.else_body {
             None => vec![Box::new(ConstInstruction::new(
                 Rc::clone(&if_error_reporter),
@@ -1761,11 +1710,7 @@ impl<'a> Visitor for QvmInstructionVisitor<'a> {
                         .map(|t| self.new_reporter_with_token(t))
                         .unwrap_or_else(|| Rc::new(PureErrReporter::INSTANCE));
                     let default = default_value_for_target(decl_target_type(&decl_cls));
-                    self.add_instruction(Box::new(ConstInstruction::new(
-                        reporter,
-                        default,
-                        None,
-                    )));
+                    self.add_instruction(Box::new(ConstInstruction::new(reporter, default, None)));
                 }
                 Some(initializer) => self.parse_initializer(initializer, &decl_cls),
             }
@@ -1808,15 +1753,10 @@ impl<'a> Visitor for QvmInstructionVisitor<'a> {
         let body_sub = self.parse_with_sub_visitor(block_statements, scope, Context::Block);
         let body_max_stack = body_sub.max_stack_size();
         let body_instructions = body_sub.take_instructions();
-        let body_lambda_definition: Rc<dyn QLambdaDefinition> =
-            Rc::new(QLambdaDefinitionInner::new(
-                try_scope_name,
-                body_instructions,
-                vec![],
-                body_max_stack,
-            ));
-        let exception_table =
-            self.parse_exception_table(try_count, ctx.try_catches.as_deref());
+        let body_lambda_definition: Rc<dyn QLambdaDefinition> = Rc::new(
+            QLambdaDefinitionInner::new(try_scope_name, body_instructions, vec![], body_max_stack),
+        );
+        let exception_table = self.parse_exception_table(try_count, ctx.try_catches.as_deref());
         let final_body_definition =
             self.parse_final_body_definition(try_count, ctx.try_finally.as_deref());
 
@@ -1852,8 +1792,7 @@ impl<'a> Visitor for QvmInstructionVisitor<'a> {
             return;
         };
         let operator_id = assign_operator.text();
-        let Some(binary_operator) = self.operator_factory.get_binary_operator(&operator_id)
-        else {
+        let Some(binary_operator) = self.operator_factory.get_binary_operator(&operator_id) else {
             return;
         };
         let reporter = self.reporter_of(assign_operator);
@@ -2037,8 +1976,7 @@ impl<'a> Visitor for QvmInstructionVisitor<'a> {
                         None => {
                             let key_text = entry_ctx.map_key.text();
                             keys.push(strip_quotes(&key_text));
-                            let reporter =
-                                self.new_reporter_with_token(cls_value.quote.symbol());
+                            let reporter = self.new_reporter_with_token(cls_value.quote.symbol());
                             self.add_instruction(Box::new(ConstInstruction::new(
                                 reporter,
                                 DataValue::Str(QLStringUtils::parse_string_escape(cls_text)),
@@ -2216,14 +2154,15 @@ impl<'a> Visitor for QvmInstructionVisitor<'a> {
             .map(|t| self.new_reporter_with_token(t))
             .unwrap_or_else(|| self.new_reporter_with_token(ctx.dot.symbol()));
         match ctx.chain {
-            ChainKind::Plain => {
-                self.add_instruction(Box::new(GetFieldInstruction::new(reporter, field_name, false)))
-            }
-            ChainKind::Optional => {
-                self.add_instruction(Box::new(GetFieldInstruction::new(reporter, field_name, true)))
-            }
-            ChainKind::Spread => self
-                .add_instruction(Box::new(SpreadGetFieldInstruction::new(reporter, field_name))),
+            ChainKind::Plain => self.add_instruction(Box::new(GetFieldInstruction::new(
+                reporter, field_name, false,
+            ))),
+            ChainKind::Optional => self.add_instruction(Box::new(GetFieldInstruction::new(
+                reporter, field_name, true,
+            ))),
+            ChainKind::Spread => self.add_instruction(Box::new(SpreadGetFieldInstruction::new(
+                reporter, field_name,
+            ))),
         }
     }
 
@@ -2244,10 +2183,7 @@ impl<'a> Visitor for QvmInstructionVisitor<'a> {
             return;
         }
         let Some(index_value_expr) = &ctx.index_value_expr else {
-            let stop = ctx
-                .lbrack
-                .symbol()
-                .clone();
+            let stop = ctx.lbrack.symbol().clone();
             self.report_parse_err(
                 &stop,
                 error_codes::MISSING_INDEX,
@@ -2261,36 +2197,34 @@ impl<'a> Visitor for QvmInstructionVisitor<'a> {
                 single.expression.accept(self);
                 self.add_instruction(Box::new(IndexInstruction::new(error_reporter)));
             }
-            Node::SliceIndex(slice) => {
-                match (&slice.start, &slice.end) {
-                    (None, None) => self.add_instruction(Box::new(SliceInstruction::new(
+            Node::SliceIndex(slice) => match (&slice.start, &slice.end) {
+                (None, None) => self.add_instruction(Box::new(SliceInstruction::new(
+                    error_reporter,
+                    SliceMode::Copy,
+                ))),
+                (None, Some(end)) => {
+                    end.accept(self);
+                    self.add_instruction(Box::new(SliceInstruction::new(
                         error_reporter,
-                        SliceMode::Copy,
-                    ))),
-                    (None, Some(end)) => {
-                        end.accept(self);
-                        self.add_instruction(Box::new(SliceInstruction::new(
-                            error_reporter,
-                            SliceMode::Left,
-                        )));
-                    }
-                    (Some(start), None) => {
-                        start.accept(self);
-                        self.add_instruction(Box::new(SliceInstruction::new(
-                            error_reporter,
-                            SliceMode::Right,
-                        )));
-                    }
-                    (Some(start), Some(end)) => {
-                        start.accept(self);
-                        end.accept(self);
-                        self.add_instruction(Box::new(SliceInstruction::new(
-                            error_reporter,
-                            SliceMode::Both,
-                        )));
-                    }
+                        SliceMode::Left,
+                    )));
                 }
-            }
+                (Some(start), None) => {
+                    start.accept(self);
+                    self.add_instruction(Box::new(SliceInstruction::new(
+                        error_reporter,
+                        SliceMode::Right,
+                    )));
+                }
+                (Some(start), Some(end)) => {
+                    start.accept(self);
+                    end.accept(self);
+                    self.add_instruction(Box::new(SliceInstruction::new(
+                        error_reporter,
+                        SliceMode::Both,
+                    )));
+                }
+            },
             _ => {}
         }
     }
@@ -2308,8 +2242,7 @@ impl<'a> Visitor for QvmInstructionVisitor<'a> {
         )));
 
         let operator_id = ctx.op_id.text();
-        let Some(binary_operator) = self.operator_factory.get_binary_operator(&operator_id)
-        else {
+        let Some(binary_operator) = self.operator_factory.get_binary_operator(&operator_id) else {
             return;
         };
         let trace_key = ctx.op_id.start_token().map(Token::start_index);
@@ -2474,9 +2407,9 @@ impl<'a> Visitor for QvmInstructionVisitor<'a> {
                         parse_integer_literal(&cleaned)
                     }
                 }
-                token::QUOTE_STRING_LITERAL => Some(DataValue::Str(
-                    QLStringUtils::parse_string_escape(text),
-                )),
+                token::QUOTE_STRING_LITERAL => {
+                    Some(DataValue::Str(QLStringUtils::parse_string_escape(text)))
+                }
                 token::NULL => Some(DataValue::NULL_VALUE),
                 _ => None,
             };
@@ -2581,13 +2514,11 @@ impl<'a> Visitor for QvmInstructionVisitor<'a> {
                             if let Some(expression) = &string_expression.expression {
                                 // SCRIPT
                                 expression.accept(self);
-                            } else if let Some(var_terminal) =
-                                &string_expression.selector_variable
+                            } else if let Some(var_terminal) = &string_expression.selector_variable
                             {
                                 // VARIABLE
                                 let var_name = var_terminal.text().trim().to_string();
-                                let reporter =
-                                    self.new_reporter_with_token(var_terminal.symbol());
+                                let reporter = self.new_reporter_with_token(var_terminal.symbol());
                                 self.add_instruction(Box::new(LoadInstruction::new(
                                     reporter, var_name, None,
                                 )));
@@ -2669,12 +2600,8 @@ impl<'a> QvmInstructionVisitor<'a> {
     fn parse_path_head_part(&mut self, pathable: &Node, path_parts: &[Node]) -> usize {
         match pathable {
             Node::TypeExpr(_) => {
-                let text = pathable
-                    .start_token()
-                    .map(Token::text)
-                    .unwrap_or_default();
-                let cls = Self::built_in_cls(text)
-                    .unwrap_or(ClassRef::Primitive(TargetType::Any));
+                let text = pathable.start_token().map(Token::text).unwrap_or_default();
+                let cls = Self::built_in_cls(text).unwrap_or(ClassRef::Primitive(TargetType::Any));
                 let dim_part_num = self.parse_dim_parts(0, path_parts);
                 let cls = wrap_in_array(cls, dim_part_num);
                 let reporter = self.reporter_of(pathable);
@@ -2713,9 +2640,7 @@ impl<'a> QvmInstructionVisitor<'a> {
         let mut head_part_ids = vec![id_context.text()];
         for path_part in path_parts {
             match path_part {
-                Node::FieldAccess(field_access)
-                    if field_access.chain == ChainKind::Plain =>
-                {
+                Node::FieldAccess(field_access) if field_access.chain == ChainKind::Plain => {
                     head_part_ids.push(Self::parse_field_id(&field_access.field_id));
                 }
                 _ => break,
@@ -2771,9 +2696,7 @@ impl<'a> QvmInstructionVisitor<'a> {
                 .cloned()
                 .unwrap_or_else(|| Token::new(0, "", 0, 0, 1, 0));
             let reporter = self.reporter_of(function_name_context);
-            let arguments: Vec<&Node> = argument_list
-                .map(argument_expressions)
-                .unwrap_or_default();
+            let arguments: Vec<&Node> = argument_list.map(argument_expressions).unwrap_or_default();
             let operator_factory = self.operator_factory;
             let mut code_generator = VisitorCodeGenerator {
                 visitor: self,
@@ -2850,10 +2773,7 @@ impl<'a> QvmInstructionVisitor<'a> {
         list_error_reporter: Rc<dyn ErrorReporter>,
     ) {
         let Some(Node::ListItems(ctx)) = list_items else {
-            self.add_instruction(Box::new(NewListInstruction::new(
-                list_error_reporter,
-                0,
-            )));
+            self.add_instruction(Box::new(NewListInstruction::new(list_error_reporter, 0)));
             return;
         };
         for expression in &ctx.expressions {
@@ -2935,14 +2855,15 @@ impl<'a> QvmInstructionVisitor<'a> {
             let (body_instructions, break_indices) = match &group.block_statements {
                 None => (Vec::new(), Vec::new()),
                 Some(body) => {
-                    let mut body_visitor = self.sub_visitor(
-                        Rc::clone(&self.generator_scope),
-                        Context::Macro,
-                    );
+                    let mut body_visitor =
+                        self.sub_visitor(Rc::clone(&self.generator_scope), Context::Macro);
                     body_visitor.collect_break_indices = Some(Vec::new());
                     body.accept(&mut body_visitor);
                     self.propagate_error(&body_visitor);
-                    let breaks = body_visitor.collect_break_indices.take().unwrap_or_default();
+                    let breaks = body_visitor
+                        .collect_break_indices
+                        .take()
+                        .unwrap_or_default();
                     (body_visitor.take_instructions(), breaks)
                 }
             };
@@ -3138,9 +3059,7 @@ impl<'a> QvmInstructionVisitor<'a> {
                                     true,
                                     -1,
                                 ));
-                                self.pure_add_shared(
-                                    Rc::clone(&jump_to_case) as SharedInstruction,
-                                );
+                                self.pure_add_shared(Rc::clone(&jump_to_case) as SharedInstruction);
                                 case_jumps.push((jump_to_case, self.instruction_list.len() - 1));
                             }
                         }
@@ -3192,8 +3111,7 @@ impl<'a> QvmInstructionVisitor<'a> {
             group.expression.accept(self);
 
             // Jump to end after evaluating result
-            let jump_to_end =
-                Rc::new(JumpInstruction::new(Rc::clone(&switch_error_reporter), -1));
+            let jump_to_end = Rc::new(JumpInstruction::new(Rc::clone(&switch_error_reporter), -1));
             self.pure_add_shared(Rc::clone(&jump_to_end) as SharedInstruction);
             end_jumps.push((jump_to_end, self.instruction_list.len() - 1));
         }
@@ -3285,8 +3203,6 @@ fn last_stmt_is_return_or_break(block_statements: Option<&Node>) -> bool {
             )
         })
 }
-
-
 
 /// Java `String.substring(1, length - 1)` for a quoted literal.
 fn strip_quotes(text: &str) -> String {
@@ -3437,7 +3353,11 @@ fn cmp_decimal(a: &str, b: &str) -> Option<std::cmp::Ordering> {
         return Some(Ordering::Equal);
     }
     if na != nb {
-        return Some(if na { Ordering::Less } else { Ordering::Greater });
+        return Some(if na {
+            Ordering::Less
+        } else {
+            Ordering::Greater
+        });
     }
     let ordering = if da.is_empty() {
         Ordering::Less
@@ -3499,9 +3419,9 @@ impl CodeGenerator for VisitorCodeGenerator<'_, '_> {
     ) -> Rc<dyn QLambdaDefinition> {
         let scope = Rc::clone(&self.visitor.generator_scope);
         let context = self.visitor.context;
-        let sub_visitor =
-            self.visitor
-                .parse_expr_body_with_sub_visitor(expression, scope, context);
+        let sub_visitor = self
+            .visitor
+            .parse_expr_body_with_sub_visitor(expression, scope, context);
         let max_stack_size = sub_visitor.max_stack_size();
         let instructions = sub_visitor.take_instructions();
         Rc::new(QLambdaDefinitionInner::new(

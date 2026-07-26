@@ -29,16 +29,102 @@ macro_rules! token_consts {
 }
 
 token_consts!(
-    FOR, IF, ELSE, WHILE, BREAK, CONTINUE, RETURN, FUNCTION, MACRO, IMPORT, STATIC, NEW, SWITCH,
-    CASE, DEFAULT, BYTE, SHORT, INT, LONG, FLOAT, DOUBLE, CHAR, BOOL, NULL, TRUE, FALSE, EXTENDS,
-    SUPER, TRY, CATCH, FINALLY, THROW, THEN, CLASS, THIS, QUOTE_STRING_LITERAL, INTEGER_LITERAL,
-    FLOATING_POINT_LITERAL, INTEGER_OR_FLOATING_LITERAL, LPAREN, RPAREN, LBRACE, RBRACE, LBRACK,
-    RBRACK, DOT, ARROW, SEMI, COMMA, QUESTION, COLON, DCOLON, GT, LT, EQ, NOEQ, RIGHSHIFT_ASSGIN,
-    RIGHSHIFT, OPTIONAL_CHAINING, SPREAD_CHAINING, URSHIFT_ASSGIN, URSHIFT, LSHIFT_ASSGIN,
-    LEFTSHIFT, GE, LE, DOTMUL, CARET, ADD_ASSIGN, SUB_ASSIGN, AND_ASSIGN, OR_ASSIGN, MUL_ASSIGN,
-    MOD_ASSIGN, DIV_ASSIGN, XOR_ASSIGN, BANG, TILDE, ADD, SUB, MUL, DIV, BIT_AND, BIT_OR, MOD, INC,
-    DEC, NEWLINE, OPID, SELECTOR_START, ID, DOUBLE_QUOTE, STATIC_STRING_CHARACTERS, DY_STR_EXPR_START,
-    DY_STR_TEXT, SELECTOR_VARIABLE_VANME
+    FOR,
+    IF,
+    ELSE,
+    WHILE,
+    BREAK,
+    CONTINUE,
+    RETURN,
+    FUNCTION,
+    MACRO,
+    IMPORT,
+    STATIC,
+    NEW,
+    SWITCH,
+    CASE,
+    DEFAULT,
+    BYTE,
+    SHORT,
+    INT,
+    LONG,
+    FLOAT,
+    DOUBLE,
+    CHAR,
+    BOOL,
+    NULL,
+    TRUE,
+    FALSE,
+    EXTENDS,
+    SUPER,
+    TRY,
+    CATCH,
+    FINALLY,
+    THROW,
+    THEN,
+    CLASS,
+    THIS,
+    QUOTE_STRING_LITERAL,
+    INTEGER_LITERAL,
+    FLOATING_POINT_LITERAL,
+    INTEGER_OR_FLOATING_LITERAL,
+    LPAREN,
+    RPAREN,
+    LBRACE,
+    RBRACE,
+    LBRACK,
+    RBRACK,
+    DOT,
+    ARROW,
+    SEMI,
+    COMMA,
+    QUESTION,
+    COLON,
+    DCOLON,
+    GT,
+    LT,
+    EQ,
+    NOEQ,
+    RIGHSHIFT_ASSGIN,
+    RIGHSHIFT,
+    OPTIONAL_CHAINING,
+    SPREAD_CHAINING,
+    URSHIFT_ASSGIN,
+    URSHIFT,
+    LSHIFT_ASSGIN,
+    LEFTSHIFT,
+    GE,
+    LE,
+    DOTMUL,
+    CARET,
+    ADD_ASSIGN,
+    SUB_ASSIGN,
+    AND_ASSIGN,
+    OR_ASSIGN,
+    MUL_ASSIGN,
+    MOD_ASSIGN,
+    DIV_ASSIGN,
+    XOR_ASSIGN,
+    BANG,
+    TILDE,
+    ADD,
+    SUB,
+    MUL,
+    DIV,
+    BIT_AND,
+    BIT_OR,
+    MOD,
+    INC,
+    DEC,
+    NEWLINE,
+    OPID,
+    SELECTOR_START,
+    ID,
+    DOUBLE_QUOTE,
+    STATIC_STRING_CHARACTERS,
+    DY_STR_EXPR_START,
+    DY_STR_TEXT,
+    SELECTOR_VARIABLE_VANME
 );
 
 const EOF: i32 = token::EOF;
@@ -192,7 +278,14 @@ impl<'a> QLParser<'a> {
     fn expect(&mut self, token_type: i32, display: &str) -> PResult<TerminalNode> {
         if !self.la(token_type) {
             let tok = self.lt();
-            return Err(self.syntax(tok, format!("mismatched input '{}' expecting {}", token_text(tok), display)));
+            return Err(self.syntax(
+                tok,
+                format!(
+                    "mismatched input '{}' expecting {}",
+                    token_text(tok),
+                    display
+                ),
+            ));
         }
         Ok(self.consume_node())
     }
@@ -245,7 +338,10 @@ impl<'a> QLParser<'a> {
         }
         if self.la(IMPORT) {
             let tok = self.lt();
-            return Err(self.syntax(tok, "Import statement is not at the beginning of the file.".to_string()));
+            return Err(self.syntax(
+                tok,
+                "Import statement is not at the beginning of the file.".to_string(),
+            ));
         }
         if self.la(THROW) {
             let throw_token = self.consume_node();
@@ -280,9 +376,9 @@ impl<'a> QLParser<'a> {
         if self.la(BREAK) || self.la(CONTINUE) {
             let token = self.consume_node();
             self.consume_next_statement()?;
-            return Ok(Node::BreakContinueStatement(BreakContinueStatementContext {
-                token,
-            }));
+            return Ok(Node::BreakContinueStatement(
+                BreakContinueStatementContext { token },
+            ));
         }
         if self.la(RETURN) {
             let return_token = self.consume_node();
@@ -387,13 +483,15 @@ impl<'a> QLParser<'a> {
         self.skip_newlines();
         self.expect(RPAREN, "')'")?;
         let block_statements = self.parse_braced_block()?;
-        Ok(Node::TraditionalForStatement(TraditionalForStatementContext {
-            for_token,
-            for_init: Box::new(for_init),
-            for_condition,
-            for_update,
-            block_statements: block_statements.map(Box::new),
-        }))
+        Ok(Node::TraditionalForStatement(
+            TraditionalForStatementContext {
+                for_token,
+                for_init: Box::new(for_init),
+                for_condition,
+                for_update,
+                block_statements: block_statements.map(Box::new),
+            },
+        ))
     }
 
     fn parse_for_init(&mut self) -> PResult<Node> {
@@ -511,9 +609,11 @@ impl<'a> QLParser<'a> {
                 }
             }
         };
-        Ok(Node::NonExpressionStatement(NonExpressionStatementContext {
-            statement: Box::new(statement),
-        }))
+        Ok(Node::NonExpressionStatement(
+            NonExpressionStatementContext {
+                statement: Box::new(statement),
+            },
+        ))
     }
 
     // ------------------------------------------------------------------
@@ -715,7 +815,10 @@ impl<'a> QLParser<'a> {
             let tok = self.lt();
             return Err(self.syntax(
                 tok,
-                format!("mismatched input '{}' expecting assignment operator", token_text(tok)),
+                format!(
+                    "mismatched input '{}' expecting assignment operator",
+                    token_text(tok)
+                ),
             ));
         }
         Ok(Node::AssignOperator(AssignOperatorContext {
@@ -937,7 +1040,10 @@ impl<'a> QLParser<'a> {
         let tok = self.lt();
         Err(self.syntax(
             tok,
-            format!("mismatched input '{}' expecting expression", token_text(tok)),
+            format!(
+                "mismatched input '{}' expecting expression",
+                token_text(tok)
+            ),
         ))
     }
 
@@ -1021,10 +1127,7 @@ impl<'a> QLParser<'a> {
         };
         self.skip_newlines();
         self.expect(RBRACK, "']'")?;
-        Ok(Node::ListExpr(ListExprContext {
-            lbrack,
-            list_items,
-        }))
+        Ok(Node::ListExpr(ListExprContext { lbrack, list_items }))
     }
 
     fn parse_list_items(&mut self) -> PResult<Node> {
@@ -1305,7 +1408,9 @@ impl<'a> QLParser<'a> {
         let labels = self.parse_switch_labels()?;
         self.skip_newlines();
         let block_statements = if !self.la(CASE) && !self.la(DEFAULT) && !self.la(RBRACE) {
-            Some(Box::new(self.parse_block_statements_until_switch_group_end()?))
+            Some(Box::new(
+                self.parse_block_statements_until_switch_group_end()?,
+            ))
         } else {
             None
         };
@@ -1661,7 +1766,10 @@ impl<'a> QLParser<'a> {
                 let tok = self.lt();
                 return Err(self.syntax(
                     tok,
-                    format!("mismatched input '{}' expecting custom path", token_text(tok)),
+                    format!(
+                        "mismatched input '{}' expecting custom path",
+                        token_text(tok)
+                    ),
                 ));
             }
             return Ok(Some(Node::CustomPath(ctx)));
@@ -1822,12 +1930,16 @@ impl<'a> QLParser<'a> {
                         expression: Some(Box::new(expression)),
                     }
                 };
-                ctx.parts.push(DyStrPart::Expr(Box::new(Node::StringExpression(expr))));
+                ctx.parts
+                    .push(DyStrPart::Expr(Box::new(Node::StringExpression(expr))));
             } else {
                 let tok = self.lt();
                 return Err(self.syntax(
                     tok,
-                    format!("mismatched input '{}' expecting string content", token_text(tok)),
+                    format!(
+                        "mismatched input '{}' expecting string content",
+                        token_text(tok)
+                    ),
                 ));
             }
         }
@@ -1990,7 +2102,10 @@ impl<'a> QLParser<'a> {
         let tok = self.lt();
         Err(self.syntax(
             tok,
-            format!("mismatched input '{}' expecting reference type", token_text(tok)),
+            format!(
+                "mismatched input '{}' expecting reference type",
+                token_text(tok)
+            ),
         ))
     }
 
@@ -2043,7 +2158,10 @@ impl<'a> QLParser<'a> {
             let tok = self.lt();
             return Err(self.syntax(
                 tok,
-                format!("mismatched input '{}' expecting identifier", token_text(tok)),
+                format!(
+                    "mismatched input '{}' expecting identifier",
+                    token_text(tok)
+                ),
             ));
         }
         Ok(Node::VarId(VarIdContext {
@@ -2079,7 +2197,10 @@ impl<'a> QLParser<'a> {
     }
 
     fn is_next_statement_start(&self) -> bool {
-        self.la(EOF) || self.la(RBRACE) || self.la(SEMI) || (self.strict_new_lines && self.la(NEWLINE))
+        self.la(EOF)
+            || self.la(RBRACE)
+            || self.la(SEMI)
+            || (self.strict_new_lines && self.la(NEWLINE))
     }
 
     fn skip_newlines(&mut self) {
@@ -2298,7 +2419,14 @@ fn is_assign_operator(ty: i32) -> bool {
 }
 
 fn is_primitive_type(ty: i32) -> bool {
-    ty == BYTE || ty == SHORT || ty == INT || ty == LONG || ty == FLOAT || ty == DOUBLE || ty == BOOL || ty == CHAR
+    ty == BYTE
+        || ty == SHORT
+        || ty == INT
+        || ty == LONG
+        || ty == FLOAT
+        || ty == DOUBLE
+        || ty == BOOL
+        || ty == CHAR
 }
 
 fn is_var_id_token(ty: i32) -> bool {
@@ -2356,10 +2484,8 @@ mod tests {
     use super::*;
     use crate::aparser::check_visitor::CheckVisitor;
     use crate::aparser::import_manager::ImportManager;
-    use crate::aparser::{
-        OutFunctionVisitor, OutVarAttrsVisitor, OutVarNamesVisitor,
-    };
     use crate::aparser::parser_operator_manager::{OpType, ParserOperatorManager};
+    use crate::aparser::{OutFunctionVisitor, OutVarAttrsVisitor, OutVarNamesVisitor};
     use crate::operator::operator_check_strategy::OperatorCheckStrategy;
     use crate::ql_precedences as prec;
 
@@ -2430,10 +2556,7 @@ mod tests {
             let prefix = ["!", "~", "+", "-", "++", "--"];
             let suffix = ["++", "--"];
             match op_type {
-                OpType::Middle => middle
-                    .iter()
-                    .find(|(op, _)| *op == lexeme)
-                    .map(|(_, p)| *p),
+                OpType::Middle => middle.iter().find(|(op, _)| *op == lexeme).map(|(_, p)| *p),
                 OpType::Prefix => {
                     if prefix.contains(&lexeme) {
                         Some(prec::UNARY)
@@ -2453,12 +2576,30 @@ mod tests {
     }
 
     fn parse(script: &str) -> Node {
-        build_tree(script, Some(&DefaultOps), false, |_| {}, InterpolationMode::Script, "${", "}", true)
-            .unwrap_or_else(|e| panic!("parse failed for {script:?}: {}", e.reason()))
+        build_tree(
+            script,
+            Some(&DefaultOps),
+            false,
+            |_| {},
+            InterpolationMode::Script,
+            "${",
+            "}",
+            true,
+        )
+        .unwrap_or_else(|e| panic!("parse failed for {script:?}: {}", e.reason()))
     }
 
     fn parse_err(script: &str) -> QLSyntaxException {
-        match build_tree(script, Some(&DefaultOps), false, |_| {}, InterpolationMode::Script, "${", "}", true) {
+        match build_tree(
+            script,
+            Some(&DefaultOps),
+            false,
+            |_| {},
+            InterpolationMode::Script,
+            "${",
+            "}",
+            true,
+        ) {
             Ok(_) => panic!("expected syntax error for {script:?}"),
             Err(e) => e,
         }
@@ -2524,7 +2665,10 @@ mod tests {
         match &statements(&tree)[0] {
             Node::WhileStatement(w) => {
                 assert_eq!(w.while_token.text(), "while");
-                assert!(matches!(w.block_statements.as_deref(), Some(Node::BlockStatements(_))));
+                assert!(matches!(
+                    w.block_statements.as_deref(),
+                    Some(Node::BlockStatements(_))
+                ));
             }
             other => panic!("expected while, got {other:?}"),
         }
@@ -2570,7 +2714,9 @@ mod tests {
             Node::FunctionStatement(f) => {
                 assert_eq!(f.var_id.text(), "add");
                 match f.params.as_deref() {
-                    Some(Node::FormalOrInferredParameterList(list)) => assert_eq!(list.params.len(), 2),
+                    Some(Node::FormalOrInferredParameterList(list)) => {
+                        assert_eq!(list.params.len(), 2)
+                    }
                     other => panic!("expected params, got {other:?}"),
                 }
             }
@@ -2624,7 +2770,9 @@ mod tests {
                 match s.local_variable_declaration.as_ref() {
                     Node::LocalVariableDeclaration(decl) => {
                         match decl.variable_declarator_list.as_ref() {
-                            Node::VariableDeclaratorList(list) => assert_eq!(list.variables.len(), 2),
+                            Node::VariableDeclaratorList(list) => {
+                                assert_eq!(list.variables.len(), 2)
+                            }
                             other => panic!("expected declarator list, got {other:?}"),
                         }
                     }
@@ -2863,8 +3011,14 @@ mod tests {
         };
         let base = base_expr(rhs);
         let primary = primary_of(base);
-        assert!(matches!(primary.prefix.as_deref(), Some(Node::PrefixExpress(_))));
-        assert!(matches!(primary.suffix.as_deref(), Some(Node::SuffixExpress(_))));
+        assert!(matches!(
+            primary.prefix.as_deref(),
+            Some(Node::PrefixExpress(_))
+        ));
+        assert!(matches!(
+            primary.suffix.as_deref(),
+            Some(Node::SuffixExpress(_))
+        ));
         assert_eq!(base.left_assos.len(), 1);
         assert_eq!(binaryop_text(&base.left_assos[0]), "+");
     }
@@ -2878,7 +3032,10 @@ mod tests {
             other => panic!(),
         };
         let primary = primary_of(base_expr(rhs));
-        assert!(matches!(primary.pathable.as_deref(), Some(Node::CastExpr(_))));
+        assert!(matches!(
+            primary.pathable.as_deref(),
+            Some(Node::CastExpr(_))
+        ));
 
         let tree = parse("x = (1 + 2) * 3;");
         let expr = expr_statement(&statements(&tree)[0]);
@@ -2888,7 +3045,10 @@ mod tests {
         };
         let base = base_expr(rhs);
         let primary = primary_of(base);
-        assert!(matches!(primary.pathable.as_deref(), Some(Node::GroupExpr(_))));
+        assert!(matches!(
+            primary.pathable.as_deref(),
+            Some(Node::GroupExpr(_))
+        ));
         assert_eq!(binaryop_text(&base.left_assos[0]), "*");
     }
 
@@ -2995,7 +3155,10 @@ mod tests {
         let primary = primary_of(base_expr(rhs));
         match &primary.path_parts[0] {
             Node::IndexExpr(i) => {
-                assert!(matches!(i.index_value_expr.as_deref(), Some(Node::SingleIndex(_))));
+                assert!(matches!(
+                    i.index_value_expr.as_deref(),
+                    Some(Node::SingleIndex(_))
+                ));
             }
             other => panic!("expected index, got {other:?}"),
         }
@@ -3172,19 +3335,15 @@ mod tests {
                 match s.local_variable_declaration.as_ref() {
                     Node::LocalVariableDeclaration(decl) => {
                         match decl.variable_declarator_list.as_ref() {
-                            Node::VariableDeclaratorList(list) => {
-                                match &list.variables[0] {
-                                    Node::VariableDeclarator(v) => {
-                                        match v.initializer.as_deref() {
-                                            Some(Node::VariableInitializer(init)) => {
-                                                assert!(init.array_initializer.is_some());
-                                            }
-                                            other => panic!("expected initializer, got {other:?}"),
-                                        }
+                            Node::VariableDeclaratorList(list) => match &list.variables[0] {
+                                Node::VariableDeclarator(v) => match v.initializer.as_deref() {
+                                    Some(Node::VariableInitializer(init)) => {
+                                        assert!(init.array_initializer.is_some());
                                     }
-                                    other => panic!("expected declarator, got {other:?}"),
-                                }
-                            }
+                                    other => panic!("expected initializer, got {other:?}"),
+                                },
+                                other => panic!("expected declarator, got {other:?}"),
+                            },
                             other => panic!(),
                         }
                     }

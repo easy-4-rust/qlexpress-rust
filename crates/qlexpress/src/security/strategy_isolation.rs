@@ -25,7 +25,9 @@ impl StrategyIsolation {
     /// Java 语义:无条件 `throw new IllegalStateException()`;Rust 以 panic 对应。
     pub fn check(&self, _member: &NativeMember) -> bool {
         // Java: throw new IllegalStateException();
-        panic!("StrategyIsolation forbids any member access check (java.lang.IllegalStateException)")
+        panic!(
+            "StrategyIsolation forbids any member access check (java.lang.IllegalStateException)"
+        )
     }
 }
 

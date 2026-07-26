@@ -115,7 +115,9 @@ pub struct BlackOperatorCheckStrategy {
 
 impl BlackOperatorCheckStrategy {
     pub fn new(forbidden_operators: HashSet<String>) -> Self {
-        BlackOperatorCheckStrategy { forbidden_operators }
+        BlackOperatorCheckStrategy {
+            forbidden_operators,
+        }
     }
 
     pub fn is_allowed(&self, operator: &str) -> bool {
@@ -154,6 +156,11 @@ mod tests {
         let strategy = OperatorCheckStrategy::blacklist(set(&["="]));
         assert!(!strategy.is_allowed("="));
         assert!(strategy.is_allowed("+"));
-        assert_eq!(BlackOperatorCheckStrategy::new(set(&["="])).operators().len(), 1);
+        assert_eq!(
+            BlackOperatorCheckStrategy::new(set(&["="]))
+                .operators()
+                .len(),
+            1
+        );
     }
 }

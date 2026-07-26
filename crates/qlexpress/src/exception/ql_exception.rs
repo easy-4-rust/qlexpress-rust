@@ -127,8 +127,15 @@ impl QLException {
         error_code: &str,
         reason: &str,
     ) -> QLSyntaxException {
-        let ex_message =
-            ExMessageUtil::format(script, token_start_pos, line, col, lexeme, error_code, reason);
+        let ex_message = ExMessageUtil::format(
+            script,
+            token_start_pos,
+            line,
+            col,
+            lexeme,
+            error_code,
+            reason,
+        );
         let diagnostic = to_diagnostic(
             token_start_pos,
             line,
@@ -160,8 +167,15 @@ impl QLException {
         reason: &str,
         catch_obj: Option<DataValue>,
     ) -> QLException {
-        let ex_message =
-            ExMessageUtil::format(script, token_start_pos, line, col, lexeme, error_code, reason);
+        let ex_message = ExMessageUtil::format(
+            script,
+            token_start_pos,
+            line,
+            col,
+            lexeme,
+            error_code,
+            reason,
+        );
         let diagnostic = to_diagnostic(
             token_start_pos,
             line,
@@ -194,7 +208,14 @@ fn to_diagnostic(
     let lexeme_len = lexeme.chars().count() as i32;
     let start = Position::new(zero_based_line, zero_based_col);
     let end = Position::new(zero_based_line, zero_based_col + lexeme_len);
-    Diagnostic::new(start_pos, Range::new(start, end), lexeme, error_code, reason, snippet)
+    Diagnostic::new(
+        start_pos,
+        Range::new(start, end),
+        lexeme,
+        error_code,
+        reason,
+        snippet,
+    )
 }
 
 impl fmt::Display for QLException {

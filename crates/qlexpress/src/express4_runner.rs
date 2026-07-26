@@ -42,9 +42,7 @@ use crate::api::parsecache::serializable_parse_cache_exporter::SerializableParse
 use crate::api::parsecache::serializable_parse_cache_importer::{
     ImportResult, SerializableParseCacheImporter,
 };
-use crate::api::parsecache::{
-    LoadedCompileCache, LoadedParseCache, SerializableParseCache,
-};
+use crate::api::parsecache::{LoadedCompileCache, LoadedParseCache, SerializableParseCache};
 use crate::api::ql_functional_varargs::QLFunctionalVarargs;
 use crate::check_options::CheckOptions;
 use crate::exception::ql_syntax_exception::QLSyntaxException;
@@ -56,7 +54,9 @@ use crate::ql_result::QLResult;
 use crate::runtime::class_ref::ClassRef;
 use crate::runtime::context::{ExpressContext, MapExpressContext};
 use crate::runtime::data::index_map::IndexMap;
-use crate::runtime::function::{as_native_method, CustomFunction, ExtensionFunction, QMethodFunction};
+use crate::runtime::function::{
+    as_native_method, CustomFunction, ExtensionFunction, QMethodFunction,
+};
 use crate::runtime::i_method::IMethod;
 use crate::runtime::instruction::Instruction;
 use crate::runtime::jvm_i_method::NativeIMethod;
@@ -321,7 +321,10 @@ impl Express4Runner {
 
     /// 解析并编译脚本,返回主 Lambda 指令序列(Stage 3b 编译入口接线)。
     /// 对应 Java `parseDefinition` 的指令部分。
-    pub fn parse_to_instructions(&self, script: &str) -> Result<Vec<Instruction>, QLSyntaxException> {
+    pub fn parse_to_instructions(
+        &self,
+        script: &str,
+    ) -> Result<Vec<Instruction>, QLSyntaxException> {
         let tree = self.parse_to_syntax_tree(script)?;
         let import_manager = RefCell::new(self.inherit_default_import());
         let user_define_functions = self.user_define_functions.borrow();
@@ -406,7 +409,11 @@ impl Express4Runner {
 
     /// 脚本静态检查(操作符黑白名单等)。对应 Java 方法
     /// `check(String, CheckOptions)`:解析后经 `CheckVisitor` 校验。
-    pub fn check(&self, script: &str, check_options: &CheckOptions) -> Result<(), QLSyntaxException> {
+    pub fn check(
+        &self,
+        script: &str,
+        check_options: &CheckOptions,
+    ) -> Result<(), QLSyntaxException> {
         let tree = self.parse_to_syntax_tree(script)?;
         let mut check_visitor = CheckVisitor::new(check_options, script);
         check_visitor.check(&tree)
@@ -440,7 +447,10 @@ impl Express4Runner {
 
     /// 导入(加载)可序列化 parse cache,绑定到本 runner。对应 Java 方法
     /// `loadSerializableCache(SerializableParseCache)`。
-    pub fn import_parse_cache(&self, cache: &SerializableParseCache) -> ImportResult<LoadedParseCache> {
+    pub fn import_parse_cache(
+        &self,
+        cache: &SerializableParseCache,
+    ) -> ImportResult<LoadedParseCache> {
         let mut importer = SerializableParseCacheImporter::new(
             &self.operator_manager,
             self.init_options.class_supplier().as_ref(),
@@ -493,7 +503,10 @@ impl Express4Runner {
 
     /// 取已注册函数。对应 Java 方法 `getFunction(String)`。
     pub fn get_function(&self, function_name: &str) -> Option<Rc<dyn CustomFunction>> {
-        self.user_define_functions.borrow().get(function_name).map(Rc::clone)
+        self.user_define_functions
+            .borrow()
+            .get(function_name)
+            .map(Rc::clone)
     }
 
     /// 注册一元闭包函数(取首个参数,缺省为 `Null`)。对应 Java 方法
@@ -502,10 +515,13 @@ impl Express4Runner {
     where
         F: Fn(DataValue) -> DataValue + 'static,
     {
-        self.add_function(name, move |_ctx: &mut dyn QContext, parameters: &Parameters| {
-            let arg = parameters.get_value(0);
-            Ok(function(arg))
-        })
+        self.add_function(
+            name,
+            move |_ctx: &mut dyn QContext, parameters: &Parameters| {
+                let arg = parameters.get_value(0);
+                Ok(function(arg))
+            },
+        )
     }
 
     /// 注册二元闭包函数(取前两个参数)。对应 Java
@@ -516,9 +532,12 @@ impl Express4Runner {
     where
         F: Fn(DataValue, DataValue) -> DataValue + 'static,
     {
-        self.add_function(name, move |_ctx: &mut dyn QContext, parameters: &Parameters| {
-            Ok(function(parameters.get_value(0), parameters.get_value(1)))
-        })
+        self.add_function(
+            name,
+            move |_ctx: &mut dyn QContext, parameters: &Parameters| {
+                Ok(function(parameters.get_value(0), parameters.get_value(1)))
+            },
+        )
     }
 
     /// 注册变参函数。对应 Java 方法
@@ -528,9 +547,12 @@ impl Express4Runner {
     where
         F: QLFunctionalVarargs + 'static,
     {
-        self.add_function(name, move |_ctx: &mut dyn QContext, parameters: &Parameters| {
-            functional_varargs.call(&parameters.values())
-        })
+        self.add_function(
+            name,
+            move |_ctx: &mut dyn QContext, parameters: &Parameters| {
+                functional_varargs.call(&parameters.values())
+            },
+        )
     }
 
     /// 批量注册函数,逐名汇报成功/失败(同名冲突进 fail)。对应 Java
@@ -579,10 +601,11 @@ impl Express4Runner {
             Rc::clone(&runtime),
             QScope::global(global_scope),
         );
-        let root_lambda = compile_cache
-            .q_lambda_definition()
-            .clone()
-            .to_lambda(&mut root_context, ql_options, true);
+        let root_lambda = compile_cache.q_lambda_definition().clone().to_lambda(
+            &mut root_context,
+            ql_options,
+            true,
+        );
         let function_table = root_lambda.function_defined(&[])?;
         let mut result = BatchAddFunctionResult::new();
         for (name, function) in function_table {
@@ -683,8 +706,11 @@ impl Express4Runner {
     {
         let method_name = extension_function.name().to_string();
         let type_name = extension_function.declaring_class().java_name().to_string();
-        self.registry_mut()
-            .register_method(type_name, method_name, as_native_method(extension_function));
+        self.registry_mut().register_method(
+            type_name,
+            method_name,
+            as_native_method(extension_function),
+        );
     }
 
     /// 注册原生类型(SPEC §4 宿主 API;Java 无同名方法,对应
@@ -721,7 +747,11 @@ impl Express4Runner {
 
     /// 注册或替换全局宏。对应 Java 方法
     /// `addOrReplaceMacro(String, String)`。
-    pub fn add_or_replace_macro(&self, name: &str, macro_script: &str) -> Result<(), QLSyntaxException> {
+    pub fn add_or_replace_macro(
+        &self,
+        name: &str,
+        macro_script: &str,
+    ) -> Result<(), QLSyntaxException> {
         let define = self.parse_macro_define(name, macro_script)?;
         self.global_scope.define_macro(name, define);
         Ok(())
@@ -734,7 +764,10 @@ impl Express4Runner {
         &self,
         name: &str,
         macro_script: &str,
-    ) -> Result<MacroDefine<crate::aparser::qvm_instruction_visitor::SharedInstruction>, QLSyntaxException> {
+    ) -> Result<
+        MacroDefine<crate::aparser::qvm_instruction_visitor::SharedInstruction>,
+        QLSyntaxException,
+    > {
         let tree = self.parse_to_syntax_tree(macro_script)?;
         let import_manager = RefCell::new(self.inherit_default_import());
         let user_define_functions = self.user_define_functions.borrow();
@@ -788,8 +821,11 @@ impl Express4Runner {
         operator: impl Into<String>,
         custom_binary_operator: Rc<dyn CustomBinaryOperator>,
     ) -> bool {
-        self.operator_manager
-            .add_binary_operator(operator, custom_binary_operator, ql_precedences::MULTI)
+        self.operator_manager.add_binary_operator(
+            operator,
+            custom_binary_operator,
+            ql_precedences::MULTI,
+        )
     }
 
     /// 注册自定义二元操作符(指定优先级)。对应 Java 方法
@@ -813,15 +849,17 @@ impl Express4Runner {
     {
         self.add_operator(
             operator,
-            Rc::new(move |left: &QValue, right: &QValue| {
-                Ok(bi_function(left.get(), right.get()))
-            }),
+            Rc::new(move |left: &QValue, right: &QValue| Ok(bi_function(left.get(), right.get()))),
         )
     }
 
     /// 以变参闭包注册操作符。对应 Java 方法
     /// `addOperator(String, QLFunctionalVarargs)`。
-    pub fn add_operator_varargs<F>(&mut self, operator: impl Into<String>, functional_varargs: F) -> bool
+    pub fn add_operator_varargs<F>(
+        &mut self,
+        operator: impl Into<String>,
+        functional_varargs: F,
+    ) -> bool
     where
         F: QLFunctionalVarargs + 'static,
     {
@@ -847,18 +885,27 @@ impl Express4Runner {
     /// 为既有操作符添加别名。对应 Java `OperatorManager.addOperatorAlias`
     /// (`Express4Runner.addAlias` 中的操作符分支)。
     pub fn add_operator_alias(&mut self, alias: impl Into<String>, origin_token: &str) -> bool {
-        self.operator_manager.add_operator_alias(alias, origin_token)
+        self.operator_manager
+            .add_operator_alias(alias, origin_token)
     }
 
     /// 为关键字/操作符/函数添加别名(任一分支成功即 true)。对应 Java
     /// 方法 `addAlias(String alias, String originToken)`。
     pub fn add_alias(&mut self, alias: impl Into<String>, origin_token: &str) -> bool {
         let alias = alias.into();
-        let key_word_result = self.operator_manager.add_key_word_alias(alias.clone(), origin_token);
-        let operator_result = self.operator_manager.add_operator_alias(alias.clone(), origin_token);
+        let key_word_result = self
+            .operator_manager
+            .add_key_word_alias(alias.clone(), origin_token);
+        let operator_result = self
+            .operator_manager
+            .add_operator_alias(alias.clone(), origin_token);
         // Java addFunctionAlias 分支:函数别名指向同一 CustomFunction。
         let function_result = {
-            let function = self.user_define_functions.borrow().get(origin_token).map(Rc::clone);
+            let function = self
+                .user_define_functions
+                .borrow()
+                .get(origin_token)
+                .map(Rc::clone);
             match function {
                 Some(function) => self.add_function_shared(alias, function),
                 None => false,
@@ -899,7 +946,10 @@ impl Express4Runner {
 
     /// 收集脚本对外部变量的属性访问路径。对应 Java 方法
     /// `getOutVarAttrs(String)`。
-    pub fn get_out_var_attrs(&self, script: &str) -> Result<HashSet<Vec<String>>, QLSyntaxException> {
+    pub fn get_out_var_attrs(
+        &self,
+        script: &str,
+    ) -> Result<HashSet<Vec<String>>, QLSyntaxException> {
         let tree = self.parse_to_syntax_tree(script)?;
         let mut visitor = OutVarAttrsVisitor::new(self.inherit_default_import());
         tree.accept(&mut visitor);
@@ -907,7 +957,10 @@ impl Express4Runner {
     }
 
     /// 收集脚本引用的外部函数名。对应 Java 方法 `getOutFunctions(String)`。
-    pub fn get_out_function_names(&self, script: &str) -> Result<HashSet<String>, QLSyntaxException> {
+    pub fn get_out_function_names(
+        &self,
+        script: &str,
+    ) -> Result<HashSet<String>, QLSyntaxException> {
         let tree = self.parse_to_syntax_tree(script)?;
         let mut visitor = OutFunctionVisitor::new();
         tree.accept(&mut visitor);

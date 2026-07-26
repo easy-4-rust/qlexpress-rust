@@ -4,8 +4,8 @@
 use crate::exception::error_codes;
 use crate::exception::error_reporter::ErrorReporter;
 use crate::exception::QLException;
-use crate::runtime::left_value::LeftValue;
 use crate::ql_precedences;
+use crate::runtime::left_value::LeftValue;
 use crate::runtime::operator::base::UnaryOperator;
 use crate::runtime::value::{DataValue, QValue};
 
@@ -58,7 +58,9 @@ impl UnaryOperator for MinusMinusSuffixUnaryOperator {
         let result = super::minus_minus_prefix_unary_operator::number_sub_one(&operand);
         // Java:value instanceof LeftValue → set(result, errorReporter)
         if let Some(left_value) = value.as_left() {
-            left_value.borrow_mut().set(result.clone(), error_reporter)?;
+            left_value
+                .borrow_mut()
+                .set(result.clone(), error_reporter)?;
         }
         // Java 原文:return result(自减后的新值——与 ++ 后缀不同,见类注释)
         Ok(result)
@@ -103,14 +105,16 @@ mod tests {
     use std::rc::Rc;
 
     fn run(value: QValue) -> Result<DataValue, QLException> {
-        MinusMinusSuffixUnaryOperator::get_instance()
-            .execute(&value, &PureErrReporter::INSTANCE)
+        MinusMinusSuffixUnaryOperator::get_instance().execute(&value, &PureErrReporter::INSTANCE)
     }
 
     #[test]
     fn suffix_minus_minus_writes_back_and_returns_new_value() {
         // Java 原文 return result:a-- 槽内变 1,表达式值也是自减后的 1
-        let slot = Rc::new(RefCell::new(AssignableDataValue::new("a", DataValue::Int(2))));
+        let slot = Rc::new(RefCell::new(AssignableDataValue::new(
+            "a",
+            DataValue::Int(2),
+        )));
         let result = run(QValue::Left(slot.clone())).unwrap();
         assert_eq!(result, DataValue::Int(1));
         assert_eq!(slot.borrow().get(), DataValue::Int(1));

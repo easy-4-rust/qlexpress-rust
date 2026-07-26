@@ -2,15 +2,15 @@
 //! 职责:以 return/break/continue 结束当前执行。
 //! 本文件由 `flow.rs` 拆分而来(SPEC §5.5 一类一文件),仅移动代码与补充中文注释,行为完全一致。
 
-use std::rc::Rc;
 use crate::exception::error_reporter::ErrorReporter;
 use crate::exception::QLException;
 use crate::ql_options::QLOptions;
-use crate::runtime::q_result::QResult;
 use crate::runtime::instruction::{with_trace, QLInstruction};
+use crate::runtime::q_result::QResult;
 use crate::runtime::qcontext::QContext;
 use crate::runtime::value::DataValue;
 use crate::utils::println_utils::PrintlnUtils;
+use std::rc::Rc;
 
 /// 返回结果类型。对应 Java: `QResult.ResultType` 中可供 ReturnInstruction 使用的取值(Java 侧为 QResult 内部枚举,此处独立定义)。
 /// Java `QResult.ResultType` values usable by `ReturnInstruction`.
@@ -110,4 +110,3 @@ impl QLInstruction for ReturnInstruction {
         &self.error_reporter
     }
 }
-

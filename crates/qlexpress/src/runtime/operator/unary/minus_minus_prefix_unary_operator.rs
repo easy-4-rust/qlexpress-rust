@@ -4,9 +4,9 @@
 use crate::exception::error_codes;
 use crate::exception::error_reporter::ErrorReporter;
 use crate::exception::QLException;
-use crate::runtime::left_value::LeftValue;
 use crate::ql_precedences;
 use crate::runtime::data::convert::to_f64;
+use crate::runtime::left_value::LeftValue;
 use crate::runtime::operator::base::UnaryOperator;
 use crate::runtime::value::{DataValue, QValue};
 
@@ -95,9 +95,7 @@ pub(crate) fn number_sub_one(operand: &DataValue) -> DataValue {
         DataValue::Long(v) => DataValue::Long(v.wrapping_sub(1)),
         DataValue::BigInt(v) => DataValue::BigInt(*v - 1),
         DataValue::BigDec(v) => DataValue::BigDec(big_dec_sub_one(v)),
-        DataValue::Float(_) | DataValue::Double(_) => {
-            DataValue::Double(to_f64(operand) - 1.0)
-        }
+        DataValue::Float(_) | DataValue::Double(_) => DataValue::Double(to_f64(operand) - 1.0),
         // 调用点已保证 is_number,其余类型不可达
         _ => unreachable!("-- on non-number"),
     }
@@ -151,7 +149,11 @@ fn split_dec(dec: &str) -> (bool, String, String) {
         None => (body, ""),
     };
     let int_trimmed = int_part.trim_start_matches('0');
-    let int_norm = if int_trimmed.is_empty() { "0" } else { int_trimmed };
+    let int_norm = if int_trimmed.is_empty() {
+        "0"
+    } else {
+        int_trimmed
+    };
     (negative, int_norm.to_string(), frac_part.to_string())
 }
 
@@ -262,14 +264,16 @@ mod tests {
     use std::rc::Rc;
 
     fn run(value: QValue) -> Result<DataValue, QLException> {
-        MinusMinusPrefixUnaryOperator::get_instance()
-            .execute(&value, &PureErrReporter::INSTANCE)
+        MinusMinusPrefixUnaryOperator::get_instance().execute(&value, &PureErrReporter::INSTANCE)
     }
 
     #[test]
     fn prefix_minus_minus_writes_back_but_returns_original() {
         // Java 原文 return operand:--a 槽内变 1,但表达式值仍是自减前的 2
-        let slot = Rc::new(RefCell::new(AssignableDataValue::new("a", DataValue::Int(2))));
+        let slot = Rc::new(RefCell::new(AssignableDataValue::new(
+            "a",
+            DataValue::Int(2),
+        )));
         let result = run(QValue::Left(slot.clone())).unwrap();
         assert_eq!(result, DataValue::Int(2));
         assert_eq!(slot.borrow().get(), DataValue::Int(1));
@@ -278,11 +282,17 @@ mod tests {
     #[test]
     fn prefix_minus_minus_promotes_byte_to_int() {
         // Java IntegerMath.subtractImpl:intValue() - 1
-        let slot = Rc::new(RefCell::new(AssignableDataValue::new("a", DataValue::Byte(1))));
+        let slot = Rc::new(RefCell::new(AssignableDataValue::new(
+            "a",
+            DataValue::Byte(1),
+        )));
         run(QValue::Left(slot.clone())).unwrap();
         assert_eq!(slot.borrow().get(), DataValue::Int(0));
         // Long 保持 Long(写回值)
-        let slot = Rc::new(RefCell::new(AssignableDataValue::new("a", DataValue::Long(1))));
+        let slot = Rc::new(RefCell::new(AssignableDataValue::new(
+            "a",
+            DataValue::Long(1),
+        )));
         run(QValue::Left(slot.clone())).unwrap();
         assert_eq!(slot.borrow().get(), DataValue::Long(0));
     }

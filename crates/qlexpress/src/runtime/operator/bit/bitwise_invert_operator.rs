@@ -83,13 +83,19 @@ mod tests {
         );
         assert_eq!(
             BitwiseInvertOperator::get_instance()
-                .execute(&QValue::Data(DataValue::Long(5)), &PureErrReporter::INSTANCE)
+                .execute(
+                    &QValue::Data(DataValue::Long(5)),
+                    &PureErrReporter::INSTANCE
+                )
                 .unwrap(),
             DataValue::Long(-6)
         );
         // 非数值操作数报错。
         assert!(BitwiseInvertOperator::get_instance()
-            .execute(&QValue::Data(DataValue::Bool(true)), &PureErrReporter::INSTANCE)
+            .execute(
+                &QValue::Data(DataValue::Bool(true)),
+                &PureErrReporter::INSTANCE
+            )
             .is_err());
     }
 }

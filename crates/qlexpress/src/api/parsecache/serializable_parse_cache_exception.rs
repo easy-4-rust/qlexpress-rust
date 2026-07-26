@@ -71,7 +71,10 @@ impl SerializableParseCacheException {
 /// 对应 Java 私有静态方法 `normalizeSource`:
 /// start 截断到 `[0, script.length]`;line <= 0 归一为 1;col < 0 归一为 0;
 /// lexeme 为 null 归一为空串。
-fn normalize_source(script: Option<&str>, source: Option<&SerializableSource>) -> SerializableSource {
+fn normalize_source(
+    script: Option<&str>,
+    source: Option<&SerializableSource>,
+) -> SerializableSource {
     let script_length = script.map(|s| s.chars().count() as i32).unwrap_or(0);
     let start = source.map(|s| s.start).unwrap_or(0);
     SerializableSource {
@@ -81,7 +84,9 @@ fn normalize_source(script: Option<&str>, source: Option<&SerializableSource>) -
             _ => 1,
         },
         col: source.map(|s| s.col.max(0)).unwrap_or(0),
-        lexeme: source.and_then(|s| s.lexeme.clone()).or_else(|| Some(String::new())),
+        lexeme: source
+            .and_then(|s| s.lexeme.clone())
+            .or_else(|| Some(String::new())),
     }
 }
 

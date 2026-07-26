@@ -88,7 +88,10 @@ fn open_allows_builtin_string_length() {
 fn isolation_blocks_registered_method() {
     let runner = runner_with(QLSecurityStrategy::isolation());
     let code = err_code(&runner, "Calc.mul(3, 4)");
-    assert_eq!(code, qlexpress_rust::exception::error_codes::METHOD_NOT_FOUND);
+    assert_eq!(
+        code,
+        qlexpress_rust::exception::error_codes::METHOD_NOT_FOUND
+    );
 }
 
 #[test]
@@ -98,20 +101,26 @@ fn isolation_blocks_builtin_method_too_when_registered() {
     // 我们只验证 isolation 对注册方法有阻断。
     let runner = runner_with(QLSecurityStrategy::isolation());
     let code = err_code(&runner, "Calc.add(1, 2)");
-    assert_eq!(code, qlexpress_rust::exception::error_codes::METHOD_NOT_FOUND);
+    assert_eq!(
+        code,
+        qlexpress_rust::exception::error_codes::METHOD_NOT_FOUND
+    );
 }
 
 // ----- blacklist -----
 
 #[test]
 fn blacklist_blocks_listed_member() {
-    use std::collections::HashSet;
     use qlexpress_rust::security::ql_security_strategy::NativeMember;
+    use std::collections::HashSet;
     let mut blocked = HashSet::new();
     blocked.insert(NativeMember::new("com.example.Calc", "mul"));
     let runner = runner_with(QLSecurityStrategy::black_list(blocked));
     let code = err_code(&runner, "Calc.mul(1, 1)");
-    assert_eq!(code, qlexpress_rust::exception::error_codes::METHOD_NOT_FOUND);
+    assert_eq!(
+        code,
+        qlexpress_rust::exception::error_codes::METHOD_NOT_FOUND
+    );
 }
 
 #[test]
@@ -127,8 +136,8 @@ fn blacklist_allows_unblocked() {
 
 #[test]
 fn whitelist_allows_listed_only() {
-    use std::collections::HashSet;
     use qlexpress_rust::security::ql_security_strategy::NativeMember;
+    use std::collections::HashSet;
     let mut allowed = HashSet::new();
     allowed.insert(NativeMember::new("com.example.Calc", "mul"));
     let runner = runner_with(QLSecurityStrategy::white_list(allowed));
@@ -137,14 +146,17 @@ fn whitelist_allows_listed_only() {
 
 #[test]
 fn whitelist_blocks_unlisted_registered() {
-    use std::collections::HashSet;
     use qlexpress_rust::security::ql_security_strategy::NativeMember;
+    use std::collections::HashSet;
     // 只放行 'mul',所以 'add' 应当被拦。Calc 当前只注册了 mul,所以
     // 即使白名单为空也不会调用到 add。我们改测:不存在的白名单。
     let empty_allow: HashSet<NativeMember> = HashSet::new();
     let runner = runner_with(QLSecurityStrategy::white_list(empty_allow));
     let code = err_code(&runner, "Calc.mul(1, 1)");
-    assert_eq!(code, qlexpress_rust::exception::error_codes::METHOD_NOT_FOUND);
+    assert_eq!(
+        code,
+        qlexpress_rust::exception::error_codes::METHOD_NOT_FOUND
+    );
 }
 
 // ----- strategy switching -----
@@ -157,7 +169,10 @@ fn strategy_can_be_switched_at_runtime() {
     // 切换为 isolation
     runner.set_security_strategy(QLSecurityStrategy::isolation());
     let code = err_code(&runner, "Calc.mul(2, 3)");
-    assert_eq!(code, qlexpress_rust::exception::error_codes::METHOD_NOT_FOUND);
+    assert_eq!(
+        code,
+        qlexpress_rust::exception::error_codes::METHOD_NOT_FOUND
+    );
     // 切回 open
     runner.set_security_strategy(QLSecurityStrategy::open());
     assert_eq!(run_int(&runner, "Calc.mul(2, 3)"), 6);

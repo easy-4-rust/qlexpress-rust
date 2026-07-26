@@ -67,7 +67,10 @@ mod tests {
     #[test]
     fn parses_standard_escapes() {
         assert_eq!(QLStringUtils::parse_string_escape("\"a\\nb\""), "a\nb");
-        assert_eq!(QLStringUtils::parse_string_escape("\"\\t\\r\\f\\b\""), "\t\r\u{000C}\u{0008}");
+        assert_eq!(
+            QLStringUtils::parse_string_escape("\"\\t\\r\\f\\b\""),
+            "\t\r\u{000C}\u{0008}"
+        );
         assert_eq!(QLStringUtils::parse_string_escape("\"\\'q\\'\""), "'q'");
         assert_eq!(QLStringUtils::parse_string_escape("\"a\\\\b\""), "a\\b");
         assert_eq!(QLStringUtils::parse_string_escape("\"a\\$b\""), "a$b");

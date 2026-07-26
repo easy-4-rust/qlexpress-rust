@@ -2,19 +2,19 @@
 //! 职责:异常捕获与 finally 处理。
 //! 本文件由 `flow.rs` 拆分而来(SPEC §5.5 一类一文件),仅移动代码与补充中文注释,行为完全一致。
 
-use std::rc::Rc;
 use crate::exception::error_codes;
 use crate::exception::error_reporter::ErrorReporter;
 use crate::exception::QLException;
 use crate::ql_options::QLOptions;
-use crate::runtime::q_result::QResult;
 use crate::runtime::instruction::QLInstruction;
 use crate::runtime::member::ClassRef;
+use crate::runtime::q_result::QResult;
 use crate::runtime::qcontext::QContext;
 use crate::runtime::qlambda_definition::QLambdaDefinition;
 use crate::runtime::util::throw_utils::wrap_throwable;
 use crate::runtime::value::{DataValue, QValue};
 use crate::utils::println_utils::PrintlnUtils;
+use std::rc::Rc;
 
 /// try-catch 指令。对应 Java: com.alibaba.qlexpress4.runtime.instruction.TryCatchInstruction(职责:异常捕获与 finally 处理)
 /// Operation: try and catch throw element
@@ -88,7 +88,10 @@ impl TryCatchInstruction {
 
     /// Java `getExceptionHandler(Class)`:
     /// `entry.getKey().isAssignableFrom(catchObjClass)`.
-    fn get_exception_handler(&self, catch_obj: Option<&DataValue>) -> Option<&Rc<dyn QLambdaDefinition>> {
+    fn get_exception_handler(
+        &self,
+        catch_obj: Option<&DataValue>,
+    ) -> Option<&Rc<dyn QLambdaDefinition>> {
         let catch_type = match catch_obj {
             // Java substitutes `new Object()` for a null catch object.
             None => "java.lang.Object",
@@ -258,4 +261,3 @@ fn class_assignable_from(entry: &ClassRef, catch_type: &str) -> bool {
         _ => false,
     }
 }
-

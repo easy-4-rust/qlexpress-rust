@@ -64,10 +64,12 @@ impl FloatingPointMath {
     pub fn mod_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
         let modulus = convert::to_i128(right);
         if modulus <= 0 {
-            return Err(number_math::arithmetic_exception("BigInteger: modulus not positive"));
+            return Err(number_math::arithmetic_exception(
+                "BigInteger: modulus not positive",
+            ));
         }
         Ok(DataValue::Double(
-            convert::to_i128(left).rem_euclid(modulus) as f64
+            convert::to_i128(left).rem_euclid(modulus) as f64,
         ))
     }
 

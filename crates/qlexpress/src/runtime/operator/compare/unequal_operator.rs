@@ -44,7 +44,12 @@ impl BinaryOperator for UnequalOperator {
         _ql_options: &QLOptions,
         error_reporter: &dyn ErrorReporter,
     ) -> Result<DataValue, QLException> {
-        Ok(DataValue::Bool(!BaseBinaryOperator::equals(self.operator, left, right, error_reporter)?))
+        Ok(DataValue::Bool(!BaseBinaryOperator::equals(
+            self.operator,
+            left,
+            right,
+            error_reporter,
+        )?))
     }
 
     /// 对应 Java 方法: `getOperator()`。

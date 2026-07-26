@@ -39,8 +39,10 @@ fn arithmetic_error_division_by_zero() {
 #[test]
 fn arithmetic_error_modulo_by_zero() {
     let e = err_code("1 % 0");
-    assert!(e == error_codes::INVALID_ARITHMETIC || e == error_codes::EXECUTE_OPERATOR_EXCEPTION,
-        "expected arithmetic error, got {e}");
+    assert!(
+        e == error_codes::INVALID_ARITHMETIC || e == error_codes::EXECUTE_OPERATOR_EXCEPTION,
+        "expected arithmetic error, got {e}"
+    );
 }
 
 // ---------- Binary operand ----------
@@ -72,7 +74,10 @@ fn syntax_error_import_not_at_beginning() {
 
 #[test]
 fn null_field_access() {
-    assert_eq!(err_code("m = null\nm.field"), error_codes::NULL_FIELD_ACCESS);
+    assert_eq!(
+        err_code("m = null\nm.field"),
+        error_codes::NULL_FIELD_ACCESS
+    );
 }
 
 // ---------- Index / array ----------
@@ -91,7 +96,10 @@ fn invalid_index_type() {
 
 #[test]
 fn method_not_found() {
-    assert_eq!(err_code("'hello'.nonExistentMethod()"), error_codes::METHOD_NOT_FOUND);
+    assert_eq!(
+        err_code("'hello'.nonExistentMethod()"),
+        error_codes::METHOD_NOT_FOUND
+    );
 }
 
 // ---------- Class ----------
@@ -104,7 +112,9 @@ fn class_not_found() {
     let runner = Express4Runner::new();
     let r = runner.execute("NonExistentClass", HashMap::new(), &opts());
     match r {
-        Ok(v) => { let _ = v; } // 返回 Null — acceptable
+        Ok(v) => {
+            let _ = v;
+        } // 返回 Null — acceptable
         Err(e) => assert_eq!(e.error_code(), error_codes::CLASS_NOT_FOUND),
     }
 }
@@ -116,12 +126,18 @@ fn script_timeout() {
     use qlexpress_rust::init_options::InitOptions;
     let runner = Express4Runner::with_init_options(
         InitOptions::builder()
-            .security_strategy(qlexpress_rust::security::ql_security_strategy::QLSecurityStrategy::open())
+            .security_strategy(
+                qlexpress_rust::security::ql_security_strategy::QLSecurityStrategy::open(),
+            )
             .build(),
     );
     let opts = QLOptions::builder().timeout_millis(50).build();
     let e = runner
-        .execute("int i = 0;\nwhile (true) { i = i + 1; }", HashMap::new(), &opts)
+        .execute(
+            "int i = 0;\nwhile (true) { i = i + 1; }",
+            HashMap::new(),
+            &opts,
+        )
         .expect_err("should timeout");
     assert_eq!(e.error_code(), error_codes::SCRIPT_TIME_OUT);
 }
@@ -130,7 +146,10 @@ fn script_timeout() {
 
 #[test]
 fn while_condition_non_bool() {
-    assert_eq!(err_code("while (1) {}"), error_codes::WHILE_CONDITION_BOOL_REQUIRED);
+    assert_eq!(
+        err_code("while (1) {}"),
+        error_codes::WHILE_CONDITION_BOOL_REQUIRED
+    );
 }
 
 // ---------- NO_SUITABLE_CONSTRUCTOR ----------
@@ -141,12 +160,16 @@ fn no_suitable_constructor() {
     let runner = Express4Runner::new();
     let r = runner.execute("new NonExistent(1)", HashMap::new(), &opts());
     match r {
-        Ok(v) => { let _ = v; }
+        Ok(v) => {
+            let _ = v;
+        }
         Err(e) => {
             let code = e.error_code();
-            assert!(code == error_codes::NO_SUITABLE_CONSTRUCTOR
-                || code == error_codes::CLASS_NOT_FOUND,
-                "expected constructor or class error, got {code}");
+            assert!(
+                code == error_codes::NO_SUITABLE_CONSTRUCTOR
+                    || code == error_codes::CLASS_NOT_FOUND,
+                "expected constructor or class error, got {code}"
+            );
         }
     }
 }

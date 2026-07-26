@@ -11,7 +11,9 @@
 
 mod alignment_util;
 
-use alignment_util::{expect_err_code, expect_err_code_with, expect_null, expect_ok, expect_ok_with};
+use alignment_util::{
+    expect_err_code, expect_err_code_with, expect_null, expect_ok, expect_ok_with,
+};
 use qlexpress_rust::ql_options::QLOptions;
 
 /// 对应 Java testsuite 脚本 `testsuite/independent/array/array_index_out_of_bound.ql`。
@@ -149,7 +151,10 @@ assert(a.b.c.mm() == null);
 assert(mmm() == null)
 assert(a.n.c[2]==null)
 assert(a.n.c[1:4]==null)"#;
-    expect_ok_with(SCRIPT, &QLOptions::builder().avoid_null_pointer(true).build());
+    expect_ok_with(
+        SCRIPT,
+        &QLOptions::builder().avoid_null_pointer(true).build(),
+    );
 }
 
 /// 对应 Java testsuite 脚本 `testsuite/independent/avoidnullpointer/can_not_find_function.ql`。
@@ -3111,7 +3116,10 @@ assert(arr1*.a==[1,2,null])
 
 Map[] brr = new Map[]{{"get100": () -> 100}, null};
 assert(brr*.get100()==[100,null])"#;
-    expect_ok_with(SCRIPT, &QLOptions::builder().avoid_null_pointer(true).build());
+    expect_ok_with(
+        SCRIPT,
+        &QLOptions::builder().avoid_null_pointer(true).build(),
+    );
 }
 
 /// 对应 Java testsuite 脚本 `testsuite/independent/string/char.ql`。
@@ -3476,7 +3484,11 @@ fn timeout_timeout() {
 while (true) {
   1+1
 }"#;
-    expect_err_code_with(SCRIPT, &QLOptions::builder().timeout_millis(10).build(), "SCRIPT_TIME_OUT");
+    expect_err_code_with(
+        SCRIPT,
+        &QLOptions::builder().timeout_millis(10).build(),
+        "SCRIPT_TIME_OUT",
+    );
 }
 
 /// 对应 Java testsuite 脚本 `testsuite/independent/trycatch/catch_order.ql`。

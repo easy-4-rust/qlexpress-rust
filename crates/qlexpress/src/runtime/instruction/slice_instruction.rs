@@ -2,17 +2,17 @@
 //! 职责:数组/列表切片。
 //! 本文件由 `index.rs` 拆分而来(SPEC §5.5 一类一文件),仅移动代码与补充中文注释,行为完全一致。
 
-use std::rc::Rc;
 use crate::exception::error_codes;
 use crate::exception::error_reporter::ErrorReporter;
 use crate::exception::QLException;
 use crate::ql_options::QLOptions;
-use crate::runtime::q_result::QResult;
 use crate::runtime::instruction::QLInstruction;
+use crate::runtime::q_result::QResult;
 use crate::runtime::qcontext::QContext;
 use crate::runtime::util::value_utils::{assert_number, java_index};
 use crate::runtime::value::{DataValue, QValue};
 use crate::utils::println_utils::PrintlnUtils;
+use std::rc::Rc;
 
 /// 切片模式。对应 Java: `SliceInstruction` 内部枚举(左闭右开/左闭右闭)。
 /// Java `SliceInstruction.Mode`.
@@ -178,4 +178,3 @@ impl QLInstruction for SliceInstruction {
         &self.error_reporter
     }
 }
-

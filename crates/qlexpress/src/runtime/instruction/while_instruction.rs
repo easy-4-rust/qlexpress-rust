@@ -2,15 +2,13 @@
 //! 职责:while 循环执行体。
 //! 本文件由 `flow.rs` 拆分而来(SPEC §5.5 一类一文件),仅移动代码与补充中文注释,行为完全一致。
 
-use std::collections::HashMap;
-use std::rc::Rc;
 use crate::exception::error_codes;
 use crate::exception::error_reporter::ErrorReporter;
 use crate::exception::QLException;
 use crate::ql_options::QLOptions;
-use crate::runtime::q_result::QResult;
 use crate::runtime::delegate_qcontext::DelegateQContext;
 use crate::runtime::instruction::QLInstruction;
+use crate::runtime::q_result::QResult;
 use crate::runtime::qcontext::QContext;
 use crate::runtime::qlambda::QLambda;
 use crate::runtime::qlambda_definition::QLambdaDefinition;
@@ -18,6 +16,8 @@ use crate::runtime::scope::QScope;
 use crate::runtime::util::throw_utils::wrap_throwable;
 use crate::runtime::value::DataValue;
 use crate::utils::println_utils::PrintlnUtils;
+use std::collections::HashMap;
+use std::rc::Rc;
 
 /// while 循环指令。对应 Java: com.alibaba.qlexpress4.runtime.instruction.WhileInstruction(职责:while 循环执行体)
 /// Operation: while (condition) do body
@@ -116,7 +116,7 @@ impl QLInstruction for WhileInstruction {
                         "WHILE_BODY_EXECUTE_ERROR",
                         "while body execute error",
                         &[],
-                    ))
+                    ));
                 }
             }
         }
@@ -154,4 +154,3 @@ fn child_fresh_scope_context(
     let scope = QScope::block_fresh_stack(&q_context.current_scope(), symbols);
     DelegateQContext::new(Rc::clone(q_context.q_runtime()), scope)
 }
-

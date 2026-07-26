@@ -20,7 +20,7 @@ use qlexpress_rust::ql_options::QLOptions;
 use qlexpress_rust::runtime::value::DataValue;
 use qlexpress_rust::Express4Runner;
 
-use alignment_util::{expect_ok, expect_err_code, expect_null, run_script};
+use alignment_util::{expect_err_code, expect_null, expect_ok, run_script};
 
 // ---------- Operator basics (arithmetic / comparison / logical) ----------
 
@@ -71,10 +71,7 @@ fn in_test_over_list() {
         expect_ok("'ab' in ['cc','dd','ff']"),
         DataValue::Bool(false)
     );
-    assert_eq!(
-        expect_ok("'cc' in ['cc','dd','ff']"),
-        DataValue::Bool(true)
-    );
+    assert_eq!(expect_ok("'cc' in ['cc','dd','ff']"), DataValue::Bool(true));
 }
 
 // ---------- Variable declaration and assignment ----------
@@ -126,8 +123,7 @@ fn while_loop() {
 
 #[test]
 fn break_inside_for() {
-    let script =
-        "int sum = 0;\n\
+    let script = "int sum = 0;\n\
          for (int i = 0; i < 10; i = i + 1) {\n\
          if (i == 5) {\n\
          break;\n\
@@ -140,8 +136,7 @@ fn break_inside_for() {
 
 #[test]
 fn continue_inside_for() {
-    let script =
-        "int sum = 0;\n\
+    let script = "int sum = 0;\n\
          for (int i = 0; i < 5; i = i + 1) {\n\
          if (i == 2) {\n\
          continue;\n\
@@ -155,8 +150,7 @@ fn continue_inside_for() {
 
 #[test]
 fn return_inside_if() {
-    let script =
-        "int a = 0;\n\
+    let script = "int a = 0;\n\
          if (true) {\n\
          return 42;\n\
          }\n\
@@ -258,7 +252,11 @@ fn security_open_allows_method_call() {
             .build(),
     );
     let result = runner
-        .execute("'hello'.length()", HashMap::new(), &QLOptions::builder().build())
+        .execute(
+            "'hello'.length()",
+            HashMap::new(),
+            &QLOptions::builder().build(),
+        )
         .unwrap()
         .into_result();
     assert_eq!(result, DataValue::Int(5));
@@ -290,7 +288,10 @@ fn security_isolation_blocks_method_call() {
         HashMap::new(),
         &QLOptions::builder().build(),
     );
-    assert!(result.is_err(), "isolation must reject registered method calls");
+    assert!(
+        result.is_err(),
+        "isolation must reject registered method calls"
+    );
 }
 
 // ---------- Map and list literals ----------
@@ -364,8 +365,14 @@ fn cache_returns_consistent_result() {
     let opts = QLOptions::builder().cache(true).build();
     let script = "1 + 2 + 3";
     let runner = Express4Runner::new();
-    let r1 = runner.execute(script, HashMap::new(), &opts).unwrap().into_result();
-    let r2 = runner.execute(script, HashMap::new(), &opts).unwrap().into_result();
+    let r1 = runner
+        .execute(script, HashMap::new(), &opts)
+        .unwrap()
+        .into_result();
+    let r2 = runner
+        .execute(script, HashMap::new(), &opts)
+        .unwrap()
+        .into_result();
     assert_eq!(r1, r2);
     assert_eq!(r1, DataValue::Long(6));
 }
@@ -387,7 +394,10 @@ fn null_division_yields_arithmetic_error() {
 
 // ---------- Test helpers ----------
 
-fn run_script_with(script: &str, options: &QLOptions) -> Result<DataValue, qlexpress_rust::exception::QLException> {
+fn run_script_with(
+    script: &str,
+    options: &QLOptions,
+) -> Result<DataValue, qlexpress_rust::exception::QLException> {
     let runner = Express4Runner::new();
     let result = runner.execute(script, HashMap::new(), options)?;
     Ok(result.into_result())

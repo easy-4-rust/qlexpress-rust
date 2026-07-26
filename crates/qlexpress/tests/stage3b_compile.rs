@@ -40,7 +40,6 @@ use qlexpress_rust::runtime::qvm_global_scope::QvmGlobalScope;
 use qlexpress_rust::runtime::qvm_runtime::QvmRuntime;
 use qlexpress_rust::runtime::value::{DataValue, QValue};
 
-
 // ---- harness --------------------------------------------------------------
 
 fn init_options() -> InitOptions {
@@ -176,9 +175,7 @@ impl CustomFunction for Choose {
     ) -> Result<DataValue, QLException> {
         let values = parameters.values();
         match &values[..] {
-            [DataValue::Bool(true), DataValue::Lambda(lambda), _] => {
-                Ok(lambda.call(&[])?.value())
-            }
+            [DataValue::Bool(true), DataValue::Lambda(lambda), _] => Ok(lambda.call(&[])?.value()),
             [DataValue::Bool(false), _, fallback] => Ok(fallback.clone()),
             _ => Ok(DataValue::Null),
         }
@@ -232,9 +229,18 @@ fn context_variable() {
 
 #[test]
 fn if_else_and_ternary() {
-    assert_eq!(run("if (1 < 2) { 'yes' } else { 'no' }"), DataValue::Str("yes".into()));
-    assert_eq!(run("if (1 > 2) { 'yes' } else { 'no' }"), DataValue::Str("no".into()));
-    assert_eq!(run("x = 5; if (x > 3) 'big' else 'small'"), DataValue::Str("big".into()));
+    assert_eq!(
+        run("if (1 < 2) { 'yes' } else { 'no' }"),
+        DataValue::Str("yes".into())
+    );
+    assert_eq!(
+        run("if (1 > 2) { 'yes' } else { 'no' }"),
+        DataValue::Str("no".into())
+    );
+    assert_eq!(
+        run("x = 5; if (x > 3) 'big' else 'small'"),
+        DataValue::Str("big".into())
+    );
     assert_eq!(run("1 < 2 ? 10 : 20"), DataValue::Int(10));
     assert_eq!(run("1 > 2 ? 10 : 20"), DataValue::Int(20));
 }
@@ -284,7 +290,9 @@ fn function_definition_call_and_recursion() {
         DataValue::Int(5)
     );
     assert_eq!(
-        run("function fib(n) { if (n < 2) { return n; }; return fib(n - 1) + fib(n - 2); } fib(10)"),
+        run(
+            "function fib(n) { if (n < 2) { return n; }; return fib(n - 1) + fib(n - 2); } fib(10)"
+        ),
         DataValue::Int(55)
     );
     // forward reference (Java: function definitions hoist)
@@ -339,7 +347,10 @@ fn list_and_map_literals() {
             DataValue::Int(3)
         ])
     );
-    assert_eq!(run("m = {'a': 1, 'b': 2}; m['a'] + m['b']"), DataValue::Int(3));
+    assert_eq!(
+        run("m = {'a': 1, 'b': 2}; m['a'] + m['b']"),
+        DataValue::Int(3)
+    );
     assert_eq!(run("l = [10, 20, 30]; l[1]"), DataValue::Int(20));
 }
 
@@ -354,7 +365,12 @@ fn switch_statement_and_expression() {
     let scope = QvmGlobalScope::new(external, HashMap::new(), false);
     let script = "x = 2; switch (x) { case 1: int r = 10; break; case 2: hit = 22; break; default: hit = 99; }; hit";
     assert_eq!(
-        run_with_scope(script, scope, NativeRegistry::with_builtins(), UserDefineFunctions::new()),
+        run_with_scope(
+            script,
+            scope,
+            NativeRegistry::with_builtins(),
+            UserDefineFunctions::new()
+        ),
         DataValue::Int(22)
     );
 }
@@ -365,7 +381,10 @@ fn new_native_instance() {
     let mut point_type = NativeType::named("com.example.Point");
     point_type.constructor = Some(Rc::new(|args: &[DataValue]| {
         let mut map = IndexMap::new();
-        map.insert(DataValue::Str("x".into()), args.first().cloned().unwrap_or(DataValue::Null));
+        map.insert(
+            DataValue::Str("x".into()),
+            args.first().cloned().unwrap_or(DataValue::Null),
+        );
         Ok(DataValue::map(map))
     }));
     let mut fields = HashMap::new();
@@ -408,8 +427,12 @@ fn new_native_instance() {
         &options,
     )
     .expect("compile");
-    let root: Rc<dyn QLambdaDefinition> =
-        Rc::new(QLambdaDefinitionInner::new("main", instructions, vec![], max_stack));
+    let root: Rc<dyn QLambdaDefinition> = Rc::new(QLambdaDefinitionInner::new(
+        "main",
+        instructions,
+        vec![],
+        max_stack,
+    ));
     let runtime = Rc::new(QvmRuntime::for_test(Rc::new(registry)));
     let result = runtime
         .execute(QvmGlobalScope::empty(), root, &QLOptions::builder().build())
@@ -439,9 +462,15 @@ fn compile_time_function_mechanism() {
         &compile_time_functions,
         &UserDefineFunctions::new(),
     );
-    let root: Rc<dyn QLambdaDefinition> =
-        Rc::new(QLambdaDefinitionInner::new("main", instructions, vec![], max_stack));
-    let runtime = Rc::new(QvmRuntime::for_test(Rc::new(NativeRegistry::with_builtins())));
+    let root: Rc<dyn QLambdaDefinition> = Rc::new(QLambdaDefinitionInner::new(
+        "main",
+        instructions,
+        vec![],
+        max_stack,
+    ));
+    let runtime = Rc::new(QvmRuntime::for_test(Rc::new(
+        NativeRegistry::with_builtins(),
+    )));
     let result = runtime
         .execute(QvmGlobalScope::empty(), root, &QLOptions::builder().build())
         .expect("execute");
@@ -451,7 +480,10 @@ fn compile_time_function_mechanism() {
 #[test]
 fn lazy_argument_function() {
     let mut user_functions = UserDefineFunctions::new();
-    user_functions.insert("choose".to_string(), Rc::new(Choose) as Rc<dyn CustomFunction>);
+    user_functions.insert(
+        "choose".to_string(),
+        Rc::new(Choose) as Rc<dyn CustomFunction>,
+    );
 
     let mut external_functions: HashMap<String, Rc<dyn CustomFunction>> = HashMap::new();
     external_functions.insert("choose".to_string(), Rc::new(Choose));
@@ -493,9 +525,15 @@ fn custom_binary_operator_end_to_end() {
         &CompileTimeFunctions::new(),
         &UserDefineFunctions::new(),
     );
-    let root: Rc<dyn QLambdaDefinition> =
-        Rc::new(QLambdaDefinitionInner::new("main", instructions, vec![], max_stack));
-    let runtime = Rc::new(QvmRuntime::for_test(Rc::new(NativeRegistry::with_builtins())));
+    let root: Rc<dyn QLambdaDefinition> = Rc::new(QLambdaDefinitionInner::new(
+        "main",
+        instructions,
+        vec![],
+        max_stack,
+    ));
+    let runtime = Rc::new(QvmRuntime::for_test(Rc::new(
+        NativeRegistry::with_builtins(),
+    )));
     let result = runtime
         .execute(QvmGlobalScope::empty(), root, &QLOptions::builder().build())
         .expect("execute");
@@ -547,9 +585,15 @@ fn interpolation_disable_mode() {
         &options,
     )
     .expect("compile");
-    let root: Rc<dyn QLambdaDefinition> =
-        Rc::new(QLambdaDefinitionInner::new("main", instructions, vec![], max_stack));
-    let runtime = Rc::new(QvmRuntime::for_test(Rc::new(NativeRegistry::with_builtins())));
+    let root: Rc<dyn QLambdaDefinition> = Rc::new(QLambdaDefinitionInner::new(
+        "main",
+        instructions,
+        vec![],
+        max_stack,
+    ));
+    let runtime = Rc::new(QvmRuntime::for_test(Rc::new(
+        NativeRegistry::with_builtins(),
+    )));
     let result = runtime
         .execute(QvmGlobalScope::empty(), root, &QLOptions::builder().build())
         .expect("execute");
