@@ -2,11 +2,10 @@
 //!
 //! Each entry records: "if a `catch_type` is thrown while the program
 //! counter is in `[start_pc, end_pc)`, jump to `handler_pc`". This is
-//! the same shape as the JVM exception table attribute and is consumed
-//! by [`crate::runtime::instruction::try_catch_instruction`].
+//! the same shape as the JVM exception table attribute.
 //!
 //! The current Rust implementation inlines the equivalent fields in
-//! the [`TryCatchInstruction`] struct directly; this file exposes the
+//! the `TryCatchInstruction` struct directly; this file exposes the
 //! canonical struct so that future refactors (and the `FixedSizeStack`
 //! story) can share a uniform representation.
 

@@ -150,7 +150,7 @@ impl DataValue {
     /// Downcast a `DataValue::Object` to a concrete type `T` *of the
     /// cell*. Works for both direct cells (`Rc<RefCell<T>>`) and the
     /// `Rc<RefCell<dyn NativeObject>>` shape produced by
-    /// [`QLExpressNativeType::into_data_value`].
+    /// `QLExpressNativeType::into_data_value`.
     ///
     /// Returns `None` if the value is not an Object or the cell is not
     /// a `Rc<RefCell<T>>`.
