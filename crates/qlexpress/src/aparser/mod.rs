@@ -8,6 +8,7 @@
 //! [`scope_stack_visitor`]), the import resolver ([`import_manager`]),
 //! macro/scope helpers and the compile cache.
 
+pub mod built_in_types_set;
 pub mod check_visitor;
 pub mod compile_cache;
 pub mod compile_time_function;
@@ -33,6 +34,7 @@ pub mod terminal_node;
 pub mod token;
 pub mod trace_expression_visitor;
 
+pub use built_in_types_set::{get_cls, BuiltInType, BYTE, CHAR, DOUBLE, FLOAT, INT, LONG, SHORT, BOOLEAN};
 pub use check_visitor::CheckVisitor;
 pub use compile_cache::{CompileCache, QCompileCache, ScriptCompileCache};
 pub use compile_time_function::{CodeGenerator, CompileTimeFunction};

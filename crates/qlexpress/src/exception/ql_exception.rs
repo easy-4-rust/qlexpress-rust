@@ -1,3 +1,9 @@
+//! 对应 Java 类：com.alibaba.qlexpress4.exception.QLException
+//!
+//! QLExpress4 统一异常类型，携带完整诊断信息（错误码、源位置、cause 链）。
+//! Rust 侧以单一 struct + `QLExceptionKind` 枚举（Syntax/Runtime/Timeout/UserDefine）
+//! 表达 Java 的四类异常，体积较大是架构性选择（文件级 allow clippy::result_large_err）。
+
 use std::fmt;
 
 use super::error_codes;

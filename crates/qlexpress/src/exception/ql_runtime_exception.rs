@@ -1,3 +1,7 @@
+//! 对应 Java 类：com.alibaba.qlexpress4.exception.QLRuntimeException
+//!
+//! 运行时异常构造辅助，对应 `QLExceptionKind::Runtime`。
+
 use super::ql_exception::{QLException, QLExceptionKind};
 use crate::runtime::value::DataValue;
 

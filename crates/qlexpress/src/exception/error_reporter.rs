@@ -1,3 +1,8 @@
+//! 对应 Java 类：com.alibaba.qlexpress4.exception.ErrorReporter
+//!
+//! 错误报告器 trait：在 AST 节点处收集诊断信息（位置、错误码、参数）
+//! 并生成 `QLException`。
+
 use super::ql_exception::QLException;
 use crate::runtime::value::DataValue;
 

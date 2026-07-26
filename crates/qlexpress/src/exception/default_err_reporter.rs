@@ -1,3 +1,7 @@
+//! 对应 Java 类：com.alibaba.qlexpress4.exception.DefaultErrReporter
+//!
+//! 默认错误报告器：携带堆栈与源位置，输出含完整 trace 的 `QLException`。
+
 use super::error_codes::format_msg;
 use super::error_reporter::ErrorReporter;
 use super::ql_exception::QLException;

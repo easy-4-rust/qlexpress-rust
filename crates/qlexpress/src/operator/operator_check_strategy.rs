@@ -1,49 +1,65 @@
-//! Operator restriction strategies, mirroring Java `OperatorCheckStrategy`
-//! and its `Default` / `White` / `Black` implementations.
+//! 对应 Java 类：com.alibaba.qlexpress4.operator.OperatorCheckStrategy
 //!
-//! 类对照(语义已在 Stage 0 覆盖,此处标注 Java 全限定名):
-//! - [`OperatorCheckStrategy`] ↔ `com.alibaba.qlexpress4.operator.OperatorCheckStrategy`
-//!   (Java 接口 + 静态工厂 allowAll/whitelist/blacklist;Rust 以枚举对应);
-//! - [`DefaultOperatorCheckStrategy`] ↔ `com.alibaba.qlexpress4.operator.DefaultOperatorCheckStrategy`
-//!   (allow-all 单例,`isAllowed` 恒 true,`getOperators` 为空集);
-//! - [`WhiteOperatorCheckStrategy`] ↔ `com.alibaba.qlexpress4.operator.WhiteOperatorCheckStrategy`
-//!   (`isAllowed` = 白名单包含,`getOperators` 返回白名单);
-//! - [`BlackOperatorCheckStrategy`] ↔ `com.alibaba.qlexpress4.operator.BlackOperatorCheckStrategy`
-//!   (`isAllowed` = 不在黑名单,`getOperators` 返回黑名单)。
+//! 操作符限制策略接口，定义"某个操作符是否被允许"的契约。
+//!
+//! Java 是一个 `interface` 加三个实现（`Default`/`White`/`Black`）：
+//! - `OperatorCheckStrategy.allowAll()` → `DefaultOperatorCheckStrategy`
+//! - `OperatorCheckStrategy.whitelist(Set)` → `WhiteOperatorCheckStrategy`
+//! - `OperatorCheckStrategy.blacklist(Set)` → `BlackOperatorCheckStrategy`
+//!
+//! Rust 侧同时提供：
+//! - **enum 形态的 [`OperatorCheckStrategy`]**（一次性承载三种策略，
+//!   供 `CheckOptions` 直接 `Clone`/`PartialEq`，与历史 API 兼容）；
+//! - **三个具体实现**（一文件一对象，对齐 SPEC §2）：
+//!   - [`crate::operator::DefaultOperatorCheckStrategy`]（`default_operator_check_strategy.rs`）
+//!   - [`crate::operator::WhiteOperatorCheckStrategy`]（`white_operator_check_strategy.rs`）
+//!   - [`crate::operator::BlackOperatorCheckStrategy`]（`black_operator_check_strategy.rs`）
+//!
+//! Java 接口注释列出的支持操作符分类（arithmetic / assign / bit / collection /
+//! compare / logic / string / unary / root instanceof）在 Rust 侧由
+//! `runtime/operator/` 子包逐类落地。
 
 use std::collections::HashSet;
 
-/// How script validation decides whether an operator is allowed, mirroring
-/// Java `OperatorCheckStrategy`.
+pub use super::black_operator_check_strategy::BlackOperatorCheckStrategy;
+pub use super::default_operator_check_strategy::DefaultOperatorCheckStrategy;
+pub use super::white_operator_check_strategy::WhiteOperatorCheckStrategy;
+
+/// 枚举形态的策略入口，对齐 Java `OperatorCheckStrategy` 接口的三个静态工厂。
+///
+/// 三个变体分别对齐 Java：
+/// - `AllowAll` ↔ `OperatorCheckStrategy.allowAll()`
+/// - `Whitelist(set)` ↔ `OperatorCheckStrategy.whitelist(set)`
+/// - `Blacklist(set)` ↔ `OperatorCheckStrategy.blacklist(set)`
+///
+/// 下游消费者（`CheckOptions` 等）直接持有该枚举做 `Clone`/`PartialEq`。
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum OperatorCheckStrategy {
-    /// Java `OperatorCheckStrategy.allowAll()`.
+    /// Java `OperatorCheckStrategy.allowAll()`。
     AllowAll,
-    /// Java `OperatorCheckStrategy.whitelist(...)`: only these operators
-    /// (Java operator text, e.g. `"+"`, `"in"`) are allowed.
+    /// Java `OperatorCheckStrategy.whitelist(Set<String>)`：仅这些操作符被允许。
     Whitelist(HashSet<String>),
-    /// Java `OperatorCheckStrategy.blacklist(...)`: these operators are
-    /// forbidden.
+    /// Java `OperatorCheckStrategy.blacklist(Set<String>)`：这些操作符被禁止。
     Blacklist(HashSet<String>),
 }
 
 impl OperatorCheckStrategy {
-    /// Java `OperatorCheckStrategy.allowAll()`.
+    /// Java `OperatorCheckStrategy.allowAll()`。
     pub fn allow_all() -> Self {
         OperatorCheckStrategy::AllowAll
     }
 
-    /// Java `OperatorCheckStrategy.whitelist(Set<String>)`.
+    /// Java `OperatorCheckStrategy.whitelist(Set<String>)`。
     pub fn whitelist(allowed_operators: HashSet<String>) -> Self {
         OperatorCheckStrategy::Whitelist(allowed_operators)
     }
 
-    /// Java `OperatorCheckStrategy.blacklist(Set<String>)`.
+    /// Java `OperatorCheckStrategy.blacklist(Set<String>)`。
     pub fn blacklist(forbidden_operators: HashSet<String>) -> Self {
         OperatorCheckStrategy::Blacklist(forbidden_operators)
     }
 
-    /// Java `isAllowed(String)`.
+    /// Java `isAllowed(String)` —— 判断操作符是否被允许。
     pub fn is_allowed(&self, operator: &str) -> bool {
         match self {
             OperatorCheckStrategy::AllowAll => true,
@@ -52,8 +68,7 @@ impl OperatorCheckStrategy {
         }
     }
 
-    /// Java `getOperators()` — the configured operator set; empty for
-    /// allow-all.
+    /// Java `getOperators()`：返回配置集合；`AllowAll` 返回空集。
     pub fn operators(&self) -> &HashSet<String> {
         match self {
             OperatorCheckStrategy::AllowAll => DefaultOperatorCheckStrategy::empty_set(),
@@ -65,67 +80,6 @@ impl OperatorCheckStrategy {
 impl Default for OperatorCheckStrategy {
     fn default() -> Self {
         OperatorCheckStrategy::AllowAll
-    }
-}
-
-/// Java `DefaultOperatorCheckStrategy` (allow-all singleton).
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct DefaultOperatorCheckStrategy;
-
-impl DefaultOperatorCheckStrategy {
-    pub fn instance() -> Self {
-        DefaultOperatorCheckStrategy
-    }
-
-    pub fn is_allowed(&self, _operator: &str) -> bool {
-        true
-    }
-
-    pub(crate) fn empty_set() -> &'static HashSet<String> {
-        static EMPTY: std::sync::OnceLock<HashSet<String>> = std::sync::OnceLock::new();
-        EMPTY.get_or_init(HashSet::new)
-    }
-}
-
-/// Java `WhiteOperatorCheckStrategy`.
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct WhiteOperatorCheckStrategy {
-    allowed_operators: HashSet<String>,
-}
-
-impl WhiteOperatorCheckStrategy {
-    pub fn new(allowed_operators: HashSet<String>) -> Self {
-        WhiteOperatorCheckStrategy { allowed_operators }
-    }
-
-    pub fn is_allowed(&self, operator: &str) -> bool {
-        self.allowed_operators.contains(operator)
-    }
-
-    pub fn operators(&self) -> &HashSet<String> {
-        &self.allowed_operators
-    }
-}
-
-/// Java `BlackOperatorCheckStrategy`.
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct BlackOperatorCheckStrategy {
-    forbidden_operators: HashSet<String>,
-}
-
-impl BlackOperatorCheckStrategy {
-    pub fn new(forbidden_operators: HashSet<String>) -> Self {
-        BlackOperatorCheckStrategy {
-            forbidden_operators,
-        }
-    }
-
-    pub fn is_allowed(&self, operator: &str) -> bool {
-        !self.forbidden_operators.contains(operator)
-    }
-
-    pub fn operators(&self) -> &HashSet<String> {
-        &self.forbidden_operators
     }
 }
 
@@ -157,10 +111,44 @@ mod tests {
         assert!(!strategy.is_allowed("="));
         assert!(strategy.is_allowed("+"));
         assert_eq!(
-            BlackOperatorCheckStrategy::new(set(&["="]))
-                .operators()
-                .len(),
+            BlackOperatorCheckStrategy::new(set(&["="])).operators().len(),
             1
         );
+    }
+
+    #[test]
+    fn enum_and_concrete_implementations_agree() {
+        // AllowAll enum ↔ DefaultOperatorCheckStrategy
+        let default_struct = DefaultOperatorCheckStrategy::instance();
+        let default_enum = OperatorCheckStrategy::allow_all();
+        for op in ["+", "-", "*", "/", "=", "in", "&&", "!", "<<"] {
+            assert_eq!(
+                default_enum.is_allowed(op),
+                default_struct.is_allowed(op),
+                "op={op}"
+            );
+        }
+
+        // Whitelist enum ↔ WhiteOperatorCheckStrategy
+        let white_struct = WhiteOperatorCheckStrategy::new(set(&["+", "*"]));
+        let white_enum = OperatorCheckStrategy::whitelist(set(&["+", "*"]));
+        for op in ["+", "*", "=", "-"] {
+            assert_eq!(
+                white_enum.is_allowed(op),
+                white_struct.is_allowed(op),
+                "op={op}"
+            );
+        }
+
+        // Blacklist enum ↔ BlackOperatorCheckStrategy
+        let black_struct = BlackOperatorCheckStrategy::new(set(&["="]));
+        let black_enum = OperatorCheckStrategy::blacklist(set(&["="]));
+        for op in ["=", "+", "-", "in"] {
+            assert_eq!(
+                black_enum.is_allowed(op),
+                black_struct.is_allowed(op),
+                "op={op}"
+            );
+        }
     }
 }

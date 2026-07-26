@@ -1,3 +1,8 @@
+//! 对应 Java 类：com.alibaba.qlexpress4.runtime.trace.ExpressionTrace
+//!
+//! 表达式执行追踪树的一个节点。运行时入口；编译期 visitor 见
+//! `aparser::trace_expression_visitor::TraceExpressionVisitor`（v1 stub）。
+
 use super::trace_type::{java_name, TraceType};
 use crate::runtime::value::DataValue;
 use crate::utils::println_utils::PrintlnUtils;

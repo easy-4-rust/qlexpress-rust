@@ -1,3 +1,7 @@
+//! 对应 Java 类：com.alibaba.qlexpress4.exception.PureErrReporter
+//!
+//! 纯文本错误报告器：仅返回错误码与原始消息，不含堆栈，用于编译期校验等场景。
+
 use super::error_codes::format_msg;
 use super::error_reporter::ErrorReporter;
 use super::ql_exception::{QLException, QLExceptionKind};
