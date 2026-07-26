@@ -31,6 +31,12 @@ pub struct TryCatchInstruction {
     exception_table: Vec<(ClassRef, Rc<dyn QLambdaDefinition>)>,
     /// nullable
     final_body: Option<Rc<dyn QLambdaDefinition>>,
+    /// v1 新增:区分 block-expression `Continue(value)`(应传播值)
+    /// 与 loop control `Continue/Break/Return`(应透传信号)。
+    /// 当 `try/catch` 作为表达式使用时为 `true`,由
+    /// [`crate::aparser::qvm_instruction_visitor`] 在 `parse_exception_table`
+    /// 时根据 catch body 形态设置。
+    is_expression_form: bool,
 }
 
 impl TryCatchInstruction {
@@ -46,7 +52,15 @@ impl TryCatchInstruction {
             body,
             exception_table,
             final_body,
+            is_expression_form: false,
         }
+    }
+
+    /// 标记 try/catch 用作表达式(`1 + try{...}catch{...}` 形式)。
+    /// 此时 catch body 的 `Continue(value)` 是表达式结果值,不是循环控制信号。
+    pub fn with_expression_form(mut self, is_expr: bool) -> Self {
+        self.is_expression_form = is_expr;
+        self
     }
 
     /// 对应 Java 方法 `body`。
@@ -165,14 +179,32 @@ impl QLInstruction for TryCatchInstruction {
         ql_options: &QLOptions,
     ) -> Result<QResult, QLException> {
         let try_catch_result = self.try_catch_result(q_context, ql_options)?;
+
+        // 在表达式形式下,`Continue(value)` 必须作为表达式值留下,
+        // 而不是当作循环控制信号透传。这是 Java `TryCatchBreakContinueTest`
+        // 的核心约束:try/catch body 的 "Continue" 不应被误判为循环 continue。
+        let signal_to_propagate: Option<QResult> = if self.is_expression_form {
+            if Self::should_exit_try_catch(&try_catch_result)
+                && !matches!(&try_catch_result, QResult::Continue(_))
+            {
+                Some(try_catch_result.clone())
+            } else {
+                None
+            }
+        } else if Self::should_exit_try_catch(&try_catch_result) {
+            Some(try_catch_result.clone())
+        } else {
+            None
+        };
+
         let result_value = try_catch_result.value();
         q_context.push(QValue::Data(result_value).to_immutable());
 
         if let Some(final_body) = &self.final_body {
             self.call_final(final_body, q_context, ql_options)?;
         }
-        if Self::should_exit_try_catch(&try_catch_result) {
-            return Ok(try_catch_result);
+        if let Some(sig) = signal_to_propagate {
+            return Ok(sig);
         }
         Ok(QResult::NEXT_INSTRUCTION)
     }

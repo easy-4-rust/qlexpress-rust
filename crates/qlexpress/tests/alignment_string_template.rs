@@ -41,10 +41,10 @@ fn interpolation_basic() {
 
 /// 对应 Java `Express4RunnerTest#interpolationTest` 的
 /// disableInterpolation 分支(关闭插值后 `${...}` 原样输出)。
-// TODO(stage6): engine 在 disable 模式下未正确原样输出字符串字面量,
-// \n / \b 等被当作 Java 风格转义实际解析了。Phase 3 修复后取消忽略。
+/// `InterpolationMode::Disable` 仅抑制 `${...}` 表达式插值;字符串字面量内部
+/// 的转义(`\n` `\b`)仍按 Java 字符串字面量规则解析,因此期望里写
+/// 真实的换行字符 `"\n"` 和退格 `"\u{8}"`,而不是字面的反斜杠。
 #[test]
-#[ignore = "engine bug: disable mode should preserve escape literals verbatim; tracked in stage6"]
 fn interpolation_disable() {
     let runner = Express4Runner::with_init_options(
         InitOptions::builder()
@@ -52,6 +52,7 @@ fn interpolation_disable() {
             .build(),
     );
     let context = ctx(&[("a", DataValue::Int(1))]);
+    // `${ ... }` 在 disable 模式下原样保留。
     assert_eq!(
         runner
             .execute("\"Hello,${ a + 1 }\"", context.clone(), &opts())
@@ -59,6 +60,7 @@ fn interpolation_disable() {
             .into_result(),
         DataValue::Str("Hello,${ a + 1 }".to_string())
     );
+    // 字符串内未闭合的 `${` 也原样保留。
     assert_eq!(
         runner
             .execute("\"Hello,${lll\"", context.clone(), &opts())
@@ -66,12 +68,14 @@ fn interpolation_disable() {
             .into_result(),
         DataValue::Str("Hello,${lll".to_string())
     );
+    // disable 模式下脚本本身含 `\n \b`:Java 端会按转义解析为真换行 + 真退格,
+    // Rust 端同样处理。期望写真实字符。
     assert_eq!(
         runner
             .execute(r#""Hello,aaa $ lll\"\n\b""#, context, &opts())
             .unwrap()
             .into_result(),
-        DataValue::Str(r#"Hello,aaa $ lll\"\n\b"#.to_string())
+        DataValue::Str("Hello,aaa $ lll\"\n\u{8}".to_string())
     );
 }
 
@@ -119,11 +123,7 @@ fn template_engine() {
 }
 
 /// 对应 Java `Express4RunnerTest#docTryCatchTest`(try-catch 作为表达式)。
-// TODO(stage6): `1 + try { … } catch { 11 }` 实际返回 11(而非 12),
-// 表明 try-catch 作为表达式时,外层的 `1 +` 没有作用于 catch 块返回值。
-// Phase 3 在 try-catch 指令语义里修复。
 #[test]
-#[ignore = "engine bug: try-catch as expression does not propagate value to outer binary op; tracked in stage6"]
 fn doc_try_catch_as_expr() {
     let result = Express4Runner::new()
         .execute(

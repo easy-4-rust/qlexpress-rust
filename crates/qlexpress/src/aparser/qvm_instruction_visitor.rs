@@ -1790,12 +1790,15 @@ impl<'a> Visitor for QvmInstructionVisitor<'a> {
         let final_body_definition =
             self.parse_final_body_definition(try_count, ctx.try_finally.as_deref());
 
-        self.add_instruction(Box::new(TryCatchInstruction::new(
-            self.new_reporter_with_token(ctx.try_token.symbol()),
-            body_lambda_definition,
-            exception_table,
-            final_body_definition,
-        )));
+        self.add_instruction(Box::new(
+            TryCatchInstruction::new(
+                self.new_reporter_with_token(ctx.try_token.symbol()),
+                body_lambda_definition,
+                exception_table,
+                final_body_definition,
+            )
+            .with_expression_form(true),
+        ));
     }
     /// Java `visitExpression` (assignment).
     fn visit_expression(&mut self, ctx: &ExpressionContext) {
