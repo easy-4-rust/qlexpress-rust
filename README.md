@@ -64,20 +64,21 @@ cargo clippy --all-targets
 
 ## 当前语义对齐范围与已知近似
 
-- **数值**:`BigInteger` ≈ `i128`(`DataValue::BigInt`);`BigDecimal` 以十进制字符串存储、按需解析。
+- **数值**:`BigInteger` 使用 `num_bigint::BigInt` 任意精度实现；
+  `BigDecimal` 以十进制字符串存储、按需解析。
 - **反射替代**(SPEC §4):Java 的 `Class.forName`/反射成员解析改为显式
   `NativeRegistry` 注册(类型、构造器、方法、字段);注解扫描式 API
   (`addObjFunction`/`addStaticFunction` 的 `@QLFunction` 扫描)不迁移,
   由宿主显式注册。
-- **安全策略**:作用于注册表成员分派(对齐 Java `ReflectLoader.check`,
-  不通过即按「成员不存在」报错);内建类型(String/List/Map/数值)方法子集
-  是语言内核,不过策略(Java `isolation` 默认下它们也会被拦,此为有意偏差);
-  注册表裸用默认 `open`,`Express4Runner` 构造时按 `InitOptions`
-  (默认 `isolation`)接线。
+- **安全策略**:作用于构造器、注册表成员、动态宿主对象以及内建 JDK
+  兼容成员分派，对齐 Java `ReflectLoader.check`；不通过时按「成员不存在」
+  报错。扩展函数先于隔离策略解析，`Express4Runner` 的宿主字段读取保留
+  Java `skipSecurity=true` 边界。
 - **并发编译缓存**:Java `ConcurrentHashMap<String, Future<QCompileCache>>`
   → 单线程 `Rc` 体系下的 `RefCell<HashMap>`(命中语义一致)。
-- **表达式 trace**:`TraceExpressionVisitor` 为 v1 stub(运行时 `ExpressionTrace`
-  已完整;编译期 visitor 待后续版本实现);`get_expression_trace` 已留好门面。
+- **表达式 trace**:`TraceExpressionVisitor`、`TracePointTree`、
+  `ExpressionTrace` 与 `QTraces` 已形成编译期标注、运行时采集和嵌套
+  lambda 追踪闭环，`get_expression_trace` 返回可序列化追踪结果。
 - **动态代理**:`proxy.QLambdaInvocationHandler` 以显式闭包/trait 适配器
   替代 Java 运行时接口代理。
 - **运行时反射改注册表**:不支持(Rust 无运行时反射;注册在 `&mut runner`
@@ -86,7 +87,7 @@ cargo clippy --all-targets
   `NativeObject` impl，支持字段 getter、alias、skip、name override。
 - **Varargs**:Java 的 `Method.isVarArgs()` + 参数打包由 Rust 闭包切片
   天然替代——注册的闭包接收 `&[DataValue]`，可自行处理变长参数。
-- **数值提升**:BigInteger(`i128`)/BigDecimal(十进制字符串)的双向转换
+- **数值提升**:BigInteger(任意精度)/BigDecimal(十进制字符串)的双向转换
   在构造器/方法闭包内部完成，无需修改 `ParametersTypeConvertor::cast`。
 - **try/catch 控制信号**:对齐 Java `shouldExitTryCatch` 语义——
   仅传播 `Return` / `Break` / `Continue(null)`（循环控制哨兵），
@@ -95,7 +96,7 @@ cargo clippy --all-targets
 ## 测试覆盖
 
 ```
-cargo test --workspace: 742 passed / 0 failed / 11 ignored
+cargo test --workspace --all-features: 777 passed / 0 failed / 0 ignored
 ```
 
 | 类别 | 数量 | 说明 |
@@ -105,12 +106,14 @@ cargo test --workspace: 742 passed / 0 failed / 11 ignored
 | Stage 0-5 原有 | ~500 | 基线 |
 | 过程宏 fixture | 12 | `stage6_derive_fixture` |
 
-### 已知限制（11 个 ignored）
+### 验收门禁
 
-| 用例 | 原因 |
+| 门禁 | 结果 |
 |---|---|
-| alignment_suite × 7 | Java 反射/BigInteger overflow/Java 测试类 |
-| try/catch while-loop × 3 | `is_expression_form=true` 吞 Continue 信号 |
+| 全量测试 | 777 passed / 0 failed / 0 ignored |
+| 格式 | `cargo fmt --all -- --check` 通过 |
+| 静态检查 | `cargo clippy --workspace --all-targets --all-features -- -D warnings` 通过 |
+| 完整性 | 无 `todo!` / `unimplemented!` / `#[ignore]` / `compat.rs` |
 
 ## 构建 / 测试
 

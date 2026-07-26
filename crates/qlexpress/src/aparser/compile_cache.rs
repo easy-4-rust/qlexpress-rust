@@ -51,6 +51,7 @@ pub struct CompileCache<L, T> {
 }
 
 impl<L, T> CompileCache<L, T> {
+    /// 构造实例。Rust 适配接口；Java 无同名对象，承接 `CompileCache` 的同职责语义。
     pub fn new() -> Self {
         CompileCache {
             map: HashMap::new(),
@@ -67,14 +68,17 @@ impl<L, T> CompileCache<L, T> {
         self.map.insert(script.into(), cache);
     }
 
+    /// 执行 `len` 公开操作。Rust 适配接口；Java 无同名对象，承接 `CompileCache` 的同职责语义。
     pub fn len(&self) -> usize {
         self.map.len()
     }
 
+    /// 执行 `is_empty` 公开操作。Rust 适配接口；Java 无同名对象，承接 `CompileCache` 的同职责语义。
     pub fn is_empty(&self) -> bool {
         self.map.is_empty()
     }
 
+    /// 执行 `clear` 公开操作。Rust 适配接口；Java 无同名对象，承接 `CompileCache` 的同职责语义。
     pub fn clear(&mut self) {
         self.map.clear();
     }

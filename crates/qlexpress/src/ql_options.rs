@@ -36,34 +36,42 @@ pub struct QLOptions {
 }
 
 impl QLOptions {
+    /// 执行 `builder` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/QLOptions.java:12` 的 `QLOptions#builder`。
     pub fn builder() -> QLOptionsBuilder {
         QLOptionsBuilder::new()
     }
 
+    /// 执行 `is_precise` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/QLOptions.java:92` 的 `QLOptions#isPrecise`。
     pub fn is_precise(&self) -> bool {
         self.precise
     }
 
+    /// 执行 `is_pollute_user_context` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/QLOptions.java:96` 的 `QLOptions#isPolluteUserContext`。
     pub fn is_pollute_user_context(&self) -> bool {
         self.pollute_user_context
     }
 
+    /// 执行 `timeout_millis` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/QLOptions.java:165` 的 `QLOptions#timeoutMillis`。
     pub fn timeout_millis(&self) -> i64 {
         self.timeout_millis
     }
 
+    /// 执行 `attachments` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/QLOptions.java:170` 的 `QLOptions#attachments`。
     pub fn attachments(&self) -> &Attachments {
         &self.attachments
     }
 
+    /// 执行 `is_cache` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/QLOptions.java:108` 的 `QLOptions#isCache`。
     pub fn is_cache(&self) -> bool {
         self.cache
     }
 
+    /// 执行 `is_avoid_null_pointer` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/QLOptions.java:112` 的 `QLOptions#isAvoidNullPointer`。
     pub fn is_avoid_null_pointer(&self) -> bool {
         self.avoid_null_pointer
     }
 
+    /// 执行 `max_arr_length` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/QLOptions.java:185` 的 `QLOptions#maxArrLength`。
     pub fn max_arr_length(&self) -> i32 {
         self.max_arr_length
     }
@@ -74,10 +82,12 @@ impl QLOptions {
         self.max_arr_length == -1 || new_arr_len <= self.max_arr_length
     }
 
+    /// 执行 `is_trace_expression` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/QLOptions.java:128` 的 `QLOptions#isTraceExpression`。
     pub fn is_trace_expression(&self) -> bool {
         self.trace_expression
     }
 
+    /// 执行 `is_short_circuit_disable` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/QLOptions.java:132` 的 `QLOptions#isShortCircuitDisable`。
     pub fn is_short_circuit_disable(&self) -> bool {
         self.short_circuit_disable
     }
@@ -105,6 +115,7 @@ pub struct QLOptionsBuilder {
 }
 
 impl QLOptionsBuilder {
+    /// 构造实例。Rust 适配接口；Java 无同名对象，承接 `QLOptionsBuilder` 的同职责语义。
     pub fn new() -> Self {
         QLOptionsBuilder {
             precise: false,
@@ -119,51 +130,61 @@ impl QLOptionsBuilder {
         }
     }
 
+    /// 执行 `precise` 公开操作。Rust 适配接口；Java 无同名对象，承接 `QLOptionsBuilder` 的同职责语义。
     pub fn precise(mut self, precise: bool) -> Self {
         self.precise = precise;
         self
     }
 
+    /// 执行 `pollute_user_context` 公开操作。Rust 适配接口；Java 无同名对象，承接 `QLOptionsBuilder` 的同职责语义。
     pub fn pollute_user_context(mut self, pollute_user_context: bool) -> Self {
         self.pollute_user_context = pollute_user_context;
         self
     }
 
+    /// 执行 `timeout_millis` 公开操作。Rust 适配接口；Java 无同名对象，承接 `QLOptionsBuilder` 的同职责语义。
     pub fn timeout_millis(mut self, timeout_millis: i64) -> Self {
         self.timeout_millis = timeout_millis;
         self
     }
 
+    /// 执行 `attachments` 公开操作。Rust 适配接口；Java 无同名对象，承接 `QLOptionsBuilder` 的同职责语义。
     pub fn attachments(mut self, attachments: Attachments) -> Self {
         self.attachments = attachments;
         self
     }
 
+    /// 执行 `cache` 公开操作。Rust 适配接口；Java 无同名对象，承接 `QLOptionsBuilder` 的同职责语义。
     pub fn cache(mut self, cache: bool) -> Self {
         self.cache = cache;
         self
     }
 
+    /// 执行 `avoid_null_pointer` 公开操作。Rust 适配接口；Java 无同名对象，承接 `QLOptionsBuilder` 的同职责语义。
     pub fn avoid_null_pointer(mut self, avoid_null_pointer: bool) -> Self {
         self.avoid_null_pointer = avoid_null_pointer;
         self
     }
 
+    /// 执行 `max_arr_length` 公开操作。Rust 适配接口；Java 无同名对象，承接 `QLOptionsBuilder` 的同职责语义。
     pub fn max_arr_length(mut self, max_arr_length: i32) -> Self {
         self.max_arr_length = max_arr_length;
         self
     }
 
+    /// 执行 `trace_expression` 公开操作。Rust 适配接口；Java 无同名对象，承接 `QLOptionsBuilder` 的同职责语义。
     pub fn trace_expression(mut self, trace_expression: bool) -> Self {
         self.trace_expression = trace_expression;
         self
     }
 
+    /// 执行 `short_circuit_disable` 公开操作。Rust 适配接口；Java 无同名对象，承接 `QLOptionsBuilder` 的同职责语义。
     pub fn short_circuit_disable(mut self, short_circuit_disable: bool) -> Self {
         self.short_circuit_disable = short_circuit_disable;
         self
     }
 
+    /// 执行 `build` 公开操作。Rust 适配接口；Java 无同名对象，承接 `QLOptionsBuilder` 的同职责语义。
     pub fn build(self) -> QLOptions {
         QLOptions {
             precise: self.precise,

@@ -16,6 +16,7 @@ pub struct FieldValue {
 }
 
 impl FieldValue {
+    /// 构造实例。对应 Java 源码 `com/alibaba/qlexpress4/runtime/data/FieldValue.java:18` 的 `FieldValue::<init>`。
     pub fn new(
         get_op: Box<dyn Fn() -> DataValue>,
         set_op: Box<dyn FnMut(DataValue)>,

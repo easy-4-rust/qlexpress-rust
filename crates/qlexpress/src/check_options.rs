@@ -12,6 +12,7 @@ pub struct CheckOptions {
 }
 
 impl CheckOptions {
+    /// 执行 `builder` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/CheckOptions.java:28` 的 `CheckOptions#builder`。
     pub fn builder() -> CheckOptionsBuilder {
         CheckOptionsBuilder::new()
     }
@@ -21,6 +22,7 @@ impl CheckOptions {
         &self.operator_check_strategy
     }
 
+    /// 执行 `is_disable_function_calls` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/CheckOptions.java:39` 的 `CheckOptions#isDisableFunctionCalls`。
     pub fn is_disable_function_calls(&self) -> bool {
         self.disable_function_calls
     }
@@ -41,6 +43,7 @@ pub struct CheckOptionsBuilder {
 }
 
 impl CheckOptionsBuilder {
+    /// 构造实例。Rust 适配接口；Java 无同名对象，承接 `CheckOptionsBuilder` 的同职责语义。
     pub fn new() -> Self {
         CheckOptionsBuilder {
             operator_check_strategy: OperatorCheckStrategy::allow_all(),
@@ -48,16 +51,19 @@ impl CheckOptionsBuilder {
         }
     }
 
+    /// 执行 `operator_check_strategy` 公开操作。Rust 适配接口；Java 无同名对象，承接 `CheckOptionsBuilder` 的同职责语义。
     pub fn operator_check_strategy(mut self, strategy: OperatorCheckStrategy) -> Self {
         self.operator_check_strategy = strategy;
         self
     }
 
+    /// 执行 `disable_function_calls` 公开操作。Rust 适配接口；Java 无同名对象，承接 `CheckOptionsBuilder` 的同职责语义。
     pub fn disable_function_calls(mut self, disable_function_calls: bool) -> Self {
         self.disable_function_calls = disable_function_calls;
         self
     }
 
+    /// 执行 `build` 公开操作。Rust 适配接口；Java 无同名对象，承接 `CheckOptionsBuilder` 的同职责语义。
     pub fn build(self) -> CheckOptions {
         CheckOptions {
             operator_check_strategy: self.operator_check_strategy,

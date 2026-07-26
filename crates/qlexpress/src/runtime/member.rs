@@ -69,6 +69,7 @@ pub trait QLExpressNativeType: NativeObject + 'static {
 
 /// Convenience: register `T` into a registry by-name.
 pub trait QLExpressRegistryExt {
+    /// 执行 `register_qlexpress_type` 公开操作。Rust 适配接口；Java 无同名对象，承接 `QLExpressRegistryExt` 的同职责语义。
     fn register_qlexpress_type<T: QLExpressNativeType>(&mut self);
 }
 

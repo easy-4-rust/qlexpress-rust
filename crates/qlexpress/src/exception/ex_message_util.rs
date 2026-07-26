@@ -17,19 +17,23 @@ pub struct ExMessage {
 }
 
 impl ExMessage {
+    /// 构造实例。Rust 适配接口；Java 无同名对象，承接 `ExMessage` 的同职责语义。
     pub fn new(message: String, snippet: String) -> Self {
         ExMessage { message, snippet }
     }
 
+    /// 执行 `message` 公开操作。Rust 适配接口；Java 无同名对象，承接 `ExMessage` 的同职责语义。
     pub fn message(&self) -> &str {
         &self.message
     }
 
+    /// 执行 `snippet` 公开操作。Rust 适配接口；Java 无同名对象，承接 `ExMessage` 的同职责语义。
     pub fn snippet(&self) -> &str {
         &self.snippet
     }
 }
 
+/// 定义 `ExMessageUtil` 对象。对应 Java 源码 `com/alibaba/qlexpress4/exception/ExMessageUtil.java:1` 的 `ExMessageUtil`；该方法为 Rust 同职责适配接口。
 pub struct ExMessageUtil;
 
 impl ExMessageUtil {

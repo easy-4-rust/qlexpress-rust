@@ -29,6 +29,7 @@ pub struct ExpressionTrace {
 }
 
 impl ExpressionTrace {
+    /// 构造实例。对应 Java 源码 `com/alibaba/qlexpress4/runtime/trace/ExpressionTrace.java:9` 的 `ExpressionTrace::<init>`。
     pub fn new(
         trace_type: TraceType,
         token: impl Into<String>,
@@ -49,22 +50,27 @@ impl ExpressionTrace {
         }
     }
 
+    /// 执行 `trace_type` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/runtime/trace/ExpressionTrace.java:1` 的 `ExpressionTrace`；该方法为 Rust 同职责适配接口。
     pub fn trace_type(&self) -> TraceType {
         self.trace_type
     }
 
+    /// 执行 `token` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/runtime/trace/ExpressionTrace.java:1` 的 `ExpressionTrace`；该方法为 Rust 同职责适配接口。
     pub fn token(&self) -> &str {
         &self.token
     }
 
+    /// 执行 `value` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/runtime/trace/ExpressionTrace.java:1` 的 `ExpressionTrace`；该方法为 Rust 同职责适配接口。
     pub fn value(&self) -> Option<&DataValue> {
         self.value.as_ref()
     }
 
+    /// 执行 `is_evaluated` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/runtime/trace/ExpressionTrace.java:77` 的 `ExpressionTrace#isEvaluated`。
     pub fn is_evaluated(&self) -> bool {
         self.evaluated
     }
 
+    /// 执行 `children` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/runtime/trace/ExpressionTrace.java:1` 的 `ExpressionTrace`；该方法为 Rust 同职责适配接口。
     pub fn children(&self) -> &[ExpressionTrace] {
         &self.children
     }
@@ -75,14 +81,17 @@ impl ExpressionTrace {
         &mut self.children
     }
 
+    /// 执行 `line` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/runtime/trace/ExpressionTrace.java:1` 的 `ExpressionTrace`；该方法为 Rust 同职责适配接口。
     pub fn line(&self) -> i32 {
         self.line
     }
 
+    /// 执行 `col` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/runtime/trace/ExpressionTrace.java:1` 的 `ExpressionTrace`；该方法为 Rust 同职责适配接口。
     pub fn col(&self) -> i32 {
         self.col
     }
 
+    /// 执行 `position` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/runtime/trace/ExpressionTrace.java:1` 的 `ExpressionTrace`；该方法为 Rust 同职责适配接口。
     pub fn position(&self) -> i32 {
         self.position
     }

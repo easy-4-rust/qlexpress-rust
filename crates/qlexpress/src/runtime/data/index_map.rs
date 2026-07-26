@@ -5,15 +5,18 @@
 use crate::runtime::value::DataValue;
 
 #[derive(Clone, Debug, Default, PartialEq)]
+/// 定义 `IndexMap` 对象。Rust 适配接口；Java 无同名对象，承接 `IndexMap` 的同职责语义。
 pub struct IndexMap {
     entries: Vec<(DataValue, DataValue)>,
 }
 
 impl IndexMap {
+    /// 构造实例。Rust 适配接口；Java 无同名对象，承接 `IndexMap` 的同职责语义。
     pub fn new() -> Self {
         IndexMap::default()
     }
 
+    /// 执行 `from_entries` 公开操作。Rust 适配接口；Java 无同名对象，承接 `IndexMap` 的同职责语义。
     pub fn from_entries(entries: Vec<(DataValue, DataValue)>) -> Self {
         let mut map = IndexMap::new();
         for (k, v) in entries {
@@ -55,10 +58,12 @@ impl IndexMap {
         self.entries.clear();
     }
 
+    /// 执行 `len` 公开操作。Rust 适配接口；Java 无同名对象，承接 `IndexMap` 的同职责语义。
     pub fn len(&self) -> usize {
         self.entries.len()
     }
 
+    /// 执行 `is_empty` 公开操作。Rust 适配接口；Java 无同名对象，承接 `IndexMap` 的同职责语义。
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty()
     }
@@ -68,10 +73,12 @@ impl IndexMap {
         &self.entries
     }
 
+    /// 执行 `keys` 公开操作。Rust 适配接口；Java 无同名对象，承接 `IndexMap` 的同职责语义。
     pub fn keys(&self) -> impl Iterator<Item = &DataValue> {
         self.entries.iter().map(|(k, _)| k)
     }
 
+    /// 执行 `values` 公开操作。Rust 适配接口；Java 无同名对象，承接 `IndexMap` 的同职责语义。
     pub fn values(&self) -> impl Iterator<Item = &DataValue> {
         self.entries.iter().map(|(_, v)| v)
     }

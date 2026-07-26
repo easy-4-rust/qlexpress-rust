@@ -11,6 +11,7 @@ pub struct Parameters {
 }
 
 impl Parameters {
+    /// 构造实例。对应 Java 源码 `com/alibaba/qlexpress4/runtime/Parameters.java:1` 的 `Parameters`；该方法为 Rust 同职责适配接口。
     pub fn new(values: Vec<QValue>) -> Self {
         Parameters { values }
     }
@@ -32,6 +33,7 @@ impl Parameters {
         self.values.len()
     }
 
+    /// 执行 `is_empty` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/runtime/Parameters.java:1` 的 `Parameters`；该方法为 Rust 同职责适配接口。
     pub fn is_empty(&self) -> bool {
         self.values.is_empty()
     }

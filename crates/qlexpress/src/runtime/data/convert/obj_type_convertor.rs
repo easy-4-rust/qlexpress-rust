@@ -56,6 +56,7 @@ pub struct QConverted {
 }
 
 impl QConverted {
+    /// 执行 `converted` 公开操作。Rust 适配接口；Java 无同名对象，承接 `QConverted` 的同职责语义。
     pub fn converted(converted: DataValue) -> Self {
         QConverted {
             convertible: true,
@@ -63,6 +64,7 @@ impl QConverted {
         }
     }
 
+    /// 执行 `un_convertible` 公开操作。Rust 适配接口；Java 无同名对象，承接 `QConverted` 的同职责语义。
     pub fn un_convertible() -> Self {
         QConverted {
             convertible: false,
@@ -70,19 +72,23 @@ impl QConverted {
         }
     }
 
+    /// 执行 `is_convertible` 公开操作。Rust 适配接口；Java 无同名对象，承接 `QConverted` 的同职责语义。
     pub fn is_convertible(&self) -> bool {
         self.convertible
     }
 
+    /// 执行 `get_converted` 公开操作。Rust 适配接口；Java 无同名对象，承接 `QConverted` 的同职责语义。
     pub fn get_converted(&self) -> &DataValue {
         &self.converted
     }
 
+    /// 执行 `into_converted` 公开操作。Rust 适配接口；Java 无同名对象，承接 `QConverted` 的同职责语义。
     pub fn into_converted(self) -> DataValue {
         self.converted
     }
 }
 
+/// 定义 `ObjTypeConvertor` 对象。对应 Java 源码 `com/alibaba/qlexpress4/runtime/data/convert/ObjTypeConvertor.java:1` 的 `ObjTypeConvertor`；该方法为 Rust 同职责适配接口。
 pub struct ObjTypeConvertor;
 
 impl ObjTypeConvertor {

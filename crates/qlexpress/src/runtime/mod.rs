@@ -29,6 +29,7 @@ pub mod operator;
 pub mod parameters;
 pub mod q_result;
 pub mod q_runtime;
+pub mod q_value;
 pub mod qcontext;
 pub mod qlambda;
 pub mod qlambda_definition;

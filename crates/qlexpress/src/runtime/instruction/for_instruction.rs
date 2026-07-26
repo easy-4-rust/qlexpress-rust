@@ -40,6 +40,7 @@ pub struct ForInstruction {
 
 impl ForInstruction {
     #[allow(clippy::too_many_arguments)]
+    /// 构造实例。对应 Java 源码 `com/alibaba/qlexpress4/runtime/instruction/ForInstruction.java:43` 的 `ForInstruction::<init>`。
     pub fn new(
         error_reporter: Rc<dyn ErrorReporter>,
         for_init: Option<Rc<dyn QLambdaDefinition>>,

@@ -73,22 +73,27 @@ impl QLException {
         )
     }
 
+    /// 执行 `kind` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/exception/QLException.java:1` 的 `QLException`；该方法为 Rust 同职责适配接口。
     pub fn kind(&self) -> QLExceptionKind {
         self.kind
     }
 
+    /// 执行 `is_syntax` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/exception/QLException.java:1` 的 `QLException`；该方法为 Rust 同职责适配接口。
     pub fn is_syntax(&self) -> bool {
         self.kind == QLExceptionKind::Syntax
     }
 
+    /// 执行 `is_timeout` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/exception/QLException.java:1` 的 `QLException`；该方法为 Rust 同职责适配接口。
     pub fn is_timeout(&self) -> bool {
         self.kind == QLExceptionKind::Timeout
     }
 
+    /// 执行 `diagnostic` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/exception/QLException.java:1` 的 `QLException`；该方法为 Rust 同职责适配接口。
     pub fn diagnostic(&self) -> &Diagnostic {
         &self.diagnostic
     }
 
+    /// 执行 `pos` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/exception/QLException.java:1` 的 `QLException`；该方法为 Rust 同职责适配接口。
     pub fn pos(&self) -> i32 {
         self.diagnostic.pos()
     }
@@ -108,10 +113,12 @@ impl QLException {
         self.diagnostic.range().start().character() + 1
     }
 
+    /// 执行 `err_lexeme` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/exception/QLException.java:1` 的 `QLException`；该方法为 Rust 同职责适配接口。
     pub fn err_lexeme(&self) -> &str {
         self.diagnostic.lexeme()
     }
 
+    /// 执行 `error_code` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/exception/QLException.java:1` 的 `QLException`；该方法为 Rust 同职责适配接口。
     pub fn error_code(&self) -> &str {
         self.diagnostic.code()
     }

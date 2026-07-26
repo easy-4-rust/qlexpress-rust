@@ -14,6 +14,7 @@ pub struct ListItemValue {
 }
 
 impl ListItemValue {
+    /// 构造实例。对应 Java 源码 `com/alibaba/qlexpress4/runtime/data/ListItemValue.java:16` 的 `ListItemValue::<init>`。
     pub fn new(list: Rc<RefCell<Vec<DataValue>>>, index: usize) -> Self {
         ListItemValue { list, index }
     }

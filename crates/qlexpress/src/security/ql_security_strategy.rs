@@ -16,6 +16,7 @@ pub struct NativeMember {
 }
 
 impl NativeMember {
+    /// 构造实例。Rust 适配接口；Java 无同名对象，承接 `NativeMember` 的同职责语义。
     pub fn new(type_name: impl Into<String>, member_name: impl Into<String>) -> Self {
         NativeMember {
             type_name: type_name.into(),

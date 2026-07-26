@@ -30,6 +30,7 @@ const KEY: &str = "key";
 const VALUE: &str = "value";
 
 impl SpreadGetFieldInstruction {
+    /// 构造实例。对应 Java 源码 `com/alibaba/qlexpress4/runtime/instruction/SpreadGetFieldInstruction.java:32` 的 `SpreadGetFieldInstruction::<init>`。
     pub fn new(error_reporter: Rc<dyn ErrorReporter>, field_name: impl Into<String>) -> Self {
         SpreadGetFieldInstruction {
             error_reporter,
@@ -37,6 +38,7 @@ impl SpreadGetFieldInstruction {
         }
     }
 
+    /// 执行 `field_name` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/runtime/instruction/SpreadGetFieldInstruction.java:1` 的 `SpreadGetFieldInstruction`；该方法为 Rust 同职责适配接口。
     pub fn field_name(&self) -> &str {
         &self.field_name
     }

@@ -28,6 +28,7 @@ pub struct ExceptionTableEntry {
 }
 
 impl ExceptionTableEntry {
+    /// 执行 `covers` 公开操作。Rust 适配接口；Java 无同名对象，承接 `ExceptionTableEntry` 的同职责语义。
     pub fn covers(&self, pc: usize) -> bool {
         pc >= self.start_pc && pc < self.end_pc
     }
@@ -40,20 +41,24 @@ pub struct ExceptionTable {
 }
 
 impl ExceptionTable {
+    /// 构造实例。对应 Java 源码 `com/alibaba/qlexpress4/runtime/ExceptionTable.java:12` 的 `ExceptionTable::<init>`。
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// 执行 `with_entry` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/runtime/ExceptionTable.java:1` 的 `ExceptionTable`；该方法为 Rust 同职责适配接口。
     pub fn with_entry(entry: ExceptionTableEntry) -> Self {
         let mut t = Self::new();
         t.entries.push(entry);
         t
     }
 
+    /// 执行 `push` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/runtime/ExceptionTable.java:1` 的 `ExceptionTable`；该方法为 Rust 同职责适配接口。
     pub fn push(&mut self, entry: ExceptionTableEntry) {
         self.entries.push(entry);
     }
 
+    /// 执行 `entries` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/runtime/ExceptionTable.java:1` 的 `ExceptionTable`；该方法为 Rust 同职责适配接口。
     pub fn entries(&self) -> &[ExceptionTableEntry] {
         &self.entries
     }

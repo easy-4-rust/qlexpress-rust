@@ -23,6 +23,7 @@ pub struct ScopeStack<S: ExistStack> {
 }
 
 impl<S: ExistStack> ScopeStack<S> {
+    /// 构造实例。Rust 适配接口；Java 无同名对象，承接 `ScopeStack` 的同职责语义。
     pub fn new(stack: S) -> Self {
         ScopeStack { stack }
     }

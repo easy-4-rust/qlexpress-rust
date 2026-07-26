@@ -18,6 +18,7 @@ pub struct DefaultErrReporter {
 }
 
 impl DefaultErrReporter {
+    /// 构造实例。对应 Java 源码 `com/alibaba/qlexpress4/exception/DefaultErrReporter.java:18` 的 `DefaultErrReporter::<init>`。
     pub fn new(
         script: impl Into<String>,
         token_start_pos: i32,
@@ -34,22 +35,27 @@ impl DefaultErrReporter {
         }
     }
 
+    /// 执行 `script` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/exception/DefaultErrReporter.java:1` 的 `DefaultErrReporter`；该方法为 Rust 同职责适配接口。
     pub fn script(&self) -> &str {
         &self.script
     }
 
+    /// 执行 `token_start_pos` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/exception/DefaultErrReporter.java:1` 的 `DefaultErrReporter`；该方法为 Rust 同职责适配接口。
     pub fn token_start_pos(&self) -> i32 {
         self.token_start_pos
     }
 
+    /// 执行 `line` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/exception/DefaultErrReporter.java:1` 的 `DefaultErrReporter`；该方法为 Rust 同职责适配接口。
     pub fn line(&self) -> i32 {
         self.line
     }
 
+    /// 执行 `col` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/exception/DefaultErrReporter.java:1` 的 `DefaultErrReporter`；该方法为 Rust 同职责适配接口。
     pub fn col(&self) -> i32 {
         self.col
     }
 
+    /// 执行 `lexeme` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/exception/DefaultErrReporter.java:1` 的 `DefaultErrReporter`；该方法为 Rust 同职责适配接口。
     pub fn lexeme(&self) -> &str {
         &self.lexeme
     }

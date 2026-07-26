@@ -71,14 +71,17 @@ impl QLImport {
         }
     }
 
+    /// 执行 `scope` 公开操作。Rust 适配接口；Java 无同名对象，承接 `QLImport` 的同职责语义。
     pub fn scope(&self) -> ImportScope {
         self.scope
     }
 
+    /// 执行 `target` 公开操作。Rust 适配接口；Java 无同名对象，承接 `QLImport` 的同职责语义。
     pub fn target(&self) -> &str {
         &self.target
     }
 
+    /// 执行 `alias` 公开操作。Rust 适配接口；Java 无同名对象，承接 `QLImport` 的同职责语义。
     pub fn alias(&self) -> Option<&str> {
         self.alias.as_deref()
     }
@@ -111,6 +114,7 @@ pub struct LoadPartQualifiedResult {
 }
 
 impl LoadPartQualifiedResult {
+    /// 构造实例。Rust 适配接口；Java 无同名对象，承接 `LoadPartQualifiedResult` 的同职责语义。
     pub fn new(cls: Option<String>, rest_index: usize) -> Self {
         LoadPartQualifiedResult { cls, rest_index }
     }

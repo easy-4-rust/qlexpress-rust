@@ -20,6 +20,7 @@ pub struct ArrayItemValue {
 }
 
 impl ArrayItemValue {
+    /// 构造实例。对应 Java 源码 `com/alibaba/qlexpress4/runtime/data/ArrayItemValue.java:16` 的 `ArrayItemValue::<init>`。
     pub fn new(array: Rc<RefCell<Vec<DataValue>>>, index: usize) -> Self {
         ArrayItemValue {
             array,
@@ -28,6 +29,7 @@ impl ArrayItemValue {
         }
     }
 
+    /// 执行 `with_component_type` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/runtime/data/ArrayItemValue.java:1` 的 `ArrayItemValue`；该方法为 Rust 同职责适配接口。
     pub fn with_component_type(
         array: Rc<RefCell<Vec<DataValue>>>,
         index: usize,
