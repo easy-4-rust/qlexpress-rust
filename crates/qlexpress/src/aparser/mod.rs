@@ -31,6 +31,7 @@ pub mod scope_stack_visitor;
 pub mod syntax_tree_factory;
 pub mod terminal_node;
 pub mod token;
+pub mod trace_expression_visitor;
 
 pub use check_visitor::CheckVisitor;
 pub use compile_cache::{CompileCache, QCompileCache, ScriptCompileCache};
@@ -57,3 +58,4 @@ pub use scope_stack_visitor::{ScopeStack, ScopedVisitor};
 pub use syntax_tree_factory::Node;
 pub use terminal_node::TerminalNode;
 pub use token::Token;
+pub use trace_expression_visitor::TraceExpressionVisitor;

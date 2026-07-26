@@ -9,6 +9,9 @@ pub const SYNTAX_ERROR: &str = "SYNTAX_ERROR";
 pub const MISSING_INDEX: &str = "MISSING_INDEX";
 pub const INVALID_NUMBER: &str = "INVALID_NUMBER";
 pub const CLASS_NOT_FOUND: &str = "CLASS_NOT_FOUND";
+/// Stage 6 / FixedSizeStack: emitted when an operand-stack push would
+/// exceed the declared capacity (mirrors Java's StackOverflowError).
+pub const STACK_OVERFLOW: &str = "STACK_OVERFLOW";
 
 // ---- runtime error ----
 pub const INVALID_INDEX: &str = "INVALID_INDEX";

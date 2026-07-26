@@ -10,6 +10,8 @@ pub mod class_ref;
 pub mod context;
 pub mod data;
 pub mod delegate_qcontext;
+pub mod exception_table;
+pub mod fixed_size_stack;
 pub mod function;
 pub mod i_method;
 pub mod instruction;
