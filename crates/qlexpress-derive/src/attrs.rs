@@ -6,6 +6,8 @@
 use syn::parse::{Parse, ParseStream};
 use syn::{Attribute, Meta, Result, Token};
 
+/// `ContainerAttrs` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/annotation/QLFunction.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Attributes applied to the type as a whole.
 #[derive(Debug, Default)]
 pub struct ContainerAttrs {
@@ -18,6 +20,9 @@ pub struct ContainerAttrs {
 }
 
 impl ContainerAttrs {
+    /// 从 ast 构造结果。
+    /// 参数：`ast`；返回：`Result<Self>`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/annotation/QLFunction.java`，方法 `fromAst`；Rust 侧按所有权与 `Result` 语义适配。
     pub fn from_ast(ast: &syn::DeriveInput) -> Result<Self> {
         let mut out = ContainerAttrs::default();
         for attr in &ast.attrs {
@@ -50,6 +55,8 @@ fn apply_container_arg(out: &mut ContainerAttrs, arg: QlexAttr) -> Result<()> {
     }
 }
 
+/// `FieldAttrs` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/annotation/QLFunction.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Per-field attributes.
 #[derive(Debug, Default)]
 pub struct FieldAttrs {
@@ -59,6 +66,9 @@ pub struct FieldAttrs {
 }
 
 impl FieldAttrs {
+    /// 从 attrs 构造结果。
+    /// 参数：`attrs`；返回：`Result<Self>`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/annotation/QLFunction.java`，方法 `fromAttrs`；Rust 侧按所有权与 `Result` 语义适配。
     pub fn from_attrs(attrs: &[Attribute]) -> Result<Self> {
         let mut out = FieldAttrs::default();
         for attr in attrs {
@@ -87,6 +97,8 @@ fn apply_field_arg(out: &mut FieldAttrs, arg: QlexAttr) -> Result<()> {
     Ok(())
 }
 
+/// `QlexAttr` 枚举的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/annotation/QLFunction.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// A single argument inside one `#[qlexpress(...)]` attribute.
 #[derive(Clone)]
 pub enum QlexAttr {
@@ -165,12 +177,15 @@ fn parse_qlexpress_args(attr: &Attribute) -> Result<Vec<QlexAttr>> {
     }
 }
 
+/// `ItemSpec` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/annotation/QLFunction.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Aggregated information we need to generate code for one type.
 pub struct ItemSpec {
     pub ident: syn::Ident,
     pub fields: Vec<FieldSpec>,
 }
-
+/// `FieldSpec` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/annotation/QLFunction.java`；具体对象路径见 `docs/对象级对照表.md`。
 pub struct FieldSpec {
     pub ident: syn::Ident,
     pub ty: syn::Type,
@@ -178,6 +193,9 @@ pub struct FieldSpec {
 }
 
 impl ItemSpec {
+    /// 从 ast 构造结果。
+    /// 参数：`ast`；返回：`Result<Self>`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/annotation/QLFunction.java`，方法 `fromAst`；Rust 侧按所有权与 `Result` 语义适配。
     pub fn from_ast(ast: &syn::DeriveInput) -> Result<Self> {
         let syn::Data::Struct(data) = &ast.data else {
             return Err(syn::Error::new_spanned(

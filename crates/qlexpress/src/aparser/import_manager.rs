@@ -5,6 +5,8 @@
 //! canonical name `String` returned from [`ClassSupplier::load_cls`]
 //! (`Some(name)` plays the role of Java's non-null `Class<?>`).
 
+/// `ImportScope` 枚举的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/ImportManager.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Java `ImportManager.ImportScope`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum ImportScope {
@@ -18,6 +20,8 @@ pub enum ImportScope {
     Alias,
 }
 
+/// `QLImport` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/ImportManager.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// One import declaration, mirroring Java `ImportManager.QLImport`.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct QLImport {
@@ -30,6 +34,9 @@ pub struct QLImport {
 }
 
 impl QLImport {
+    /// 添加或注册 pack。
+    /// 参数：`pack_path`；返回：`Self`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/ImportManager.java`，方法 `importPack`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `ImportManager.importPack(String)`.
     pub fn import_pack(pack_path: impl Into<String>) -> Self {
         QLImport {
@@ -39,6 +46,9 @@ impl QLImport {
         }
     }
 
+    /// 添加或注册 inner cls。
+    /// 参数：`cls_path`；返回：`Self`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/ImportManager.java`，方法 `importInnerCls`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `ImportManager.importInnerCls(String)`.
     pub fn import_inner_cls(cls_path: impl Into<String>) -> Self {
         QLImport {
@@ -48,6 +58,9 @@ impl QLImport {
         }
     }
 
+    /// 添加或注册 cls。
+    /// 参数：`cls_path`；返回：`Self`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/ImportManager.java`，方法 `importCls`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `ImportManager.importCls(String)`.
     pub fn import_cls(cls_path: impl Into<String>) -> Self {
         QLImport {
@@ -57,6 +70,9 @@ impl QLImport {
         }
     }
 
+    /// 添加或注册 cls alias。
+    /// 参数：`cls_path`、`alias`；返回：`Self`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/QLException.java`，方法 `importClsAlias`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `ImportManager.importClsAlias(Class, String)`.
     ///
     /// Java throws `IllegalArgumentException` on a null class; the Rust
@@ -71,17 +87,20 @@ impl QLImport {
         }
     }
 
-    /// 执行 `scope` 公开操作。Rust 适配接口；Java 无同名对象，承接 `QLImport` 的同职责语义。
+    /// 返回导入范围（包、类或别名）。
+    /// 承接 Java `ImportManager` 内部导入项的分类字段。
     pub fn scope(&self) -> ImportScope {
         self.scope
     }
 
-    /// 执行 `target` 公开操作。Rust 适配接口；Java 无同名对象，承接 `QLImport` 的同职责语义。
+    /// 返回导入目标的规范路径。
+    /// 承接 Java `ImportManager` 内部导入项的类名或包名。
     pub fn target(&self) -> &str {
         &self.target
     }
 
-    /// 执行 `alias` 公开操作。Rust 适配接口；Java 无同名对象，承接 `QLImport` 的同职责语义。
+    /// 返回显式别名；非别名导入返回 `None`。
+    /// 对应 Java: `ImportManager#importClsAlias` 保存的别名。
     pub fn alias(&self) -> Option<&str> {
         self.alias.as_deref()
     }
@@ -95,6 +114,8 @@ use std::collections::HashMap;
 
 use crate::class_supplier::ClassSupplier;
 
+/// `ImportManager` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/ImportManager.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Java `ImportManager`: tracks imported packages/classes and resolves
 /// (possibly partial) qualified names.
 pub struct ImportManager<'a> {
@@ -104,6 +125,8 @@ pub struct ImportManager<'a> {
     imported_clses: HashMap<String, String>,
 }
 
+/// `LoadPartQualifiedResult` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/ImportManager.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Java `ImportManager.LoadPartQualifiedResult`.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LoadPartQualifiedResult {
@@ -114,16 +137,23 @@ pub struct LoadPartQualifiedResult {
 }
 
 impl LoadPartQualifiedResult {
-    /// 构造实例。Rust 适配接口；Java 无同名对象，承接 `LoadPartQualifiedResult` 的同职责语义。
+    /// 创建部分限定名解析结果。
+    /// 对应 Java: `ImportManager.LoadPartQualifiedResult` 构造器。
     pub fn new(cls: Option<String>, rest_index: usize) -> Self {
         LoadPartQualifiedResult { cls, rest_index }
     }
 
+    /// 处理 cls 对应的领域职责。
+    /// 无显式参数；返回：`Option<&str>`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/ImportManager.java`，方法 `cls`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `getCls`.
     pub fn cls(&self) -> Option<&str> {
         self.cls.as_deref()
     }
 
+    /// 处理 rest index 对应的领域职责。
+    /// 无显式参数；返回：`usize`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/ImportManager.java`，方法 `restIndex`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `getRestIndex`.
     pub fn rest_index(&self) -> usize {
         self.rest_index
@@ -131,6 +161,9 @@ impl LoadPartQualifiedResult {
 }
 
 impl<'a> ImportManager<'a> {
+    /// 创建对象实例。
+    /// 参数：`class_supplier`、`imports`；返回：`Self`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/ImportManager.java`，构造器 `<init>`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `new ImportManager(classSupplier, imports)`.
     pub fn new(class_supplier: &'a dyn ClassSupplier, imports: Vec<QLImport>) -> Self {
         let mut manager = ImportManager {
@@ -144,6 +177,9 @@ impl<'a> ImportManager<'a> {
         manager
     }
 
+    /// 从 parts 构造结果。
+    /// 参数：`class_supplier`、`imported_packs`、`imported_clses`；返回：`Self`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/ImportManager.java`，方法 `fromParts`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `new ImportManager(classSupplier, importedPacks, importedClses)`.
     pub fn from_parts(
         class_supplier: &'a dyn ClassSupplier,
@@ -157,6 +193,9 @@ impl<'a> ImportManager<'a> {
         }
     }
 
+    /// 添加或注册 import。
+    /// 参数：`an_import`；返回：`bool`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/ImportManager.java`，方法 `addImport`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `addImport`. Returns false when a `Cls` import cannot be loaded
     /// (Java returns false when `loadCls` yields null).
     pub fn add_import(&mut self, an_import: QLImport) -> bool {
@@ -190,11 +229,17 @@ impl<'a> ImportManager<'a> {
         }
     }
 
+    /// 查询 qualified。
+    /// 参数：`qualified_cls`；返回：`Option<String>`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/ImportManager.java`，方法 `loadQualified`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `loadQualified`.
     pub fn load_qualified(&self, qualified_cls: &str) -> Option<String> {
         self.class_supplier.load_cls(qualified_cls)
     }
 
+    /// 查询 part qualified。
+    /// 参数：`field_ids`；返回：`LoadPartQualifiedResult`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/ImportManager.java`，方法 `loadPartQualified`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `loadPartQualified`: resolve the class-path prefix of
     /// `field_ids`, returning the loaded class and the index of the first
     /// non-class-path field.

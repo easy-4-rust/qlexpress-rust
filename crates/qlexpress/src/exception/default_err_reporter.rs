@@ -7,6 +7,8 @@ use super::error_reporter::ErrorReporter;
 use super::ql_exception::QLException;
 use crate::runtime::value::DataValue;
 
+/// `DefaultErrReporter` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/DefaultErrReporter.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Reporter bound to a script position, mirroring Java `DefaultErrReporter`.
 #[derive(Clone, Debug)]
 pub struct DefaultErrReporter {
@@ -35,27 +37,32 @@ impl DefaultErrReporter {
         }
     }
 
-    /// 执行 `script` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/exception/DefaultErrReporter.java:1` 的 `DefaultErrReporter`；该方法为 Rust 同职责适配接口。
+    /// 返回发生错误的原始脚本。
+    /// 对应 Java: `DefaultErrReporter` 保存的 `script`。
     pub fn script(&self) -> &str {
         &self.script
     }
 
-    /// 执行 `token_start_pos` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/exception/DefaultErrReporter.java:1` 的 `DefaultErrReporter`；该方法为 Rust 同职责适配接口。
+    /// 返回错误 token 的字符起始偏移。
+    /// 对应 Java: `DefaultErrReporter` 保存的 `tokenStartPos`。
     pub fn token_start_pos(&self) -> i32 {
         self.token_start_pos
     }
 
-    /// 执行 `line` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/exception/DefaultErrReporter.java:1` 的 `DefaultErrReporter`；该方法为 Rust 同职责适配接口。
+    /// 返回错误 token 的一基行号。
+    /// 对应 Java: `DefaultErrReporter` 保存的 `line`。
     pub fn line(&self) -> i32 {
         self.line
     }
 
-    /// 执行 `col` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/exception/DefaultErrReporter.java:1` 的 `DefaultErrReporter`；该方法为 Rust 同职责适配接口。
+    /// 返回错误 token 的一基列号。
+    /// 对应 Java: `DefaultErrReporter` 保存的 `col`。
     pub fn col(&self) -> i32 {
         self.col
     }
 
-    /// 执行 `lexeme` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/exception/DefaultErrReporter.java:1` 的 `DefaultErrReporter`；该方法为 Rust 同职责适配接口。
+    /// 返回触发错误的词素。
+    /// 对应 Java: `DefaultErrReporter` 保存的 `lexeme`。
     pub fn lexeme(&self) -> &str {
         &self.lexeme
     }

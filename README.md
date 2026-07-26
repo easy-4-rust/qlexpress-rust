@@ -62,14 +62,14 @@ cargo test          # 全量:lib 单测 + tests/ 各 Stage 端到端
 cargo clippy --all-targets
 ```
 
-## 当前语义对齐范围与已知近似
+## 当前语义对齐范围与 Rust 实现差异
 
 - **数值**:`BigInteger` 使用 `num_bigint::BigInt` 任意精度实现；
   `BigDecimal` 以十进制字符串存储、按需解析。
 - **反射替代**(SPEC §4):Java 的 `Class.forName`/反射成员解析改为显式
-  `NativeRegistry` 注册(类型、构造器、方法、字段);注解扫描式 API
-  (`addObjFunction`/`addStaticFunction` 的 `@QLFunction` 扫描)不迁移,
-  由宿主显式注册。
+  `NativeRegistry` 注册(类型、构造器、方法、字段)；`@QLFunction` /
+  `@QLAlias` 扫描职责由 `#[derive(QLExpressType)]` 在编译期生成，
+  宿主也可通过 `addObjFunction`/`addStaticFunction` 对应的注册 API 显式接线。
 - **安全策略**:作用于构造器、注册表成员、动态宿主对象以及内建 JDK
   兼容成员分派，对齐 Java `ReflectLoader.check`；不通过时按「成员不存在」
   报错。扩展函数先于隔离策略解析，`Express4Runner` 的宿主字段读取保留
@@ -81,8 +81,8 @@ cargo clippy --all-targets
   lambda 追踪闭环，`get_expression_trace` 返回可序列化追踪结果。
 - **动态代理**:`proxy.QLambdaInvocationHandler` 以显式闭包/trait 适配器
   替代 Java 运行时接口代理。
-- **运行时反射改注册表**:不支持(Rust 无运行时反射;注册在 `&mut runner`
-  上进行)。
+- **运行时反射改注册表**:Rust 无 JVM 运行时反射，等价职责由
+  `ReflectLoader` 门面和 `NativeRegistry` 承担，注册在 `&mut runner` 上进行。
 - **#[derive(QLExpressType)]**:过程宏自动生成 `NativeType` 注册 +
   `NativeObject` impl，支持字段 getter、alias、skip、name override。
 - **Varargs**:Java 的 `Method.isVarArgs()` + 参数打包由 Rust 闭包切片

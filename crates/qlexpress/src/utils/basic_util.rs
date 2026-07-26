@@ -9,6 +9,8 @@ pub const LENGTH: &str = "length";
 /// Well-known member name: Java `BasicUtil.CLASS`.
 pub const CLASS: &str = "class";
 
+/// `NumKind` 枚举的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/utils/BasicUtil.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Numeric kinds used for promotion, mirroring the Java classes handled by
 /// `BasicUtil.numberPromoteLevel`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -24,6 +26,9 @@ pub enum NumKind {
 }
 
 impl NumKind {
+    /// 处理 promote level 对应的领域职责。
+    /// 无显式参数；返回：`u8`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/utils/BasicUtil.java`，方法 `promoteLevel`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `BasicUtil.numberPromoteLevel`:
     /// byte=0, short=1, int=2, long=3, BigInteger=4, float=5, double=6,
     /// BigDecimal=7.
@@ -41,6 +46,8 @@ impl NumKind {
     }
 }
 
+/// `PrimitiveType` 枚举的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/utils/BasicUtil.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Java primitive types plus their boxed forms, mirroring the keys/values of
 /// `BasicUtil.primitiveMap`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -55,6 +62,9 @@ pub enum PrimitiveType {
     Short,
 }
 
+/// 处理 trans to primitive 对应的领域职责。
+/// 参数：`primitive`；返回：`PrimitiveType`。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/utils/BasicUtil.java`，方法 `transToPrimitive`；Rust 侧按所有权与 `Result` 语义适配。
 /// Java `BasicUtil.transToPrimitive`: in Rust boxed and primitive forms are
 /// the same type, so this is the identity mapping kept for API parity.
 pub fn trans_to_primitive(primitive: PrimitiveType) -> PrimitiveType {
@@ -66,16 +76,25 @@ pub fn trans_to_primitive(primitive: PrimitiveType) -> PrimitiveType {
 pub struct BasicUtil;
 
 impl BasicUtil {
+    /// 查询 getter。
+    /// 参数：`s`；返回：`String`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/utils/BasicUtil.java`，方法 `getGetter`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `BasicUtil.getGetter`: `"get" + Capitalized(s)`.
     pub fn get_getter(s: &str) -> String {
         capitalize_prefixed("get", s)
     }
 
+    /// 查询 setter。
+    /// 参数：`s`；返回：`String`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/utils/BasicUtil.java`，方法 `getSetter`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `BasicUtil.getSetter`: `"set" + Capitalized(s)`.
     pub fn get_setter(s: &str) -> String {
         capitalize_prefixed("set", s)
     }
 
+    /// 查询 is getter。
+    /// 参数：`s`；返回：`String`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/utils/BasicUtil.java`，方法 `getIsGetter`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `BasicUtil.getIsGetter`: `"is" + Capitalized(s)`.
     pub fn get_is_getter(s: &str) -> String {
         capitalize_prefixed("is", s)

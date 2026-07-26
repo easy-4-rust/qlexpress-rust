@@ -10,12 +10,18 @@
 pub struct QLFunctionUtil;
 
 impl QLFunctionUtil {
+    /// 查询 ql function value。
+    /// 参数：`ql_function_names`；返回：`Option<&[String]>`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/annotation/QLFunction.java`，方法 `getQlFunctionValue`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `getQLFunctionValue`: the names declared for the method.
     /// Returns `None` when the method carries no `QLFunction` names.
     pub fn get_ql_function_value(ql_function_names: Option<&[String]>) -> Option<&[String]> {
         ql_function_names
     }
 
+    /// 判断 ql function for method 条件。
+    /// 参数：`ql_function_names`；返回：`bool`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/annotation/QLFunction.java`，方法 `containsQlFunctionForMethod`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `containsQLFunctionForMethod`: whether any `QLFunction` names
     /// were declared for the method.
     pub fn contains_ql_function_for_method(ql_function_names: Option<&[String]>) -> bool {

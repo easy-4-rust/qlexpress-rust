@@ -23,39 +23,60 @@ pub struct ScopeStack<S: ExistStack> {
 }
 
 impl<S: ExistStack> ScopeStack<S> {
-    /// 构造实例。Rust 适配接口；Java 无同名对象，承接 `ScopeStack` 的同职责语义。
+    /// 使用根变量存在性栈创建作用域状态。
+    /// 对应 Java: `ScopeStackVisitor` 初始化 `existStack` 字段。
     pub fn new(stack: S) -> Self {
         ScopeStack { stack }
     }
 
+    /// 处理 push 对应的领域职责。
+    /// 无显式参数；返回：无。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/ScopeStackVisitor.java`，方法 `push`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `push()`.
     pub fn push(&mut self) {
         self.stack = self.stack.push();
     }
 
+    /// 处理 pop 对应的领域职责。
+    /// 无显式参数；返回：无。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/ScopeStackVisitor.java`，方法 `pop`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `pop()`.
     pub fn pop(&mut self) {
         self.stack = self.stack.pop();
     }
 
+    /// 处理 stack 对应的领域职责。
+    /// 无显式参数；返回：`&S`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/ScopeStackVisitor.java`，方法 `stack`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `getStack()`.
     pub fn stack(&self) -> &S {
         &self.stack
     }
 
+    /// 处理 stack mut 对应的领域职责。
+    /// 无显式参数；返回：`&mut S`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/ScopeStackVisitor.java`，方法 `stackMut`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `getStack()` mutable (for `add`).
     pub fn stack_mut(&mut self) -> &mut S {
         &mut self.stack
     }
 }
 
+/// `ScopedVisitor` 接口的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/ScopeStackVisitor.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// The scope-aware `visit*` overrides of Java `ScopeStackVisitor`, provided
 /// as default methods. Concrete visitors implement [`ScopedVisitor`] and
 /// forward from their [`Visitor`] implementation.
 pub trait ScopedVisitor: Visitor<T = ()> {
+    /// 处理 scope stack 对应的接口职责。
+    /// 无显式参数；返回：`&mut ScopeStack<ExistVarStack>`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/ScopeStackVisitor.java`，方法 `scopeStack`。
     /// Access to the scope stack state.
     fn scope_stack(&mut self) -> &mut ScopeStack<ExistVarStack>;
 
+    /// 处理 scoped visit block expr 对应的接口职责。
+    /// 参数：`ctx`；返回：无。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/ScopeStackVisitor.java`，方法 `scopedVisitBlockExpr`。
     /// Java `ScopeStackVisitor.visitBlockExpr`.
     fn scoped_visit_block_expr(&mut self, ctx: &BlockExprContext) {
         self.scope_stack().push();
@@ -63,6 +84,9 @@ pub trait ScopedVisitor: Visitor<T = ()> {
         self.scope_stack().pop();
     }
 
+    /// 处理 scoped visit ql if 对应的接口职责。
+    /// 参数：`ctx`；返回：无。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/ScopeStackVisitor.java`，方法 `scopedVisitQlIf`。
     /// Java `ScopeStackVisitor.visitQlIf`.
     fn scoped_visit_ql_if(&mut self, ctx: &QlIfContext) {
         ctx.condition.accept(self);
@@ -78,6 +102,9 @@ pub trait ScopedVisitor: Visitor<T = ()> {
         }
     }
 
+    /// 处理 scoped visit switch expr 对应的接口职责。
+    /// 参数：`ctx`；返回：无。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/ScopeStackVisitor.java`，方法 `scopedVisitSwitchExpr`。
     /// Java `ScopeStackVisitor.visitSwitchExpr`.
     fn scoped_visit_switch_expr(&mut self, ctx: &SwitchExprContext) {
         ctx.expression.accept(self);
@@ -121,6 +148,9 @@ pub trait ScopedVisitor: Visitor<T = ()> {
         }
     }
 
+    /// 处理 scoped visit try catch expr 对应的接口职责。
+    /// 参数：`ctx`；返回：无。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/ScopeStackVisitor.java`，方法 `scopedVisitTryCatchExpr`。
     /// Java `ScopeStackVisitor.visitTryCatchExpr`.
     fn scoped_visit_try_catch_expr(&mut self, ctx: &TryCatchExprContext) {
         if let Some(block_statements) = &ctx.block_statements {
@@ -140,6 +170,9 @@ pub trait ScopedVisitor: Visitor<T = ()> {
         }
     }
 
+    /// 处理 scoped visit try catch 对应的接口职责。
+    /// 参数：`ctx`；返回：无。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/ScopeStackVisitor.java`，方法 `scopedVisitTryCatch`。
     /// Java `ScopeStackVisitor.visitTryCatch`.
     fn scoped_visit_try_catch(&mut self, ctx: &TryCatchContext) {
         self.scope_stack().push();
@@ -147,6 +180,9 @@ pub trait ScopedVisitor: Visitor<T = ()> {
         self.scope_stack().pop();
     }
 
+    /// 处理 scoped visit function statement 对应的接口职责。
+    /// 参数：`ctx`；返回：无。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/ScopeStackVisitor.java`，方法 `scopedVisitFunctionStatement`。
     /// Java `ScopeStackVisitor.visitFunctionStatement`.
     fn scoped_visit_function_statement(&mut self, ctx: &FunctionStatementContext) {
         ctx.var_id.accept(self);

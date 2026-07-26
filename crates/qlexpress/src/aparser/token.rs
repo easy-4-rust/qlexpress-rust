@@ -224,6 +224,9 @@ pub const TOKEN_TYPE_COUNT: usize = 97;
 /// cross-referencing.
 pub const SELECTOR_VARIABLE_VANME_JAVA_NAME: &str = "SelectorVariable_VANME";
 
+/// 处理 keyword type 对应的领域职责。
+/// 参数：`text`；返回：`Option<u16>`。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/Token.java`，方法 `keywordType`；Rust 侧按所有权与 `Result` 语义适配。
 /// Look up the token type of a keyword, mirroring `QLexer.KEYWORDS`.
 /// Returns `None` for non-keywords (the scanner then emits [`ID`] or an
 /// operator alias).
@@ -268,6 +271,8 @@ pub fn keyword_type(text: &str) -> Option<u16> {
     })
 }
 
+/// `Token` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/Token.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// A lexical token, mirroring Java `Token`.
 ///
 /// `start_index`/`stop_index` are character offsets into the script
@@ -291,6 +296,9 @@ pub struct Token {
 }
 
 impl Token {
+    /// 创建对象实例。
+    /// 参数：`token_type`、`text`、`start_index`、`stop_index`、`line`、`char_position_in_line`；返回：`Self`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/Token.java`，构造器 `<init>`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `new Token(type, text, startIndex, stopIndex, line,
     /// charPositionInLine)`.
     pub fn new(
@@ -311,37 +319,58 @@ impl Token {
         }
     }
 
+    /// 处理 token type 对应的领域职责。
+    /// 无显式参数；返回：`i32`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/Token.java`，方法 `tokenType`；Rust 侧按所有权与 `Result` 语义适配。
     /// Token type as declared by the constants in this module
     /// (Java `getType`).
     pub fn token_type(&self) -> i32 {
         self.token_type
     }
 
+    /// 更新 token type。
+    /// 参数：`token_type`；返回：无。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/Token.java`，方法 `setTokenType`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `setType` — the parser may re-tag tokens (e.g. OPID aliases).
     pub fn set_token_type(&mut self, token_type: i32) {
         self.token_type = token_type;
     }
 
+    /// 处理 text 对应的领域职责。
+    /// 无显式参数；返回：`&str`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/Token.java`，方法 `text`；Rust 侧按所有权与 `Result` 语义适配。
     /// Source text (Java `getText`).
     pub fn text(&self) -> &str {
         &self.text
     }
 
+    /// 处理 start index 对应的领域职责。
+    /// 无显式参数；返回：`i32`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/Token.java`，方法 `startIndex`；Rust 侧按所有权与 `Result` 语义适配。
     /// Inclusive start offset in chars (Java `getStartIndex`).
     pub fn start_index(&self) -> i32 {
         self.start_index
     }
 
+    /// 处理 stop index 对应的领域职责。
+    /// 无显式参数；返回：`i32`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/Token.java`，方法 `stopIndex`；Rust 侧按所有权与 `Result` 语义适配。
     /// Inclusive stop offset in chars (Java `getStopIndex`).
     pub fn stop_index(&self) -> i32 {
         self.stop_index
     }
 
+    /// 处理 line 对应的领域职责。
+    /// 无显式参数；返回：`i32`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/Token.java`，方法 `line`；Rust 侧按所有权与 `Result` 语义适配。
     /// 1-based line number (Java `getLine`).
     pub fn line(&self) -> i32 {
         self.line
     }
 
+    /// 处理 char position in line 对应的领域职责。
+    /// 无显式参数；返回：`i32`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/lsp/Position.java`，方法 `charPositionInLine`；Rust 侧按所有权与 `Result` 语义适配。
     /// 0-based column (Java `getCharPositionInLine`).
     pub fn char_position_in_line(&self) -> i32 {
         self.char_position_in_line

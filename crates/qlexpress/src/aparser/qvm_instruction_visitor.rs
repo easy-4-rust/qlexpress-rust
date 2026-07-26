@@ -88,6 +88,8 @@ const MAX_DOUBLE_TEXT: &str = "1.7976931348623157E308";
 /// Java `TIMEOUT_CHECK_GAP`.
 const TIMEOUT_CHECK_GAP: i32 = 5;
 
+/// `Context` 枚举的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/QvmInstructionVisitor.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Java `QvmInstructionVisitor.Context`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Context {
@@ -95,22 +97,34 @@ pub enum Context {
     Macro,
 }
 
+/// `SharedInstruction` 类型别名的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/QvmInstructionVisitor.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Instruction representation shared through scopes/macros (Java shares
 /// the `QLInstruction` objects; the port shares them by `Rc`).
 pub type SharedInstruction = Rc<dyn QLInstruction>;
 
+/// `InstructionScope` 类型别名的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/GeneratorScope.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Java `GeneratorScope` instantiated with the shared instruction type.
 pub type InstructionScope = GeneratorScope<SharedInstruction>;
 
+/// `InstructionMacroDefine` 类型别名的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/MacroDefine.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Java `MacroDefine` instantiated with the shared instruction type.
 pub type InstructionMacroDefine = MacroDefine<SharedInstruction>;
 
+/// `CompileTimeFunctions` 类型别名的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/compiletimefunction/CompileTimeFunction.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Compile-time function registry (Java `Map<String, CompileTimeFunction>`).
 pub type CompileTimeFunctions = HashMap<String, Rc<dyn CompileTimeFunction>>;
 
+/// `UserDefineFunctions` 类型别名的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/function/CustomFunction.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// User-defined function registry (Java `Map<String, CustomFunction>`).
 pub type UserDefineFunctions = HashMap<String, Rc<dyn CustomFunction>>;
 
+/// `QvmInstructionVisitor` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/QvmInstructionVisitor.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Java `QvmInstructionVisitor`.
 pub struct QvmInstructionVisitor<'a> {
     script: &'a str,
@@ -150,6 +164,9 @@ pub struct QvmInstructionVisitor<'a> {
 }
 
 impl<'a> QvmInstructionVisitor<'a> {
+    /// 创建对象实例。
+    /// 参数：`script`、`import_manager`、`global_scope`、`operator_factory`、`compile_time_functions`、`user_define_functions`、`init_options`；返回：`Self`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/QvmInstructionVisitor.java`，构造器 `<init>`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java main constructor: `new QvmInstructionVisitor(script,
     /// importManager, globalScope, operatorFactory, compileTimeFunctions,
     /// userDefineFunctions, initOptions)`.
@@ -174,6 +191,9 @@ impl<'a> QvmInstructionVisitor<'a> {
         )
     }
 
+    /// 附加 context 配置并返回新值。
+    /// 参数：`script`、`import_manager`、`generator_scope`、`operator_factory`、`context`、`compile_time_functions`、`user_define_functions`、`init_options`；返回：`Self`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/QvmInstructionVisitor.java`，方法 `withContext`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java macro constructor: `new QvmInstructionVisitor(script,
     /// importManager, generatorScope, operatorFactory, context,
     /// compileTimeFunctions, userDefineFunctions, initOptions)` —
@@ -244,26 +264,41 @@ impl<'a> QvmInstructionVisitor<'a> {
         }
     }
 
+    /// 处理 instructions 对应的领域职责。
+    /// 无显式参数；返回：`&[Instruction]`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/instruction/QLInstruction.java`，方法 `instructions`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `getInstructions`.
     pub fn instructions(&self) -> &[Instruction] {
         &self.instruction_list
     }
 
+    /// 处理 take instructions 对应的领域职责。
+    /// 无显式参数；返回：`Vec<Instruction>`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/QvmInstructionVisitor.java`，方法 `takeInstructions`；Rust 侧按所有权与 `Result` 语义适配。
     /// Take the compiled instruction list (sub-visitor handover).
     pub fn take_instructions(self) -> Vec<Instruction> {
         self.instruction_list
     }
 
+    /// 处理 max stack size 对应的领域职责。
+    /// 无显式参数；返回：`usize`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/QvmInstructionVisitor.java`，方法 `maxStackSize`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `getMaxStackSize`.
     pub fn max_stack_size(&self) -> usize {
         self.max_stack_size as usize
     }
 
+    /// 处理 syntax error 对应的领域职责。
+    /// 无显式参数；返回：`Option<&QLSyntaxException>`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/QvmInstructionVisitor.java`，方法 `syntaxError`；Rust 侧按所有权与 `Result` 语义适配。
     /// The first recorded syntax error, if any (Java: thrown).
     pub fn syntax_error(&self) -> Option<&QLSyntaxException> {
         self.syntax_error.as_ref()
     }
 
+    /// 处理 compile 对应的领域职责。
+    /// 参数：`tree`；返回：`Result<(Vec<Instruction>, usize), QLSyntaxException>`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/QvmInstructionVisitor.java`，方法 `compile`；Rust 侧按所有权与 `Result` 语义适配。
     /// Compile `tree` and return the instructions plus max stack size, or
     /// the first syntax error (Java: the exception unwinds `accept`).
     pub fn compile(mut self, tree: &Node) -> Result<(Vec<Instruction>, usize), QLSyntaxException> {
@@ -3484,6 +3519,9 @@ impl CodeGenerator for VisitorCodeGenerator<'_, '_> {
 // Convenience entry point (Java Express4Runner's parse+compile pipeline).
 // ---------------------------------------------------------------------------
 
+/// 构建或解析 script。
+/// 参数：`script`、`tree`、`import_manager`、`global_scope`、`operator_factory`、`compile_time_functions`、`user_define_functions`、`init_options`；返回：`Result<(Vec<Instruction>, usize), QLSyntaxException>`。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/Express4Runner.java`，方法 `compileScript`；Rust 侧按所有权与 `Result` 语义适配。
 /// Compile a parsed `Program` tree into an instruction sequence, mirroring
 /// Java `Express4Runner`: `tree.accept(new QvmInstructionVisitor(...))`.
 ///

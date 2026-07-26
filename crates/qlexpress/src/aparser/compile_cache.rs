@@ -7,6 +7,8 @@
 
 use std::collections::HashMap;
 
+/// `QCompileCache` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/QCompileCache.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Java `QCompileCache`: the cached result of compiling one script.
 #[derive(Clone, Debug)]
 pub struct QCompileCache<L, T> {
@@ -15,6 +17,9 @@ pub struct QCompileCache<L, T> {
 }
 
 impl<L, T> QCompileCache<L, T> {
+    /// 创建对象实例。
+    /// 参数：`q_lambda_definition`、`expression_trace_points`；返回：`Self`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/QCompileCache.java`，构造器 `<init>`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `new QCompileCache(qLambdaDefinition, expressionTracePoints)`.
     pub fn new(q_lambda_definition: L, expression_trace_points: Vec<T>) -> Self {
         QCompileCache {
@@ -23,17 +28,25 @@ impl<L, T> QCompileCache<L, T> {
         }
     }
 
+    /// 处理 q lambda definition 对应的领域职责。
+    /// 无显式参数；返回：`&L`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/QLambdaDefinition.java`，方法 `qLambdaDefinition`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `getQLambdaDefinition`.
     pub fn q_lambda_definition(&self) -> &L {
         &self.q_lambda_definition
     }
 
+    /// 处理 expression trace points 对应的领域职责。
+    /// 无显式参数；返回：`&[T]`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/trace/ExpressionTrace.java`，方法 `expressionTracePoints`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `getExpressionTracePoints`.
     pub fn expression_trace_points(&self) -> &[T] {
         &self.expression_trace_points
     }
 }
 
+/// `ScriptCompileCache` 类型别名的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/QCompileCache.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// The concrete parse cache used by the runner (Java
 /// `Express4Runner.parseCache`): script text -> compiled root
 /// `QLambdaDefinition` plus expression trace points
@@ -43,6 +56,8 @@ pub type ScriptCompileCache = CompileCache<
     crate::runtime::trace::TracePointTree,
 >;
 
+/// `CompileCache` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/Express4Runner.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Script -> compiled-artifact cache with plain get/put semantics, as used
 /// by the runner's parse cache (Java keeps it in `Express4Runner`).
 #[derive(Clone, Debug, Default)]
@@ -51,34 +66,41 @@ pub struct CompileCache<L, T> {
 }
 
 impl<L, T> CompileCache<L, T> {
-    /// 构造实例。Rust 适配接口；Java 无同名对象，承接 `CompileCache` 的同职责语义。
+    /// 创建空的脚本编译缓存。
+    /// 承接 Java `Express4Runner.parseCache` 的按脚本文本索引职责。
     pub fn new() -> Self {
         CompileCache {
             map: HashMap::new(),
         }
     }
 
+    /// 处理 get 对应的领域职责。
+    /// 参数：`script`；返回：`Option<&QCompileCache<L, T>>`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/QCompileCache.java`，方法 `get`；Rust 侧按所有权与 `Result` 语义适配。
     /// `None` when the script was never compiled (cache miss).
     pub fn get(&self, script: &str) -> Option<&QCompileCache<L, T>> {
         self.map.get(script)
     }
 
+    /// 处理 put 对应的领域职责。
+    /// 参数：`script`、`cache`；返回：无。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/QCompileCache.java`，方法 `put`；Rust 侧按所有权与 `Result` 语义适配。
     /// Insert/replace the compiled artifact for `script`.
     pub fn put(&mut self, script: impl Into<String>, cache: QCompileCache<L, T>) {
         self.map.insert(script.into(), cache);
     }
 
-    /// 执行 `len` 公开操作。Rust 适配接口；Java 无同名对象，承接 `CompileCache` 的同职责语义。
+    /// 返回缓存中的已编译脚本数量。
     pub fn len(&self) -> usize {
         self.map.len()
     }
 
-    /// 执行 `is_empty` 公开操作。Rust 适配接口；Java 无同名对象，承接 `CompileCache` 的同职责语义。
+    /// 判断缓存是否没有任何编译结果。
     pub fn is_empty(&self) -> bool {
         self.map.is_empty()
     }
 
-    /// 执行 `clear` 公开操作。Rust 适配接口；Java 无同名对象，承接 `CompileCache` 的同职责语义。
+    /// 清空全部脚本编译结果。
     pub fn clear(&mut self) {
         self.map.clear();
     }

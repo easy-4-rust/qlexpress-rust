@@ -38,7 +38,8 @@ impl SpreadGetFieldInstruction {
         }
     }
 
-    /// 执行 `field_name` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/runtime/instruction/SpreadGetFieldInstruction.java:1` 的 `SpreadGetFieldInstruction`；该方法为 Rust 同职责适配接口。
+    /// 返回要在集合元素上展开读取的字段名。
+    /// 对应 Java: `SpreadGetFieldInstruction#getFieldName`。
     pub fn field_name(&self) -> &str {
         &self.field_name
     }

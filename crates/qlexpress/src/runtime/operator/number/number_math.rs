@@ -38,6 +38,9 @@ pub(crate) const ARITHMETIC_EXCEPTION: &str = "ARITHMETIC_EXCEPTION";
 pub struct NumberMath;
 
 impl NumberMath {
+    /// 处理 abs 对应的领域职责。
+    /// 参数：`number`；返回：`Result<DataValue, QLException>`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/NumberMath.java`，方法 `abs`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `NumberMath.abs(Number)`。
     pub fn abs(number: &DataValue) -> Result<DataValue, QLException> {
         match domain_of_one(number) {
@@ -50,6 +53,9 @@ impl NumberMath {
         }
     }
 
+    /// 处理 add 对应的领域职责。
+    /// 参数：`left`、`right`；返回：`Result<DataValue, QLException>`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/NumberMath.java`，方法 `add`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `NumberMath.add(left, right)`。
     pub fn add(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
         match convert::math_domain(left, right) {
@@ -62,6 +68,9 @@ impl NumberMath {
         }
     }
 
+    /// 处理 subtract 对应的领域职责。
+    /// 参数：`left`、`right`；返回：`Result<DataValue, QLException>`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/NumberMath.java`，方法 `subtract`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `NumberMath.subtract(left, right)`。
     pub fn subtract(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
         match convert::math_domain(left, right) {
@@ -74,6 +83,9 @@ impl NumberMath {
         }
     }
 
+    /// 处理 multiply 对应的领域职责。
+    /// 参数：`left`、`right`；返回：`Result<DataValue, QLException>`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/NumberMath.java`，方法 `multiply`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `NumberMath.multiply(left, right)`。
     pub fn multiply(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
         match convert::math_domain(left, right) {
@@ -145,6 +157,9 @@ impl NumberMath {
         }
     }
 
+    /// 处理 int div 对应的领域职责。
+    /// 参数：`left`、`right`；返回：`Result<DataValue, QLException>`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/NumberMath.java`，方法 `intDiv`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `NumberMath.intDiv(left, right)`。
     pub fn int_div(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
         match convert::math_domain(left, right) {
@@ -168,6 +183,9 @@ impl NumberMath {
         }
     }
 
+    /// 处理 remainder 对应的领域职责。
+    /// 参数：`left`、`right`；返回：`Result<DataValue, QLException>`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/NumberMath.java`，方法 `remainder`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `NumberMath.remainder(left, right)`。
     pub fn remainder(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
         match convert::math_domain(left, right) {
@@ -221,6 +239,9 @@ impl NumberMath {
         }
     }
 
+    /// 处理 bitwise negate 对应的领域职责。
+    /// 参数：`left`；返回：`Result<DataValue, QLException>`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/NumberMath.java`，方法 `bitwiseNegate`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `NumberMath.bitwiseNegate(left)`。
     pub fn bitwise_negate(left: &DataValue) -> Result<DataValue, QLException> {
         match domain_of_one(left) {
@@ -231,6 +252,9 @@ impl NumberMath {
         }
     }
 
+    /// 处理 unary minus 对应的领域职责。
+    /// 参数：`left`；返回：`Result<DataValue, QLException>`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/NumberMath.java`，方法 `unaryMinus`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `NumberMath.unaryMinus(left)`。
     pub fn unary_minus(left: &DataValue) -> Result<DataValue, QLException> {
         match domain_of_one(left) {
@@ -243,6 +267,9 @@ impl NumberMath {
         }
     }
 
+    /// 处理 unary plus 对应的领域职责。
+    /// 参数：`left`；返回：`Result<DataValue, QLException>`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/NumberMath.java`，方法 `unaryPlus`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `NumberMath.unaryPlus(left)`。
     pub fn unary_plus(left: &DataValue) -> Result<DataValue, QLException> {
         match domain_of_one(left) {
@@ -255,36 +282,57 @@ impl NumberMath {
         }
     }
 
+    /// 判断 floating point 条件。
+    /// 参数：`number`；返回：`bool`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/NumberMath.java`，方法 `isFloatingPoint`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `NumberMath.isFloatingPoint(number)`。
     pub fn is_floating_point(number: &DataValue) -> bool {
         matches!(number, DataValue::Double(_) | DataValue::Float(_))
     }
 
+    /// 判断 integer 条件。
+    /// 参数：`number`；返回：`bool`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/NumberMath.java`，方法 `isInteger`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `NumberMath.isInteger(number)`。
     pub fn is_integer(number: &DataValue) -> bool {
         matches!(number, DataValue::Int(_))
     }
 
+    /// 判断 short 条件。
+    /// 参数：`number`；返回：`bool`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/NumberMath.java`，方法 `isShort`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `NumberMath.isShort(number)`。
     pub fn is_short(number: &DataValue) -> bool {
         matches!(number, DataValue::Short(_))
     }
 
+    /// 判断 byte 条件。
+    /// 参数：`number`；返回：`bool`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/NumberMath.java`，方法 `isByte`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `NumberMath.isByte(number)`。
     pub fn is_byte(number: &DataValue) -> bool {
         matches!(number, DataValue::Byte(_))
     }
 
+    /// 判断 long 条件。
+    /// 参数：`number`；返回：`bool`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/NumberMath.java`，方法 `isLong`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `NumberMath.isLong(number)`。
     pub fn is_long(number: &DataValue) -> bool {
         matches!(number, DataValue::Long(_))
     }
 
+    /// 判断 big decimal 条件。
+    /// 参数：`number`；返回：`bool`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/NumberMath.java`，方法 `isBigDecimal`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `NumberMath.isBigDecimal(number)`。
     pub fn is_big_decimal(number: &DataValue) -> bool {
         matches!(number, DataValue::BigDec(_))
     }
 
+    /// 判断 big integer 条件。
+    /// 参数：`number`；返回：`bool`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/NumberMath.java`，方法 `isBigInteger`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `NumberMath.isBigInteger(number)`。
     pub fn is_big_integer(number: &DataValue) -> bool {
         matches!(number, DataValue::BigInt(_))

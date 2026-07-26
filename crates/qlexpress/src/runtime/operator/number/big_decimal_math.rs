@@ -435,6 +435,9 @@ fn set_scale_half_up(d: &Decimal, new_scale: usize) -> Decimal {
 }
 
 impl BigDecimalMath {
+    /// 处理 abs impl 对应的领域职责。
+    /// 参数：`number`；返回：`Result<DataValue, QLException>`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/BigDecimalMath.java`，方法 `absImpl`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `absImpl`。
     pub fn abs_impl(number: &DataValue) -> Result<DataValue, QLException> {
         Ok(DataValue::BigDec(dec_of(number).abs().to_plain_string()))
@@ -447,6 +450,9 @@ impl BigDecimalMath {
         ))
     }
 
+    /// 处理 subtract impl 对应的领域职责。
+    /// 参数：`left`、`right`；返回：`Result<DataValue, QLException>`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/BigDecimalMath.java`，方法 `subtractImpl`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `subtractImpl`。
     pub fn subtract_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
         Ok(DataValue::BigDec(
@@ -499,11 +505,17 @@ impl BigDecimalMath {
         }
     }
 
+    /// 处理 unary minus impl 对应的领域职责。
+    /// 参数：`left`；返回：`Result<DataValue, QLException>`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/BigDecimalMath.java`，方法 `unaryMinusImpl`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `unaryMinusImpl`。
     pub fn unary_minus_impl(left: &DataValue) -> Result<DataValue, QLException> {
         Ok(DataValue::BigDec(dec_of(left).negate().to_plain_string()))
     }
 
+    /// 处理 unary plus impl 对应的领域职责。
+    /// 参数：`left`；返回：`Result<DataValue, QLException>`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/BigDecimalMath.java`，方法 `unaryPlusImpl`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `unaryPlusImpl`。
     pub fn unary_plus_impl(left: &DataValue) -> Result<DataValue, QLException> {
         Ok(DataValue::BigDec(dec_of(left).to_plain_string()))

@@ -8,6 +8,8 @@ const REPORT_TEMPLATE: &str = "[Error {0}: {1}]\n[Near: {2}]\n{3}\n[Line: {4}, C
 
 const SNIPPET_EXTENSION_LEN: usize = 20;
 
+/// `ExMessage` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/ExMessageUtil.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// A formatted error message plus the snippet extracted around the error,
 /// mirroring Java `ExMessageUtil.ExMessage`.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -17,17 +19,18 @@ pub struct ExMessage {
 }
 
 impl ExMessage {
-    /// 构造实例。Rust 适配接口；Java 无同名对象，承接 `ExMessage` 的同职责语义。
+    /// 创建格式化错误消息及其脚本片段。
+    /// 承接 Java `ExMessageUtil#format` 的二元返回结果。
     pub fn new(message: String, snippet: String) -> Self {
         ExMessage { message, snippet }
     }
 
-    /// 执行 `message` 公开操作。Rust 适配接口；Java 无同名对象，承接 `ExMessage` 的同职责语义。
+    /// 返回完整错误消息。对应 Java: `ExMessageUtil#format` 的首个返回内容。
     pub fn message(&self) -> &str {
         &self.message
     }
 
-    /// 执行 `snippet` 公开操作。Rust 适配接口；Java 无同名对象，承接 `ExMessage` 的同职责语义。
+    /// 返回带定位标记的脚本片段。对应 Java: `ExMessageUtil#format` 的上下文内容。
     pub fn snippet(&self) -> &str {
         &self.snippet
     }
@@ -38,6 +41,9 @@ impl ExMessage {
 pub struct ExMessageUtil;
 
 impl ExMessageUtil {
+    /// 处理 format 对应的领域职责。
+    /// 参数：`script`、`token_start_pos`、`token_line`、`token_col`、`lexeme`、`error_code`、`reason`；返回：`ExMessage`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/ExMessageUtil.java`，方法 `format`；Rust 侧按所有权与 `Result` 语义适配。
     /// Build the [`ExMessage`] for an error at `token_start_pos` of `script`
     /// (1-based `token_line` / `token_col`), mirroring Java
     /// `ExMessageUtil.format`.

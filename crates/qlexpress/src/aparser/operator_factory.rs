@@ -20,15 +20,26 @@ use crate::runtime::operator::custom_binary_operator::CustomBinaryOperator;
 use crate::runtime::qcontext::QContext;
 use crate::runtime::value::{DataValue, QValue};
 
+/// `OperatorFactory` 接口的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/OperatorFactory.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Java `OperatorFactory`: the compile-time operator lookup used by
 /// `QvmInstructionVisitor`.
 pub trait OperatorFactory {
+    /// 查询 binary operator。
+    /// 参数：`operator_lexeme`；返回：`Option<Rc<dyn BinaryOperator>>`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/OperatorFactory.java`，方法 `getBinaryOperator`。
     /// Java `getBinaryOperator(String)`; `None` plays Java's `null`.
     fn get_binary_operator(&self, operator_lexeme: &str) -> Option<Rc<dyn BinaryOperator>>;
 
+    /// 查询 prefix unary operator。
+    /// 参数：`operator_lexeme`；返回：`Option<Rc<dyn UnaryOperator>>`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/OperatorFactory.java`，方法 `getPrefixUnaryOperator`。
     /// Java `getPrefixUnaryOperator(String)`.
     fn get_prefix_unary_operator(&self, operator_lexeme: &str) -> Option<Rc<dyn UnaryOperator>>;
 
+    /// 查询 suffix unary operator。
+    /// 参数：`operator_lexeme`；返回：`Option<Rc<dyn UnaryOperator>>`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/OperatorFactory.java`，方法 `getSuffixUnaryOperator`。
     /// Java `getSuffixUnaryOperator(String)`.
     fn get_suffix_unary_operator(&self, operator_lexeme: &str) -> Option<Rc<dyn UnaryOperator>>;
 }
@@ -106,6 +117,8 @@ impl BinaryOperator for AliasedBinaryOperator {
     }
 }
 
+/// `OperatorManager` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/ParserOperatorManager.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Java `OperatorManager`: built-in operator tables plus user-registered
 /// custom operators, operator aliases and keyword aliases.
 ///
@@ -126,12 +139,18 @@ pub struct OperatorManager {
 }
 
 impl OperatorManager {
+    /// 创建对象实例。
+    /// 无显式参数；返回：`Self`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/OperatorFactory.java`，构造器 `<init>`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `new OperatorManager()` (with as-yet unpopulated default
     /// tables; see the module docs).
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// 添加或注册 default binary operator。
+    /// 参数：`operator`；返回：无。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/OperatorFactory.java`，方法 `registerDefaultBinaryOperator`；Rust 侧按所有权与 `Result` 语义适配。
     /// Register a built-in binary operator (Stage 4 fills the table that
     /// Java initializes in the static block).
     pub fn register_default_binary_operator(&mut self, operator: Rc<dyn BinaryOperator>) {
@@ -139,18 +158,27 @@ impl OperatorManager {
             .insert(operator.operator().to_string(), operator);
     }
 
+    /// 添加或注册 default prefix unary operator。
+    /// 参数：`operator`；返回：无。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/OperatorFactory.java`，方法 `registerDefaultPrefixUnaryOperator`；Rust 侧按所有权与 `Result` 语义适配。
     /// Register a built-in prefix unary operator (Stage 4).
     pub fn register_default_prefix_unary_operator(&mut self, operator: Rc<dyn UnaryOperator>) {
         self.default_prefix_unary_operator_map
             .insert(operator.operator().to_string(), operator);
     }
 
+    /// 添加或注册 default suffix unary operator。
+    /// 参数：`operator`；返回：无。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/OperatorFactory.java`，方法 `registerDefaultSuffixUnaryOperator`；Rust 侧按所有权与 `Result` 语义适配。
     /// Register a built-in suffix unary operator (Stage 4).
     pub fn register_default_suffix_unary_operator(&mut self, operator: Rc<dyn UnaryOperator>) {
         self.default_suffix_unary_operator_map
             .insert(operator.operator().to_string(), operator);
     }
 
+    /// 添加或注册 binary operator。
+    /// 参数：`operator_name`、`custom_binary_operator`、`priority`；返回：`bool`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/BinaryOperator.java`，方法 `addBinaryOperator`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `addBinaryOperator`: register a custom binary operator unless
     /// the name clashes with a built-in operator.
     pub fn add_binary_operator(
@@ -180,6 +208,9 @@ impl OperatorManager {
         true
     }
 
+    /// 更新 default operator。
+    /// 参数：`operator_name`、`custom_binary_operator`；返回：`bool`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/Operator.java`，方法 `replaceDefaultOperator`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `replaceDefaultOperator`.
     pub fn replace_default_operator(
         &mut self,
@@ -204,6 +235,9 @@ impl OperatorManager {
         true
     }
 
+    /// 添加或注册 operator alias。
+    /// 参数：`lexeme`、`operator`；返回：`bool`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/Operator.java`，方法 `addOperatorAlias`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `addOperatorAlias`: give an existing operator a new lexeme.
     pub fn add_operator_alias(&mut self, lexeme: impl Into<String>, operator: &str) -> bool {
         let lexeme = lexeme.into();
@@ -227,6 +261,9 @@ impl OperatorManager {
         true
     }
 
+    /// 添加或注册 key word alias。
+    /// 参数：`lexeme`、`key_word`；返回：`bool`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/annotation/QLAlias.java`，方法 `addKeyWordAlias`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `addKeyWordAlias`: alias a keyword (`if`, `while`, ...) so the
     /// lexer maps `lexeme` to the keyword token type.
     pub fn add_key_word_alias(&mut self, lexeme: impl Into<String>, key_word: &str) -> bool {

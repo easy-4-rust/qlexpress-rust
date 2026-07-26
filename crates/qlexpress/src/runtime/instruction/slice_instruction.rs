@@ -25,7 +25,7 @@ pub enum SliceMode {
 }
 
 /// 切片指令。对应 Java: com.alibaba.qlexpress4.runtime.instruction.SliceInstruction(职责:数组/列表切片)
-/// Operation: slice array or list, like a[2:4], a[4:-1], a[:4], a[5:], a[:]
+/// 操作：切片数组或列表，例如 `a[2:4]`、`a[4:-1]`、`a[:4]`、`a[5:]`、`a[:]`。
 /// Input: 0-2
 /// Output: 1
 ///

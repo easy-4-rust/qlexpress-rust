@@ -5,11 +5,17 @@
 pub struct PrintlnUtils;
 
 impl PrintlnUtils {
+    /// 处理 println by cur depth 对应的领域职责。
+    /// 参数：`depth`、`s`、`debug`；返回：无。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/utils/PrintlnUtils.java`，方法 `printlnByCurDepth`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `printlnByCurDepth`: send the indented string to `debug`.
     pub fn println_by_cur_depth(depth: i32, s: &str, debug: &mut dyn FnMut(String)) {
         debug(Self::build_indent_string(depth, s));
     }
 
+    /// 构建或解析 indent string。
+    /// 参数：`indent`、`origin_str`；返回：`String`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/utils/PrintlnUtils.java`，方法 `buildIndentString`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `buildIndentString`: indent with `"  "` per level, the last
     /// level being `"| "`.
     pub fn build_indent_string(indent: i32, origin_str: &str) -> String {

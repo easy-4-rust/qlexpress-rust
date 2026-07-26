@@ -22,6 +22,9 @@ use crate::runtime::qvm_global_scope::QvmGlobalScope;
 use crate::runtime::scope::QScope;
 use crate::runtime::trace::QTraces;
 
+/// 处理 current time millis 对应的领域职责。
+/// 无显式参数；返回：`i64`。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/QvmRuntime.java`，方法 `currentTimeMillis`；Rust 侧按所有权与 `Result` 语义适配。
 /// Current time in milliseconds since the Unix epoch (Java
 /// `System.currentTimeMillis()`).
 pub fn current_time_millis() -> i64 {
@@ -31,6 +34,8 @@ pub fn current_time_millis() -> i64 {
         .unwrap_or(0)
 }
 
+/// `QvmRuntime` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/QvmRuntime.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Root runtime with external variable and function, mirroring Java
 /// `QvmRuntime`. Immutable after construction (trace points mutate through
 /// interior mutability inside [`QTraces`]); shared as `Rc<QvmRuntime>` like
@@ -43,6 +48,9 @@ pub struct QvmRuntime {
 }
 
 impl QvmRuntime {
+    /// 创建对象实例。
+    /// 参数：`traces`、`attachments`、`registry`、`start_time`；返回：`Self`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/QvmRuntime.java`，构造器 `<init>`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `new QvmRuntime(traces, attachments, reflectLoader, startTime)`.
     pub fn new(
         traces: QTraces,
@@ -58,6 +66,9 @@ impl QvmRuntime {
         }
     }
 
+    /// 处理 for test 对应的领域职责。
+    /// 参数：`registry`；返回：`Self`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/QvmRuntime.java`，方法 `forTest`；Rust 侧按所有权与 `Result` 语义适配。
     /// Convenience: a runtime with empty traces/attachments and the default
     /// registry, started now.
     pub fn for_test(registry: Rc<NativeRegistry>) -> Self {
@@ -69,6 +80,9 @@ impl QvmRuntime {
         )
     }
 
+    /// 处理 execute 对应的领域职责。
+    /// 参数：`global_scope`、`root_definition`、`ql_options`；返回：`Result<QResult, QLException>`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/Express4Runner.java`，方法 `execute`；Rust 侧按所有权与 `Result` 语义适配。
     /// Top-level script execution, mirroring Java `Express4Runner`:
     /// `rootLambdaDefinition.toLambda(new DelegateQContext(qvmRuntime,
     /// globalScope), qlOptions, true).call()`.
@@ -83,6 +97,9 @@ impl QvmRuntime {
         root_lambda.call(&[])
     }
 
+    /// 执行 instructions。
+    /// 参数：`instructions`、`ql_options`；返回：`Result<QResult, QLException>`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/QvmRuntime.java`，方法 `executeInstructions`；Rust 侧按所有权与 `Result` 语义适配。
     /// Execute an instruction sequence directly with a fresh global scope
     /// (test/support entry point).
     pub fn execute_instructions(
@@ -123,6 +140,9 @@ impl QRuntime for QvmRuntime {
     }
 }
 
+/// 执行 instructions。
+/// 参数：`q_context`、`instructions`、`ql_options`；返回：`Result<QResult, QLException>`。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/QLambdaInner.java`，方法 `runInstructions`；Rust 侧按所有权与 `Result` 语义适配。
 /// The QVM fetch-execute loop, mirroring Java `QLambdaInner.callInner`:
 /// execute each instruction; `JUMP` adds the (relative) offset to the
 /// program counter, `RETURN`/`BREAK`/`CONTINUE` exit the loop, anything

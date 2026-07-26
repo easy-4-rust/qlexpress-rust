@@ -16,7 +16,7 @@ use crate::utils::println_utils::PrintlnUtils;
 use std::rc::Rc;
 
 /// 下标访问指令。对应 Java: com.alibaba.qlexpress4.runtime.instruction.IndexInstruction(职责:按下标读写集合/数组元素)
-/// Operation: extract value with index, like a[0], m['a']
+/// 操作：按下标取值，例如 `a[0]`、`m['a']`。
 /// Input: 2, indexable object and index
 /// Output: 1
 ///

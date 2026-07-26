@@ -5,6 +5,8 @@
 use super::ql_exception::{QLException, QLExceptionKind};
 use crate::runtime::value::DataValue;
 
+/// `QLRuntimeException` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/QLRuntimeException.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Runtime error, mirroring Java `QLRuntimeException`.
 ///
 /// The catchable attachment lives on [`QLException::catch_obj`]; this wrapper
@@ -15,6 +17,9 @@ pub struct QLRuntimeException {
 }
 
 impl QLRuntimeException {
+    /// 处理 for test 对应的领域职责。
+    /// 参数：`catch_obj`、`reason`、`error_code`；返回：`Self`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/QLRuntimeException.java`，方法 `forTest`；Rust 侧按所有权与 `Result` 语义适配。
     /// Mirrors the Java "Visible for test"
     /// `QLRuntimeException(catchObj, reason, errorCode)` constructor.
     pub fn for_test(catch_obj: Option<DataValue>, reason: &str, error_code: &str) -> Self {

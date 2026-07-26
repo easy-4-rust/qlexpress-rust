@@ -1,3 +1,5 @@
+/// `Position` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/lsp/Position.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Zero-based position in a document, mirroring Java `lsp.Position`.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub struct Position {
@@ -13,12 +15,14 @@ impl Position {
         Position { line, character }
     }
 
-    /// 执行 `line` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/exception/lsp/Position.java:1` 的 `Position`；该方法为 Rust 同职责适配接口。
+    /// 返回 LSP 零基行号。
+    /// 对应 Java: `Position#line`。
     pub fn line(&self) -> i32 {
         self.line
     }
 
-    /// 执行 `character` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/exception/lsp/Position.java:1` 的 `Position`；该方法为 Rust 同职责适配接口。
+    /// 返回 LSP 零基字符列。
+    /// 对应 Java: `Position#character`。
     pub fn character(&self) -> i32 {
         self.character
     }

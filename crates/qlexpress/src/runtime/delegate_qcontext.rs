@@ -20,6 +20,8 @@ use crate::runtime::scope::{QScope, ScopeRef};
 use crate::runtime::trace::QTraces;
 use crate::runtime::value::{DataValue, QValue};
 
+/// `DelegateQContext` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/DelegateQContext.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Mirroring Java `DelegateQContext`: pairs the shared [`QvmRuntime`] with
 /// a mutable "current scope" pointer.
 pub struct DelegateQContext {
@@ -28,6 +30,9 @@ pub struct DelegateQContext {
 }
 
 impl DelegateQContext {
+    /// 创建对象实例。
+    /// 参数：`q_runtime`、`q_scope`；返回：`Self`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/DelegateQContext.java`，构造器 `<init>`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `new DelegateQContext(qRuntime, qScope)`.
     pub fn new(q_runtime: Rc<QvmRuntime>, q_scope: ScopeRef) -> Self {
         DelegateQContext { q_runtime, q_scope }

@@ -1,5 +1,7 @@
 use std::fmt;
 
+/// `ExceptionType` 枚举的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/UserDefineException.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// User-defined error type for custom functions/operators, mirroring Java
 /// `UserDefineException.ExceptionType`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -8,6 +10,8 @@ pub enum ExceptionType {
     BizException,
 }
 
+/// `UserDefineException` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/UserDefineException.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// User-defined error message for custom functions/operators, mirroring Java
 /// `UserDefineException`.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -17,11 +21,17 @@ pub struct UserDefineException {
 }
 
 impl UserDefineException {
+    /// 创建对象实例。
+    /// 参数：`message`；返回：`Self`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/UserDefineException.java`，构造器 `<init>`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `UserDefineException(String)` — defaults to `BIZ_EXCEPTION`.
     pub fn new(message: impl Into<String>) -> Self {
         Self::with_type(ExceptionType::BizException, message)
     }
 
+    /// 附加 type 配置并返回新值。
+    /// 参数：`exception_type`、`message`；返回：`Self`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/UserDefineException.java`，方法 `withType`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `UserDefineException(ExceptionType, String)`.
     pub fn with_type(exception_type: ExceptionType, message: impl Into<String>) -> Self {
         UserDefineException {

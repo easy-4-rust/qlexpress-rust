@@ -11,6 +11,8 @@ use std::rc::Rc;
 
 use super::macro_define::MacroDefine;
 
+/// `GeneratorScope` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/GeneratorScope.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Java `GeneratorScope`. Macro lookup walks the parent chain.
 #[derive(Debug)]
 pub struct GeneratorScope<I> {
@@ -20,6 +22,9 @@ pub struct GeneratorScope<I> {
 }
 
 impl<I> GeneratorScope<I> {
+    /// 创建对象实例。
+    /// 参数：`name`、`parent`；返回：`Self`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/GeneratorScope.java`，构造器 `<init>`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `new GeneratorScope(name, parent)`.
     pub fn new(name: impl Into<String>, parent: Option<Rc<GeneratorScope<I>>>) -> Self {
         GeneratorScope {
@@ -29,6 +34,9 @@ impl<I> GeneratorScope<I> {
         }
     }
 
+    /// 附加 macros 配置并返回新值。
+    /// 参数：`parent`、`name`、`macro_define_map`；返回：`Self`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/GeneratorScope.java`，方法 `withMacros`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `new GeneratorScope(parent, name, macroDefineMap)`.
     pub fn with_macros(
         parent: Option<Rc<GeneratorScope<I>>>,
@@ -42,6 +50,9 @@ impl<I> GeneratorScope<I> {
         }
     }
 
+    /// 添加或注册 macro if absent。
+    /// 参数：`name`、`macro_define`；返回：`bool`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/GeneratorScope.java`，方法 `defineMacroIfAbsent`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `defineMacroIfAbsent`: true when defined, false if the macro
     /// name already exists in *this* scope.
     pub fn define_macro_if_absent(
@@ -58,6 +69,9 @@ impl<I> GeneratorScope<I> {
         }
     }
 
+    /// 添加或注册 macro。
+    /// 参数：`name`、`macro_define`；返回：无。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/GeneratorScope.java`，方法 `defineMacro`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `defineMacro`.
     pub fn define_macro(&self, name: impl Into<String>, macro_define: MacroDefine<I>) {
         self.macro_define_map
@@ -65,6 +79,9 @@ impl<I> GeneratorScope<I> {
             .insert(name.into(), macro_define);
     }
 
+    /// 查询 macro instructions。
+    /// 参数：`macro_name`；返回：`Option<MacroDefine<I>>`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/instruction/QLInstruction.java`，方法 `getMacroInstructions`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `getMacroInstructions`: search this scope then parents.
     ///
     /// Returns a clone of the definition (Java returns the shared object;
@@ -81,6 +98,9 @@ impl<I> GeneratorScope<I> {
             .and_then(|parent| parent.get_macro_instructions(macro_name))
     }
 
+    /// 处理 name 对应的领域职责。
+    /// 无显式参数；返回：`&str`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/GeneratorScope.java`，方法 `name`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `getName`.
     pub fn name(&self) -> &str {
         &self.name

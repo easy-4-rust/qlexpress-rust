@@ -7,9 +7,13 @@ use crate::aparser::interpolation_mode::InterpolationMode;
 use crate::class_supplier::{ClassSupplier, DefaultClassSupplier};
 use crate::security::ql_security_strategy::QLSecurityStrategy;
 
+/// `DebugInfoConsumer` 类型别名的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/InitOptions.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Debug info sink; Java `Consumer<String>`.
 pub type DebugInfoConsumer = Rc<dyn Fn(String)>;
 
+/// `InitOptions` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/InitOptions.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Initialization options, mirroring Java `InitOptions`.
 #[derive(Clone)]
 pub struct InitOptions {
@@ -41,12 +45,12 @@ pub struct InitOptions {
 }
 
 impl InitOptions {
-    /// 执行 `builder` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/InitOptions.java:17` 的 `InitOptions#builder`。
+    /// 创建引擎初始化选项构建器。对应 Java: `InitOptions#builder`。
     pub fn builder() -> InitOptionsBuilder {
         InitOptionsBuilder::new()
     }
 
-    /// 执行 `class_supplier` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/InitOptions.java:179` 的 `InitOptions#classSupplier`。
+    /// 返回类引用供应器。对应 Java: `InitOptions#classSupplier`。
     pub fn class_supplier(&self) -> &Rc<dyn ClassSupplier> {
         &self.class_supplier
     }
@@ -57,47 +61,47 @@ impl InitOptions {
         &self.default_import
     }
 
-    /// 执行 `is_debug` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/InitOptions.java:115` 的 `InitOptions#isDebug`。
+    /// 返回是否输出编译调试信息。对应 Java: `InitOptions#isDebug`。
     pub fn is_debug(&self) -> bool {
         self.debug
     }
 
-    /// 执行 `debug_info_consumer` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/InitOptions.java:194` 的 `InitOptions#debugInfoConsumer`。
+    /// 返回调试信息消费者。对应 Java: `InitOptions#debugInfoConsumer`。
     pub fn debug_info_consumer(&self) -> &DebugInfoConsumer {
         &self.debug_info_consumer
     }
 
-    /// 执行 `security_strategy` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/InitOptions.java:199` 的 `InitOptions#securityStrategy`。
+    /// 返回成员访问安全策略。对应 Java: `InitOptions#securityStrategy`。
     pub fn security_strategy(&self) -> &QLSecurityStrategy {
         &self.security_strategy
     }
 
-    /// 执行 `is_allow_private_access` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/InitOptions.java:127` 的 `InitOptions#isAllowPrivateAccess`。
+    /// 返回是否允许访问宿主私有成员。对应 Java: `InitOptions#isAllowPrivateAccess`。
     pub fn is_allow_private_access(&self) -> bool {
         self.allow_private_access
     }
 
-    /// 执行 `interpolation_mode` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/InitOptions.java:209` 的 `InitOptions#interpolationMode`。
+    /// 返回字符串插值模式。对应 Java: `InitOptions#interpolationMode`。
     pub fn interpolation_mode(&self) -> InterpolationMode {
         self.interpolation_mode
     }
 
-    /// 执行 `is_trace_expression` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/InitOptions.java:135` 的 `InitOptions#isTraceExpression`。
+    /// 返回引擎是否允许表达式追踪。对应 Java: `InitOptions#isTraceExpression`。
     pub fn is_trace_expression(&self) -> bool {
         self.trace_expression
     }
 
-    /// 执行 `selector_start` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/InitOptions.java:219` 的 `InitOptions#selectorStart`。
+    /// 返回插值选择器起始标记。对应 Java: `InitOptions#selectorStart`。
     pub fn selector_start(&self) -> &str {
         &self.selector_start
     }
 
-    /// 执行 `selector_end` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/InitOptions.java:227` 的 `InitOptions#selectorEnd`。
+    /// 返回插值选择器结束标记。对应 Java: `InitOptions#selectorEnd`。
     pub fn selector_end(&self) -> &str {
         &self.selector_end
     }
 
-    /// 执行 `is_strict_new_lines` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/InitOptions.java:147` 的 `InitOptions#isStrictNewLines`。
+    /// 返回是否严格要求语句换行分隔。对应 Java: `InitOptions#isStrictNewLines`。
     pub fn is_strict_new_lines(&self) -> bool {
         self.strict_new_lines
     }
@@ -126,6 +130,8 @@ impl std::fmt::Debug for InitOptions {
     }
 }
 
+/// `InitOptionsBuilder` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/InitOptions.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Java `InitOptions.Builder`.
 pub struct InitOptionsBuilder {
     class_supplier: Rc<dyn ClassSupplier>,
@@ -142,7 +148,8 @@ pub struct InitOptionsBuilder {
 }
 
 impl InitOptionsBuilder {
-    /// 构造实例。Rust 适配接口；Java 无同名对象，承接 `InitOptionsBuilder` 的同职责语义。
+    /// 创建采用 Java 默认导入、安全策略和插值设置的构建器。
+    /// 对应 Java: `InitOptions.Builder`。
     pub fn new() -> Self {
         InitOptionsBuilder {
             class_supplier: Rc::new(DefaultClassSupplier::instance()),
@@ -165,54 +172,60 @@ impl InitOptionsBuilder {
         }
     }
 
-    /// 执行 `class_supplier` 公开操作。Rust 适配接口；Java 无同名对象，承接 `InitOptionsBuilder` 的同职责语义。
+    /// 设置类引用供应器并返回构建器。对应 Java: `InitOptions.Builder#classSupplier`。
     pub fn class_supplier(mut self, class_supplier: Rc<dyn ClassSupplier>) -> Self {
         self.class_supplier = class_supplier;
         self
     }
 
+    /// 添加或注册 default import。
+    /// 参数：`default_import`；返回：`Self`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/InitOptions.java`，方法 `addDefaultImport`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `addDefaultImport`: appends to the default import list.
     pub fn add_default_import(mut self, default_import: Vec<QLImport>) -> Self {
         self.default_import.extend(default_import);
         self
     }
 
-    /// 执行 `debug` 公开操作。Rust 适配接口；Java 无同名对象，承接 `InitOptionsBuilder` 的同职责语义。
+    /// 设置调试输出开关并返回构建器。对应 Java: `InitOptions.Builder#debug`。
     pub fn debug(mut self, debug: bool) -> Self {
         self.debug = debug;
         self
     }
 
-    /// 执行 `debug_info_consumer` 公开操作。Rust 适配接口；Java 无同名对象，承接 `InitOptionsBuilder` 的同职责语义。
+    /// 设置调试信息消费者并返回构建器。对应 Java: `InitOptions.Builder#debugInfoConsumer`。
     pub fn debug_info_consumer(mut self, consumer: DebugInfoConsumer) -> Self {
         self.debug_info_consumer = consumer;
         self
     }
 
-    /// 执行 `security_strategy` 公开操作。Rust 适配接口；Java 无同名对象，承接 `InitOptionsBuilder` 的同职责语义。
+    /// 设置成员访问安全策略并返回构建器。对应 Java: `InitOptions.Builder#securityStrategy`。
     pub fn security_strategy(mut self, security_strategy: QLSecurityStrategy) -> Self {
         self.security_strategy = security_strategy;
         self
     }
 
-    /// 执行 `allow_private_access` 公开操作。Rust 适配接口；Java 无同名对象，承接 `InitOptionsBuilder` 的同职责语义。
+    /// 设置私有成员访问开关并返回构建器。对应 Java: `InitOptions.Builder#allowPrivateAccess`。
     pub fn allow_private_access(mut self, allow_private_access: bool) -> Self {
         self.allow_private_access = allow_private_access;
         self
     }
 
-    /// 执行 `interpolation_mode` 公开操作。Rust 适配接口；Java 无同名对象，承接 `InitOptionsBuilder` 的同职责语义。
+    /// 设置字符串插值模式并返回构建器。对应 Java: `InitOptions.Builder#interpolationMode`。
     pub fn interpolation_mode(mut self, interpolation_mode: InterpolationMode) -> Self {
         self.interpolation_mode = interpolation_mode;
         self
     }
 
-    /// 执行 `trace_expression` 公开操作。Rust 适配接口；Java 无同名对象，承接 `InitOptionsBuilder` 的同职责语义。
+    /// 设置表达式追踪能力开关并返回构建器。对应 Java: `InitOptions.Builder#traceExpression`。
     pub fn trace_expression(mut self, trace_expression: bool) -> Self {
         self.trace_expression = trace_expression;
         self
     }
 
+    /// 处理 selector start 对应的领域职责。
+    /// 参数：`selector_start`；返回：`Self`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/InitOptions.java`，方法 `selectorStart`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java validates `selectorStart ∈ { "${", "$[", "#{", "#[" }` and
     /// throws `IllegalArgumentException` otherwise; Rust panics with the
     /// same message.
@@ -226,6 +239,9 @@ impl InitOptionsBuilder {
         self
     }
 
+    /// 处理 selector end 对应的领域职责。
+    /// 参数：`selector_end`；返回：`Self`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/InitOptions.java`，方法 `selectorEnd`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java validates `selectorEnd` is non-empty and throws
     /// `IllegalArgumentException` otherwise; Rust panics with the same
     /// message.
@@ -239,13 +255,13 @@ impl InitOptionsBuilder {
         self
     }
 
-    /// 执行 `strict_new_lines` 公开操作。Rust 适配接口；Java 无同名对象，承接 `InitOptionsBuilder` 的同职责语义。
+    /// 设置严格换行解析开关并返回构建器。对应 Java: `InitOptions.Builder#strictNewLines`。
     pub fn strict_new_lines(mut self, strict_new_lines: bool) -> Self {
         self.strict_new_lines = strict_new_lines;
         self
     }
 
-    /// 执行 `build` 公开操作。Rust 适配接口；Java 无同名对象，承接 `InitOptionsBuilder` 的同职责语义。
+    /// 构建不可变初始化选项。对应 Java: `InitOptions.Builder#build`。
     pub fn build(self) -> InitOptions {
         InitOptions {
             class_supplier: self.class_supplier,

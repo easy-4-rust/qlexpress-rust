@@ -7,6 +7,8 @@ use super::error_reporter::ErrorReporter;
 use super::ql_exception::{QLException, QLExceptionKind};
 use crate::runtime::value::DataValue;
 
+/// `PureErrReporter` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/PureErrReporter.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Reporter without script context, mirroring Java `PureErrReporter`.
 ///
 /// Builds a bare runtime exception (dummy diagnostic, no snippet). Note that

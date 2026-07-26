@@ -10,6 +10,9 @@ use super::obj_type_convertor::{ObjTypeConvertor, TargetType};
 pub struct ParametersTypeConvertor;
 
 impl ParametersTypeConvertor {
+    /// 处理 cast 对应的领域职责。
+    /// 参数：`arguments`、`param_types`、`is_var_arg`；返回：`Vec<DataValue>`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/data/convert/ParametersTypeConvertor.java`，方法 `cast`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `ParametersTypeConvertor.cast(Object[], Class<?>[], boolean)`.
     ///
     /// Like the Java version, convertibility is *not* checked: an

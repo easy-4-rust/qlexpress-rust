@@ -5,6 +5,9 @@
 pub struct QLStringUtils;
 
 impl QLStringUtils {
+    /// 构建或解析 string escape。
+    /// 参数：`origin_str`；返回：`String`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/utils/QLStringUtils.java`，方法 `parseStringEscape`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `parseStringEscape`: strip the first and last character (the
     /// surrounding quotes) and resolve escape sequences.
     pub fn parse_string_escape(origin_str: &str) -> String {
@@ -13,6 +16,9 @@ impl QLStringUtils {
         Self::parse_string_escape_start_end(origin_str, 1, end)
     }
 
+    /// 构建或解析 string escape start end。
+    /// 参数：`origin_str`、`start`、`end`；返回：`String`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/utils/QLStringUtils.java`，方法 `parseStringEscapeStartEnd`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `parseStringEscapeStartEnd`: resolve escapes in
     /// `origin_str[start..end]` (char indices).
     ///

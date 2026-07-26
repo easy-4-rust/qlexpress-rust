@@ -8,6 +8,8 @@ use crate::runtime::value::DataValue;
 
 use super::{to_big_dec_string, to_big_int, to_f64, to_i64};
 
+/// `TargetType` 枚举的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/DefaultClassSupplier.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Conversion target, standing in for the Java `Class<?>` parameter of
 /// `ObjTypeConvertor.cast`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -27,6 +29,9 @@ pub enum TargetType {
 }
 
 impl TargetType {
+    /// 处理 java name 对应的领域职责。
+    /// 无显式参数；返回：`&'static str`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/data/convert/ObjTypeConvertor.java`，方法 `javaName`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `Class.getName()`-style display, used in error messages.
     pub fn java_name(self) -> &'static str {
         match self {
@@ -45,6 +50,8 @@ impl TargetType {
     }
 }
 
+/// `QConverted` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/data/convert/ObjTypeConvertor.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Result of a conversion attempt, mirroring Java
 /// `ObjTypeConvertor.QConverted`.
 #[derive(Clone, Debug, PartialEq)]
@@ -56,7 +63,8 @@ pub struct QConverted {
 }
 
 impl QConverted {
-    /// 执行 `converted` 公开操作。Rust 适配接口；Java 无同名对象，承接 `QConverted` 的同职责语义。
+    /// 创建转换成功结果并保存目标值。
+    /// 对应 Java: `new QConverted(true, converted)`。
     pub fn converted(converted: DataValue) -> Self {
         QConverted {
             convertible: true,
@@ -64,7 +72,7 @@ impl QConverted {
         }
     }
 
-    /// 执行 `un_convertible` 公开操作。Rust 适配接口；Java 无同名对象，承接 `QConverted` 的同职责语义。
+    /// 创建不可转换结果，转换值按 Java `null` 语义置为 `DataValue::Null`。
     pub fn un_convertible() -> Self {
         QConverted {
             convertible: false,
@@ -72,17 +80,17 @@ impl QConverted {
         }
     }
 
-    /// 执行 `is_convertible` 公开操作。Rust 适配接口；Java 无同名对象，承接 `QConverted` 的同职责语义。
+    /// 返回本次类型转换是否成功。对应 Java: `QConverted#isConvertible`。
     pub fn is_convertible(&self) -> bool {
         self.convertible
     }
 
-    /// 执行 `get_converted` 公开操作。Rust 适配接口；Java 无同名对象，承接 `QConverted` 的同职责语义。
+    /// 借用转换后的值。对应 Java: `QConverted#getConverted`。
     pub fn get_converted(&self) -> &DataValue {
         &self.converted
     }
 
-    /// 执行 `into_converted` 公开操作。Rust 适配接口；Java 无同名对象，承接 `QConverted` 的同职责语义。
+    /// 消费结果并取得转换后的值；不可转换时得到 `DataValue::Null`。
     pub fn into_converted(self) -> DataValue {
         self.converted
     }
@@ -93,6 +101,9 @@ impl QConverted {
 pub struct ObjTypeConvertor;
 
 impl ObjTypeConvertor {
+    /// 处理 cast 对应的领域职责。
+    /// 参数：`value`、`target`；返回：`QConverted`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/data/convert/ObjTypeConvertor.java`，方法 `cast`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `ObjTypeConvertor.cast(Object, Class<?>)`.
     pub fn cast(value: &DataValue, target: TargetType) -> QConverted {
         if no_need_convert(value, target) {
@@ -146,6 +157,9 @@ impl ObjTypeConvertor {
         }
     }
 
+    /// 处理 cast opt 对应的领域职责。
+    /// 参数：`value`、`target`；返回：`QConverted`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/data/convert/ObjTypeConvertor.java`，方法 `castOpt`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `ObjTypeConvertor.cast` overload taking a nullable `Class<?>`;
     /// `None` mirrors `type == null` (no conversion needed).
     pub fn cast_opt(value: &DataValue, target: Option<TargetType>) -> QConverted {

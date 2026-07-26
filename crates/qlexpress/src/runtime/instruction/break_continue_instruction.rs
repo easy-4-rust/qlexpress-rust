@@ -25,6 +25,9 @@ pub struct BreakContinueInstruction {
 }
 
 impl BreakContinueInstruction {
+    /// 创建对象实例。
+    /// 参数：`error_reporter`、`is_break`；返回：`Self`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/instruction/BreakContinueInstruction.java`，构造器 `<init>`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `new BreakContinueInstruction(errorReporter, result)` where
     /// `result` is `LOOP_BREAK_RESULT` or `LOOP_CONTINUE_RESULT`.
     pub fn new(error_reporter: Rc<dyn ErrorReporter>, is_break: bool) -> Self {
@@ -34,6 +37,9 @@ impl BreakContinueInstruction {
         }
     }
 
+    /// 处理 result 对应的领域职责。
+    /// 无显式参数；返回：`QResult`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/instruction/BreakContinueInstruction.java`，方法 `result`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `getResult()`.
     pub fn result(&self) -> QResult {
         if self.is_break {

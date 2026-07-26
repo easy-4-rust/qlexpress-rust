@@ -18,6 +18,9 @@ pub enum ChildRef<'a> {
 }
 
 impl<'a> ChildRef<'a> {
+    /// 处理 text 对应的领域职责。
+    /// 无显式参数；返回：`String`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/ParseTree.java`，方法 `text`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `ParseTree.getText`.
     pub fn text(&self) -> String {
         match self {
@@ -26,6 +29,9 @@ impl<'a> ChildRef<'a> {
         }
     }
 
+    /// 处理 start token 对应的领域职责。
+    /// 无显式参数；返回：`Option<&'a Token>`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/RuleContext.java`，方法 `startToken`；Rust 侧按所有权与 `Result` 语义适配。
     /// First token covered by this child (Java bounds computation).
     pub fn start_token(&self) -> Option<&'a Token> {
         match self {
@@ -34,6 +40,9 @@ impl<'a> ChildRef<'a> {
         }
     }
 
+    /// 处理 stop token 对应的领域职责。
+    /// 无显式参数；返回：`Option<&'a Token>`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/RuleContext.java`，方法 `stopToken`；Rust 侧按所有权与 `Result` 语义适配。
     /// Last token covered by this child.
     pub fn stop_token(&self) -> Option<&'a Token> {
         match self {
@@ -46,6 +55,9 @@ impl<'a> ChildRef<'a> {
 /// 可按源码顺序枚举孩子的节点契约。对应 Java: `RuleContext.children` 访问能力(Rust 适配 trait)
 /// Anything that can enumerate its children in source order.
 pub trait HasChildren {
+    /// 处理 children 对应的接口职责。
+    /// 无显式参数；返回：`Vec<ChildRef<'_>>`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/RuleContext.java`，方法 `children`。
     /// Children in the exact order the Java parser `addChild`ed them.
     fn children(&self) -> Vec<ChildRef<'_>>;
 }

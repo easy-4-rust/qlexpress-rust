@@ -6,6 +6,8 @@
 
 use std::collections::HashSet;
 
+/// `NativeMember` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/security/QLSecurityStrategy.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Identifies a native member (method/field) for security checks.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct NativeMember {
@@ -16,7 +18,8 @@ pub struct NativeMember {
 }
 
 impl NativeMember {
-    /// 构造实例。Rust 适配接口；Java 无同名对象，承接 `NativeMember` 的同职责语义。
+    /// 创建用于安全策略匹配的“类型名 + 成员名”描述符。
+    /// 对应 Java: `java.lang.reflect.Member` 提供给 `QLSecurityStrategy#check` 的身份信息。
     pub fn new(type_name: impl Into<String>, member_name: impl Into<String>) -> Self {
         NativeMember {
             type_name: type_name.into(),
@@ -25,6 +28,8 @@ impl NativeMember {
     }
 }
 
+/// `QLSecurityStrategy` 枚举的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/security/QLSecurityStrategy.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Mirroring Java `QLSecurityStrategy`: decides whether a native member may
 /// be accessed from a script.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -41,26 +46,41 @@ pub enum QLSecurityStrategy {
 }
 
 impl QLSecurityStrategy {
+    /// 处理 open 对应的领域职责。
+    /// 无显式参数；返回：`Self`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/security/QLSecurityStrategy.java`，方法 `open`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `QLSecurityStrategy.open()`.
     pub fn open() -> Self {
         QLSecurityStrategy::Open
     }
 
+    /// 处理 isolation 对应的领域职责。
+    /// 无显式参数；返回：`Self`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/security/QLSecurityStrategy.java`，方法 `isolation`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `QLSecurityStrategy.isolation()`.
     pub fn isolation() -> Self {
         QLSecurityStrategy::Isolation
     }
 
+    /// 处理 black list 对应的领域职责。
+    /// 参数：`black_list`；返回：`Self`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/security/QLSecurityStrategy.java`，方法 `blackList`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `QLSecurityStrategy.blackList(...)`.
     pub fn black_list(black_list: HashSet<NativeMember>) -> Self {
         QLSecurityStrategy::BlackList(black_list)
     }
 
+    /// 处理 white list 对应的领域职责。
+    /// 参数：`white_list`；返回：`Self`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/security/QLSecurityStrategy.java`，方法 `whiteList`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `QLSecurityStrategy.whiteList(...)`.
     pub fn white_list(white_list: HashSet<NativeMember>) -> Self {
         QLSecurityStrategy::WhiteList(white_list)
     }
 
+    /// 处理 check 对应的领域职责。
+    /// 参数：`member`；返回：`bool`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/security/QLSecurityStrategy.java`，方法 `check`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `check(Member)`: true when the member is secure to access.
     pub fn check(&self, member: &NativeMember) -> bool {
         match self {

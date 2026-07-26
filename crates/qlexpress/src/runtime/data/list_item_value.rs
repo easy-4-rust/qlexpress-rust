@@ -7,6 +7,8 @@ use crate::runtime::data::convert::obj_type_convertor::TargetType;
 use crate::runtime::left_value::LeftValue;
 use crate::runtime::value::{DataValue, Value};
 
+/// `ListItemValue` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/data/ListItemValue.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Mirrors Java `ListItemValue`: an l-value view of `list[index]`.
 pub struct ListItemValue {
     list: Rc<RefCell<Vec<DataValue>>>,

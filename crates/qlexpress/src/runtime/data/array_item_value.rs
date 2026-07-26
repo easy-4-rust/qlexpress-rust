@@ -7,6 +7,8 @@ use crate::runtime::data::convert::obj_type_convertor::TargetType;
 use crate::runtime::left_value::LeftValue;
 use crate::runtime::value::{DataValue, Value};
 
+/// `ArrayItemValue` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/data/ArrayItemValue.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Mirrors Java `ArrayItemValue`: an l-value view of `array[index]`.
 ///
 /// Java aliases a live Java array; Rust uses a shared `Rc<RefCell<Vec>>` so
@@ -29,7 +31,8 @@ impl ArrayItemValue {
         }
     }
 
-    /// 执行 `with_component_type` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/runtime/data/ArrayItemValue.java:1` 的 `ArrayItemValue`；该方法为 Rust 同职责适配接口。
+    /// 指定数组元素的目标类型，用于写回时执行 Java 兼容转换。
+    /// 对应 Java: `ArrayItemValue` 从数组 component type 推导赋值类型。
     pub fn with_component_type(
         array: Rc<RefCell<Vec<DataValue>>>,
         index: usize,

@@ -105,6 +105,9 @@ pub fn promote(left: &DataValue, right: &DataValue, domain: MathDomain) -> (Data
     (conv(left), conv(right))
 }
 
+/// 转换为 f64。
+/// 参数：`value`；返回：`f64`。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/NumberMath.java`，方法 `toF64`；Rust 侧按所有权与 `Result` 语义适配。
 /// Java `Number.doubleValue()`。
 pub fn to_f64(value: &DataValue) -> f64 {
     match value {
@@ -138,6 +141,9 @@ pub fn to_i128(value: &DataValue) -> i128 {
     }
 }
 
+/// 转换为 i64。
+/// 参数：`value`；返回：`i64`。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/NumberMath.java`，方法 `toI64`；Rust 侧按所有权与 `Result` 语义适配。
 /// Java `Number.longValue()`。
 pub fn to_i64(value: &DataValue) -> i64 {
     match value {

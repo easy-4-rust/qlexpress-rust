@@ -85,6 +85,9 @@ pub const INVALID_ARGUMENT: &str = "INVALID_ARGUMENT";
 pub const BIZ_EXCEPTION: &str = "BIZ_EXCEPTION";
 pub const QL_THROW: &str = "QL_THROW";
 
+/// 处理 error msg 对应的领域职责。
+/// 参数：`code`；返回：`&'static str`。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/QLErrorCodes.java`，方法 `errorMsg`；Rust 侧按所有权与 `Result` 语义适配。
 /// Returns the Java message template for an error code (verbatim from
 /// `QLErrorCodes`). Unknown codes yield an empty string, mirroring the
 /// empty-message codes in Java.
@@ -175,6 +178,9 @@ pub fn error_msg(code: &str) -> &'static str {
     }
 }
 
+/// 处理 format msg 对应的领域职责。
+/// 参数：`format`、`args`；返回：`String`。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/QLErrorCodes.java`，方法 `formatMsg`；Rust 侧按所有权与 `Result` 语义适配。
 /// Java `String.format` subset used by QLExpress error templates: replaces
 /// `%s` / `%d` placeholders in order with the given pre-rendered arguments.
 /// Missing placeholders and extra arguments are tolerated (as in Java usage).

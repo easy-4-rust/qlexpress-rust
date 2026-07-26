@@ -4,6 +4,8 @@ use crate::runtime::data::convert::obj_type_convertor::TargetType;
 use crate::runtime::left_value::LeftValue;
 use crate::runtime::value::{DataValue, Value};
 
+/// `AssignableDataValue` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/data/AssignableDataValue.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Mirrors Java `AssignableDataValue`: a symbol table entry with an optional
 /// declared type.
 pub struct AssignableDataValue {
@@ -13,6 +15,9 @@ pub struct AssignableDataValue {
 }
 
 impl AssignableDataValue {
+    /// 创建对象实例。
+    /// 参数：`symbol_name`、`value`；返回：`Self`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/data/AssignableDataValue.java`，构造器 `<init>`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `AssignableDataValue(String symbolName, Object value)`.
     pub fn new(symbol_name: impl Into<String>, value: DataValue) -> Self {
         AssignableDataValue {
@@ -22,6 +27,9 @@ impl AssignableDataValue {
         }
     }
 
+    /// 附加 type 配置并返回新值。
+    /// 参数：`symbol_name`、`value`、`define_type`；返回：`Self`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/data/AssignableDataValue.java`，方法 `withType`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `AssignableDataValue(String symbolName, Object value,
     /// Class<?> defineType)`.
     pub fn with_type(

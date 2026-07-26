@@ -330,6 +330,9 @@ impl BaseBinaryOperator {
         ))
     }
 
+    /// 处理 bitwise or 对应的领域职责。
+    /// 参数：`operator`、`left`、`right`、`error_reporter`；返回：`Result<DataValue, QLException>`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/base/BaseBinaryOperator.java`，方法 `bitwiseOr`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `bitwiseOr(...)`。
     pub fn bitwise_or(
         operator: &str,
@@ -353,6 +356,9 @@ impl BaseBinaryOperator {
         ))
     }
 
+    /// 处理 bitwise xor 对应的领域职责。
+    /// 参数：`operator`、`left`、`right`、`error_reporter`；返回：`Result<DataValue, QLException>`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/base/BaseBinaryOperator.java`，方法 `bitwiseXor`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `bitwiseXor(...)`。
     pub fn bitwise_xor(
         operator: &str,
@@ -376,6 +382,9 @@ impl BaseBinaryOperator {
         ))
     }
 
+    /// 处理 left shift 对应的领域职责。
+    /// 参数：`operator`、`left`、`right`、`error_reporter`；返回：`Result<DataValue, QLException>`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/base/BaseBinaryOperator.java`，方法 `leftShift`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `leftShift(...)`。
     pub fn left_shift(
         operator: &str,
@@ -394,6 +403,9 @@ impl BaseBinaryOperator {
         ))
     }
 
+    /// 处理 right shift 对应的领域职责。
+    /// 参数：`operator`、`left`、`right`、`error_reporter`；返回：`Result<DataValue, QLException>`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/base/BaseBinaryOperator.java`，方法 `rightShift`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `rightShift(...)`。
     pub fn right_shift(
         operator: &str,
@@ -412,6 +424,9 @@ impl BaseBinaryOperator {
         ))
     }
 
+    /// 处理 right shift unsigned 对应的领域职责。
+    /// 参数：`operator`、`left`、`right`、`error_reporter`；返回：`Result<DataValue, QLException>`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/base/BaseBinaryOperator.java`，方法 `rightShiftUnsigned`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `rightShiftUnsigned(...)`。
     pub fn right_shift_unsigned(
         operator: &str,

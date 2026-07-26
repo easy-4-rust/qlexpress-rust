@@ -8,6 +8,8 @@ use super::trace_type::{java_name, TraceType};
 use crate::runtime::value::DataValue;
 use crate::utils::println_utils::PrintlnUtils;
 
+/// `ExpressionTrace` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/trace/ExpressionTrace.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// One node of the expression-execution trace tree, mirroring Java
 /// `ExpressionTrace`.
 #[derive(Clone, Debug)]
@@ -50,58 +52,75 @@ impl ExpressionTrace {
         }
     }
 
-    /// 执行 `trace_type` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/runtime/trace/ExpressionTrace.java:1` 的 `ExpressionTrace`；该方法为 Rust 同职责适配接口。
+    /// 返回追踪节点类型。
+    /// 对应 Java: `ExpressionTrace#getTraceType`。
     pub fn trace_type(&self) -> TraceType {
         self.trace_type
     }
 
-    /// 执行 `token` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/runtime/trace/ExpressionTrace.java:1` 的 `ExpressionTrace`；该方法为 Rust 同职责适配接口。
+    /// 返回该追踪节点对应的词法单元。
+    /// 对应 Java: `ExpressionTrace#getToken`。
     pub fn token(&self) -> &str {
         &self.token
     }
 
-    /// 执行 `value` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/runtime/trace/ExpressionTrace.java:1` 的 `ExpressionTrace`；该方法为 Rust 同职责适配接口。
+    /// 返回运行时求值得到的值；尚未求值时返回 `None`。
+    /// 对应 Java: `ExpressionTrace#getValue`。
     pub fn value(&self) -> Option<&DataValue> {
         self.value.as_ref()
     }
 
-    /// 执行 `is_evaluated` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/runtime/trace/ExpressionTrace.java:77` 的 `ExpressionTrace#isEvaluated`。
+    /// 返回当前节点是否已经记录运行时求值结果。
+    /// 对应 Java: `ExpressionTrace#isEvaluated`。
     pub fn is_evaluated(&self) -> bool {
         self.evaluated
     }
 
-    /// 执行 `children` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/runtime/trace/ExpressionTrace.java:1` 的 `ExpressionTrace`；该方法为 Rust 同职责适配接口。
+    /// 返回直接子追踪节点。
+    /// 对应 Java: `ExpressionTrace#getChildren`。
     pub fn children(&self) -> &[ExpressionTrace] {
         &self.children
     }
 
+    /// 处理 children mut 对应的领域职责。
+    /// 无显式参数；返回：`&mut [ExpressionTrace]`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/trace/ExpressionTrace.java`，方法 `childrenMut`；Rust 侧按所有权与 `Result` 语义适配。
     /// Mutable children access, used by instructions that mark child trace
     /// points evaluated (Java `getChildren().get(i).valueEvaluated(...)`).
     pub fn children_mut(&mut self) -> &mut [ExpressionTrace] {
         &mut self.children
     }
 
-    /// 执行 `line` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/runtime/trace/ExpressionTrace.java:1` 的 `ExpressionTrace`；该方法为 Rust 同职责适配接口。
+    /// 返回脚本中的一基行号。
+    /// 对应 Java: `ExpressionTrace` 的 token 行位置。
     pub fn line(&self) -> i32 {
         self.line
     }
 
-    /// 执行 `col` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/runtime/trace/ExpressionTrace.java:1` 的 `ExpressionTrace`；该方法为 Rust 同职责适配接口。
+    /// 返回脚本中的一基列号。
+    /// 对应 Java: `ExpressionTrace` 的 token 列位置。
     pub fn col(&self) -> i32 {
         self.col
     }
 
-    /// 执行 `position` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/runtime/trace/ExpressionTrace.java:1` 的 `ExpressionTrace`；该方法为 Rust 同职责适配接口。
+    /// 返回 token 在脚本中的字符偏移。
+    /// 对应 Java: `ExpressionTrace` 的 token 起始位置。
     pub fn position(&self) -> i32 {
         self.position
     }
 
+    /// 处理 value evaluated 对应的领域职责。
+    /// 参数：`value`；返回：无。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/Value.java`，方法 `valueEvaluated`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `valueEvaluated`: record the evaluated value.
     pub fn value_evaluated(&mut self, value: DataValue) {
         self.value = Some(value);
         self.evaluated = true;
     }
 
+    /// 转换为 pretty string。
+    /// 参数：`indent`；返回：`String`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/trace/ExpressionTrace.java`，方法 `toPrettyString`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `toPrettyString`: indented, recursive rendering.
     pub fn to_pretty_string(&self, indent: i32) -> String {
         let value_part = if self.evaluated {

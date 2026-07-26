@@ -56,11 +56,17 @@ pub trait Visitor {
     /// Visit result type (Java `T`); `()` for `QLParserBaseVisitor<Void>`.
     type T: Default;
 
+    /// 遍历 terminal 语法节点。
+    /// 参数：`_node`；返回：`Self::T`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/QLParserBaseVisitor.java`，方法 `visitTerminal`。
     /// Java `visitTerminal` (returns null / default).
     fn visit_terminal(&mut self, _node: &TerminalNode) -> Self::T {
         Self::T::default()
     }
 
+    /// 遍历 children of 语法节点。
+    /// 参数：`ctx`；返回：`Self::T`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/QLParserBaseVisitor.java`，方法 `visitChildrenOf`。
     /// Java `visitChildren`: visit every child in order, returning the last
     /// child's result.
     fn visit_children_of(&mut self, ctx: &dyn HasChildren) -> Self::T {
@@ -74,6 +80,9 @@ pub trait Visitor {
         result
     }
 
+    /// 遍历 children 语法节点。
+    /// 参数：`node`；返回：`Self::T`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/QLParserBaseVisitor.java`，方法 `visitChildren`。
     /// Java `visitChildren(RuleContext)`.
     fn visit_children(&mut self, node: &Node) -> Self::T {
         self.visit_children_of(node)

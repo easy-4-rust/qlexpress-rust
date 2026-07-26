@@ -12,6 +12,8 @@ use super::lsp::{Diagnostic, Position, Range};
 use super::ql_syntax_exception::QLSyntaxException;
 use crate::runtime::value::DataValue;
 
+/// `QLExceptionKind` 枚举的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/QLException.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Which Java exception subclass this error corresponds to.
 ///
 /// Java models the error hierarchy as classes (`QLSyntaxException`,
@@ -28,6 +30,8 @@ pub enum QLExceptionKind {
     Timeout,
 }
 
+/// `QLException` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/QLException.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// The engine's single error type, mirroring Java `QLException`
 /// (and subclasses, via [`QLExceptionKind`]).
 #[derive(Clone, Debug)]
@@ -56,12 +60,18 @@ impl QLException {
         }
     }
 
+    /// 附加 catch obj 配置并返回新值。
+    /// 参数：`catch_obj`；返回：`Self`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/QLException.java`，方法 `withCatchObj`；Rust 侧按所有权与 `Result` 语义适配。
     /// Builder-style setter for the catchable attachment.
     pub fn with_catch_obj(mut self, catch_obj: DataValue) -> Self {
         self.catch_obj = Some(catch_obj);
         self
     }
 
+    /// 处理 for test 对应的领域职责。
+    /// 参数：`kind`、`reason`、`error_code`；返回：`Self`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/QLException.java`，方法 `forTest`；Rust 侧按所有权与 `Result` 语义适配。
     /// Constructor mirroring the Java "Visible for test"
     /// `QLRuntimeException(catchObj, reason, errorCode)`.
     pub fn for_test(kind: QLExceptionKind, reason: impl Into<String>, error_code: &str) -> Self {
@@ -73,61 +83,83 @@ impl QLException {
         )
     }
 
-    /// 执行 `kind` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/exception/QLException.java:1` 的 `QLException`；该方法为 Rust 同职责适配接口。
+    /// 返回异常类别，用于区分语法、运行时、超时与用户异常。
+    /// 对应 Java: `QLException` 的具体子类类型。
     pub fn kind(&self) -> QLExceptionKind {
         self.kind
     }
 
-    /// 执行 `is_syntax` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/exception/QLException.java:1` 的 `QLException`；该方法为 Rust 同职责适配接口。
+    /// 判断当前异常是否来自语法分析阶段。
+    /// 对应 Java: `exception instanceof QLSyntaxException`。
     pub fn is_syntax(&self) -> bool {
         self.kind == QLExceptionKind::Syntax
     }
 
-    /// 执行 `is_timeout` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/exception/QLException.java:1` 的 `QLException`；该方法为 Rust 同职责适配接口。
+    /// 判断当前异常是否为执行超时。
+    /// 对应 Java: `exception instanceof QLTimeoutException`。
     pub fn is_timeout(&self) -> bool {
         self.kind == QLExceptionKind::Timeout
     }
 
-    /// 执行 `diagnostic` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/exception/QLException.java:1` 的 `QLException`；该方法为 Rust 同职责适配接口。
+    /// 返回完整 LSP 诊断；没有脚本位置时返回 `None`。
+    /// 对应 Java: `QLException#getDiagnostic`。
     pub fn diagnostic(&self) -> &Diagnostic {
         &self.diagnostic
     }
 
-    /// 执行 `pos` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/exception/QLException.java:1` 的 `QLException`；该方法为 Rust 同职责适配接口。
+    /// 返回错误 token 的绝对字符偏移。
+    /// 对应 Java: `QLException#getPos`。
     pub fn pos(&self) -> i32 {
         self.diagnostic.pos()
     }
 
+    /// 处理 reason 对应的领域职责。
+    /// 无显式参数；返回：`&str`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/QLException.java`，方法 `reason`；Rust 侧按所有权与 `Result` 语义适配。
     /// The unformatted reason of this error.
     pub fn reason(&self) -> &str {
         self.diagnostic.message()
     }
 
+    /// 处理 line no 对应的领域职责。
+    /// 无显式参数；返回：`i32`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/QLException.java`，方法 `lineNo`；Rust 侧按所有权与 `Result` 语义适配。
     /// Line no, 1-based.
     pub fn line_no(&self) -> i32 {
         self.diagnostic.range().start().line() + 1
     }
 
+    /// 处理 col no 对应的领域职责。
+    /// 无显式参数；返回：`i32`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/QLException.java`，方法 `colNo`；Rust 侧按所有权与 `Result` 语义适配。
     /// Column no, 1-based.
     pub fn col_no(&self) -> i32 {
         self.diagnostic.range().start().character() + 1
     }
 
-    /// 执行 `err_lexeme` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/exception/QLException.java:1` 的 `QLException`；该方法为 Rust 同职责适配接口。
+    /// 返回触发错误的词素。
+    /// 对应 Java: `QLException#getErrLexeme`。
     pub fn err_lexeme(&self) -> &str {
         self.diagnostic.lexeme()
     }
 
-    /// 执行 `error_code` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/exception/QLException.java:1` 的 `QLException`；该方法为 Rust 同职责适配接口。
+    /// 返回稳定的 QLExpress 错误码。
+    /// 对应 Java: `QLException#getErrorCode`。
     pub fn error_code(&self) -> &str {
         self.diagnostic.code()
     }
 
+    /// 处理 catch obj 对应的领域职责。
+    /// 无显式参数；返回：`Option<&DataValue>`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/QLException.java`，方法 `catchObj`；Rust 侧按所有权与 `Result` 语义适配。
     /// Object catchable in a QLExpress catch clause (Java `getCatchObj`).
     pub fn catch_obj(&self) -> Option<&DataValue> {
         self.catch_obj.as_ref()
     }
 
+    /// 处理 report scanner err 对应的领域职责。
+    /// 参数：`script`、`token_start_pos`、`line`、`col`、`lexeme`、`error_code`、`reason`；返回：`QLSyntaxException`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/QLException.java`，方法 `reportScannerErr`；Rust 侧按所有权与 `Result` 语义适配。
     /// Report a scanner/syntax error, mirroring Java
     /// `QLException.reportScannerErr`.
     #[allow(clippy::too_many_arguments)]
@@ -166,6 +198,9 @@ impl QLException {
         ))
     }
 
+    /// 处理 report runtime err with attach 对应的领域职责。
+    /// 参数：`script`、`token_start_pos`、`line`、`col`、`lexeme`、`error_code`、`reason`、`catch_obj`；返回：`QLException`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/QLException.java`，方法 `reportRuntimeErrWithAttach`；Rust 侧按所有权与 `Result` 语义适配。
     /// Report a runtime error carrying a catchable attachment, mirroring Java
     /// `QLException.reportRuntimeErrWithAttach`. A `SCRIPT_TIME_OUT` code
     /// yields [`QLExceptionKind::Timeout`].

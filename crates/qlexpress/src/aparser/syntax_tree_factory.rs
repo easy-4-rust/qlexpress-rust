@@ -117,6 +117,9 @@ pub struct BreakContinueStatementContext {
 }
 
 impl BreakContinueStatementContext {
+    /// 判断 break 条件。
+    /// 无显式参数；返回：`bool`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/SyntaxTreeFactory.java`，方法 `isBreak`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `BREAK() != null`.
     pub fn is_break(&self) -> bool {
         self.token.symbol().token_type() == super::token::BREAK as i32
@@ -247,6 +250,9 @@ pub struct DimsContext {
 }
 
 impl DimsContext {
+    /// 处理 dim count 对应的领域职责。
+    /// 无显式参数；返回：`usize`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/SyntaxTreeFactory.java`，方法 `dimCount`；Rust 侧按所有权与 `Result` 语义适配。
     /// Number of `[]` dimensions (Java `LBRACK().size()`).
     pub fn dim_count(&self) -> usize {
         self.brackets.len() / 2
@@ -271,6 +277,9 @@ pub struct ExpressionContext {
 }
 
 impl ExpressionContext {
+    /// 判断 assign 条件。
+    /// 无显式参数；返回：`bool`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/SyntaxTreeFactory.java`，方法 `isAssign`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `leftHandSide()`.
     pub fn is_assign(&self) -> bool {
         self.left.is_some()
@@ -651,6 +660,8 @@ pub struct QuoteStringKeyContext {
     pub token: TerminalNode,
 }
 
+/// `ChainKind` 枚举的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/SyntaxTreeFactory.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// How a path part is chained, mirroring the Java `Optional*`/`Spread*`
 /// subclasses of `MethodInvokeContext`/`FieldAccessContext`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -751,6 +762,8 @@ pub struct LiteralContext {
     pub double_quote_string: Option<Box<Node>>,
 }
 
+/// `DyStrPart` 枚举的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/SyntaxTreeFactory.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// One piece of a double-quoted string: literal text or an interpolation.
 #[derive(Clone, Debug)]
 pub enum DyStrPart {

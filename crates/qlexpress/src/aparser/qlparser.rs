@@ -155,6 +155,8 @@ token_consts!(
 
 const EOF: i32 = token::EOF;
 
+/// `ParseFail` 枚举的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/QLParser.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Java `QLParseBacktrack` vs fatal syntax error.
 #[derive(Debug)]
 pub enum ParseFail {
@@ -185,6 +187,9 @@ impl From<ParseFail> for QLSyntaxException {
 
 type PResult<T> = Result<T, ParseFail>;
 
+/// 构建或解析 tree。
+/// 参数：`script`、`operator_manager`、`print_tree`、`printer`、`interpolation_mode`、`selector_start`、`selector_end`、`strict_new_lines`；返回：`Result<Node, QLSyntaxException>`。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/SyntaxTreeFactory.java`，方法 `buildTree`；Rust 侧按所有权与 `Result` 语义适配。
 /// Java `SyntaxTreeFactory.buildTree`.
 ///
 /// Tokenizes `script` with [`qlexer::tokenize`] and parses it into a
@@ -219,6 +224,8 @@ pub fn build_tree(
     Ok(program)
 }
 
+/// `QLParser` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/QLParser.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Java `QLParser`.
 pub struct QLParser<'a> {
     script: &'a str,
@@ -229,6 +236,9 @@ pub struct QLParser<'a> {
 }
 
 impl<'a> QLParser<'a> {
+    /// 创建对象实例。
+    /// 参数：`script`、`tokens`、`operator_manager`、`strict_new_lines`；返回：`Self`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/QLParser.java`，构造器 `<init>`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `new QLParser(script, tokens, operatorManager, strictNewLines)`.
     pub fn new(
         script: &'a str,
@@ -245,6 +255,9 @@ impl<'a> QLParser<'a> {
         }
     }
 
+    /// 处理 program 对应的领域职责。
+    /// 无显式参数；返回：`Result<Node, QLSyntaxException>`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/QLParser.java`，方法 `program`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `program()`.
     pub fn program(&mut self) -> Result<Node, QLSyntaxException> {
         self.program_internal().map_err(QLSyntaxException::from)

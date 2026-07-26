@@ -28,6 +28,8 @@ pub use crate::runtime::native_type::{
 };
 pub use crate::runtime::util::method_invoke_utils::{find_method_and_invoke, invoke_native_method};
 
+/// `QLExpressNativeType` 接口的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/QRuntime.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Trait auto-derivable via `#[derive(QLExpressType)]`
 /// (proc-macro crate `qlexpress-derive`).
 ///
@@ -40,16 +42,25 @@ pub trait QLExpressNativeType: NativeObject + 'static {
     /// Defaults to the Rust type identifier when unspecified.
     const QL_TYPE_NAME: &'static str;
 
+    /// 处理 ql type id 对应的接口职责。
+    /// 无显式参数；返回：`TypeId`。
+    /// Rust 原生接口适配；承接当前 trait 既有 rustdoc 标注的 Java 职责。
     /// `TypeId` of the implementor. Used by the runtime to downcast
     /// `DataValue::Object` payloads back to `&mut T`.
     fn ql_type_id(&self) -> TypeId {
         TypeId::of::<Self>()
     }
 
+    /// 构建 native type。
+    /// 无显式参数；返回：`NativeType`。
+    /// Rust 原生接口适配；承接当前 trait 既有 rustdoc 标注的 Java 职责。
     /// Build the `NativeType` description for registration into a
     /// [`NativeRegistry`].
     fn build_native_type() -> NativeType;
 
+    /// 处理 into data value 对应的接口职责。
+    /// 无显式参数；返回：`crate::runtime::value::DataValue`。
+    /// Rust 原生接口适配；承接当前 trait 既有 rustdoc 标注的 Java 职责。
     /// Wrap `self` into a `DataValue::Object` cell so the engine can hold
     /// a strong reference. The default impl wraps via `Rc<RefCell<T>>`;
     /// override only when you need a custom cell (e.g. for tracing).
@@ -67,9 +78,12 @@ pub trait QLExpressNativeType: NativeObject + 'static {
     }
 }
 
+/// `QLExpressRegistryExt` 接口的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/QRuntime.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Convenience: register `T` into a registry by-name.
 pub trait QLExpressRegistryExt {
-    /// 执行 `register_qlexpress_type` 公开操作。Rust 适配接口；Java 无同名对象，承接 `QLExpressRegistryExt` 的同职责语义。
+    /// 将派生宏生成的宿主类型元数据注册进 QLExpress 注册表。
+    /// 替代 Java `ReflectLoader` 的运行时反射发现。
     fn register_qlexpress_type<T: QLExpressNativeType>(&mut self);
 }
 

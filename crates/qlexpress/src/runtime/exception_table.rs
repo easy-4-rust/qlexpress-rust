@@ -11,6 +11,8 @@
 
 use crate::runtime::value::DataValue;
 
+/// `ExceptionTableEntry` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/QLException.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// One exception handler entry, mirroring
 /// `com.alibaba.qlexpress4.runtime.ExceptionTable.ExceptionTableEntry`.
 ///
@@ -28,12 +30,15 @@ pub struct ExceptionTableEntry {
 }
 
 impl ExceptionTableEntry {
-    /// 执行 `covers` 公开操作。Rust 适配接口；Java 无同名对象，承接 `ExceptionTableEntry` 的同职责语义。
+    /// 判断程序计数器是否落在该异常处理区间内。
+    /// 对应 Java: `ExceptionTable` 查找覆盖当前指令的 catch 条目。
     pub fn covers(&self, pc: usize) -> bool {
         pc >= self.start_pc && pc < self.end_pc
     }
 }
 
+/// `ExceptionTable` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/ExceptionTable.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// The full exception table attached to a `try/catch` instruction.
 #[derive(Clone, Debug, Default)]
 pub struct ExceptionTable {
@@ -46,23 +51,29 @@ impl ExceptionTable {
         Self::default()
     }
 
-    /// 执行 `with_entry` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/runtime/ExceptionTable.java:1` 的 `ExceptionTable`；该方法为 Rust 同职责适配接口。
+    /// 追加一条异常处理区间并返回表本身，便于构建器式初始化。
+    /// 对应 Java: `ExceptionTable#addExceptionTableEntry`。
     pub fn with_entry(entry: ExceptionTableEntry) -> Self {
         let mut t = Self::new();
         t.entries.push(entry);
         t
     }
 
-    /// 执行 `push` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/runtime/ExceptionTable.java:1` 的 `ExceptionTable`；该方法为 Rust 同职责适配接口。
+    /// 追加一条异常处理区间。
+    /// 对应 Java: `ExceptionTable#addExceptionTableEntry`。
     pub fn push(&mut self, entry: ExceptionTableEntry) {
         self.entries.push(entry);
     }
 
-    /// 执行 `entries` 公开操作。对应 Java 源码 `com/alibaba/qlexpress4/runtime/ExceptionTable.java:1` 的 `ExceptionTable`；该方法为 Rust 同职责适配接口。
+    /// 返回按编译顺序保存的异常处理区间。
+    /// 对应 Java: `ExceptionTable` 的异常表条目集合。
     pub fn entries(&self) -> &[ExceptionTableEntry] {
         &self.entries
     }
 
+    /// 处理 lookup 对应的领域职责。
+    /// 参数：`pc`、`exception`；返回：`Option<usize>`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/ExceptionTable.java`，方法 `lookup`；Rust 侧按所有权与 `Result` 语义适配。
     /// Locate the first handler matching `pc` whose `catch_type` matches
     /// `exception.data_type_name()`. When `catch_type` is `None`, the
     /// handler matches any exception.

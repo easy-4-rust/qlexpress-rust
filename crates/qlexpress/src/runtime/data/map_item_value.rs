@@ -8,6 +8,8 @@ use crate::runtime::data::index_map::IndexMap;
 use crate::runtime::left_value::LeftValue;
 use crate::runtime::value::{DataValue, Value};
 
+/// `MapItemValue` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/data/MapItemValue.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Mirrors Java `MapItemValue`: an l-value view of `map[key]`.
 pub struct MapItemValue {
     symbol_name: Option<String>,
@@ -16,6 +18,9 @@ pub struct MapItemValue {
 }
 
 impl MapItemValue {
+    /// 创建对象实例。
+    /// 参数：`map`、`key`；返回：`Self`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/data/MapItemValue.java`，构造器 `<init>`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `MapItemValue(Map map, Object key)`.
     pub fn new(map: Rc<RefCell<IndexMap>>, key: DataValue) -> Self {
         MapItemValue {
@@ -25,6 +30,9 @@ impl MapItemValue {
         }
     }
 
+    /// 附加 symbol name 配置并返回新值。
+    /// 参数：`symbol_name`、`map`、`key`；返回：`Self`。
+    /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/data/MapItemValue.java`，方法 `withSymbolName`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `MapItemValue(String symbolName, Map map, Object key)`.
     pub fn with_symbol_name(
         symbol_name: impl Into<String>,

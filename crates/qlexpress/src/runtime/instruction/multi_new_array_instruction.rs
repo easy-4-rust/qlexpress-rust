@@ -15,10 +15,8 @@ use crate::utils::println_utils::PrintlnUtils;
 use std::rc::Rc;
 
 /// 多维数组创建指令。对应 Java: com.alibaba.qlexpress4.runtime.instruction.MultiNewArrayInstruction(职责:创建多维数组)
-/// new int[1][2][][]
-/// Operation: new array with multi dims
-/// Input: ${dims}
-/// Output: 1
+/// 示例：`new int[1][2][][]`。
+/// 操作：创建多维数组；输入栈元素数为 `dims`，输出一个数组值。
 ///
 /// Mirrors Java `MultiNewArrayInstruction`. Rust arrays are untyped
 /// `Vec<DataValue>`; extra dimensions become nested arrays filled with
