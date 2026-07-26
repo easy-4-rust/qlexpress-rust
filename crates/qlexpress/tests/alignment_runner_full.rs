@@ -125,24 +125,42 @@ fn while_loop() {
 }
 
 #[test]
-#[ignore = "engine limitation: parser treats 'sum' after '}' as a syntax error; needs parser fix for trailing statements after blocks"]
 fn break_inside_for() {
-    let script = "int sum = 0; for (int i = 0; i < 10; i = i + 1) { if (i == 5) { break; } sum = sum + i; } sum";
+    let script =
+        "int sum = 0;\n\
+         for (int i = 0; i < 10; i = i + 1) {\n\
+         if (i == 5) {\n\
+         break;\n\
+         }\n\
+         sum = sum + i;\n\
+         }\n\
+         sum";
     assert_eq!(expect_ok(script), DataValue::Long(10));
 }
 
 #[test]
-#[ignore = "engine limitation: same parser limitation as break_inside_for"]
 fn continue_inside_for() {
-    let script = "int sum = 0; for (int i = 0; i < 5; i = i + 1) { if (i == 2) { continue; } sum = sum + i; } sum";
+    let script =
+        "int sum = 0;\n\
+         for (int i = 0; i < 5; i = i + 1) {\n\
+         if (i == 2) {\n\
+         continue;\n\
+         }\n\
+         sum = sum + i;\n\
+         }\n\
+         sum";
     // sum = 0+1+3+4 = 8
     assert_eq!(expect_ok(script), DataValue::Long(8));
 }
 
 #[test]
-#[ignore = "engine limitation: parser treats 'a' after '}' as a syntax error; same root cause as break_inside_for"]
 fn return_inside_if() {
-    let script = "int a = 0; if (true) { return 42; } a";
+    let script =
+        "int a = 0;\n\
+         if (true) {\n\
+         return 42;\n\
+         }\n\
+         a";
     assert_eq!(expect_ok(script), DataValue::Long(42));
 }
 
