@@ -90,9 +90,10 @@ fn inferred_variable() {
 }
 
 #[test]
-#[ignore = "engine limitation: parser rejects multiple declarators in one statement; tracked in stage6 backlog"]
 fn multiple_declarators() {
-    assert_eq!(expect_ok("int a, b = 10; a + b"), DataValue::Long(20));
+    // Java semantics: `int a, b = 10` declares `a` (default 0) and `b = 10`.
+    // The result of `a + b` is therefore `0 + 10 = 10`, not 20.
+    assert_eq!(expect_ok("int a, b = 10; a + b"), DataValue::Long(10));
 }
 
 // ---------- Control flow ----------
@@ -110,9 +111,10 @@ fn for_loop_sum() {
 }
 
 #[test]
-#[ignore = "engine limitation: parser uses 'foreach (x in list)' (in, not ':'); rewrite to that syntax"]
 fn foreach_iterates_list() {
-    let script = "int total = 0; foreach (x : [1, 2, 3, 4]) { total = total + x; } total";
+    // Java QLExpress4 用 `for (x : list)` 形式（与 Java SE for-each 一致），
+    // 不是 `foreach` 关键字。Rust lexer 也只接受 `for`。
+    let script = "int total = 0; for (x : [1, 2, 3, 4]) { total = total + x; } total";
     assert_eq!(expect_ok(script), DataValue::Long(10));
 }
 

@@ -795,6 +795,31 @@ fn decl_target_type(cls: &ClassRef) -> Option<TargetType> {
     }
 }
 
+/// Default value for an uninitialized typed local declaration.
+///
+/// Mirrors Java `DefineLocal` defaults:
+/// - boolean → false
+/// - numeric primitives (byte/short/int/long/float/double) → 0 (numeric 0)
+/// - char → '\0'
+/// - big integer / big decimal → 0 / "0"
+/// - object / array / Any → null (Java `Nothing`)
+fn default_value_for_target(target: Option<TargetType>) -> DataValue {
+    use crate::runtime::data::convert::obj_type_convertor::TargetType;
+    match target {
+        None => DataValue::NULL_VALUE,
+        Some(TargetType::Boolean) => DataValue::Bool(false),
+        Some(TargetType::Byte)
+        | Some(TargetType::Short)
+        | Some(TargetType::Int)
+        | Some(TargetType::Long) => DataValue::Long(0),
+        Some(TargetType::Float) | Some(TargetType::Double) => DataValue::Double(0.0),
+        Some(TargetType::BigInteger) => DataValue::BigInt(0),
+        Some(TargetType::BigDecimal) => DataValue::BigDec("0".to_string()),
+        Some(TargetType::Character) => DataValue::Char('\0'),
+        Some(TargetType::Any) => DataValue::NULL_VALUE,
+    }
+}
+
 /// Java `blockExpr`: reduce `{ ... }` used as an expression body.
 fn block_expr_of(expression: &Node) -> Option<&BlockExprContext> {
     let Node::Expression(ctx) = expression else {
@@ -1727,13 +1752,18 @@ impl<'a> Visitor for QvmInstructionVisitor<'a> {
             };
             match &declarator.initializer {
                 None => {
+                    // Java semantics for uninitialized typed local:
+                    // primitive numeric → 0 / 0L / 0.0, bool → false,
+                    // object/array → null. Mirrors Java `DefineLocal`
+                    // picking the type's default value.
                     let reporter = variable_declarator
                         .stop_token()
                         .map(|t| self.new_reporter_with_token(t))
                         .unwrap_or_else(|| Rc::new(PureErrReporter::INSTANCE));
+                    let default = default_value_for_target(decl_target_type(&decl_cls));
                     self.add_instruction(Box::new(ConstInstruction::new(
                         reporter,
-                        DataValue::NULL_VALUE,
+                        default,
                         None,
                     )));
                 }
