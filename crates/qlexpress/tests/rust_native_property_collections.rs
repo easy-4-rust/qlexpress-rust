@@ -52,15 +52,6 @@ fn run_bool(script: &str) -> bool {
     }
 }
 
-fn run_is_null(script: &str) -> bool {
-    let runner = Express4Runner::new();
-    let r = runner
-        .execute(script, HashMap::new(), &opts())
-        .expect("ok")
-        .into_result();
-    r == DataValue::Null
-}
-
 // ==================== List ====================
 
 #[test]
@@ -71,7 +62,7 @@ fn empty_list_size_is_zero() {
 #[test]
 fn empty_list_is_truthy() {
     // 非空 list 在 boolean 上下文应为 true
-    assert_eq!(run_bool("[] == []"), true);
+    assert!(run_bool("[] == []"));
 }
 
 #[test]
@@ -99,8 +90,8 @@ fn list_sum_10k() {
 
 #[test]
 fn list_contains() {
-    assert_eq!(run_bool("'b' in ['a','b','c']"), true);
-    assert_eq!(run_bool("'x' in ['a','b','c']"), false);
+    assert!(run_bool("'b' in ['a','b','c']"));
+    assert!(!run_bool("'x' in ['a','b','c']"));
 }
 
 // ==================== Map ====================
@@ -144,7 +135,7 @@ fn string_concat() {
 
 #[test]
 fn string_contains() {
-    assert_eq!(run_bool("'hello world'.contains('world')"), true);
+    assert!(run_bool("'hello world'.contains('world')"));
 }
 
 // ==================== Edge cases ====================

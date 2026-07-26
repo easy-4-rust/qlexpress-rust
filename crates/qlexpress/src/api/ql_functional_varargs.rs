@@ -35,10 +35,13 @@ mod tests {
         // Java: (params) -> params.length
         let f = |params: &[DataValue]| Ok(DataValue::Int(params.len() as i32));
         assert_eq!(
-            f.call(&[DataValue::Int(1), DataValue::Str("x".to_string())])
+            QLFunctionalVarargs::call(&f, &[DataValue::Int(1), DataValue::Str("x".to_string())],)
                 .ok(),
             Some(DataValue::Int(2))
         );
-        assert_eq!(f.call(&[]).ok(), Some(DataValue::Int(0)));
+        assert_eq!(
+            QLFunctionalVarargs::call(&f, &[]).ok(),
+            Some(DataValue::Int(0))
+        );
     }
 }

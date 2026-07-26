@@ -24,6 +24,7 @@ pub mod native_object;
 pub mod native_registry;
 pub mod native_type;
 pub mod nothing;
+pub mod opaque_native_object;
 pub mod operator;
 pub mod parameters;
 pub mod q_result;

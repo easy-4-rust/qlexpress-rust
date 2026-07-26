@@ -10,7 +10,10 @@
 
 use super::exist_stack::{ExistStack, ExistVarStack};
 use super::qlparser_base_visitor::Visitor;
-use super::syntax_tree_factory::*;
+use super::syntax_tree_factory::{
+    BlockExprContext, FunctionStatementContext, Node, QlIfContext, SwitchExprContext,
+    TryCatchContext, TryCatchExprContext,
+};
 
 /// Java `ScopeStackVisitor` 的 `existStack` 字段。
 /// The `existStack` field of Java `ScopeStackVisitor`.

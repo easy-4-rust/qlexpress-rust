@@ -12,7 +12,33 @@
 use super::interpolation_mode::InterpolationMode;
 use super::parser_operator_manager::{OpType, ParserOperatorManager};
 use super::qlexer;
-use super::syntax_tree_factory::*;
+use super::syntax_tree_factory::{
+    ArgumentListContext, ArrayInitializerContext, AssignOperatorContext, BaseExprContext,
+    BinaryopContext, BlockExprContext, BlockStatementsContext, BoolenLiteralContext,
+    BreakContinueStatementContext, CastExprContext, CatchParamsContext, ChainKind, ClsTypeContext,
+    ClsValueContext, ConstExprContext, ContextSelectExprContext, CustomPathContext,
+    DeclTypeContext, DeclTypeNoArrContext, DimExprsContext, DimsContext,
+    DoubleQuoteStringLiteralContext, DyStrPart, EValueContext, ElseBodyContext,
+    EmptyStatementContext, ExpressionContext, ExpressionListContext, ExpressionStatementContext,
+    FieldAccessContext, FieldIdContext, ForEachStatementContext, ForInitContext,
+    FormalOrInferredParameterContext, FormalOrInferredParameterListContext,
+    FunctionStatementContext, GroupExprContext, IdKeyContext, ImportClsContext, ImportPackContext,
+    IndexExprContext, LambdaExprContext, LambdaParametersContext, LeftAssoContext,
+    LeftHandSideContext, ListExprContext, ListItemsContext, LiteralContext,
+    LocalVariableDeclarationContext, LocalVariableDeclarationStatementContext,
+    MacroStatementContext, MapEntriesContext, MapEntryContext, MapExprContext, MethodAccessContext,
+    MethodInvokeContext, NewEmptyArrExprContext, NewInitArrExprContext, NewObjExprContext, Node,
+    NonExpressionStatementContext, OpIdContext, PrefixExpressContext, PrimaryContext,
+    PrimitiveTypeContext, ProgramContext, QlIfContext, QuoteStringKeyContext,
+    ReturnStatementContext, SingleIndexContext, SliceIndexContext, StringExpressionContext,
+    StringKeyContext, SuffixExpressContext, SwitchCaseGroupsContext, SwitchExprContext,
+    SwitchExprGroupContext, SwitchExpressionLabelContext, SwitchLabelContext, SwitchLabelsContext,
+    SwitchStatementGroupContext, TernaryExprContext, ThenBodyContext, ThrowStatementContext,
+    TraditionalForStatementContext, TryCatchContext, TryCatchExprContext, TryCatchesContext,
+    TryFinallyContext, TypeExprContext, VarIdContext, VarIdExprContext, VariableDeclaratorContext,
+    VariableDeclaratorIdContext, VariableDeclaratorListContext, VariableInitializerContext,
+    VariableInitializerListContext, WhileStatementContext,
+};
 use super::terminal_node::TerminalNode;
 use super::token::{self, Token};
 use crate::exception::error_codes;
@@ -1510,10 +1536,9 @@ impl<'a> QLParser<'a> {
         self.skip_newlines();
         let try_catches = if self.la(CATCH) {
             let mut catches = Vec::new();
-            let mut save = save;
             while self.la(CATCH) {
                 catches.push(self.parse_try_catch()?);
-                save = self.p;
+                let save = self.p;
                 self.skip_newlines();
                 if !self.la(CATCH) {
                     self.p = save;
@@ -2963,7 +2988,7 @@ mod tests {
                 Node::BaseExpr(right) => assert_eq!(binaryop_text(&right.left_assos[0]), "*"),
                 other => panic!("expected right base expr, got {other:?}"),
             },
-            other => panic!(),
+            _other => panic!(),
         }
     }
 
@@ -3029,7 +3054,7 @@ mod tests {
         let expr = expr_statement(&statements(&tree)[0]);
         let rhs = match expr.expression.as_deref() {
             Some(Node::Expression(e)) => e,
-            other => panic!(),
+            _other => panic!(),
         };
         let primary = primary_of(base_expr(rhs));
         assert!(matches!(
@@ -3041,7 +3066,7 @@ mod tests {
         let expr = expr_statement(&statements(&tree)[0]);
         let rhs = match expr.expression.as_deref() {
             Some(Node::Expression(e)) => e,
-            other => panic!(),
+            _other => panic!(),
         };
         let base = base_expr(rhs);
         let primary = primary_of(base);
@@ -3058,7 +3083,7 @@ mod tests {
         let expr = expr_statement(&statements(&tree)[0]);
         let rhs = match expr.expression.as_deref() {
             Some(Node::Expression(e)) => e,
-            other => panic!(),
+            _other => panic!(),
         };
         let primary = primary_of(base_expr(rhs));
         match primary.pathable.as_deref() {
@@ -3073,7 +3098,7 @@ mod tests {
         let expr = expr_statement(&statements(&tree)[0]);
         let rhs = match expr.expression.as_deref() {
             Some(Node::Expression(e)) => e,
-            other => panic!(),
+            _other => panic!(),
         };
         assert!(matches!(
             primary_of(base_expr(rhs)).pathable.as_deref(),
@@ -3084,7 +3109,7 @@ mod tests {
         let expr = expr_statement(&statements(&tree)[0]);
         let rhs = match expr.expression.as_deref() {
             Some(Node::Expression(e)) => e,
-            other => panic!(),
+            _other => panic!(),
         };
         assert!(matches!(
             primary_of(base_expr(rhs)).pathable.as_deref(),
@@ -3104,7 +3129,7 @@ mod tests {
         let expr = expr_statement(&statements(&tree)[0]);
         let rhs = match expr.expression.as_deref() {
             Some(Node::Expression(e)) => e,
-            other => panic!(),
+            _other => panic!(),
         };
         match primary_of(base_expr(rhs)).pathable.as_deref() {
             Some(Node::ListExpr(list)) => match list.list_items.as_deref() {
@@ -3118,7 +3143,7 @@ mod tests {
         let expr = expr_statement(&statements(&tree)[0]);
         let rhs = match expr.expression.as_deref() {
             Some(Node::Expression(e)) => e,
-            other => panic!(),
+            _other => panic!(),
         };
         match primary_of(base_expr(rhs)).pathable.as_deref() {
             Some(Node::MapExpr(map)) => match map.map_entries.as_ref() {
@@ -3133,7 +3158,7 @@ mod tests {
         let expr = expr_statement(&statements(&tree)[0]);
         let rhs = match expr.expression.as_deref() {
             Some(Node::Expression(e)) => e,
-            other => panic!(),
+            _other => panic!(),
         };
         match primary_of(base_expr(rhs)).pathable.as_deref() {
             Some(Node::MapExpr(map)) => match map.map_entries.as_ref() {
@@ -3150,7 +3175,7 @@ mod tests {
         let expr = expr_statement(&statements(&tree)[0]);
         let rhs = match expr.expression.as_deref() {
             Some(Node::Expression(e)) => e,
-            other => panic!(),
+            _other => panic!(),
         };
         let primary = primary_of(base_expr(rhs));
         match &primary.path_parts[0] {
@@ -3167,7 +3192,7 @@ mod tests {
         let expr = expr_statement(&statements(&tree)[0]);
         let rhs = match expr.expression.as_deref() {
             Some(Node::Expression(e)) => e,
-            other => panic!(),
+            _other => panic!(),
         };
         let primary = primary_of(base_expr(rhs));
         match &primary.path_parts[0] {
@@ -3187,7 +3212,7 @@ mod tests {
         let expr = expr_statement(&statements(&tree)[0]);
         let rhs = match expr.expression.as_deref() {
             Some(Node::Expression(e)) => e,
-            other => panic!(),
+            _other => panic!(),
         };
         let primary = primary_of(base_expr(rhs));
         assert_eq!(primary.path_parts.len(), 4);
@@ -3215,7 +3240,7 @@ mod tests {
         let expr = expr_statement(&statements(&tree)[0]);
         let rhs = match expr.expression.as_deref() {
             Some(Node::Expression(e)) => e,
-            other => panic!(),
+            _other => panic!(),
         };
         let primary = primary_of(base_expr(rhs));
         match &primary.path_parts[0] {
@@ -3230,7 +3255,7 @@ mod tests {
         let expr = expr_statement(&statements(&tree)[0]);
         let rhs = match expr.expression.as_deref() {
             Some(Node::Expression(e)) => e,
-            other => panic!(),
+            _other => panic!(),
         };
         let primary = primary_of(base_expr(rhs));
         match primary.non_pathable.as_deref() {
@@ -3248,7 +3273,7 @@ mod tests {
         let expr = expr_statement(&statements(&tree)[0]);
         let rhs = match expr.expression.as_deref() {
             Some(Node::Expression(e)) => e,
-            other => panic!(),
+            _other => panic!(),
         };
         let primary = primary_of(base_expr(rhs));
         match primary.non_pathable.as_deref() {
@@ -3274,7 +3299,7 @@ mod tests {
         let expr = expr_statement(&statements(&tree)[0]);
         let rhs = match expr.expression.as_deref() {
             Some(Node::Expression(e)) => e,
-            other => panic!(),
+            _other => panic!(),
         };
         let primary = primary_of(base_expr(rhs));
         match primary.pathable.as_deref() {
@@ -3321,7 +3346,7 @@ mod tests {
         let expr = expr_statement(&statements(&tree)[0]);
         let rhs = match expr.expression.as_deref() {
             Some(Node::Expression(e)) => e,
-            other => panic!(),
+            _other => panic!(),
         };
         let primary = primary_of(base_expr(rhs));
         assert!(matches!(primary.path_parts[0], Node::MethodAccess(_)));
@@ -3344,10 +3369,10 @@ mod tests {
                                 },
                                 other => panic!("expected declarator, got {other:?}"),
                             },
-                            other => panic!(),
+                            _other => panic!(),
                         }
                     }
-                    other => panic!(),
+                    _other => panic!(),
                 }
             }
             other => panic!("expected local decl, got {other:?}"),

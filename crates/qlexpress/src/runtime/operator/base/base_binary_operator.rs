@@ -24,6 +24,13 @@ pub struct BaseBinaryOperator;
 impl BaseBinaryOperator {
     /// Java `isSameType(left, right)`:两边类型名相同。
     pub(crate) fn is_same_type(left: &QValue, right: &QValue) -> bool {
+        let left_value = left.get();
+        let right_value = right.get();
+        if let (DataValue::Object(left_obj), DataValue::Object(right_obj)) =
+            (&left_value, &right_value)
+        {
+            return left_obj.borrow().native_type_name() == right_obj.borrow().native_type_name();
+        }
         left.type_name() == right.type_name()
     }
 
@@ -31,10 +38,12 @@ impl BaseBinaryOperator {
     /// 数值、字符串、布尔、字符(Java 的 String/Boolean/Character 均
     /// implements Comparable)。
     pub(crate) fn is_instanceof_comparable(value: &QValue) -> bool {
+        let data = value.get();
         matches!(
-            value.get(),
+            &data,
             DataValue::Str(_) | DataValue::Bool(_) | DataValue::Char(_)
-        ) || value.get().is_number()
+        ) || data.is_number()
+            || matches!(&data, DataValue::Object(obj) if obj.borrow().is_comparable())
     }
 
     /// Java `isBothBoolean(left, right)`。
@@ -453,6 +462,21 @@ impl BaseBinaryOperator {
                 (DataValue::Str(a), DataValue::Str(b)) => compare_ord(a.cmp(b)),
                 (DataValue::Bool(a), DataValue::Bool(b)) => compare_ord(a.cmp(b)),
                 (DataValue::Char(a), DataValue::Char(b)) => compare_ord(a.cmp(b)),
+                (DataValue::Object(a), DataValue::Object(b)) => {
+                    let left_obj = a.borrow();
+                    let right_obj = b.borrow();
+                    left_obj
+                        .compare_to(&*right_obj)
+                        .map(compare_ord)
+                        .ok_or_else(|| {
+                            Self::build_invalid_operand_type_exception(
+                                operator,
+                                left,
+                                right,
+                                error_reporter,
+                            )
+                        })?
+                }
                 _ => {
                     return Err(Self::build_invalid_operand_type_exception(
                         operator,

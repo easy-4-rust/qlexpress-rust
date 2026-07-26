@@ -11,7 +11,7 @@ impl QLAliasUtils {
     pub fn match_ql_alias(match_name: &str, ql_aliases: &[&[&str]]) -> bool {
         ql_aliases
             .iter()
-            .any(|alias_group| alias_group.iter().any(|alias| *alias == match_name))
+            .any(|alias_group| alias_group.contains(&match_name))
     }
 }
 

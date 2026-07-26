@@ -198,7 +198,7 @@ impl QScope {
     /// Java `pop(int number)`: the top `number` elements in stack order
     /// (deepest first).
     pub fn pop_n(this: &ScopeRef, number: usize) -> Parameters {
-        let mut stack = Self::stack(this);
+        let stack = Self::stack(this);
         let mut stack = stack.borrow_mut();
         let len = stack.len();
         assert!(number <= len, "operand stack underflow");

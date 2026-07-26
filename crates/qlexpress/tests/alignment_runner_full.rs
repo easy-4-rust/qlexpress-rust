@@ -20,7 +20,7 @@ use qlexpress_rust::ql_options::QLOptions;
 use qlexpress_rust::runtime::value::DataValue;
 use qlexpress_rust::Express4Runner;
 
-use alignment_util::{expect_err_code, expect_null, expect_ok, run_script};
+use alignment_util::{expect_err_code, expect_ok};
 
 // ---------- Operator basics (arithmetic / comparison / logical) ----------
 
@@ -178,7 +178,7 @@ fn try_finally_runs() {
 
 #[test]
 fn add_function_with_closure() {
-    let mut runner = Express4Runner::new();
+    let runner = Express4Runner::new();
     runner.add_function(
         "add",
         |_ctx: &mut dyn qlexpress_rust::runtime::qcontext::QContext,
@@ -201,7 +201,7 @@ fn add_function_with_closure() {
 
 #[test]
 fn add_varargs_function_collects_args() {
-    let mut runner = Express4Runner::new();
+    let runner = Express4Runner::new();
     runner.add_varargs_function(
         "join",
         |params: &[DataValue]| -> Result<_, qlexpress_rust::exception::QLException> {
@@ -246,7 +246,7 @@ fn add_operator_bifunction() {
 #[test]
 fn security_open_allows_method_call() {
     use qlexpress_rust::security::ql_security_strategy::QLSecurityStrategy;
-    let mut runner = Express4Runner::with_init_options(
+    let runner = Express4Runner::with_init_options(
         qlexpress_rust::init_options::InitOptions::builder()
             .security_strategy(QLSecurityStrategy::open())
             .build(),
@@ -336,7 +336,7 @@ fn short_circuit_disabled_evaluates_both() {
 fn dollar_interpolation_default() {
     let opts = QLOptions::builder().build();
     let script = "\"a = ${1+2}\"";
-    let mut runner = Express4Runner::new();
+    let runner = Express4Runner::new();
     let result = runner
         .execute(script, HashMap::new(), &opts)
         .unwrap()

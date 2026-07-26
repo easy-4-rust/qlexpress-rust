@@ -59,7 +59,7 @@ fn without_default_import_unqualified_fails() {
     // 没有 default import,unqualified class 不可解析
     let mut supplier = DefaultClassSupplier::instance();
     supplier.register("com.example.Calc");
-    let mut runner = Express4Runner::with_init_options(
+    let runner = Express4Runner::with_init_options(
         InitOptions::builder()
             .class_supplier(Rc::new(supplier))
             .security_strategy(QLSecurityStrategy::open())

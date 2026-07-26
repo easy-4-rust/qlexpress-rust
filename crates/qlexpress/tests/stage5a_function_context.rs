@@ -6,6 +6,8 @@
 //! LazyArg 不求值语义 / QMethodFunction(方法包装)/ 成员分派经
 //! MethodInvokeUtils。
 
+#![allow(clippy::result_large_err)]
+
 #[path = "stage3b_ops.rs"]
 mod ops;
 use ops::operator_manager;

@@ -25,7 +25,7 @@ fn try_catch_break_continue_inside_for() {
 fn empty_loop_body_returns_null() {
     // Java Issue427: empty for/while body must not propagate RETURN
     // signal nor yield null.
-    let script = "int i = 0; for (; i < 3; ) { } i";
+    let _script = "int i = 0; for (; i < 3; ) { } i";
     // We don't assert on this exact script — the parser may not accept
     // the empty-init form. Cover the alternate `for (;;)` shape.
     let _ = expect_ok("1 + 1");
@@ -53,7 +53,7 @@ fn ql_alias_function_register() {
     use qlexpress_rust::Express4Runner;
     use std::collections::HashMap;
 
-    let mut runner = Express4Runner::new();
+    let runner = Express4Runner::new();
     runner.add_function(
         "shout",
         |_ctx: &mut dyn qlexpress_rust::runtime::qcontext::QContext,

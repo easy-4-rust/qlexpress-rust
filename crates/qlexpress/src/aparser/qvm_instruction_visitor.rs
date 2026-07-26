@@ -19,7 +19,19 @@ use super::interpolation_mode::InterpolationMode;
 use super::macro_define::MacroDefine;
 use super::operator_factory::OperatorFactory;
 use super::qlparser_base_visitor::Visitor;
-use super::syntax_tree_factory::*;
+use super::syntax_tree_factory::{
+    BlockExprContext, BlockStatementsContext, BreakContinueStatementContext, CastExprContext,
+    ChainKind, ContextSelectExprContext, CustomPathContext, DoubleQuoteStringLiteralContext,
+    DyStrPart, ExpressionContext, FieldAccessContext, ForEachStatementContext,
+    FunctionStatementContext, ImportClsContext, ImportPackContext, IndexExprContext,
+    LambdaExprContext, LeftAssoContext, LeftHandSideContext, ListExprContext, LiteralContext,
+    LocalVariableDeclarationContext, MacroStatementContext, MapExprContext, MethodAccessContext,
+    MethodInvokeContext, NewEmptyArrExprContext, NewInitArrExprContext, NewObjExprContext, Node,
+    PrimaryContext, QlIfContext, ReturnStatementContext, SwitchExprContext, SwitchExprGroupContext,
+    SwitchStatementGroupContext, TernaryExprContext, ThrowStatementContext,
+    TraditionalForStatementContext, TryCatchExprContext, TypeExprContext, VarIdExprContext,
+    WhileStatementContext,
+};
 use super::token::{self, Token};
 use crate::exception::default_err_reporter::DefaultErrReporter;
 use crate::exception::error_codes;
@@ -31,7 +43,19 @@ use crate::init_options::InitOptions;
 use crate::runtime::data::convert::obj_type_convertor::TargetType;
 use crate::runtime::function::CustomFunction;
 use crate::runtime::instruction::ReturnResultType;
-use crate::runtime::instruction::*;
+use crate::runtime::instruction::{
+    BreakContinueInstruction, CallFunctionInstruction, CastInstruction, CheckTimeOutInstruction,
+    CloseScopeInstruction, ConstInstruction, DefineFunctionInstruction, DefineLocalInstruction,
+    ForEachInstruction, ForInstruction, GetFieldInstruction, GetMethodInstruction,
+    IndexInstruction, Instruction, JumpIfInstruction, JumpIfPopInstruction, JumpInstruction,
+    LoadInstruction, LoadLambdaInstruction, MethodInvokeInstruction, MultiNewArrayInstruction,
+    NewArrayInstruction, NewFilledInstanceInstruction, NewInstanceInstruction, NewListInstruction,
+    NewMapInstruction, NewScopeInstruction, OperatorInstruction, PopInstruction, QLInstruction,
+    ReturnInstruction, SliceInstruction, SliceMode, SpreadGetFieldInstruction,
+    SpreadMethodInvokeInstruction, StringJoinInstruction, ThrowInstruction,
+    TraceEvaluatedInstruction, TracePeekInstruction, TryCatchInstruction, UnaryInstruction,
+    WhileInstruction,
+};
 use crate::runtime::member::{ClassRef, MetaClass};
 use crate::runtime::qlambda_definition::QLambdaDefinition;
 use crate::runtime::qlambda_definition_empty::QLambdaDefinitionEmpty;
@@ -178,6 +202,10 @@ impl<'a> QvmInstructionVisitor<'a> {
     }
 
     /// Java recursion constructor.
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "对应 Java QvmInstructionVisitor 递归构造器的参数契约"
+    )]
     fn for_recursion(
         script: &'a str,
         import_manager: &'a RefCell<ImportManager<'a>>,
@@ -1121,7 +1149,7 @@ impl<'a> QvmInstructionVisitor<'a> {
                     .collect();
                 return statements
                     .last()
-                    .map_or(true, |last| Self::block_stmt_fill_const(last));
+                    .is_none_or(|last| Self::block_stmt_fill_const(last));
             }
             return true;
         }
@@ -1147,14 +1175,13 @@ impl<'a> QvmInstructionVisitor<'a> {
 
     /// Java `getMacroLastStmt`: whether the macro's last statement is an
     /// expression statement.
-    fn macro_last_stmt_is_expression<'b>(macro_block_statements: Option<&'b Node>) -> bool {
+    fn macro_last_stmt_is_expression(macro_block_statements: Option<&Node>) -> bool {
         let Some(Node::BlockStatements(ctx)) = macro_block_statements else {
             return false;
         };
         ctx.statements
             .iter()
-            .filter(|bs| !matches!(bs, Node::EmptyStatement(_)))
-            .last()
+            .rfind(|bs| !matches!(bs, Node::EmptyStatement(_)))
             .is_some_and(|last| matches!(last, Node::ExpressionStatement(_)))
     }
 
@@ -1597,7 +1624,7 @@ impl<'a> Visitor for QvmInstructionVisitor<'a> {
 
         // else branch
         let else_scope_name = self.child_scope_name(&format!("{IF_PREFIX}{if_count}{ELSE_SUFFIX}"));
-        let mut else_instructions = match &ctx.else_body {
+        let else_instructions = match &ctx.else_body {
             None => vec![Box::new(ConstInstruction::new(
                 Rc::clone(&if_error_reporter),
                 DataValue::NULL_VALUE,
@@ -3201,8 +3228,7 @@ fn last_stmt_is_return_or_break(block_statements: Option<&Node>) -> bool {
     };
     ctx.statements
         .iter()
-        .filter(|bs| !matches!(bs, Node::EmptyStatement(_)))
-        .last()
+        .rfind(|bs| !matches!(bs, Node::EmptyStatement(_)))
         .is_some_and(|last| {
             matches!(
                 last,
@@ -3235,18 +3261,18 @@ fn parse_integer_literal(int_text: &str) -> Option<DataValue> {
     let base_int = parse_base_integer(base_text)?;
     if force_long {
         // Java BigInteger.longValue() wraps on overflow.
-        return Some(DataValue::Long(
-            crate::runtime::data::convert::to_i64(&DataValue::BigInt(base_int)),
-        ));
+        return Some(DataValue::Long(crate::runtime::data::convert::to_i64(
+            &DataValue::BigInt(base_int),
+        )));
     }
     if base_int <= BigInt::from(i32::MAX) {
         Some(DataValue::Int(
             crate::runtime::data::convert::to_i128(&DataValue::BigInt(base_int)) as i32,
         ))
     } else if base_int <= BigInt::from(i64::MAX) {
-        Some(DataValue::Long(
-            crate::runtime::data::convert::to_i64(&DataValue::BigInt(base_int)),
-        ))
+        Some(DataValue::Long(crate::runtime::data::convert::to_i64(
+            &DataValue::BigInt(base_int),
+        )))
     } else {
         Some(DataValue::BigInt(base_int))
     }
@@ -3260,8 +3286,8 @@ fn parse_base_integer(int_text: &str) -> Option<BigInt> {
     let prefix_len = int_text.len().min(2);
     let radix_prefix = &int_text[..prefix_len];
     match radix_prefix {
-        "0x" | "0X" => BigInt::parse_bytes(int_text[2..].as_bytes(), 16),
-        "0b" | "0B" => BigInt::parse_bytes(int_text[2..].as_bytes(), 2),
+        "0x" | "0X" => BigInt::parse_bytes(&int_text.as_bytes()[2..], 16),
+        "0b" | "0B" => BigInt::parse_bytes(&int_text.as_bytes()[2..], 2),
         _ => {
             if radix_prefix.starts_with('0') && int_text.len() > 1 {
                 // radix 8

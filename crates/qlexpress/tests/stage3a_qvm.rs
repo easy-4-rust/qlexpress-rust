@@ -2,6 +2,8 @@
 //! by the QVM (`QvmRuntime`/`run_instructions`), mirroring how Java tests
 //! drive `QLInstruction[]` through a `QContext`.
 
+#![allow(clippy::result_large_err)]
+
 use std::rc::Rc;
 
 use qlexpress_rust::exception::error_codes;
@@ -532,7 +534,7 @@ fn index_pushes_aliased_left_value() {
         konst(DataValue::Int(0)),
         Box::new(IndexInstruction::new(reporter())),
     ];
-    let mut ctx = run_with_ctx(&runtime(), &instructions).expect("run");
+    let ctx = run_with_ctx(&runtime(), &instructions).expect("run");
     let top = ctx.peek();
     let left = top.as_left().expect("index result is a left value");
     left.borrow_mut()

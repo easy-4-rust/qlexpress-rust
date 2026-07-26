@@ -6,7 +6,7 @@
 
 use crate::runtime::value::DataValue;
 
-use super::{to_big_dec_string, to_f64, to_i128, to_i64};
+use super::{to_big_dec_string, to_big_int, to_f64, to_i64};
 
 /// Conversion target, standing in for the Java `Class<?>` parameter of
 /// `ObjTypeConvertor.cast`.
@@ -125,7 +125,7 @@ impl ObjTypeConvertor {
                 _ => QConverted::un_convertible(),
             },
             TargetType::BigInteger => match value {
-                v if v.is_number() => QConverted::converted(DataValue::BigInt(to_i128(v))),
+                v if v.is_number() => QConverted::converted(DataValue::BigInt(to_big_int(v))),
                 _ => QConverted::un_convertible(),
             },
             TargetType::BigDecimal => match value {
@@ -226,7 +226,7 @@ mod tests {
         );
         assert_eq!(
             ObjTypeConvertor::cast(&DataValue::Double(3.9), TargetType::BigInteger).get_converted(),
-            &DataValue::BigInt(3)
+            &DataValue::big_int(3)
         );
     }
 

@@ -122,7 +122,6 @@ assert(a[3:-1] == [4,5])";
 
 /// 对应 Java testsuite 脚本 `testsuite/independent/array/unindexable.ql`。
 #[test]
-#[ignore = "偏差(无反射):`new HashSet()` 需要 Java 集合构造器,Rust 版无 JVM 类路径,无法构造;报 NO_SUITABLE_CONSTRUCTOR 而非 Java 的 NONINDEXABLE_OBJECT。"]
 fn array_unindexable() {
     const SCRIPT: &str = r#"/*
 {
@@ -1923,7 +1922,6 @@ assert(a.'a b c d' == 'oopp')
 
 /// 对应 Java testsuite 脚本 `testsuite/independent/newlines/newlines.ql`。
 #[test]
-#[ignore = "偏差(无反射):`new ArrayList(10)` 需要 Java 构造器,Rust 版无 JVM 类路径。"]
 fn newlines_newlines() {
     const SCRIPT: &str = r"function testAdd(
     int a, int b
@@ -2038,7 +2036,6 @@ assert(0 == 0);";
 
 /// 对应 Java testsuite 脚本 `testsuite/independent/number/precise.ql`。
 #[test]
-#[ignore = "偏差(已知近似 BigInteger=i128):字面量 121932631137021795226185032733622923332237463801111263526900 超出 i128 范围,报 INVALID_NUMBER。"]
 fn number_precise() {
     const SCRIPT: &str = r"assert(123456789.123456789+987654321.987654321==1111111111.11111111)
 assert(123456789012345678901234567890*987654321098765432109876543210==121932631137021795226185032733622923332237463801111263526900)
@@ -2142,7 +2139,6 @@ assert(y == -1.5)"#;
 
 /// 对应 Java testsuite 脚本 `testsuite/independent/operator/big_integer.ql`。
 #[test]
-#[ignore = "偏差(无反射 + BigInteger=i128):`BigInteger.valueOf` 静态方法、`(byte)` 收窄后向 BigInteger 的类型化赋值拓宽依赖 Java 反射与装箱体系。"]
 fn operator_big_integer() {
     const SCRIPT: &str = r"// assign
 BigInteger bi;
@@ -2495,7 +2491,6 @@ assertErrorCode(() -> {'测试一下' > 1}, "INVALID_BINARY_OPERAND")"#;
 
 /// 对应 Java testsuite 脚本 `testsuite/independent/operator/comparable.ql`。
 #[test]
-#[ignore = "偏差(无反射):`import com.alibaba.qlexpress4.inport.Person` 依赖 Java 测试类,Rust 版无法加载宿主 Java 类。"]
 fn operator_comparable() {
     const SCRIPT: &str = r"import com.alibaba.qlexpress4.inport.Person;
 
@@ -2686,7 +2681,6 @@ assert("bc" not_in "acd");"#;
 
 /// 对应 Java testsuite 脚本 `testsuite/independent/operator/integer.ql`。
 #[test]
-#[ignore = "偏差(无反射):`Integer.MAX_VALUE` 静态字段读取依赖 Java 反射。"]
 fn operator_integer() {
     const SCRIPT: &str = r"// plus
 x = 2 + 2
@@ -2887,7 +2881,6 @@ assertFalse(null && null);
 
 /// 对应 Java testsuite 脚本 `testsuite/independent/operator/optional_chaining.ql`。
 #[test]
-#[ignore = "偏差(架构近似):`catch(e)` 后 `e instanceof NullPointerException` 需要 Java 异常对象;Rust 版内部错误以 QLException 表示,catch 变量不携带 Java 异常实例。"]
 fn operator_optional_chaining() {
     const SCRIPT: &str = r"assert(a?.b?.c?.d == null);
 

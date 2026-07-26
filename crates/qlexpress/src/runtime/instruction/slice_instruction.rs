@@ -88,7 +88,7 @@ impl QLInstruction for SliceInstruction {
         ql_options: &QLOptions,
     ) -> Result<QResult, QLException> {
         let mut start_int: i64 = 0;
-        let mut end_int: i64;
+        let end_int: i64;
         let index_able: DataValue;
         match self.mode {
             SliceMode::Both => {

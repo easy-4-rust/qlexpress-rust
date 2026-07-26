@@ -1,7 +1,5 @@
 //! 实例方法扩展函数,对应 Java `com.alibaba.qlexpress4.runtime.function.ExtensionFunction`。
 
-use std::cell::Cell;
-
 use crate::exception::QLException;
 use crate::runtime::class_ref::ClassRef;
 use crate::runtime::i_method::IMethod;
@@ -93,16 +91,12 @@ pub fn as_native_method<F: ExtensionFunction + 'static>(
 /// 可共享的扩展函数句柄(Rust 适配辅助,等价于 Java 单例 `INSTANCE` 的共享语义)。
 pub struct SharedExtension<F: ExtensionFunction> {
     extension: F,
-    /// 记录 `set_accessible` 调用以复现 Java 状态语义(对扩展函数为空操作)。
-    accessible: Cell<bool>,
 }
 
 impl<F: ExtensionFunction> SharedExtension<F> {
+    /// 创建共享扩展函数适配器。Rust 共享适配入口，Java 无同名方法。
     pub fn new(extension: F) -> Self {
-        SharedExtension {
-            extension,
-            accessible: Cell::new(true),
-        }
+        SharedExtension { extension }
     }
 
     /// 取内部扩展函数。

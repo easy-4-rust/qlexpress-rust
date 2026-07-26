@@ -81,14 +81,14 @@ impl CallFunctionInstruction {
             return Err(self.error_reporter.report_format(
                 error_codes::FUNCTION_NOT_FOUND,
                 error_codes::error_msg(error_codes::FUNCTION_NOT_FOUND),
-                &[self.function_name.clone()],
+                std::slice::from_ref(&self.function_name),
             ));
         };
         let DataValue::Lambda(q_lambda) = &lambda_symbol else {
             return Err(self.error_reporter.report_format(
                 error_codes::FUNCTION_TYPE_MISMATCH,
                 error_codes::error_msg(error_codes::FUNCTION_TYPE_MISMATCH),
-                &[self.function_name.clone()],
+                std::slice::from_ref(&self.function_name),
             ));
         };
         let parameters = q_context.pop_n(self.arg_num);

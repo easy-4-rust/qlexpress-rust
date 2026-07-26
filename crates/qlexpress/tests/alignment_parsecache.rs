@@ -19,8 +19,6 @@ use qlexpress_rust::runtime::context::map_express_context::MapExpressContext;
 use qlexpress_rust::runtime::value::DataValue;
 use qlexpress_rust::Express4Runner;
 
-use alignment_util::expect_ok;
-
 fn empty_ctx() -> Rc<dyn qlexpress_rust::runtime::context::express_context::ExpressContext> {
     use std::cell::RefCell;
     Rc::new(MapExpressContext::new(std::rc::Rc::new(RefCell::new(

@@ -33,9 +33,10 @@ pub use super::white_operator_check_strategy::WhiteOperatorCheckStrategy;
 /// - `Blacklist(set)` ↔ `OperatorCheckStrategy.blacklist(set)`
 ///
 /// 下游消费者（`CheckOptions` 等）直接持有该枚举做 `Clone`/`PartialEq`。
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub enum OperatorCheckStrategy {
     /// Java `OperatorCheckStrategy.allowAll()`。
+    #[default]
     AllowAll,
     /// Java `OperatorCheckStrategy.whitelist(Set<String>)`：仅这些操作符被允许。
     Whitelist(HashSet<String>),
@@ -74,12 +75,6 @@ impl OperatorCheckStrategy {
             OperatorCheckStrategy::AllowAll => DefaultOperatorCheckStrategy::empty_set(),
             OperatorCheckStrategy::Whitelist(ops) | OperatorCheckStrategy::Blacklist(ops) => ops,
         }
-    }
-}
-
-impl Default for OperatorCheckStrategy {
-    fn default() -> Self {
-        OperatorCheckStrategy::AllowAll
     }
 }
 

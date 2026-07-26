@@ -6,7 +6,6 @@ use crate::exception::error_reporter::ErrorReporter;
 use crate::exception::QLException;
 use crate::ql_precedences;
 use crate::runtime::data::convert::to_f64;
-use crate::runtime::left_value::LeftValue;
 use crate::runtime::operator::base::UnaryOperator;
 use crate::runtime::value::{DataValue, QValue};
 

@@ -8,7 +8,10 @@
 
 use super::qlparser_base_visitor::Visitor;
 use super::rule_context::HasChildren;
-use super::syntax_tree_factory::*;
+use super::syntax_tree_factory::{
+    ExpressionContext, LeftAssoContext, LeftHandSideContext, MethodInvokeContext, Node,
+    PrefixExpressContext, SuffixExpressContext, VarIdExprContext,
+};
 use crate::aparser::token::Token;
 use crate::check_options::CheckOptions;
 use crate::exception::error_codes;

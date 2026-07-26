@@ -26,18 +26,6 @@ fn opts() -> QLOptions {
     QLOptions::builder().build()
 }
 
-fn run_int(runner: &Express4Runner, script: &str) -> i64 {
-    let r = runner
-        .execute(script, HashMap::new(), &opts())
-        .expect("ok")
-        .into_result();
-    match r {
-        DataValue::Long(n) => n,
-        DataValue::Int(n) => n as i64,
-        other => panic!("expected int/long, got {other:?}"),
-    }
-}
-
 // ---------- Static field access ----------
 
 #[test]

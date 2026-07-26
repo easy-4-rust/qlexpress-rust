@@ -42,6 +42,7 @@ impl CustomFunction for QMethodFunction {
     /// 对应 Java 方法 `call(QContext, Parameters)`:
     /// 1. 取实参值与类型;2. `MemberResolver.resolveMethod` 校验匹配;
     /// 3. `ParametersTypeConvertor.cast` 转换;4. `MethodHandler.Access`
+    ///
     /// 带访问控制调用。
     fn call(
         &self,

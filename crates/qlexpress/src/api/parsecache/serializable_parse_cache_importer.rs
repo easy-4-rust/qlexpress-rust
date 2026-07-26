@@ -14,7 +14,19 @@ use crate::exception::default_err_reporter::DefaultErrReporter;
 use crate::exception::error_codes;
 use crate::exception::error_reporter::ErrorReporter;
 use crate::runtime::data::convert::obj_type_convertor::TargetType;
-use crate::runtime::instruction::*;
+use crate::runtime::instruction::{
+    BreakContinueInstruction, CallFunctionInstruction, CallInstruction, CastInstruction,
+    CheckTimeOutInstruction, CloseScopeInstruction, ConstInstruction, DefineFunctionInstruction,
+    DefineLocalInstruction, ForEachInstruction, ForInstruction, GetFieldInstruction,
+    GetMethodInstruction, IndexInstruction, Instruction, JumpIfInstruction, JumpIfPopInstruction,
+    JumpInstruction, LoadInstruction, LoadLambdaInstruction, MethodInvokeInstruction,
+    MultiNewArrayInstruction, NewArrayInstruction, NewFilledInstanceInstruction,
+    NewInstanceInstruction, NewListInstruction, NewMapInstruction, NewScopeInstruction,
+    OperatorInstruction, PopInstruction, ReturnInstruction, ReturnResultType, SliceInstruction,
+    SliceMode, SpreadGetFieldInstruction, SpreadMethodInvokeInstruction, StringJoinInstruction,
+    ThrowInstruction, TraceEvaluatedInstruction, TracePeekInstruction, TryCatchInstruction,
+    UnaryInstruction, WhileInstruction,
+};
 use crate::runtime::member::{ClassRef, MetaClass};
 use crate::runtime::qlambda_definition::QLambdaDefinition;
 use crate::runtime::qlambda_definition_inner::{Param, QLambdaDefinitionInner};

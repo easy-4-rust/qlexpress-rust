@@ -1,39 +1,96 @@
-//! 对应 Java 类：com.alibaba.qlexpress4.runtime.ReflectLoader
+//! 原生成员加载门面，对应 Java
+//! `com.alibaba.qlexpress4.runtime.ReflectLoader`。
 //!
-//! Java `ReflectLoader` 是基于 `java.lang.reflect` 的成员加载器：
-//! 持有一个 `QLSecurityStrategy` 与 `allowPrivateAccess` 标志，
-//! 对外暴露 `loadConstructor`/`loadMethod`/`loadField`/`loadJavaField`/
-//! `loadFieldReflectCache`/`securityFilter` 等方法，
-//! 在 QVM 执行 `MethodInvokeInstruction`/`GetFieldInstruction` 等指令时被调用。
-//!
-//! **本文件不迁移**（SPEC §4 🚫）。Rust 无 JVM 反射，QLExpress 的反射成员分派
-//! 全部由显式注册的 [`crate::runtime::native_registry::NativeRegistry`] 承载：
-//!
-//! | Java `ReflectLoader` 方法 | Rust 化替代 |
-//! |---------------------------|------------|
-//! | `loadConstructor(Class, args)` | `NativeRegistry::find_constructor(type, args)` |
-//! | `loadMethod(Class, name, args)` | `NativeRegistry::find_method(type, name, args)` |
-//! | `loadField(Class, name)` | `NativeRegistry::find_field(type, name)` |
-//! | `loadJavaField` / `loadFieldReflectCache` | `NativeRegistry::find_field`（直接走注册表，无反射缓存） |
-//! | `securityFilter(IMethod)` / `securityFilter(Field)` | `NativeRegistry` 在分派期由注入的 `QLSecurityStrategy` 过滤 |
-//! | `setMethodAccessible` / `setFieldAccessible` | Rust 侧无访问修饰符运行时反射；`AccessMode` 在 `NativeRegistry` 注册期决定 |
-//!
-//! 保留本占位文件仅用于"对象级对照表"的结构对齐（SPEC §2），
-//! 文件头注释即唯一的对外说明；**不要在此文件内定义任何业务逻辑**。
+//! Java 通过 JVM 反射发现构造器、方法和字段；Rust 没有运行时 JVM，
+//! 因而把“发现”改为显式注册，但仍由本对象承担相同的加载、安全过滤和
+//! 生命周期职责，实际索引存储在 [`NativeRegistry`]。
 
-#![allow(dead_code)]
+use std::rc::Rc;
 
-/// 仅作为类型身份占位，对应 Java `com.alibaba.qlexpress4.runtime.ReflectLoader`。
+use crate::runtime::class_ref::ClassRef;
+use crate::runtime::native_registry::NativeRegistry;
+use crate::runtime::native_type::{NativeConstructor, NativeMethod};
+use crate::runtime::value::{DataValue, QValue};
+use crate::security::ql_security_strategy::QLSecurityStrategy;
+
+/// Rust 原生成员加载器。
 ///
-/// 该 enum 不参与任何运行时逻辑；所有反射成员分派请使用
-/// [`crate::runtime::native_registry::NativeRegistry`]。
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ReflectLoader {}
+/// 对应 Java: `com.alibaba.qlexpress4.runtime.ReflectLoader`。Java 的
+/// `allowPrivateAccess` 在 Rust 中表示“宿主是否选择注册非公开成员”；
+/// Rust 不会绕过语言可见性，因此该标志作为注册策略元数据保留。
+pub struct ReflectLoader {
+    registry: Rc<NativeRegistry>,
+    allow_private_access: bool,
+}
 
 impl ReflectLoader {
-    /// 返回 Java 类全限定名，供 doc 引用统一。
-    pub const JAVA_FQN: &'static str = "com.alibaba.qlexpress4.runtime.ReflectLoader";
+    /// 使用安全策略和私有访问策略创建加载器。
+    ///
+    /// 对应 Java 构造器 `ReflectLoader(securityStrategy, allowPrivateAccess)`。
+    pub fn new(security_strategy: QLSecurityStrategy, allow_private_access: bool) -> Self {
+        let registry = NativeRegistry::with_builtins();
+        registry.set_security_strategy(security_strategy);
+        Self {
+            registry: Rc::new(registry),
+            allow_private_access,
+        }
+    }
 
-    /// 返回 Rust 化替代的全限定路径。
-    pub const RUST_REPLACEMENT: &'static str = "crate::runtime::native_registry::NativeRegistry";
+    /// 以既有注册表创建加载器。Rust 宿主集成便捷入口，Java 无同名方法。
+    pub fn from_registry(registry: Rc<NativeRegistry>, allow_private_access: bool) -> Self {
+        Self {
+            registry,
+            allow_private_access,
+        }
+    }
+
+    /// 获取底层原生注册表。
+    pub fn registry(&self) -> &Rc<NativeRegistry> {
+        &self.registry
+    }
+
+    /// 当注册表尚未被运行时共享时获取可变引用，供宿主注册成员。
+    pub fn registry_mut(&mut self) -> Option<&mut NativeRegistry> {
+        Rc::get_mut(&mut self.registry)
+    }
+
+    /// 是否允许宿主注册非公开成员。对应 Java 字段 `allowPrivateAccess`。
+    pub fn allow_private_access(&self) -> bool {
+        self.allow_private_access
+    }
+
+    /// 加载注册构造器。对应 Java 方法 `loadConstructor`。
+    pub fn load_constructor(&self, class_ref: &ClassRef) -> Option<NativeConstructor> {
+        self.registry.load_constructor(class_ref)
+    }
+
+    /// 加载对象字段。对应 Java 方法 `loadField`。
+    pub fn load_field(&self, bean: &DataValue, field_name: &str) -> Option<QValue> {
+        self.registry.load_field(bean, field_name)
+    }
+
+    /// 加载对象方法。对应 Java 方法 `loadMethod`。
+    pub fn load_method(&self, bean: &DataValue, method_name: &str) -> Option<NativeMethod> {
+        self.registry.resolve_method(bean, method_name)
+    }
+
+    /// 获取当前成员安全策略。对应 Java `securityStrategy` 字段。
+    pub fn security_strategy(&self) -> QLSecurityStrategy {
+        self.registry.security_strategy()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::security::ql_security_strategy::QLSecurityStrategy;
+
+    #[test]
+    fn delegates_builtin_member_loading() {
+        let loader = ReflectLoader::new(QLSecurityStrategy::open(), false);
+        assert!(loader
+            .load_method(&DataValue::Str("abc".to_string()), "length")
+            .is_some());
+        assert!(!loader.allow_private_access());
+    }
 }

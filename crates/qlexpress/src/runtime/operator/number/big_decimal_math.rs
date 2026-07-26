@@ -228,7 +228,7 @@ fn mul_pow10(a: &[u8], n: usize) -> Vec<u8> {
         return Vec::new();
     }
     let mut out = a.to_vec();
-    out.extend(std::iter::repeat(0).take(n));
+    out.extend(std::iter::repeat_n(0, n));
     out
 }
 
@@ -248,7 +248,7 @@ fn divmod_mag(a: &[u8], b: &[u8]) -> (Vec<u8>, Vec<u8>) {
         let mut lo = 0u8;
         let mut hi = 9u8;
         while lo < hi {
-            let mid = (lo + hi + 1) / 2;
+            let mid = (lo + hi).div_ceil(2);
             if cmp_mag(&mul_mag(b, &[mid]), &rem) != std::cmp::Ordering::Greater {
                 lo = mid;
             } else {

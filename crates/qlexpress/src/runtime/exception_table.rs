@@ -65,7 +65,7 @@ impl ExceptionTable {
         let exc_type = exception.data_type_name();
         self.entries
             .iter()
-            .find(|e| e.covers(pc) && e.catch_type.as_deref().map_or(true, |t| t == exc_type))
+            .find(|e| e.covers(pc) && e.catch_type.as_deref().is_none_or(|t| t == exc_type))
             .map(|e| e.handler_pc)
     }
 }

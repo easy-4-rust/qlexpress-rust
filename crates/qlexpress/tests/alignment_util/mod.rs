@@ -7,7 +7,12 @@
 
 // 与 lib 一致的架构性豁免:QLException 对齐 Java 单一异常类。
 #![allow(clippy::result_large_err)]
+// 本文件会分别编译进多个 integration-test crate；每个 crate 只使用其中
+// 一部分公共夹具，因此按单个 crate 检查时其余夹具必然显示为 dead_code。
+#![allow(dead_code)]
 
+use std::cell::RefCell;
+use std::cmp::Ordering;
 use std::collections::HashMap;
 
 use std::rc::Rc;
@@ -17,6 +22,8 @@ use qlexpress_rust::exception::error_codes;
 use qlexpress_rust::exception::ql_exception::{QLException, QLExceptionKind};
 use qlexpress_rust::init_options::InitOptions;
 use qlexpress_rust::ql_options::QLOptions;
+use qlexpress_rust::runtime::native_object::NativeObject;
+use qlexpress_rust::runtime::native_type::NativeType;
 use qlexpress_rust::runtime::parameters::Parameters;
 use qlexpress_rust::runtime::qcontext::QContext;
 use qlexpress_rust::runtime::value::DataValue;
@@ -73,6 +80,7 @@ const JDK_CLASSES: &[(&str, &str)] = &[
     ("java.util", "Objects"),
     ("java.util", "Collections"),
     ("java.util", "Date"),
+    ("com.alibaba.qlexpress4.inport", "Person"),
 ];
 
 impl ClassSupplier for JdkClassSupplier {
@@ -193,10 +201,72 @@ fn print_function(_ctx: &mut dyn QContext, _params: &Parameters) -> Result<DataV
     Ok(DataValue::Null)
 }
 
+/// Java 测试夹具 `com.alibaba.qlexpress4.inport.Person` 的 Rust 对等对象。
+struct TestPerson {
+    age: i64,
+}
+
+impl NativeObject for TestPerson {
+    fn get_field(&self, name: &str) -> Option<DataValue> {
+        (name == "age").then_some(DataValue::Long(self.age))
+    }
+
+    fn call_method(&mut self, name: &str, args: &[DataValue]) -> Result<DataValue, QLException> {
+        if name == "compareTo" {
+            let Some(DataValue::Object(other)) = args.first() else {
+                return Err(biz_error("Person.compareTo expects Person"));
+            };
+            let borrowed = other.borrow();
+            let Some(other) = borrowed.as_any().downcast_ref::<TestPerson>() else {
+                return Err(biz_error("Person.compareTo expects Person"));
+            };
+            return Ok(DataValue::Int(match self.age.cmp(&other.age) {
+                Ordering::Less => -1,
+                Ordering::Equal => 0,
+                Ordering::Greater => 1,
+            }));
+        }
+        Err(biz_error(format!("Person method not found: {name}")))
+    }
+
+    fn native_type_name(&self) -> &str {
+        "com.alibaba.qlexpress4.inport.Person"
+    }
+
+    fn is_comparable(&self) -> bool {
+        true
+    }
+
+    fn compare_to(&self, other: &dyn NativeObject) -> Option<Ordering> {
+        other
+            .as_any()
+            .downcast_ref::<TestPerson>()
+            .map(|other| self.age.cmp(&other.age))
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+}
+
 /// 对应 Java `TestSuiteRunner.prepareRunner`:注册四个测试函数,
 /// 并使用开放安全策略 + JDK 类型供应器(同 `handleFile`)。
 pub fn suite_runner() -> Express4Runner {
-    let runner = Express4Runner::with_init_options(jdk_init_options());
+    let mut runner = Express4Runner::with_init_options(jdk_init_options());
+    let mut person = NativeType::named("com.alibaba.qlexpress4.inport.Person");
+    person.constructor = Some(Rc::new(|args| {
+        let [age] = args else {
+            return Err(biz_error("Person constructor expects one age"));
+        };
+        if !age.is_number() {
+            return Err(biz_error("Person constructor expects numeric age"));
+        }
+        let object: Rc<RefCell<dyn NativeObject>> = Rc::new(RefCell::new(TestPerson {
+            age: qlexpress_rust::runtime::data::convert::to_i64(age),
+        }));
+        Ok(DataValue::Object(object))
+    }));
+    runner.register_native_type(person);
     runner.add_function("assert", assert_function);
     runner.add_function("assertFalse", assert_false_function);
     runner.add_function("assertErrorCode", assert_error_code_function);

@@ -7,7 +7,8 @@
 //! callback instead of a runtime `CallFunctionInstruction`.
 
 pub mod code_generator;
-pub mod compile_time_function;
+#[path = "compile_time_function.rs"]
+pub mod contract;
 
 pub use code_generator::CodeGenerator;
-pub use compile_time_function::CompileTimeFunction;
+pub use contract::CompileTimeFunction;

@@ -30,7 +30,7 @@ pub fn generate(
         .fields
         .iter()
         .filter(|f| !f.attrs.skip)
-        .map(|f| gen_getter_arm(f))
+        .map(gen_getter_arm)
         .collect();
     let mut getter_combined = TokenStream::new();
     for arm in getter_arms {

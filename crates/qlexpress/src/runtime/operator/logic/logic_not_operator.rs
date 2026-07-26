@@ -10,7 +10,7 @@ use crate::runtime::value::{DataValue, QValue};
 
 use crate::runtime::operator::base::base_unary_operator::BaseUnaryOperator;
 use crate::runtime::operator::base::UnaryOperator;
-use crate::runtime::operator::operator::Operator;
+use crate::runtime::operator::Operator;
 
 /// 逻辑非操作符 `!`。
 ///

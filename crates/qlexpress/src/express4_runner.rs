@@ -72,6 +72,7 @@ use crate::runtime::qlambda_definition::QLambdaDefinition;
 use crate::runtime::qlambda_definition_inner::QLambdaDefinitionInner;
 use crate::runtime::qvm_global_scope::QvmGlobalScope;
 use crate::runtime::qvm_runtime::{current_time_millis, QvmRuntime};
+use crate::runtime::reflect_loader::ReflectLoader;
 use crate::runtime::scope::QScope;
 use crate::runtime::trace::{ExpressionTrace, QTraces, TracePointTree};
 use crate::runtime::value::{DataValue, QValue};
@@ -97,7 +98,7 @@ pub struct Express4Runner {
     global_scope: Rc<InstructionScope>,
     /// 原生类型/成员注册表。对应 Java 字段 `reflectLoader`
     /// (SPEC §4:显式注册表替代反射 + 安全策略检查点)。
-    registry: Rc<NativeRegistry>,
+    reflect_loader: ReflectLoader,
     /// 初始化选项。对应 Java 字段 `initOptions`。
     init_options: InitOptions,
     /// runner 身份令牌(Java `this` 引用,用于 parse cache 绑定校验)。
@@ -123,15 +124,17 @@ impl Express4Runner {
     /// 按 `InitOptions.securityStrategy` 接线注册表安全检查
     /// (Java: `new ReflectLoader(securityStrategy, allowPrivateAccess)`)。
     pub fn with_init_options(init_options: InitOptions) -> Self {
-        let registry = NativeRegistry::with_builtins();
-        registry.set_security_strategy(init_options.security_strategy().clone());
+        let reflect_loader = ReflectLoader::new(
+            init_options.security_strategy().clone(),
+            init_options.is_allow_private_access(),
+        );
         Express4Runner {
             operator_manager: OperatorManager::new(),
             compile_cache: RefCell::new(HashMap::new()),
             user_define_functions: RefCell::new(HashMap::new()),
             compile_time_functions: RefCell::new(HashMap::new()),
             global_scope: Rc::new(GeneratorScope::new("global", None)),
-            registry: Rc::new(registry),
+            reflect_loader,
             init_options,
             identity: RUNNER_IDENTITY.fetch_add(1, Ordering::Relaxed),
         }
@@ -144,12 +147,13 @@ impl Express4Runner {
 
     /// 取注册表(只读)。对应 Java 内部对 `reflectLoader` 的访问。
     pub fn registry(&self) -> &Rc<NativeRegistry> {
-        &self.registry
+        self.reflect_loader.registry()
     }
 
     /// 注册表可变访问(`&mut self` 且注册表未被 QVM 共享时)。
     fn registry_mut(&mut self) -> &mut NativeRegistry {
-        Rc::get_mut(&mut self.registry)
+        self.reflect_loader
+            .registry_mut()
             .expect("Express4Runner registry must not be shared outside execute")
     }
 
@@ -293,7 +297,7 @@ impl Express4Runner {
         let runtime = Rc::new(QvmRuntime::new(
             traces,
             ql_options.attachments().clone(),
-            Rc::clone(&self.registry),
+            Rc::clone(self.reflect_loader.registry()),
             current_time_millis(),
         ));
         let definition = Rc::clone(compile_cache.q_lambda_definition());
@@ -606,7 +610,7 @@ impl Express4Runner {
         let runtime = Rc::new(QvmRuntime::new(
             QTraces::empty(),
             ql_options.attachments().clone(),
-            Rc::clone(&self.registry),
+            Rc::clone(self.reflect_loader.registry()),
             current_time_millis(),
         ));
         // Java: mainLambdaTrace.getqLambda().getFunctionDefined()
@@ -655,7 +659,7 @@ impl Express4Runner {
         method_name: &str,
     ) -> bool {
         let Some(method) = self
-            .registry
+            .registry()
             .get_type(class_name)
             .and_then(|t| t.static_methods.get(method_name).map(Rc::clone))
         else {
@@ -744,7 +748,7 @@ impl Express4Runner {
 
     /// 读取对象字段。对应 Java 方法 `loadField(Object, String)`。
     pub fn load_field(&self, object: &DataValue, field_name: &str) -> Option<QValue> {
-        self.registry.load_field(object, field_name)
+        self.reflect_loader.load_field(object, field_name)
     }
 
     // ------------------------------------------------------------------
@@ -935,12 +939,14 @@ impl Express4Runner {
     /// 注册表进行的方法/字段分派。对应 Java `ReflectLoader` 持有的
     /// `securityStrategy`(`InitOptions.Builder.securityStrategy`)。
     pub fn set_security_strategy(&self, security_strategy: QLSecurityStrategy) {
-        self.registry.set_security_strategy(security_strategy);
+        self.reflect_loader
+            .registry()
+            .set_security_strategy(security_strategy);
     }
 
     /// 当前安全策略。对应 Java `InitOptions.getSecurityStrategy()`。
     pub fn security_strategy(&self) -> QLSecurityStrategy {
-        self.registry.security_strategy()
+        self.reflect_loader.security_strategy()
     }
 
     // ------------------------------------------------------------------

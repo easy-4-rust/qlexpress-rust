@@ -4,7 +4,33 @@
 //! 本文件由 `syntax_tree.rs` 拆分而来(SPEC §5.5 一类一文件),仅移动代码与补充中文注释,行为完全一致。
 
 use super::rule_context::{ChildRef, HasChildren};
-use super::syntax_tree_factory::*;
+use super::syntax_tree_factory::{
+    ArgumentListContext, ArrayInitializerContext, AssignOperatorContext, BaseExprContext,
+    BinaryopContext, BlockExprContext, BlockStatementsContext, BoolenLiteralContext,
+    BreakContinueStatementContext, CastExprContext, CatchParamsContext, ClsTypeContext,
+    ClsValueContext, ConstExprContext, ContextSelectExprContext, CustomPathContext,
+    DeclTypeContext, DeclTypeNoArrContext, DimExprsContext, DimsContext,
+    DoubleQuoteStringLiteralContext, EValueContext, ElseBodyContext, EmptyStatementContext,
+    ExpressionContext, ExpressionListContext, ExpressionStatementContext, FieldAccessContext,
+    FieldIdContext, ForEachStatementContext, ForInitContext, FormalOrInferredParameterContext,
+    FormalOrInferredParameterListContext, FunctionStatementContext, GroupExprContext, IdKeyContext,
+    ImportClsContext, ImportPackContext, IndexExprContext, LambdaExprContext,
+    LambdaParametersContext, LeftAssoContext, LeftHandSideContext, ListExprContext,
+    ListItemsContext, LiteralContext, LocalVariableDeclarationContext,
+    LocalVariableDeclarationStatementContext, MacroStatementContext, MapEntriesContext,
+    MapEntryContext, MapExprContext, MethodAccessContext, MethodInvokeContext,
+    NewEmptyArrExprContext, NewInitArrExprContext, NewObjExprContext, Node,
+    NonExpressionStatementContext, OpIdContext, PrefixExpressContext, PrimaryContext,
+    PrimitiveTypeContext, ProgramContext, QlIfContext, QuoteStringKeyContext,
+    ReturnStatementContext, SingleIndexContext, SliceIndexContext, StringExpressionContext,
+    StringKeyContext, SuffixExpressContext, SwitchCaseGroupsContext, SwitchExprContext,
+    SwitchExprGroupContext, SwitchExpressionLabelContext, SwitchLabelContext, SwitchLabelsContext,
+    SwitchStatementGroupContext, TernaryExprContext, ThenBodyContext, ThrowStatementContext,
+    TraditionalForStatementContext, TryCatchContext, TryCatchExprContext, TryCatchesContext,
+    TryFinallyContext, TypeExprContext, VarIdContext, VarIdExprContext, VariableDeclaratorContext,
+    VariableDeclaratorIdContext, VariableDeclaratorListContext, VariableInitializerContext,
+    VariableInitializerListContext, WhileStatementContext,
+};
 use super::terminal_node::TerminalNode;
 
 // ---------------------------------------------------------------------------
@@ -176,7 +202,7 @@ mod tests {
                 match child {
                     ChildRef::Node(node) => node.accept(self),
                     ChildRef::Term(term) => {
-                        let _ = self.visit_terminal(term);
+                        self.visit_terminal(term);
                     }
                 }
             }

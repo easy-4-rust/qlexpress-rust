@@ -6,7 +6,6 @@
 
 #![allow(clippy::result_large_err)]
 
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -102,7 +101,7 @@ fn new_instance_with_array_arg() {
 #[test]
 fn new_instance_no_constructor_returns_error() {
     // Calc 没注册 constructor
-    let mut calc = NativeType::named("com.example.Calc");
+    let calc = NativeType::named("com.example.Calc");
     // 不设 constructor
     let runner = runner_with(calc);
     let r = runner.execute("new Calc(1)", HashMap::new(), &opts());

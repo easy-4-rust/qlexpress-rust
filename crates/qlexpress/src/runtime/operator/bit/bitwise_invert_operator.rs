@@ -11,7 +11,7 @@ use crate::runtime::value::{DataValue, QValue};
 use crate::runtime::operator::base::base_unary_operator::BaseUnaryOperator;
 use crate::runtime::operator::base::UnaryOperator;
 use crate::runtime::operator::number::number_math::NumberMath;
-use crate::runtime::operator::operator::Operator;
+use crate::runtime::operator::Operator;
 
 /// 按位取反操作符 `~`。
 ///

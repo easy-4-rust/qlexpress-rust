@@ -9,7 +9,12 @@ use super::exist_stack::{ExistStack, ExistVarStack};
 use super::import_manager::ImportManager;
 use super::qlparser_base_visitor::Visitor;
 use super::scope_stack_visitor::{ScopeStack, ScopedVisitor};
-use super::syntax_tree_factory::*;
+use super::syntax_tree_factory::{
+    BlockExprContext, ExpressionContext, FieldIdContext, FormalOrInferredParameterContext,
+    FunctionStatementContext, ImportClsContext, ImportPackContext, LeftHandSideContext, Node,
+    PrimaryContext, QlIfContext, SwitchExprContext, TryCatchContext, TryCatchExprContext,
+    VarIdExprContext, VariableDeclaratorContext, VariableDeclaratorIdContext,
+};
 use super::token as tk;
 use crate::utils::ql_string_utils::QLStringUtils;
 

@@ -33,21 +33,11 @@ mod native_type;
 ///   (The first alias is also registered as a getter method matching the
 ///   Java `isX/getX` convention.)
 ///
-/// On inherent methods:
-/// - `#[qlexpress(constructor)]` — designate the function as the type's
-///   script-visible constructor.
-/// - `#[qlexpress(static)]` — register as a static method (no bean arg).
-/// - `#[qlexpress(skip)]` — do not expose.
-/// - `#[qlexpress(rename = "other")]` — register under a different name.
-/// - `#[qlexpress(alias = "...")]` — register additional aliases.
-///
 /// # Limitations (v1)
 ///
 /// - Generic structs / generic methods are rejected with a clear error.
-/// - `async fn` is rejected.
-/// - Methods taking `self` by value are rejected.
-/// - Variadic methods are not auto-generated; users must hand-write closures.
-/// - One closure per method name (no overloading); use `rename` to disambiguate.
+/// - Rust derive 宏看不到独立的 `impl` 块，因此不会自动注册方法或构造器；
+///   宿主必须通过 `NativeRegistry` 显式注册这些成员。
 #[proc_macro_derive(QLExpressType, attributes(qlexpress))]
 pub fn derive_ql_express_type(input: TokenStream) -> TokenStream {
     let ast = syn::parse_macro_input!(input as syn::DeriveInput);
@@ -66,9 +56,8 @@ fn expand(ast: &syn::DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
     let native_type_impl = native_type::generate(ast, &item, &struct_attrs, &qlexpress_path);
     let native_object_impl = native_object::generate(ast, &item, &struct_attrs, &qlexpress_path);
 
-    // Always emit both impls. `no_native_object` is currently a no-op
-    // reserved for future expansion; v1 requires the derive to provide
-    // `NativeObject` so that `QLExpressNativeType: NativeObject` holds.
+    // 始终生成两个实现。当前 trait 约束要求 `QLExpressNativeType` 同时实现
+    // `NativeObject`，因此 `no_native_object` 仍作为后续版本保留字段。
     let _ = struct_attrs.no_native_object;
     Ok(quote! {
         #native_type_impl

@@ -1,36 +1,14 @@
 #![allow(dead_code)]
 //! Shared mock operators for Stage 3b tests (Stage 4 delivers real ones).
-use std::cell::RefCell;
-use std::collections::HashMap;
 use std::rc::Rc;
 
-use qlexpress_rust::aparser::compile_time_function::{CodeGenerator, CompileTimeFunction};
-use qlexpress_rust::aparser::import_manager::ImportManager;
-use qlexpress_rust::aparser::interpolation_mode::InterpolationMode;
-use qlexpress_rust::aparser::operator_factory::{OperatorFactory, OperatorManager};
-use qlexpress_rust::aparser::qlparser::build_tree;
-use qlexpress_rust::aparser::qvm_instruction_visitor::{
-    compile_script, CompileTimeFunctions, UserDefineFunctions,
-};
-use qlexpress_rust::class_supplier::DefaultClassSupplier;
+use qlexpress_rust::aparser::operator_factory::OperatorManager;
 use qlexpress_rust::exception::error_reporter::ErrorReporter;
-use qlexpress_rust::exception::pure_err_reporter::PureErrReporter;
 use qlexpress_rust::exception::QLException;
-use qlexpress_rust::init_options::InitOptions;
 use qlexpress_rust::ql_options::QLOptions;
 use qlexpress_rust::ql_precedences;
-use qlexpress_rust::runtime::data::index_map::IndexMap;
-use qlexpress_rust::runtime::function::{CustomFunction, LazyArgCustomFunction};
-use qlexpress_rust::runtime::instruction::{ConstInstruction, Instruction, QLInstruction};
-use qlexpress_rust::runtime::member::{NativeRegistry, NativeType};
 use qlexpress_rust::runtime::operator::base::{BinaryOperator, UnaryOperator};
-use qlexpress_rust::runtime::operator::custom_binary_operator::CustomBinaryOperator;
-use qlexpress_rust::runtime::parameters::Parameters;
 use qlexpress_rust::runtime::qcontext::QContext;
-use qlexpress_rust::runtime::qlambda_definition::QLambdaDefinition;
-use qlexpress_rust::runtime::qlambda_definition_inner::QLambdaDefinitionInner;
-use qlexpress_rust::runtime::qvm_global_scope::QvmGlobalScope;
-use qlexpress_rust::runtime::qvm_runtime::QvmRuntime;
 use qlexpress_rust::runtime::value::{DataValue, QValue};
 
 // ---- mock operators (Stage 4 delivers the real ones) ---------------------
@@ -67,7 +45,7 @@ pub fn as_f64(v: &DataValue) -> Option<f64> {
         DataValue::Long(x) => Some(*x as f64),
         DataValue::Float(x) => Some(*x as f64),
         DataValue::Double(x) => Some(*x),
-        DataValue::BigInt(x) => Some(*x as f64),
+        DataValue::BigInt(x) => x.to_string().parse::<f64>().ok(),
         _ => None,
     }
 }

@@ -33,7 +33,7 @@ fn run_int(runner: &Express4Runner, script: &str) -> i64 {
 #[test]
 fn add_function_with_function_signature() {
     // Java addFunction(String, Function<T, R>)
-    let mut runner = Express4Runner::new();
+    let runner = Express4Runner::new();
     runner.add_function(
         "inc",
         |_ctx: &mut dyn QContext,
@@ -49,7 +49,7 @@ fn add_function_with_function_signature() {
 #[test]
 fn add_function_with_predicate() {
     // Java addFunction(String, Predicate<T>)
-    let mut runner = Express4Runner::new();
+    let runner = Express4Runner::new();
     runner.add_function_unary("is_pos", |v: DataValue| -> DataValue {
         // 接受任意 numeric,通过 to_i64 统一处理
         let n = qlexpress_rust::runtime::data::convert::to_i64(&v);
@@ -65,7 +65,7 @@ fn add_function_with_predicate() {
 #[test]
 fn add_function_with_runnable_returns_null() {
     // Java Runnable.run() returns void → null
-    let mut runner = Express4Runner::new();
+    let runner = Express4Runner::new();
     runner.add_function(
         "do_nothing",
         |_ctx: &mut dyn QContext,
@@ -83,7 +83,7 @@ fn add_function_with_runnable_returns_null() {
 
 #[test]
 fn add_function_with_consumer() {
-    let mut runner = Express4Runner::new();
+    let runner = Express4Runner::new();
     runner.add_function_unary("double_str", |v: DataValue| -> DataValue {
         let s = v.string_value_of();
         DataValue::Str(format!("{s}{s}"))
@@ -98,7 +98,7 @@ fn add_function_with_consumer() {
 #[test]
 fn add_varargs_function() {
     // Java QLFunctionalVarargs
-    let mut runner = Express4Runner::new();
+    let runner = Express4Runner::new();
     runner.add_varargs_function(
         "join_with",
         |params: &[DataValue]| -> Result<DataValue, qlexpress_rust::exception::QLException> {
@@ -140,7 +140,7 @@ fn add_operator_bifunction() {
 #[test]
 fn replace_default_operator() {
     // Java replaceDefaultOperator("+", ...)
-    let mut runner = Express4Runner::new();
+    let runner = Express4Runner::new();
     runner.add_function(
         "add_one",
         |_ctx: &mut dyn QContext,

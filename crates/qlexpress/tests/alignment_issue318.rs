@@ -7,7 +7,6 @@
 mod alignment_util;
 
 use std::collections::HashMap;
-use std::rc::Rc;
 
 use qlexpress_derive::QLExpressType;
 use qlexpress_rust::ql_options::QLOptions;

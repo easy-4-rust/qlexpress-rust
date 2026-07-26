@@ -7,6 +7,7 @@ use crate::exception::error_reporter::ErrorReporter;
 use crate::exception::QLException;
 use crate::ql_options::QLOptions;
 use crate::runtime::instruction::QLInstruction;
+use crate::runtime::opaque_native_object::OpaqueNativeObject;
 use crate::runtime::q_result::QResult;
 use crate::runtime::qcontext::QContext;
 use crate::runtime::value::{DataValue, QValue};
@@ -67,7 +68,8 @@ impl QLInstruction for GetFieldInstruction {
                 q_context.push(QValue::Data(DataValue::NULL_VALUE));
                 return Ok(QResult::NEXT_INSTRUCTION);
             }
-            return Err(self.error_reporter.report(
+            return Err(self.error_reporter.report_with_catch(
+                Some(OpaqueNativeObject::new("java.lang.NullPointerException").into_data_value()),
                 error_codes::NULL_FIELD_ACCESS,
                 error_codes::error_msg(error_codes::NULL_FIELD_ACCESS),
             ));
@@ -76,7 +78,7 @@ impl QLInstruction for GetFieldInstruction {
             return Err(self.error_reporter.report_format(
                 error_codes::FIELD_NOT_FOUND,
                 error_codes::error_msg(error_codes::FIELD_NOT_FOUND),
-                &[self.field_name.clone()],
+                std::slice::from_ref(&self.field_name),
             ));
         };
         q_context.push(field_value);

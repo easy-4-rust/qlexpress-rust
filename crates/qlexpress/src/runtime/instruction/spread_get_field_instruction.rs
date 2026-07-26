@@ -98,7 +98,7 @@ impl SpreadGetFieldInstruction {
                     Err(self.error_reporter.report_format(
                         error_codes::FIELD_NOT_FOUND,
                         error_codes::error_msg(error_codes::FIELD_NOT_FOUND),
-                        &[self.field_name.clone()],
+                        std::slice::from_ref(&self.field_name),
                     ))
                 }
             }
@@ -142,7 +142,7 @@ impl QLInstruction for SpreadGetFieldInstruction {
                     return Err(self.error_reporter.report_format(
                         error_codes::FIELD_NOT_FOUND,
                         error_codes::error_msg(error_codes::FIELD_NOT_FOUND),
-                        &[self.field_name.clone()],
+                        std::slice::from_ref(&self.field_name),
                     ));
                 }
             }

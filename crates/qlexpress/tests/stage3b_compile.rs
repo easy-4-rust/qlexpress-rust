@@ -6,6 +6,8 @@
 //! [`OperatorManager`] (the same instance feeds the lexer/parser and the
 //! compile visitor, like Java's `OperatorManager`).
 
+#![allow(clippy::result_large_err)]
+
 #[path = "stage3b_ops.rs"]
 mod ops;
 use ops::{as_f64, operator_manager};

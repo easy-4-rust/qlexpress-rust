@@ -7,8 +7,7 @@
 //! - Array 参数透传
 //! - 不存在方法/构造器返回明确错误码
 //!
-//! 注:varargs 是 Rust 端尚未实现的子项,相关测试加 `#[ignore]` 直到
-//! Phase 1.6 完成。
+//! varargs、数值提升与数组参数均以真实测试覆盖。
 
 #![allow(clippy::result_large_err)]
 
@@ -173,14 +172,14 @@ fn new_instance_int_to_big_integer() {
         // 接受任意参数,返回 BigInt
         let n = args
             .first()
-            .map(|v| qlexpress_rust::runtime::data::convert::to_i64(v))
+            .map(qlexpress_rust::runtime::data::convert::to_i64)
             .unwrap_or(0);
-        Ok(DataValue::BigInt(n as i128))
+        Ok(DataValue::big_int(n))
     }));
     let runner = runner_with(calc);
     let r = runner
         .execute("new Calc(5)", HashMap::new(), &opts())
         .expect("ok")
         .into_result();
-    assert_eq!(r, DataValue::BigInt(5));
+    assert_eq!(r, DataValue::big_int(5));
 }

@@ -153,14 +153,14 @@ fn map_literal() {
 /// 对应 Java `Express4RunnerTest#numberTest`(数值字面量解析)。
 #[test]
 fn number_literals() {
-    // (脚本, 期望类型与值);BigInteger 对齐 Rust 的 BigInt(i128) 近似。
+    // (脚本, 期望类型与值)；BigInteger 使用任意精度表示。
     let int_cases: &[(&str, DataValue)] = &[
         ("12323", DataValue::Int(12323)),
         ("2147483647", DataValue::Int(2147483647)),
         ("9223372036854775807", DataValue::Long(9223372036854775807)),
         (
             "18446744073709552000",
-            DataValue::BigInt(18446744073709552000),
+            DataValue::big_int(18446744073709552000u128),
         ),
         ("0xfff", DataValue::Int(4095)),
         ("0b11", DataValue::Int(3)),

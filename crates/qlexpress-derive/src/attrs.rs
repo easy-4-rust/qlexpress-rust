@@ -4,7 +4,7 @@
 //! The grammar is intentionally tiny — see `lib.rs` for the full doc.
 
 use syn::parse::{Parse, ParseStream};
-use syn::{Attribute, Lit, Meta, Result, Token};
+use syn::{Attribute, Meta, Result, Token};
 
 /// Attributes applied to the type as a whole.
 #[derive(Debug, Default)]
@@ -81,45 +81,6 @@ fn apply_field_arg(out: &mut FieldAttrs, arg: QlexAttr) -> Result<()> {
             return Err(syn::Error::new_spanned(
                 other,
                 "unsupported #[qlexpress(...)] attribute on field",
-            ));
-        }
-    }
-    Ok(())
-}
-
-/// Per-method attributes.
-#[derive(Debug, Default)]
-pub struct MethodAttrs {
-    pub skip: bool,
-    pub is_static: bool,
-    pub is_constructor: bool,
-    pub rename: Option<String>,
-    pub aliases: Vec<String>,
-}
-
-impl MethodAttrs {
-    pub fn from_attrs(attrs: &[Attribute]) -> Result<Self> {
-        let mut out = MethodAttrs::default();
-        for attr in attrs {
-            for arg in parse_qlexpress_args(attr)? {
-                apply_method_arg(&mut out, arg)?;
-            }
-        }
-        Ok(out)
-    }
-}
-
-fn apply_method_arg(out: &mut MethodAttrs, arg: QlexAttr) -> Result<()> {
-    match arg {
-        QlexAttr::Flag(name) if name == "skip" => out.skip = true,
-        QlexAttr::Flag(name) if name == "static" => out.is_static = true,
-        QlexAttr::Flag(name) if name == "constructor" => out.is_constructor = true,
-        QlexAttr::KeyValue { key, value } if key == "rename" => out.rename = Some(value),
-        QlexAttr::List { key, values } if key == "alias" => out.aliases.extend(values),
-        other => {
-            return Err(syn::Error::new_spanned(
-                other,
-                "unsupported #[qlexpress(...)] attribute on method",
             ));
         }
     }
@@ -207,20 +168,13 @@ fn parse_qlexpress_args(attr: &Attribute) -> Result<Vec<QlexAttr>> {
 /// Aggregated information we need to generate code for one type.
 pub struct ItemSpec {
     pub ident: syn::Ident,
-    pub generics: syn::Generics,
     pub fields: Vec<FieldSpec>,
-    pub methods: Vec<MethodSpec>,
 }
 
 pub struct FieldSpec {
     pub ident: syn::Ident,
     pub ty: syn::Type,
     pub attrs: FieldAttrs,
-}
-
-pub struct MethodSpec {
-    pub sig: syn::Signature,
-    pub attrs: MethodAttrs,
 }
 
 impl ItemSpec {
@@ -258,20 +212,9 @@ impl ItemSpec {
             });
         }
 
-        let methods = collect_inherent_methods(ast)?;
-
         Ok(ItemSpec {
             ident: ast.ident.clone(),
-            generics: ast.generics.clone(),
             fields,
-            methods,
         })
     }
-}
-
-fn collect_inherent_methods(_ast: &syn::DeriveInput) -> Result<Vec<MethodSpec>> {
-    // Methods attached via `impl` blocks are not part of `syn::DeriveInput`.
-    // For v1 the derive only inspects struct fields; method registration
-    // is done manually via the `NativeRegistry` API after `register_type`.
-    Ok(Vec::new())
 }

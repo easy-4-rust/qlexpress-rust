@@ -7,7 +7,10 @@ use std::collections::HashSet;
 use super::exist_stack::{ExistStack, ExistVarStack};
 use super::qlparser_base_visitor::Visitor;
 use super::scope_stack_visitor::{ScopeStack, ScopedVisitor};
-use super::syntax_tree_factory::*;
+use super::syntax_tree_factory::{
+    BlockExprContext, BlockStatementsContext, FunctionStatementContext, LeftHandSideContext, Node,
+    QlIfContext, SwitchExprContext, TryCatchContext, TryCatchExprContext, VarIdExprContext,
+};
 
 /// Java `VarIdContext.getText` via node.
 fn var_id_text(var_id: &Node) -> String {

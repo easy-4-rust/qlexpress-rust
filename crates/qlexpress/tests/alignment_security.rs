@@ -10,24 +10,13 @@
 mod alignment_util;
 
 use std::collections::HashMap;
-use std::rc::Rc;
 
 use qlexpress_rust::check_options::CheckOptions;
 use qlexpress_rust::init_options::InitOptions;
 use qlexpress_rust::ql_options::QLOptions;
-use qlexpress_rust::runtime::context::express_context::ExpressContext;
 use qlexpress_rust::runtime::value::DataValue;
 use qlexpress_rust::security::ql_security_strategy::QLSecurityStrategy;
 use qlexpress_rust::Express4Runner;
-
-fn empty_ctx() -> Rc<dyn ExpressContext> {
-    use qlexpress_rust::runtime::context::map_express_context::MapExpressContext;
-    use qlexpress_rust::runtime::data::index_map::IndexMap;
-    use std::cell::RefCell;
-    Rc::new(MapExpressContext::new(Rc::new(RefCell::new(
-        IndexMap::new(),
-    ))))
-}
 
 // ---------- Security strategies ----------
 

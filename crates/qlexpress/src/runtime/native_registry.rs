@@ -18,6 +18,7 @@ use crate::runtime::data::MapItemValue;
 use crate::runtime::function::ExtensionFunction;
 use crate::runtime::meta_class::{as_meta_class, MetaClass};
 use crate::runtime::native_type::{NativeConstructor, NativeMethod, NativeType};
+use crate::runtime::opaque_native_object::OpaqueNativeObject;
 use crate::runtime::value::{DataValue, QValue};
 use crate::security::ql_security_strategy::{NativeMember, QLSecurityStrategy};
 use crate::utils::basic_util;
@@ -125,13 +126,9 @@ impl NativeRegistry {
     /// 参数匹配委托给构造器闭包自身(Java 由 `MemberResolver` 选重载,
     /// Rust 一个类型只注册一个构造入口)。
     pub fn load_constructor(&self, clz: &ClassRef) -> Option<NativeConstructor> {
-        match clz {
-            ClassRef::Named(name) => self
-                .types
-                .get(name)
-                .and_then(|t| t.constructor.as_ref().map(Rc::clone)),
-            ClassRef::Primitive(_) => None,
-        }
+        self.types
+            .get(clz.java_name())
+            .and_then(|native_type| native_type.constructor.as_ref().map(Rc::clone))
     }
 
     // ---- 对应 Java ReflectLoader.loadField ----
@@ -178,17 +175,16 @@ impl NativeRegistry {
                             // Java 返回 Class 对象本身;栈上最接近的值即 MetaClass 数据。
                             return Some(QValue::Data(bean.clone()));
                         }
-                        if let ClassRef::Named(name) = clz {
-                            // 安全策略接线点(Java ReflectLoader.check):
-                            // 静态字段访问前过 QLSecurityStrategy。
-                            if self.check_member(&name, field_name) {
-                                if let Some(value) = self
-                                    .types
-                                    .get(&name)
-                                    .and_then(|t| t.static_fields.get(field_name))
-                                {
-                                    return Some(QValue::Data(value.clone()));
-                                }
+                        let name = clz.java_name();
+                        // 安全策略接线点(Java ReflectLoader.check):
+                        // 静态字段访问前过 QLSecurityStrategy。
+                        if self.check_member(name, field_name) {
+                            if let Some(value) = self
+                                .types
+                                .get(name)
+                                .and_then(|t| t.static_fields.get(field_name))
+                            {
+                                return Some(QValue::Data(value.clone()));
                             }
                         }
                         None
@@ -220,17 +216,15 @@ impl NativeRegistry {
     pub fn resolve_method(&self, bean: &DataValue, method_name: &str) -> Option<NativeMethod> {
         // MetaClass 接收者 → 静态方法(Java `isStaticMethod` 分支)。
         if let Some(meta) = as_meta_class(bean) {
-            if let ClassRef::Named(name) = meta {
-                // 安全策略接线点:静态方法访问前过 QLSecurityStrategy。
-                if !self.check_member(&name, method_name) {
-                    return None;
-                }
-                return self
-                    .types
-                    .get(&name)
-                    .and_then(|t| t.static_methods.get(method_name).map(Rc::clone));
+            let name = meta.java_name();
+            // 安全策略接线点:静态方法访问前过 QLSecurityStrategy。
+            if !self.check_member(name, method_name) {
+                return None;
             }
-            return None;
+            return self
+                .types
+                .get(name)
+                .and_then(|t| t.static_methods.get(method_name).map(Rc::clone));
         }
         // 内建方法子集(Java 中即 String/List/Map/Number 的真实方法)。
         // 偏差:内建方法不过安全策略(Rust 语言内核;Java 默认 isolation
@@ -256,12 +250,91 @@ impl NativeRegistry {
     /// 注册内建锚点类型,供 `ClassSupplier` 式查询与宿主覆盖挂接;
     /// 实际分派在 [`builtin_method`]。对应 Java 中这些 JDK 类天然可被反射。
     fn register_builtin_types(&mut self) {
+        let mut array_list = NativeType::named("java.util.ArrayList");
+        array_list.constructor = Some(Rc::new(|args| match args {
+            [] => Ok(DataValue::list(Vec::new())),
+            [capacity] if capacity.is_number() => {
+                let capacity = crate::runtime::data::convert::to_i64(capacity);
+                if capacity < 0 {
+                    Err(wrong_args("ArrayList"))
+                } else {
+                    Ok(DataValue::List(Rc::new(RefCell::new(Vec::with_capacity(
+                        capacity as usize,
+                    )))))
+                }
+            }
+            _ => Err(wrong_args("ArrayList")),
+        }));
+        self.register_type(array_list);
+
+        let mut hash_set = NativeType::named("java.util.HashSet");
+        hash_set.constructor = Some(Rc::new(|args| {
+            if args.is_empty() {
+                Ok(OpaqueNativeObject::new("java.util.HashSet").into_data_value())
+            } else {
+                Err(wrong_args("HashSet"))
+            }
+        }));
+        self.register_type(hash_set);
+
+        let mut integer = NativeType::named("java.lang.Integer");
+        integer
+            .static_fields
+            .insert("MAX_VALUE".to_string(), DataValue::Int(i32::MAX));
+        integer
+            .static_fields
+            .insert("MIN_VALUE".to_string(), DataValue::Int(i32::MIN));
+        integer.constructor = Some(Rc::new(|args| match args {
+            [value] if value.is_number() => Ok(DataValue::Int(
+                crate::runtime::data::convert::to_i64(value) as i32,
+            )),
+            _ => Err(wrong_args("Integer")),
+        }));
+        self.register_type(integer);
+
+        let mut long = NativeType::named("java.lang.Long");
+        long.static_fields
+            .insert("MAX_VALUE".to_string(), DataValue::Long(i64::MAX));
+        long.static_fields
+            .insert("MIN_VALUE".to_string(), DataValue::Long(i64::MIN));
+        long.constructor = Some(Rc::new(|args| match args {
+            [value] if value.is_number() => Ok(DataValue::Long(
+                crate::runtime::data::convert::to_i64(value),
+            )),
+            _ => Err(wrong_args("Long")),
+        }));
+        self.register_type(long);
+
+        let mut big_integer = NativeType::named("java.math.BigInteger");
+        big_integer.static_methods.insert(
+            "valueOf".to_string(),
+            Rc::new(|_bean, args| match args {
+                [value] if value.is_number() => Ok(DataValue::BigInt(
+                    crate::runtime::data::convert::to_big_int(value),
+                )),
+                _ => Err(wrong_args("BigInteger.valueOf")),
+            }),
+        );
+        self.register_type(big_integer);
+
+        for exception_name in [
+            "java.lang.RuntimeException",
+            "java.lang.NullPointerException",
+        ] {
+            let mut exception_type = NativeType::named(exception_name);
+            exception_type.constructor = Some(Rc::new(move |args| {
+                if args.is_empty() || matches!(args, [DataValue::Str(_)]) {
+                    Ok(OpaqueNativeObject::new(exception_name).into_data_value())
+                } else {
+                    Err(wrong_args(exception_name))
+                }
+            }));
+            self.register_type(exception_type);
+        }
+
         for name in [
             "java.lang.String",
-            "java.util.ArrayList",
             "java.util.LinkedHashMap",
-            "java.lang.Integer",
-            "java.lang.Long",
             "java.lang.Double",
             "java.lang.Boolean",
         ] {

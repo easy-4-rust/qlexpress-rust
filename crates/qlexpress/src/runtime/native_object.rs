@@ -1,6 +1,7 @@
 //! 宿主对象 trait,对应 Java 反射访问对象的能力(SPEC §4/§6 显式注册策略;
 //! Rust 新增物,承担 Java 中 `Field.get`/`Method.invoke` 于宿主对象上的职责)。
 
+use std::cmp::Ordering;
 use std::fmt;
 
 use crate::exception::QLException;
@@ -24,6 +25,17 @@ pub trait NativeObject: std::any::Any {
 
     /// 原生类型名,用于错误消息,对应 Java 类名。
     fn native_type_name(&self) -> &str;
+
+    /// 是否实现 Java `Comparable`。Rust 宿主对象默认不可比较。
+    fn is_comparable(&self) -> bool {
+        false
+    }
+
+    /// 对应 Java `Comparable.compareTo(Object)`；不可比较或类型不兼容时
+    /// 返回 `None`。
+    fn compare_to(&self, _other: &dyn NativeObject) -> Option<Ordering> {
+        None
+    }
 
     /// 向下转型支持(如 `CastInstruction`/`as_meta_class` 识别 `MetaClass`
     /// 包装,对应 Java `instanceof MetaClass`)。

@@ -173,44 +173,20 @@ mod tests {
     #[test]
     fn like_percent_wildcard() {
         // Java 对齐:`%` 通配任意长度
-        assert_eq!(
-            run(DataValue::Str("abc".into()), DataValue::Str("a%c".into())).unwrap(),
-            true
-        );
-        assert_eq!(
-            run(DataValue::Str("abc".into()), DataValue::Str("a%d".into())).unwrap(),
-            false
-        );
-        assert_eq!(
-            run(DataValue::Str("abc".into()), DataValue::Str("%".into())).unwrap(),
-            true
-        );
-        assert_eq!(
-            run(DataValue::Str("".into()), DataValue::Str("%".into())).unwrap(),
-            true
-        );
-        assert_eq!(
-            run(DataValue::Str("abc".into()), DataValue::Str("abc".into())).unwrap(),
-            true
-        );
+        assert!(run(DataValue::Str("abc".into()), DataValue::Str("a%c".into())).unwrap());
+        assert!(!run(DataValue::Str("abc".into()), DataValue::Str("a%d".into())).unwrap());
+        assert!(run(DataValue::Str("abc".into()), DataValue::Str("%".into())).unwrap());
+        assert!(run(DataValue::Str("".into()), DataValue::Str("%".into())).unwrap());
+        assert!(run(DataValue::Str("abc".into()), DataValue::Str("abc".into())).unwrap());
         // `_` 不是通配符(SQL LIKE 风格,非正则)
-        assert_eq!(
-            run(DataValue::Str("abc".into()), DataValue::Str("a_c".into())).unwrap(),
-            false
-        );
+        assert!(!run(DataValue::Str("abc".into()), DataValue::Str("a_c".into())).unwrap());
     }
 
     #[test]
     fn like_null_semantics() {
-        assert_eq!(run(DataValue::Null, DataValue::Null).unwrap(), true);
-        assert_eq!(
-            run(DataValue::Null, DataValue::Str("x".into())).unwrap(),
-            false
-        );
-        assert_eq!(
-            run(DataValue::Str("x".into()), DataValue::Null).unwrap(),
-            false
-        );
+        assert!(run(DataValue::Null, DataValue::Null).unwrap());
+        assert!(!run(DataValue::Null, DataValue::Str("x".into())).unwrap());
+        assert!(!run(DataValue::Str("x".into()), DataValue::Null).unwrap());
     }
 
     #[test]

@@ -6,7 +6,6 @@ use crate::exception::error_reporter::ErrorReporter;
 use crate::exception::QLException;
 use crate::ql_options::QLOptions;
 use crate::ql_precedences;
-use crate::runtime::left_value::LeftValue;
 use crate::runtime::operator::base::BinaryOperator;
 use crate::runtime::qcontext::QContext;
 use crate::runtime::value::{DataValue, QValue};

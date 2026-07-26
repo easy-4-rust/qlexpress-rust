@@ -15,16 +15,17 @@ pub mod binary_operator;
 pub mod bit;
 pub mod collection;
 pub mod compare;
+#[path = "operator.rs"]
+pub mod contract;
 pub mod custom_binary_operator;
 pub mod instance_of_operator;
 pub mod logic;
 pub mod number;
-pub mod operator;
 pub mod operator_manager;
 pub mod string;
 pub mod unary;
 
 pub use base::{BinaryOperator, UnaryOperator};
+pub use contract::Operator;
 pub use custom_binary_operator::CustomBinaryOperator;
-pub use operator::Operator;
 pub use operator_manager::OperatorManager;
