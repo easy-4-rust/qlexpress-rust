@@ -92,7 +92,7 @@ pub(crate) fn number_add_one(operand: &DataValue) -> DataValue {
         DataValue::Short(v) => DataValue::Int((*v as i32).wrapping_add(1)),
         DataValue::Int(v) => DataValue::Int(v.wrapping_add(1)),
         DataValue::Long(v) => DataValue::Long(v.wrapping_add(1)),
-        DataValue::BigInt(v) => DataValue::BigInt(*v + 1),
+        DataValue::BigInt(v) => DataValue::BigInt(v + 1),
         DataValue::BigDec(v) => DataValue::BigDec(big_dec_add_one(v)),
         DataValue::Float(_) | DataValue::Double(_) => DataValue::Double(to_f64(operand) + 1.0),
         // 调用点已保证 is_number,其余类型不可达

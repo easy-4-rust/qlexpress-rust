@@ -4,6 +4,8 @@ use std::cell::RefCell;
 use std::fmt;
 use std::rc::Rc;
 
+use num_bigint::BigInt;
+
 use crate::runtime::data::index_map::IndexMap;
 use crate::runtime::qlambda::QLambda;
 
@@ -23,9 +25,8 @@ pub use crate::runtime::native_object::NativeObject;
 
 /// Corresponds to Java `DataValue`: a `Value` holding concrete data.
 ///
-/// Variant set fixed by SPEC §3.1. `BigDec` stores a decimal string to keep
-/// full precision without external dependencies; `BigInt` approximates
-/// `BigInteger` with `i128`.
+/// `BigDec` stores a decimal string and uses the decimal arithmetic module；
+/// `BigInt` 使用任意精度整数，与 Java `BigInteger` 的无界精度一致。
 #[derive(Clone)]
 pub enum DataValue {
     /// Java `Value.NULL_VALUE` content.
@@ -37,8 +38,8 @@ pub enum DataValue {
     Long(i64),
     Float(f32),
     Double(f64),
-    /// `BigInteger` approximation (SPEC §3.1).
-    BigInt(i128),
+    /// Java `BigInteger` 的任意精度表示。
+    BigInt(BigInt),
     /// `BigDecimal`: decimal string storage, parsed on demand.
     BigDec(String),
     Char(char),
@@ -130,6 +131,11 @@ impl DataValue {
     /// Convenience constructor for [`DataValue::Map`].
     pub fn map(map: IndexMap) -> DataValue {
         DataValue::Map(Rc::new(RefCell::new(map)))
+    }
+
+    /// 从任意可转换整数创建 Java `BigInteger` 值。
+    pub fn big_int(value: impl Into<BigInt>) -> DataValue {
+        DataValue::BigInt(value.into())
     }
 
     /// True when the value is a [`DataValue::Object`].
@@ -379,6 +385,6 @@ mod tests {
             DataValue::Null.type_name(),
             "com.alibaba.qlexpress4.runtime.Nothing"
         );
-        assert_eq!(DataValue::BigInt(0).type_name(), "java.math.BigInteger");
+        assert_eq!(DataValue::big_int(0).type_name(), "java.math.BigInteger");
     }
 }

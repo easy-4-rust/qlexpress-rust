@@ -2,7 +2,6 @@
 //! 对齐 Java `SerializableParseCacheExporter` / `SerializableParseCacheImporter`
 //! 的语义:常量、指令(含嵌套 Lambda)、trace 点、错误分支。
 
-use std::cell::RefCell;
 use std::rc::Rc;
 
 use qlexpress_rust::aparser::compile_cache::QCompileCache;
@@ -25,7 +24,7 @@ use qlexpress_rust::runtime::member::{as_meta_class, ClassRef, MetaClass};
 use qlexpress_rust::runtime::operator::operator_manager::OperatorManager;
 use qlexpress_rust::runtime::qlambda_definition::QLambdaDefinition;
 use qlexpress_rust::runtime::qlambda_definition_inner::{Param, QLambdaDefinitionInner};
-use qlexpress_rust::runtime::trace::{ExpressionTrace, TraceType};
+use qlexpress_rust::runtime::trace::{TracePointTree, TraceType};
 use qlexpress_rust::runtime::value::DataValue;
 
 const SCRIPT: &str = "a + 2";
@@ -56,11 +55,8 @@ fn build_main_definition(manager: &OperatorManager) -> Rc<dyn QLambdaDefinition>
 }
 
 fn build_compile_cache(manager: &OperatorManager) -> LoadedCompileCache {
-    let trace = ExpressionTrace::new(TraceType::Operator, "+", vec![], 1, 5, 4);
-    QCompileCache::new(
-        build_main_definition(manager),
-        vec![Rc::new(RefCell::new(trace))],
-    )
+    let trace = TracePointTree::new(TraceType::Operator, "+", vec![], 1, 5, 4);
+    QCompileCache::new(build_main_definition(manager), vec![trace])
 }
 
 #[test]
@@ -130,8 +126,8 @@ fn export_json_import_round_trip() {
     // trace 点还原
     let traces = loaded.get_compile_cache().expression_trace_points();
     assert_eq!(traces.len(), 1);
-    assert_eq!(traces[0].borrow().token(), "+");
-    assert_eq!(traces[0].borrow().trace_type(), TraceType::Operator);
+    assert_eq!(traces[0].token(), "+");
+    assert_eq!(traces[0].trace_type(), TraceType::Operator);
 
     // 二次导出与首次导出一致(幂等)
     let re_exporter = SerializableParseCacheExporter::new(SCRIPT, &manager, true);
@@ -159,7 +155,7 @@ fn constant_round_trip_all_types() {
         (DataValue::Int(-7), "INT"),
         (DataValue::Long(9_000_000_000), "LONG"),
         (
-            DataValue::BigInt(123456789012345678901234567890i128),
+            DataValue::big_int(123456789012345678901234567890i128),
             "BIG_INTEGER",
         ),
         (DataValue::Float(1.5), "FLOAT"),

@@ -68,7 +68,7 @@ fn unary_plus(operand: &DataValue) -> DataValue {
         DataValue::Short(v) => DataValue::Int(*v as i32),
         DataValue::Int(v) => DataValue::Int(*v),
         DataValue::Long(v) => DataValue::Long(*v),
-        DataValue::BigInt(v) => DataValue::BigInt(*v),
+        DataValue::BigInt(v) => DataValue::BigInt(v.clone()),
         DataValue::BigDec(v) => DataValue::BigDec(v.clone()),
         // Java FloatingPointMath:float/double 都以 doubleValue 返回
         DataValue::Float(_) | DataValue::Double(_) => DataValue::Double(to_f64(operand)),
@@ -115,7 +115,7 @@ mod tests {
     #[test]
     fn unary_plus_keeps_long_big_types_and_widens_float() {
         assert_eq!(run(DataValue::Long(7)).unwrap(), DataValue::Long(7));
-        assert_eq!(run(DataValue::BigInt(7)).unwrap(), DataValue::BigInt(7));
+        assert_eq!(run(DataValue::big_int(7)).unwrap(), DataValue::big_int(7));
         assert_eq!(
             run(DataValue::BigDec("1.50".into())).unwrap(),
             DataValue::BigDec("1.50".into())

@@ -14,8 +14,8 @@
 //! - Java 反射式 API(`addFunctionOfServiceMethod` 的方法查找、
 //!   `addObjFunction`/`addStaticFunction` 的注解扫描)按 SPEC §4 改为
 //!   显式传入 `IMethod`/`NativeMethod`(见各方法文档)。
-//! - 表达式 trace:Java 依赖 `TraceExpressionVisitor`(本仓库尚未迁移,
-//!   见 README 已知近似),`QLResult.expression_traces` 暂恒为空。
+//! - 表达式 trace:编译期由 `TraceExpressionVisitor` 生成静态点树，
+//!   执行期在初始化选项和执行选项同时开启时创建本次执行专属的值树。
 
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
@@ -37,6 +37,7 @@ use crate::aparser::qvm_instruction_visitor::{
     QvmInstructionVisitor, UserDefineFunctions,
 };
 use crate::aparser::syntax_tree_factory::Node;
+use crate::aparser::trace_expression_visitor::TraceExpressionVisitor;
 use crate::api::batch_add_function_result::BatchAddFunctionResult;
 use crate::api::parsecache::serializable_parse_cache_exporter::SerializableParseCacheExporter;
 use crate::api::parsecache::serializable_parse_cache_importer::{
@@ -72,7 +73,7 @@ use crate::runtime::qlambda_definition_inner::QLambdaDefinitionInner;
 use crate::runtime::qvm_global_scope::QvmGlobalScope;
 use crate::runtime::qvm_runtime::{current_time_millis, QvmRuntime};
 use crate::runtime::scope::QScope;
-use crate::runtime::trace::{ExpressionTrace, QTraces};
+use crate::runtime::trace::{ExpressionTrace, QTraces, TracePointTree};
 use crate::runtime::value::{DataValue, QValue};
 use crate::security::ql_security_strategy::QLSecurityStrategy;
 
@@ -199,8 +200,7 @@ impl Express4Runner {
             self.parse_definition(script).map(Rc::new)
         }
         .map_err(QLSyntaxException::into_exception)?;
-        let definition = Rc::clone(compile_cache.q_lambda_definition());
-        self.execute_definition(definition, context, ql_options)
+        self.execute_definition(&compile_cache, true, context, ql_options)
     }
 
     /// 执行已加载的 parse cache。对应 Java 方法
@@ -223,8 +223,12 @@ impl Express4Runner {
                 crate::exception::error_codes::SERIALIZABLE_PARSE_CACHE_INVALID_MODEL,
             ));
         }
-        let definition = Rc::clone(cache.get_compile_cache().q_lambda_definition());
-        self.execute_definition(definition, context, ql_options)
+        self.execute_definition(
+            cache.get_compile_cache(),
+            cache.has_trace_points(),
+            context,
+            ql_options,
+        )
     }
 
     /// 加载并执行可序列化 parse cache。对应 Java 方法
@@ -257,11 +261,7 @@ impl Express4Runner {
         let compile_cache = self
             .parse_definition(script)
             .map_err(QLSyntaxException::into_exception)?;
-        let result = self.execute_definition(
-            Rc::clone(compile_cache.q_lambda_definition()),
-            context,
-            ql_options,
-        )?;
+        let result = self.execute_definition(&compile_cache, true, context, ql_options)?;
         Ok((result, instructions))
     }
 
@@ -269,7 +269,8 @@ impl Express4Runner {
     /// `executeLambdaTrace(QLambdaTrace)`(含 debug 计时输出)。
     fn execute_definition(
         &self,
-        definition: Rc<dyn QLambdaDefinition>,
+        compile_cache: &LoadedCompileCache,
+        trace_points_available: bool,
         context: Rc<dyn ExpressContext>,
         ql_options: &QLOptions,
     ) -> Result<QLResult, QLException> {
@@ -281,12 +282,21 @@ impl Express4Runner {
             ql_options.attachments().clone(),
             ql_options.is_pollute_user_context(),
         );
+        let traces = if self.init_options.is_trace_expression()
+            && ql_options.is_trace_expression()
+            && trace_points_available
+        {
+            QTraces::from_trace_points(compile_cache.expression_trace_points())
+        } else {
+            QTraces::empty()
+        };
         let runtime = Rc::new(QvmRuntime::new(
-            QTraces::empty(),
+            traces,
             ql_options.attachments().clone(),
             Rc::clone(&self.registry),
             current_time_millis(),
         ));
+        let definition = Rc::clone(compile_cache.q_lambda_definition());
         let result = runtime.execute(global_scope, definition, ql_options)?;
         if debug {
             (self.init_options.debug_info_consumer())(format!(
@@ -294,8 +304,7 @@ impl Express4Runner {
                 current_time_millis() - start
             ));
         }
-        // Java: new QLResult(result, traces.getExpressionTraces())
-        // (trace 点未迁移时 snapshot 为空,见文件头)。
+        // Java: new QLResult(result, traces.getExpressionTraces())。
         Ok(QLResult::new(result.value(), runtime.traces().snapshot()))
     }
 
@@ -373,9 +382,13 @@ impl Express4Runner {
             vec![],
             max_stack,
         ));
-        // Java: isTraceExpression() 时附带 TraceExpressionVisitor 收集的
-        // trace 点;该 visitor 尚未迁移,恒为空列表(见文件头)。
-        Ok(QCompileCache::new(definition, vec![]))
+        let trace_points = if self.init_options.is_trace_expression() {
+            let mut visitor = TraceExpressionVisitor::new();
+            visitor.visit(&tree)
+        } else {
+            Vec::new()
+        };
+        Ok(QCompileCache::new(definition, trace_points))
     }
 
     /// 带缓存的编译(同一 script 只编译一次)。对应 Java 方法
@@ -967,10 +980,22 @@ impl Express4Runner {
         Ok(visitor.out_functions().clone())
     }
 
-    /// 执行脚本并取表达式 trace 列表(`QLOptions.trace_expression`
-    /// 开启时由 QVM 填充)。对应 Java `QLResult.getExpressionTraces`
-    /// 的独立取 trace 用法(`getExpressionTracePoints` 依赖
-    /// `TraceExpressionVisitor`,尚未迁移,见文件头与 README)。
+    /// 静态解析脚本并返回表达式追踪点树。
+    ///
+    /// 无论初始化时是否开启运行时追踪，本方法都会执行静态访问器；
+    /// 对应 Java 方法 `getExpressionTracePoints(String)`。
+    pub fn get_expression_trace_points(
+        &self,
+        script: &str,
+    ) -> Result<Vec<TracePointTree>, QLSyntaxException> {
+        let tree = self.parse_to_syntax_tree(script)?;
+        let mut visitor = TraceExpressionVisitor::new();
+        Ok(visitor.visit(&tree))
+    }
+
+    /// 执行脚本并取表达式 trace 列表。只有初始化选项与本次执行选项
+    /// 都开启 trace 时由 QVM 填充。对应 Java `QLResult.getExpressionTraces`
+    /// 的独立取 trace 用法。
     pub fn get_expression_trace(
         &self,
         script: &str,

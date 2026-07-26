@@ -1,19 +1,17 @@
 //! 已加载的编译缓存,对应 Java `com.alibaba.qlexpress4.api.parsecache.LoadedParseCache`。
 //! 职责:Importer 的产出——还原后的编译产物 + 源可序列化缓存 + runner 身份绑定。
 
-use std::cell::RefCell;
 use std::rc::Rc;
 
 use crate::aparser::compile_cache::QCompileCache;
 use crate::runtime::qlambda_definition::QLambdaDefinition;
-use crate::runtime::trace::ExpressionTrace;
+use crate::runtime::trace::TracePointTree;
 
 use super::serializable_parse_cache::SerializableParseCache;
 
 /// Importer 还原后的编译缓存类型(Java `QCompileCache` 的具体化:
 /// 主 Lambda 定义 + 表达式 trace 点)。
-pub type LoadedCompileCache =
-    QCompileCache<Rc<dyn QLambdaDefinition>, Rc<RefCell<ExpressionTrace>>>;
+pub type LoadedCompileCache = QCompileCache<Rc<dyn QLambdaDefinition>, TracePointTree>;
 
 /// 已加载的编译缓存。对应 Java: com.alibaba.qlexpress4.api.parsecache.LoadedParseCache
 ///

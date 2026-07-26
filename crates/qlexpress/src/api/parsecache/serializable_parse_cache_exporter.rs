@@ -16,7 +16,7 @@ use crate::runtime::member::as_meta_class;
 use crate::runtime::qlambda_definition::QLambdaDefinition;
 use crate::runtime::qlambda_definition_inner::QLambdaDefinitionInner;
 use crate::runtime::trace::trace_type;
-use crate::runtime::trace::ExpressionTrace;
+use crate::runtime::trace::TracePointTree;
 use crate::runtime::value::DataValue;
 
 use super::loaded_parse_cache::LoadedCompileCache;
@@ -531,14 +531,8 @@ impl<'a> SerializableParseCacheExporter<'a> {
     }
 
     /// 对应 Java 私有方法 `exportTracePoints` / `exportTracePoint`。
-    fn export_trace_points(
-        &self,
-        trace_points: &[Rc<std::cell::RefCell<ExpressionTrace>>],
-    ) -> Vec<SerializableTracePoint> {
-        trace_points
-            .iter()
-            .map(|trace_point| export_trace_point(&trace_point.borrow()))
-            .collect()
+    fn export_trace_points(&self, trace_points: &[TracePointTree]) -> Vec<SerializableTracePoint> {
+        trace_points.iter().map(export_trace_point).collect()
     }
 
     /// 对应 Java 私有方法 `unsupportedInstruction`。
@@ -572,7 +566,7 @@ fn typed_constant(const_type: &str, value: Value) -> SerializableConstant {
 }
 
 /// 导出单个 trace 点(递归子节点)。对应 Java `exportTracePoint`。
-fn export_trace_point(trace_point: &ExpressionTrace) -> SerializableTracePoint {
+fn export_trace_point(trace_point: &TracePointTree) -> SerializableTracePoint {
     SerializableTracePoint {
         trace_type: Some(trace_type::java_name(trace_point.trace_type()).to_string()),
         token: Some(trace_point.token().to_string()),

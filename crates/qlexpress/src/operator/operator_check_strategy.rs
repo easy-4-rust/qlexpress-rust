@@ -111,7 +111,9 @@ mod tests {
         assert!(!strategy.is_allowed("="));
         assert!(strategy.is_allowed("+"));
         assert_eq!(
-            BlackOperatorCheckStrategy::new(set(&["="])).operators().len(),
+            BlackOperatorCheckStrategy::new(set(&["="]))
+                .operators()
+                .len(),
             1
         );
     }

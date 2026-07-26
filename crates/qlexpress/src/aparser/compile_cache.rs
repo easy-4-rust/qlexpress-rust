@@ -37,10 +37,10 @@ impl<L, T> QCompileCache<L, T> {
 /// The concrete parse cache used by the runner (Java
 /// `Express4Runner.parseCache`): script text -> compiled root
 /// `QLambdaDefinition` plus expression trace points
-/// (`TracePointTree` ≈ [`ExpressionTrace`]).
+/// (`TracePointTree`).
 pub type ScriptCompileCache = CompileCache<
     std::rc::Rc<dyn crate::runtime::qlambda_definition::QLambdaDefinition>,
-    std::rc::Rc<std::cell::RefCell<crate::runtime::trace::ExpressionTrace>>,
+    crate::runtime::trace::TracePointTree,
 >;
 
 /// Script -> compiled-artifact cache with plain get/put semantics, as used

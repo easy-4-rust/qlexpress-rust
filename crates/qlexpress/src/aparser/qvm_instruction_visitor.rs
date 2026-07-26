@@ -10,6 +10,8 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
+use num_bigint::BigInt;
+
 use super::compile_time_function::{CodeGenerator, CompileTimeFunction};
 use super::generator_scope::GeneratorScope;
 use super::import_manager::ImportManager;
@@ -804,7 +806,7 @@ fn default_value_for_target(target: Option<TargetType>) -> DataValue {
         | Some(TargetType::Int)
         | Some(TargetType::Long) => DataValue::Long(0),
         Some(TargetType::Float) | Some(TargetType::Double) => DataValue::Double(0.0),
-        Some(TargetType::BigInteger) => DataValue::BigInt(0),
+        Some(TargetType::BigInteger) => DataValue::big_int(0),
         Some(TargetType::BigDecimal) => DataValue::BigDec("0".to_string()),
         Some(TargetType::Character) => DataValue::Char('\0'),
         Some(TargetType::Any) => DataValue::NULL_VALUE,
@@ -3233,34 +3235,40 @@ fn parse_integer_literal(int_text: &str) -> Option<DataValue> {
     let base_int = parse_base_integer(base_text)?;
     if force_long {
         // Java BigInteger.longValue() wraps on overflow.
-        return Some(DataValue::Long(base_int as i64));
+        return Some(DataValue::Long(
+            crate::runtime::data::convert::to_i64(&DataValue::BigInt(base_int)),
+        ));
     }
-    if base_int <= i32::MAX as i128 {
-        Some(DataValue::Int(base_int as i32))
-    } else if base_int <= i64::MAX as i128 {
-        Some(DataValue::Long(base_int as i64))
+    if base_int <= BigInt::from(i32::MAX) {
+        Some(DataValue::Int(
+            crate::runtime::data::convert::to_i128(&DataValue::BigInt(base_int)) as i32,
+        ))
+    } else if base_int <= BigInt::from(i64::MAX) {
+        Some(DataValue::Long(
+            crate::runtime::data::convert::to_i64(&DataValue::BigInt(base_int)),
+        ))
     } else {
         Some(DataValue::BigInt(base_int))
     }
 }
 
 /// Java `parseBaseInteger` (hex/binary/octal/decimal by prefix).
-fn parse_base_integer(int_text: &str) -> Option<i128> {
+fn parse_base_integer(int_text: &str) -> Option<BigInt> {
     if int_text.is_empty() {
         return None;
     }
     let prefix_len = int_text.len().min(2);
     let radix_prefix = &int_text[..prefix_len];
     match radix_prefix {
-        "0x" | "0X" => i128::from_str_radix(&int_text[2..], 16).ok(),
-        "0b" | "0B" => i128::from_str_radix(&int_text[2..], 2).ok(),
+        "0x" | "0X" => BigInt::parse_bytes(int_text[2..].as_bytes(), 16),
+        "0b" | "0B" => BigInt::parse_bytes(int_text[2..].as_bytes(), 2),
         _ => {
             if radix_prefix.starts_with('0') && int_text.len() > 1 {
                 // radix 8
-                i128::from_str_radix(int_text, 8).ok()
+                BigInt::parse_bytes(int_text.as_bytes(), 8)
             } else {
                 // radix 10
-                int_text.parse::<i128>().ok()
+                BigInt::parse_bytes(int_text.as_bytes(), 10)
             }
         }
     }

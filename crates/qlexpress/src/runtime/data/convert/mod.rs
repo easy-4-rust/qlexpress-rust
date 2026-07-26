@@ -10,8 +10,8 @@ pub mod obj_type_convertor;
 pub mod parameters_type_convertor;
 
 pub use number_math_helpers::{
-    big_dec_compare, big_dec_to_i128, math_domain, number_compare, num_kind, promote, to_big_dec_string,
-    to_f64, to_i128, to_i64, MathDomain,
+    big_dec_compare, big_dec_to_big_int, big_dec_to_i128, math_domain, num_kind, number_compare,
+    promote, to_big_dec_string, to_big_int, to_f64, to_i128, to_i64, MathDomain,
 };
 pub use obj_type_convertor::{ObjTypeConvertor, QConverted, TargetType};
 pub use parameters_type_convertor::ParametersTypeConvertor;

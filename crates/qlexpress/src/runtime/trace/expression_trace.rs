@@ -1,7 +1,8 @@
 //! 对应 Java 类：com.alibaba.qlexpress4.runtime.trace.ExpressionTrace
 //!
-//! 表达式执行追踪树的一个节点。运行时入口；编译期 visitor 见
-//! `aparser::trace_expression_visitor::TraceExpressionVisitor`（v1 stub）。
+//! 表达式执行追踪树的一个节点。编译期静态模型见
+//! `aparser::trace_expression_visitor::TraceExpressionVisitor` 与
+//! [`super::TracePointTree`]。
 
 use super::trace_type::{java_name, TraceType};
 use crate::runtime::value::DataValue;
@@ -96,7 +97,7 @@ impl ExpressionTrace {
     pub fn to_pretty_string(&self, indent: i32) -> String {
         let value_part = if self.evaluated {
             match &self.value {
-                Some(v) => format!("{v:?}"),
+                Some(v) => v.string_value_of(),
                 None => String::new(),
             }
         } else {
@@ -130,6 +131,6 @@ mod tests {
         let root = ExpressionTrace::new(TraceType::Operator, "+", vec![leaf], 1, 3, 2);
         let pretty = root.to_pretty_string(0);
         assert!(pretty.starts_with("OPERATOR + \n"));
-        assert!(pretty.contains("| VALUE 1 Int(1)"));
+        assert!(pretty.contains("| VALUE 1 1"));
     }
 }

@@ -119,7 +119,7 @@ pub(crate) fn with_trace(
     trace_key: Option<i32>,
     f: impl FnOnce(&mut crate::runtime::trace::ExpressionTrace),
 ) {
-    if let Some(trace) = q_context.traces().get_expression_trace_by_key(trace_key) {
-        f(&mut trace.borrow_mut());
-    }
+    q_context
+        .traces()
+        .with_expression_trace_by_key(trace_key, f);
 }

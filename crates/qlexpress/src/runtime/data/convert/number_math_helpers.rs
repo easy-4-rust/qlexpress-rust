@@ -5,15 +5,18 @@
 //!   → [`math_domain`]（按域提升矩阵：FloatingPoint > BigDecimal > BigInteger > Long > Integer）
 //! - `NumberMath.compareTo(left, right)` → [`number_compare`]
 //! - `NumberMath.toBigDecimal(n)` → [`to_big_dec_string`]（字符串化存储）
-//! - `BigDecimal.toBigInteger()`（trunc toward zero） → [`big_dec_to_i128`]
+//! - `BigDecimal.toBigInteger()`（trunc toward zero） → [`big_dec_to_big_int`]
 //! - `BigDecimal.compareTo(...)`（忽略 scale） → [`big_dec_compare`]
-//! - `Number.doubleValue()` / `Number.longValue()` → [`to_f64`] / [`to_i64`] / [`to_i128`]
+//! - `Number.doubleValue()` / `Number.longValue()` → [`to_f64`] / [`to_i64`]
 //!
 //! 历史与定位：该模块原嵌于 `convert/mod.rs`，为遵守
 //! "mod.rs 禁止定义类型/逻辑"（SPEC §2）规范迁出为独立文件。
 //! Java 没有单独的对应类，因此标为 🆕 Rust 化新增。
 
 use std::cmp::Ordering;
+
+use num_bigint::BigInt;
+use num_traits::ToPrimitive;
 
 use crate::runtime::value::DataValue;
 use crate::utils::basic_util::NumKind;
@@ -83,22 +86,18 @@ pub fn number_compare(left: &DataValue, right: &DataValue) -> Option<Ordering> {
             &to_big_dec_string(left),
             &to_big_dec_string(right),
         )),
-        MathDomain::BigInteger => Some(to_i128(left).cmp(&to_i128(right))),
+        MathDomain::BigInteger => Some(to_big_int(left).cmp(&to_big_int(right))),
         MathDomain::Long | MathDomain::Integer => Some(to_i64(left).cmp(&to_i64(right))),
     }
 }
 
 /// 按指定数域提升两侧操作数（Java `NumberMath` 操作数提升）。
-pub fn promote(
-    left: &DataValue,
-    right: &DataValue,
-    domain: MathDomain,
-) -> (DataValue, DataValue) {
+pub fn promote(left: &DataValue, right: &DataValue, domain: MathDomain) -> (DataValue, DataValue) {
     let conv = |v: &DataValue| -> DataValue {
         match domain {
             MathDomain::FloatingPoint => DataValue::Double(to_f64(v)),
             MathDomain::BigDecimal => DataValue::BigDec(to_big_dec_string(v)),
-            MathDomain::BigInteger => DataValue::BigInt(to_i128(v)),
+            MathDomain::BigInteger => DataValue::BigInt(to_big_int(v)),
             MathDomain::Long => DataValue::Long(to_i64(v)),
             MathDomain::Integer => DataValue::Int(to_i64(v) as i32),
         }
@@ -115,13 +114,16 @@ pub fn to_f64(value: &DataValue) -> f64 {
         DataValue::Long(v) => *v as f64,
         DataValue::Float(v) => *v as f64,
         DataValue::Double(v) => *v,
-        DataValue::BigInt(v) => *v as f64,
+        DataValue::BigInt(v) => v
+            .to_f64()
+            .unwrap_or_else(|| v.to_string().parse::<f64>().unwrap_or(f64::NAN)),
         DataValue::BigDec(v) => v.parse::<f64>().unwrap_or(f64::NAN),
         _ => f64::NAN,
     }
 }
 
-/// Java `Number.longValue()` 扩展为 `i128`（BigInteger 域）。
+/// 转换为 `i128`。对任意精度整数保留低 128 位，等价于 Java
+/// `BigInteger.longValue()` 的二进制补码截断规则扩展到 128 位。
 pub fn to_i128(value: &DataValue) -> i128 {
     match value {
         DataValue::Byte(v) => *v as i128,
@@ -130,7 +132,7 @@ pub fn to_i128(value: &DataValue) -> i128 {
         DataValue::Long(v) => *v as i128,
         DataValue::Float(v) => *v as i128,
         DataValue::Double(v) => *v as i128,
-        DataValue::BigInt(v) => *v,
+        DataValue::BigInt(v) => big_int_low_i128(v),
         DataValue::BigDec(v) => big_dec_to_i128(v),
         _ => 0,
     }
@@ -145,9 +147,24 @@ pub fn to_i64(value: &DataValue) -> i64 {
         DataValue::Long(v) => *v,
         DataValue::Float(v) => *v as i64,
         DataValue::Double(v) => *v as i64,
-        DataValue::BigInt(v) => *v as i64,
+        DataValue::BigInt(v) => big_int_low_i64(v),
         DataValue::BigDec(v) => big_dec_to_i128(v) as i64,
         _ => 0,
+    }
+}
+
+/// 转换到 Java `BigInteger` 数域。
+pub fn to_big_int(value: &DataValue) -> BigInt {
+    match value {
+        DataValue::Byte(v) => BigInt::from(*v),
+        DataValue::Short(v) => BigInt::from(*v),
+        DataValue::Int(v) => BigInt::from(*v),
+        DataValue::Long(v) => BigInt::from(*v),
+        DataValue::Float(v) => BigInt::from(*v as i128),
+        DataValue::Double(v) => BigInt::from(*v as i128),
+        DataValue::BigInt(v) => v.clone(),
+        DataValue::BigDec(v) => big_dec_to_big_int(v),
+        _ => BigInt::from(0),
     }
 }
 
@@ -170,18 +187,49 @@ pub fn to_big_dec_string(value: &DataValue) -> String {
 
 /// Java `BigDecimal.toBigInteger()`：向零截断小数部分。
 pub fn big_dec_to_i128(dec: &str) -> i128 {
+    big_int_low_i128(&big_dec_to_big_int(dec))
+}
+
+/// Java `BigDecimal.toBigInteger()`：向零截断小数部分并保持任意精度。
+pub fn big_dec_to_big_int(dec: &str) -> BigInt {
     let (negative, int_part, _) = split_decimal(dec);
-    let digits: String = int_part.trim_start_matches('0').to_string();
-    let magnitude: i128 = if digits.is_empty() {
-        0
+    let digits = int_part.trim_start_matches('0');
+    let magnitude = if digits.is_empty() {
+        BigInt::from(0)
     } else {
-        digits.parse().unwrap_or(0)
+        BigInt::parse_bytes(digits.as_bytes(), 10).unwrap_or_else(|| BigInt::from(0))
     };
     if negative {
         -magnitude
     } else {
         magnitude
     }
+}
+
+fn big_int_low_i128(value: &BigInt) -> i128 {
+    let bytes = value.to_signed_bytes_le();
+    let fill = if value.sign() == num_bigint::Sign::Minus {
+        0xff
+    } else {
+        0
+    };
+    let mut low = [fill; 16];
+    let copy_len = bytes.len().min(low.len());
+    low[..copy_len].copy_from_slice(&bytes[..copy_len]);
+    i128::from_le_bytes(low)
+}
+
+fn big_int_low_i64(value: &BigInt) -> i64 {
+    let bytes = value.to_signed_bytes_le();
+    let fill = if value.sign() == num_bigint::Sign::Minus {
+        0xff
+    } else {
+        0
+    };
+    let mut low = [fill; 8];
+    let copy_len = bytes.len().min(low.len());
+    low[..copy_len].copy_from_slice(&bytes[..copy_len]);
+    i64::from_le_bytes(low)
 }
 
 /// 按数值比较两个十进制字符串（与 `BigDecimal.compareTo` 一致，忽略 scale：
@@ -265,11 +313,11 @@ mod tests {
             Some(MathDomain::FloatingPoint)
         );
         assert_eq!(
-            math_domain(&DataValue::BigDec("1".into()), &DataValue::BigInt(2)),
+            math_domain(&DataValue::BigDec("1".into()), &DataValue::big_int(2)),
             Some(MathDomain::BigDecimal)
         );
         assert_eq!(
-            math_domain(&DataValue::BigInt(1), &DataValue::Long(2)),
+            math_domain(&DataValue::big_int(1), &DataValue::Long(2)),
             Some(MathDomain::BigInteger)
         );
         assert_eq!(
@@ -281,7 +329,10 @@ mod tests {
             math_domain(&DataValue::Byte(1), &DataValue::Short(2)),
             Some(MathDomain::Integer)
         );
-        assert_eq!(math_domain(&DataValue::Bool(true), &DataValue::Int(1)), None);
+        assert_eq!(
+            math_domain(&DataValue::Bool(true), &DataValue::Int(1)),
+            None
+        );
     }
 
     #[test]
@@ -302,7 +353,7 @@ mod tests {
             Some(Ordering::Less)
         );
         assert_eq!(
-            number_compare(&DataValue::BigInt(i128::MAX), &DataValue::Long(i64::MAX)),
+            number_compare(&DataValue::big_int(i128::MAX), &DataValue::Long(i64::MAX)),
             Some(Ordering::Greater)
         );
         assert_eq!(

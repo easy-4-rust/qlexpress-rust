@@ -16,3 +16,5 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 # Stage 6: 反射替代的派生宏,默认启用。
 qlexpress-derive = { path = "../qlexpress-derive" }
+num-bigint = { workspace = true }
+num-traits = { workspace = true }

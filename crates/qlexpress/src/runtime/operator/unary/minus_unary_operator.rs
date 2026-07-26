@@ -68,7 +68,7 @@ fn unary_minus(operand: &DataValue) -> DataValue {
         DataValue::Short(v) => DataValue::Int(-(*v as i32)),
         DataValue::Int(v) => DataValue::Int(v.wrapping_neg()),
         DataValue::Long(v) => DataValue::Long(v.wrapping_neg()),
-        DataValue::BigInt(v) => DataValue::BigInt(-*v),
+        DataValue::BigInt(v) => DataValue::BigInt(-v),
         // Java BigDecimal.negate():十进制字符串翻转符号(零不添负号)
         DataValue::BigDec(v) => DataValue::BigDec(big_dec_negate(v)),
         // Java FloatingPointMath:float/double 都以 -doubleValue 返回
@@ -146,7 +146,7 @@ mod tests {
         // Java FloatingPointMath:Float → Double
         assert_eq!(run(DataValue::Float(1.5)).unwrap(), DataValue::Double(-1.5));
         assert_eq!(run(DataValue::Long(7)).unwrap(), DataValue::Long(-7));
-        assert_eq!(run(DataValue::BigInt(7)).unwrap(), DataValue::BigInt(-7));
+        assert_eq!(run(DataValue::big_int(7)).unwrap(), DataValue::big_int(-7));
     }
 
     #[test]

@@ -2,9 +2,9 @@
 //! 职责:把 [`SerializableParseCache`](可来自 JSON 反序列化)还原为可执行的
 //! 编译产物(指令序列 + Lambda 定义 + trace 点)。
 
-use std::cell::RefCell;
 use std::rc::Rc;
 
+use num_bigint::BigInt;
 use serde_json::{Map, Value};
 
 use crate::aparser::compile_cache::QCompileCache;
@@ -18,7 +18,7 @@ use crate::runtime::instruction::*;
 use crate::runtime::member::{ClassRef, MetaClass};
 use crate::runtime::qlambda_definition::QLambdaDefinition;
 use crate::runtime::qlambda_definition_inner::{Param, QLambdaDefinitionInner};
-use crate::runtime::trace::{ExpressionTrace, TraceType};
+use crate::runtime::trace::{TracePointTree, TraceType};
 use crate::runtime::value::DataValue;
 
 use super::loaded_parse_cache::LoadedParseCache;
@@ -118,10 +118,6 @@ impl<'a> SerializableParseCacheImporter<'a> {
             Some(trace_points) => self.import_trace_points(trace_points, None)?,
             None => Vec::new(),
         };
-        let trace_points: Vec<Rc<RefCell<ExpressionTrace>>> = trace_points
-            .into_iter()
-            .map(|trace| Rc::new(RefCell::new(trace)))
-            .collect();
         Ok(LoadedParseCache::new(
             QCompileCache::new(main, trace_points),
             cache.clone(),
@@ -537,10 +533,9 @@ impl<'a> SerializableParseCacheImporter<'a> {
             )?)),
             "BIG_INTEGER" => {
                 let decimal = self.as_decimal_string(&value, owner, "constant.value")?;
-                decimal
-                    .parse::<i128>()
+                BigInt::parse_bytes(decimal.as_bytes(), 10)
                     .map(DataValue::BigInt)
-                    .map_err(|_| self.invalid(owner, "constant.value must be a decimal string"))
+                    .ok_or_else(|| self.invalid(owner, "constant.value must be a decimal string"))
             }
             "FLOAT" => Ok(DataValue::Float(
                 self.as_f64(&value, owner, "constant.value")? as f32,
@@ -569,7 +564,7 @@ impl<'a> SerializableParseCacheImporter<'a> {
         &self,
         raw_trace_points: &[SerializableTracePoint],
         owner: Option<&SerializableInstruction>,
-    ) -> ImportResult<Vec<ExpressionTrace>> {
+    ) -> ImportResult<Vec<TracePointTree>> {
         let mut result = Vec::with_capacity(raw_trace_points.len());
         for trace_point in raw_trace_points {
             result.push(self.import_trace_point(trace_point, owner)?);
@@ -582,7 +577,7 @@ impl<'a> SerializableParseCacheImporter<'a> {
         &self,
         trace_point: &SerializableTracePoint,
         owner: Option<&SerializableInstruction>,
-    ) -> ImportResult<ExpressionTrace> {
+    ) -> ImportResult<TracePointTree> {
         let trace_type = trace_type_from_java_name(trace_point.trace_type.as_deref().unwrap_or(""))
             .ok_or_else(|| {
                 self.invalid(
@@ -597,7 +592,7 @@ impl<'a> SerializableParseCacheImporter<'a> {
             Some(children) => self.import_trace_points(children, owner)?,
             None => Vec::new(),
         };
-        Ok(ExpressionTrace::new(
+        Ok(TracePointTree::new(
             trace_type,
             trace_point.token.clone().unwrap_or_default(),
             children,

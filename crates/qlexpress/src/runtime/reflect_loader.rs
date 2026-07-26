@@ -35,6 +35,5 @@ impl ReflectLoader {
     pub const JAVA_FQN: &'static str = "com.alibaba.qlexpress4.runtime.ReflectLoader";
 
     /// 返回 Rust 化替代的全限定路径。
-    pub const RUST_REPLACEMENT: &'static str =
-        "crate::runtime::native_registry::NativeRegistry";
+    pub const RUST_REPLACEMENT: &'static str = "crate::runtime::native_registry::NativeRegistry";
 }

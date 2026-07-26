@@ -298,7 +298,7 @@ impl NumberMath {
 
     /// Java `NumberMath.toBigInteger(n)`:截断小数部分(向零取整)。
     pub fn to_big_integer(number: &DataValue) -> DataValue {
-        DataValue::BigInt(convert::to_i128(number))
+        DataValue::BigInt(convert::to_big_int(number))
     }
 }
 

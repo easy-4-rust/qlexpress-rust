@@ -1,50 +1,44 @@
 //! BigInteger 数值域实现。
 //!
 //! 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.BigIntegerMath
-//! (reference groovy source code)。SPEC §3.1 决策:无外部依赖,用 i128
-//! 近似 BigInteger —— 溢出行为以 i128 回绕代替 Java 的无限精度,属于
-//! SPEC 认可的近似偏差;位运算按补码语义,i128 与 BigInteger 的非负
-//! 数范围一致,负数补码在固定位宽下与 Java 结果的低 128 位一致。
+//! (reference groovy source code)。使用 `num_bigint::BigInt` 保持 Java
+//! `BigInteger` 的任意精度、补码位运算与移位语义。
 
 use super::big_decimal_math::BigDecimalMath;
 use super::number_math;
 use crate::exception::QLException;
 use crate::runtime::data::convert;
 use crate::runtime::value::DataValue;
+use num_bigint::BigInt;
+use num_traits::{Signed, Zero};
 
 /// 对应 Java: BigIntegerMath(单例,Rust 用零大小类型 + 关联函数)。
 pub struct BigIntegerMath;
 
 /// Java `NumberMath.toBigInteger(n)`(截断小数)。
-fn big_value(v: &DataValue) -> i128 {
-    convert::to_i128(v)
+fn big_value(v: &DataValue) -> BigInt {
+    convert::to_big_int(v)
 }
 
 impl BigIntegerMath {
     /// Java `absImpl`。
     pub fn abs_impl(number: &DataValue) -> Result<DataValue, QLException> {
-        Ok(DataValue::BigInt(big_value(number).wrapping_abs()))
+        Ok(DataValue::BigInt(big_value(number).abs()))
     }
 
     /// Java `addImpl`。
     pub fn add_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
-        Ok(DataValue::BigInt(
-            big_value(left).wrapping_add(big_value(right)),
-        ))
+        Ok(DataValue::BigInt(big_value(left) + big_value(right)))
     }
 
     /// Java `subtractImpl`。
     pub fn subtract_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
-        Ok(DataValue::BigInt(
-            big_value(left).wrapping_sub(big_value(right)),
-        ))
+        Ok(DataValue::BigInt(big_value(left) - big_value(right)))
     }
 
     /// Java `multiplyImpl`。
     pub fn multiply_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
-        Ok(DataValue::BigInt(
-            big_value(left).wrapping_mul(big_value(right)),
-        ))
+        Ok(DataValue::BigInt(big_value(left) * big_value(right)))
     }
 
     /// Java `divideImpl`:委托 BigDecimalMath。
@@ -63,9 +57,11 @@ impl BigIntegerMath {
 
     /// Java `intDivImpl`(截断向零;除零抛 "/ by zero")。
     pub fn int_div_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
-        match big_value(left).checked_div(big_value(right)) {
-            Some(v) => Ok(DataValue::BigInt(v)),
-            None => Err(number_math::arithmetic_exception("/ by zero")),
+        let divisor = big_value(right);
+        if divisor.is_zero() {
+            Err(number_math::arithmetic_exception("/ by zero"))
+        } else {
+            Ok(DataValue::BigInt(big_value(left) / divisor))
         }
     }
 
@@ -73,25 +69,32 @@ impl BigIntegerMath {
     /// ArithmeticException("BigInteger: modulus not positive")。
     pub fn mod_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
         let modulus = big_value(right);
-        if modulus <= 0 {
+        if modulus <= BigInt::zero() {
             return Err(number_math::arithmetic_exception(
                 "BigInteger: modulus not positive",
             ));
         }
-        Ok(DataValue::BigInt(big_value(left).rem_euclid(modulus)))
+        let remainder = big_value(left) % &modulus;
+        Ok(DataValue::BigInt(if remainder.is_negative() {
+            remainder + modulus
+        } else {
+            remainder
+        }))
     }
 
     /// Java `remainderImpl`:BigInteger.remainder 符号跟随被除数。
     pub fn remainder_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
-        match big_value(left).checked_rem(big_value(right)) {
-            Some(v) => Ok(DataValue::BigInt(v)),
-            None => Err(number_math::arithmetic_exception("/ by zero")),
+        let divisor = big_value(right);
+        if divisor.is_zero() {
+            Err(number_math::arithmetic_exception("/ by zero"))
+        } else {
+            Ok(DataValue::BigInt(big_value(left) % divisor))
         }
     }
 
     /// Java `unaryMinusImpl`。
     pub fn unary_minus_impl(left: &DataValue) -> Result<DataValue, QLException> {
-        Ok(DataValue::BigInt(big_value(left).wrapping_neg()))
+        Ok(DataValue::BigInt(-big_value(left)))
     }
 
     /// Java `unaryPlusImpl`。
@@ -119,16 +122,13 @@ impl BigIntegerMath {
         Ok(DataValue::BigInt(big_value(left) ^ big_value(right)))
     }
 
-    /// Java `leftShiftImpl`(`BigInteger.shiftLeft(int)`;负距离等价右移。
-    /// i128 近似:距离按 127 掩码回绕,Java 则允许任意距离)。
+    /// Java `leftShiftImpl`(`BigInteger.shiftLeft(int)`；负距离等价右移)。
     pub fn left_shift_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
         let distance = convert::to_i64(right) as i32;
         if distance < 0 {
             return Self::right_shift_with(left, distance.unsigned_abs());
         }
-        Ok(DataValue::BigInt(
-            big_value(left).wrapping_shl(distance as u32),
-        ))
+        Ok(DataValue::BigInt(big_value(left) << distance as usize))
     }
 
     /// Java `rightShiftImpl`(`BigInteger.shiftRight(int)`,算术右移)。
@@ -141,11 +141,11 @@ impl BigIntegerMath {
     }
 
     fn left_shift_with(left: &DataValue, distance: u32) -> Result<DataValue, QLException> {
-        Ok(DataValue::BigInt(big_value(left).wrapping_shl(distance)))
+        Ok(DataValue::BigInt(big_value(left) << distance as usize))
     }
 
     fn right_shift_with(left: &DataValue, distance: u32) -> Result<DataValue, QLException> {
-        Ok(DataValue::BigInt(big_value(left).wrapping_shr(distance)))
+        Ok(DataValue::BigInt(big_value(left) >> distance as usize))
     }
 }
 
@@ -155,21 +155,38 @@ mod tests {
 
     #[test]
     fn big_int_beyond_i64() {
-        // 超出 long 范围的加法(i128 近似 BigInteger)。
-        let big = (i64::MAX as i128) + 10;
+        // 超出 long 范围仍保持精确。
+        let big = BigInt::from(i64::MAX) + BigInt::from(10);
         assert_eq!(
-            BigIntegerMath::add_impl(&DataValue::BigInt(big), &DataValue::Long(1)).unwrap(),
-            DataValue::BigInt(big + 1)
+            BigIntegerMath::add_impl(&DataValue::BigInt(big.clone()), &DataValue::Long(1)).unwrap(),
+            DataValue::BigInt(big + BigInt::from(1))
         );
         // mod 恒非负。
         assert_eq!(
-            BigIntegerMath::mod_impl(&DataValue::BigInt(-7), &DataValue::Int(3)).unwrap(),
-            DataValue::BigInt(2)
+            BigIntegerMath::mod_impl(&DataValue::big_int(-7), &DataValue::Int(3)).unwrap(),
+            DataValue::big_int(2)
         );
         // remainder 符号跟随被除数。
         assert_eq!(
-            BigIntegerMath::remainder_impl(&DataValue::BigInt(-7), &DataValue::Int(3)).unwrap(),
-            DataValue::BigInt(-1)
+            BigIntegerMath::remainder_impl(&DataValue::big_int(-7), &DataValue::Int(3)).unwrap(),
+            DataValue::big_int(-1)
+        );
+    }
+
+    #[test]
+    fn arithmetic_is_not_limited_to_i128() {
+        let huge = BigInt::parse_bytes(
+            b"121932631137021795226185032733622923332237463801111263526900",
+            10,
+        )
+        .expect("任意精度整数");
+        assert_eq!(
+            BigIntegerMath::add_impl(
+                &DataValue::BigInt(huge.clone()),
+                &DataValue::BigInt(huge.clone())
+            )
+            .unwrap(),
+            DataValue::BigInt(huge * BigInt::from(2))
         );
     }
 }

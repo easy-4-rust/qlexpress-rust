@@ -34,7 +34,9 @@ pub mod terminal_node;
 pub mod token;
 pub mod trace_expression_visitor;
 
-pub use built_in_types_set::{get_cls, BuiltInType, BYTE, CHAR, DOUBLE, FLOAT, INT, LONG, SHORT, BOOLEAN};
+pub use built_in_types_set::{
+    get_cls, BuiltInType, BOOLEAN, BYTE, CHAR, DOUBLE, FLOAT, INT, LONG, SHORT,
+};
 pub use check_visitor::CheckVisitor;
 pub use compile_cache::{CompileCache, QCompileCache, ScriptCompileCache};
 pub use compile_time_function::{CodeGenerator, CompileTimeFunction};
