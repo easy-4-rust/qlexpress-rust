@@ -1,0 +1,18 @@
+[package]
+name = "qlexpress_rust"
+description = "Rust port of Alibaba QLExpress4 dynamic script engine (full semantic migration)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "qlexpress_rust"
+path = "src/lib.rs"
+
+[dependencies]
+# SPEC §5.5.5 依赖映射:Jackson → serde/serde_json。
+# 供 api/parsecache 编译缓存的导出/导入(JSON 序列化)使用,默认启用。
+serde = { workspace = true }
+serde_json = { workspace = true }
+# Stage 6: 反射替代的派生宏,默认启用。
+qlexpress-derive = { path = "../qlexpress-derive" }

@@ -693,6 +693,16 @@ impl Express4Runner {
         self.registry_mut().register_type(native_type);
     }
 
+    /// 通过 `#[derive(QLExpressType)]` 宏注册原生类型。对应
+    /// Java `ReflectLoader.register` 的 Rust 形态。
+    pub fn register_qlexpress_type<T>(&mut self)
+    where
+        T: crate::runtime::member::QLExpressNativeType,
+    {
+        let native_type = T::build_native_type();
+        self.register_native_type(native_type);
+    }
+
     /// 读取对象字段。对应 Java 方法 `loadField(Object, String)`。
     pub fn load_field(&self, object: &DataValue, field_name: &str) -> Option<QValue> {
         self.registry.load_field(object, field_name)

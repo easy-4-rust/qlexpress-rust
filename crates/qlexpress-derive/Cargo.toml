@@ -1,0 +1,18 @@
+[package]
+name = "qlexpress-derive"
+description = "Proc-macro crate for qlexpress_rust: #[derive(QLExpressType)] generates NativeType + NativeObject impls"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2 = { workspace = true }
+quote = { workspace = true }
+syn = { workspace = true }
+
+[dev-dependencies]
+# 让 derive crate 的单测能直接调用 qlexpress_rust(避免循环依赖的话,
+# 单测可放在 qlexpress crate 里,这里只放 proc-macro 自身的解析单测)。

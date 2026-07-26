@@ -132,6 +132,38 @@ impl DataValue {
         DataValue::Map(Rc::new(RefCell::new(map)))
     }
 
+    /// True when the value is a [`DataValue::Object`].
+    pub fn is_object(&self) -> bool {
+        matches!(self, DataValue::Object(_))
+    }
+
+    /// Borrow the `Rc<RefCell<dyn NativeObject>>` payload without cloning.
+    /// Used by the derive macro and the runner to dispatch through
+    /// `NativeObject::get_field` / `call_method`.
+    pub fn as_object_ref(&self) -> Option<&Rc<RefCell<dyn NativeObject>>> {
+        match self {
+            DataValue::Object(rc) => Some(rc),
+            _ => None,
+        }
+    }
+
+    /// Downcast a `DataValue::Object` to a concrete type `T` *of the
+    /// cell*. Works for both direct cells (`Rc<RefCell<T>>`) and the
+    /// `Rc<RefCell<dyn NativeObject>>` shape produced by
+    /// [`QLExpressNativeType::into_data_value`].
+    ///
+    /// Returns `None` if the value is not an Object or the cell is not
+    /// a `Rc<RefCell<T>>`.
+    pub fn downcast_object<T: 'static>(&self) -> Option<Rc<RefCell<T>>> {
+        use std::any::Any;
+        let rc = self.as_object_ref()?;
+        // `rc: &Rc<RefCell<dyn NativeObject>>`. The underlying Rc was
+        // originally `Rc<RefCell<T>>` (see QLExpressNativeType::into_data_value),
+        // so downcasting the Rc itself to `Rc<RefCell<T>>` works because
+        // `Rc<T>` keeps the original concrete type in its TypeId.
+        (rc as &dyn Any).downcast_ref::<Rc<RefCell<T>>>().cloned()
+    }
+
     /// Java `String.valueOf`-style rendering used in error messages and
     /// string concatenation (`null` for [`DataValue::Null`]).
     pub fn string_value_of(&self) -> String {

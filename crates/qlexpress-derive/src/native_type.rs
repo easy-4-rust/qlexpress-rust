@@ -1,0 +1,97 @@
+//! Generate `impl QLExpressNativeType for T`.
+
+use proc_macro2::TokenStream;
+use quote::quote;
+
+use crate::attrs::{ContainerAttrs, FieldSpec, ItemSpec};
+
+pub fn generate(
+    _ast: &syn::DeriveInput,
+    item: &ItemSpec,
+    container: &ContainerAttrs,
+    qlexpress_path: &syn::Path,
+) -> TokenStream {
+    let type_name = container
+        .name
+        .clone()
+        .unwrap_or_else(|| item.ident.to_string());
+    let ident = &item.ident;
+
+    let field_entries: Vec<TokenStream> = item
+        .fields
+        .iter()
+        .filter(|f| !f.attrs.skip)
+        .map(|f| gen_field_entry(f, qlexpress_path))
+        .collect();
+
+    let field_alias_entries: Vec<TokenStream> = item
+        .fields
+        .iter()
+        .filter(|f| !f.attrs.skip && !f.attrs.aliases.is_empty())
+        .map(|f| {
+            let name = f.ident.to_string();
+            let aliases = &f.attrs.aliases;
+            quote! {
+                t.field_aliases.insert(
+                    #name.to_string(),
+                    vec![ #( #aliases.to_string() ),* ],
+                );
+            }
+        })
+        .collect();
+
+    let mut combined = TokenStream::new();
+    for entry in field_entries {
+        combined.extend(entry);
+    }
+    for entry in field_alias_entries {
+        combined.extend(entry);
+    }
+
+    quote! {
+        impl #qlexpress_path::runtime::member::QLExpressNativeType for #ident {
+            const QL_TYPE_NAME: &'static str = #type_name;
+
+            fn build_native_type()
+                -> #qlexpress_path::runtime::member::NativeType
+            {
+                use ::std::collections::HashMap;
+                use #qlexpress_path::runtime::member::{
+                    NativeFieldGetter, NativeType,
+                };
+
+                let mut t = NativeType::named(#type_name);
+                let fields: &mut HashMap<String, NativeFieldGetter> = &mut t.fields;
+                #combined
+                t
+            }
+        }
+    }
+}
+
+fn gen_field_entry(f: &FieldSpec, qlexpress_path: &syn::Path) -> TokenStream {
+    let path = qlexpress_path;
+    let name = f.ident.to_string();
+    let field_ident = &f.ident;
+    let value_expr = crate::convert::expr_to_data_value(&f.ty, quote!(me.#field_ident));
+    quote! {
+        {
+            let g: NativeFieldGetter = ::std::rc::Rc::new(
+                move |bean: & #path::runtime::value::DataValue|
+                    -> Option< #path::runtime::value::DataValue>
+                {
+                    // Walk through the cell to get a `&Self`. The cell
+                    // is `Rc<RefCell<dyn NativeObject>>` whose contents
+                    // are a `Self`; borrow() returns a `Ref<dyn NativeObject>`
+                    // which we downcast back to `&Self` via `as_any`.
+                    let cell = bean.as_object_ref()?;
+                    let native: &dyn #path::runtime::native_object::NativeObject =
+                        &*cell.borrow();
+                    let me: &Self = native.as_any().downcast_ref::<Self>()?;
+                    Some({ #value_expr })
+                }
+            );
+            fields.insert(#name.to_string(), g);
+        }
+    }
+}
