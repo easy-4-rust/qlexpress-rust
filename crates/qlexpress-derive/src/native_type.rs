@@ -48,6 +48,16 @@ pub fn generate(
         combined.extend(entry);
     }
 
+    // expose_fields 的 v1 行为由 `NativeObject::get_field` 默认实现已经覆盖:
+// 每个字段被 derive 后的 `impl NativeObject for T` 处理,
+// `obj.field` 走 `as_any().downcast_ref::<Self>()` 后访问字段。
+// 这里不再额外注册,只需保留属性机制供后续扩展。
+let expose_methods: Vec<TokenStream> = Vec::new();
+    let mut expose_combined = TokenStream::new();
+    for entry in expose_methods {
+        expose_combined.extend(entry);
+    }
+
     quote! {
         impl #qlexpress_path::runtime::member::QLExpressNativeType for #ident {
             const QL_TYPE_NAME: &'static str = #type_name;

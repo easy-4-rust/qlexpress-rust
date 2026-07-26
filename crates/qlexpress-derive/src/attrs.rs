@@ -11,6 +11,10 @@ use syn::{Attribute, Lit, Meta, Result, Token};
 pub struct ContainerAttrs {
     pub name: Option<String>,
     pub no_native_object: bool,
+    /// v1 新增:把每个 pub 字段也注册为同名方法,让 `obj.field` 既走
+    /// `NativeType.fields` 也走 `methods`。对齐 Java 直接 public field 访问
+    /// (`Issue318Test`)。
+    pub expose_fields: bool,
 }
 
 impl ContainerAttrs {
@@ -29,6 +33,10 @@ fn apply_container_arg(out: &mut ContainerAttrs, arg: QlexAttr) -> Result<()> {
     match arg {
         QlexAttr::Flag(name) if name == "no_native_object" => {
             out.no_native_object = true;
+            Ok(())
+        }
+        QlexAttr::Flag(name) if name == "expose_fields" => {
+            out.expose_fields = true;
             Ok(())
         }
         QlexAttr::KeyValue { key, value } if key == "name" => {
