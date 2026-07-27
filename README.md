@@ -1,141 +1,303 @@
-# qlexpress
+<a id="readme-top"></a>
 
-Alibaba [QLExpress4](https://github.com/alibaba/QLExpress) 动态脚本引擎的 Rust 全量语义迁移
-(Rust 首发版本 `0.1.0-alpha.1`，逐类对齐 `com.alibaba.qlexpress4`
-`4.2.0-beta`，基线提交 `9065b9ac`)。
+<div align="center">
 
-## 与 QLExpress4 的对应关系
+# QlExpress-Rust
 
-| Java (`com.alibaba.qlexpress4`) | Rust (`qlexpress`) |
-| --- | --- |
-| `Express4Runner` | `express4_runner::Express4Runner`(门面,见下) |
-| `InitOptions` / `QLOptions` / `QLResult` / `CheckOptions` | `init_options` / `ql_options` / `ql_result` / `check_options` |
-| `ClassSupplier` / `DefaultClassSupplier` | `class_supplier` / `default_class_supplier`(显式注册替代 `Class.forName`) |
-| `aparser.*`(QLexer/QLParser/QvmInstructionVisitor 等) | `aparser/`(词法、递归下降语法树、编译为 QVM 指令) |
-| `runtime.*`(QvmRuntime/QLambda/Value/function/context) | `runtime/`(QVM、Lambda、值体系、函数、上下文) |
-| `runtime.operator.*` | `runtime/operator/`(内建操作符全量 + 自定义操作符) |
-| `security.QLSecurityStrategy` | `security`(open/isolation/黑/白名单) |
-| `api.parsecache.*` | `api/parsecache/`(serde JSON 序列化编译缓存) |
-| `exception.QLException` 族 | `exception/`(统一 `QLException` + kind: Syntax/Runtime/Timeout) |
-| `proxy.QLambdaInvocationHandler` | `proxy/`(Java 动态代理 → 显式闭包/trait 适配器,见文件头注释) |
-| `enums.AccessMode` | `enums::AccessMode` |
+**An embeddable Rust expression and dynamic scripting engine, behaviorally ported from Alibaba QLExpress4.**
 
-## 快速上手
+[![Crates.io](https://img.shields.io/crates/v/qlexpress)](https://crates.io/crates/qlexpress)
+[![docs.rs](https://img.shields.io/docsrs/qlexpress)](https://docs.rs/qlexpress)
+[![Production Readiness](https://github.com/easy-4-rust/qlexpress-rust/actions/workflows/production-readiness.yml/badge.svg?branch=main)](https://github.com/easy-4-rust/qlexpress-rust/actions/workflows/production-readiness.yml)
+[![MSRV](https://img.shields.io/badge/MSRV-1.85-orange)](#requirements)
+[![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 
-```toml
-[dependencies]
-qlexpress = "=0.1.0-alpha.1"
+[English](README.md) | [简体中文](README.zh-CN.md)
+
+[Quick start](#quick-start) · [Capabilities](#capabilities) · [Architecture](#architecture) ·
+[Compatibility](#java-compatibility) · [Verification](#verification) · [Documentation](#documentation)
+
+</div>
+
+---
+
+> **Release:** `0.1.0-alpha.1`<br>
+> **Maturity:** alpha preview; APIs may change before `1.0`<br>
+> **Java baseline:** QLExpress4 `4.2.0-beta`, commit `9065b9ac5d985dcd02e627239aa9cdb78fb2f7f3`<br>
+> **Last verified:** 2026-07-27
+
+`qlexpress` evaluates expressions and rule scripts inside a Rust process. It provides a parser, a
+stack-based QVM, Java-compatible value and error semantics, custom functions and operators,
+explicit native-type registration, security policies, compile caches, and expression tracing.
+
+The repository has passed its repeatable local and CI readiness gates. That is evidence for the
+library and its harness—not proof that an arbitrary business deployment is production-ready.
+Real scripts, data, capacity limits, monitoring, rollout, and rollback must still be accepted in
+each host environment.
+
+## Why qlexpress?
+
+- Embed business rules without starting a separate service or JVM.
+- Use a familiar C/Java-like expression language with lists, maps, lambdas, functions, loops,
+  dynamic strings, macros, and structured errors.
+- Extend the language through Rust closures, custom operators, and registered host types.
+- Keep host access explicit: Rust uses `NativeRegistry` instead of unrestricted JVM reflection.
+- Compare behavior against a pinned QLExpress4 baseline with differential and replay tests.
+
+### Good fit
+
+- pricing, promotion, eligibility, routing, scoring, and validation rules;
+- configurable expressions embedded in a Rust application;
+- teams migrating QLExpress4 rule behavior from Java to Rust.
+
+### Boundaries
+
+- This is not a Java ABI/JVM replacement.
+- A single `Express4Runner` is not `Send` or `Sync`; use one runner per worker thread.
+- Rust native methods and constructors are registered explicitly; derive cannot inspect `impl`
+  blocks.
+- `0.1.0-alpha.1` is an alpha release, not a stable `1.0` compatibility promise.
+
+## Architecture
+
+```text
+script + host context + QLOptions
+                 │
+                 ▼
+┌──────────────────────────────────────────────────────────────┐
+│ Express4Runner                                               │
+│  lexer/parser → syntax tree → instruction compiler           │
+│       │                              │                       │
+│       └──────── compile cache ◄──────┘                       │
+│                                      ▼                       │
+│  functions / operators / NativeRegistry → QVM + QLambda     │
+│                                      │                       │
+│                       result / trace / structured error       │
+└──────────────────────────────────────────────────────────────┘
 ```
+
+The execution path is:
+
+```text
+Express4Runner::execute
+  → execute_with_context
+  → parse_to_definition_with_cache | parse_definition
+  → parse_to_syntax_tree
+  → QvmInstructionVisitor::compile
+  → QvmRuntime::execute
+  → QLambdaInner / run_instructions
+  → QLResult
+```
+
+| Crate | Published | Responsibility |
+|:---|:---:|:---|
+| `qlexpress` | Yes | Public facade, parser, compiler, QVM, values, extensions, security |
+| `qlexpress-derive` | Yes | `#[derive(QLExpressType)]` for registered host structs |
+| `qlexpress-verification` | No | Differential, replay, concurrency, load, fuzz, host, and canary harness |
+
+See [Architecture](docs/qlexpress-Architecture.md) for component boundaries, runtime flows,
+security, failure handling, and architecture decisions.
+
+## Capabilities
+
+| Capability | Status | Evidence / limit |
+|:---|:---:|:---|
+| Expressions, control flow, functions, lambdas, lists, maps | Implemented | Alignment and stage integration tests |
+| Custom functions, operators, aliases, and macros | Implemented | Public `Express4Runner` APIs |
+| Structured syntax/runtime/timeout errors | Implemented | Stable error codes and source positions |
+| Parse-cache export/import | Implemented | JSON model v1 and round-trip tests |
+| Expression tracing | Implemented | Compile-time trace points plus runtime collection |
+| Host-type derive | Implemented | Fields, aliases, skip, name override; no generic structs |
+| Native methods and constructors | Explicit registration | Not discovered from Rust `impl` blocks |
+| Security policy | Implemented | Isolation default; open, allowlist, and denylist modes |
+| Multi-thread execution | Runner per worker | Sharing one runner across threads is unsupported |
+| Cross-platform support | Not yet claimed | CI currently executes on Ubuntu only |
+
+## Quick start
+
+### Requirements
+
+- Rust `1.85` or newer
+- Cargo with Rust Edition 2021 support
+
+Add the crate:
+
+```bash
+cargo add qlexpress@0.1.0-alpha.1
+```
+
+Evaluate a script:
 
 ```rust
 use std::collections::HashMap;
-use qlexpress::{DataValue, Express4Runner, QLExpressType, QLOptions};
 
-let runner = Express4Runner::new();
-let options = QLOptions::builder().build();
+use qlexpress::{DataValue, Express4Runner, QLOptions};
 
-// 执行脚本(Map 上下文:key 即脚本变量名)
-let mut context = HashMap::new();
-context.insert("a".to_string(), DataValue::Int(19));
-context.insert("b".to_string(), DataValue::Int(23));
-let result = runner.execute("a + b", context, &options)?;
-assert_eq!(result.into_result(), DataValue::Int(42));
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let runner = Express4Runner::new();
+    let options = QLOptions::builder().cache(true).build();
 
-// 注册自定义函数(Java: addFunction(name, (qContext, params) -> ...))
-runner.add_function("dbl", |_ctx, params| {
-    match params.get_value(0) {
-        DataValue::Int(v) => Ok(DataValue::Int(v * 2)),
-        _ => Ok(DataValue::Null),
-    }
-});
-let r = runner.execute("dbl(21)", HashMap::new(), &options)?;
-assert_eq!(r.into_result(), DataValue::Int(42));
+    let mut context = HashMap::new();
+    context.insert("price".to_string(), DataValue::Double(125.0));
+    context.insert("vip".to_string(), DataValue::Bool(true));
+
+    let result = runner.execute(
+        "vip ? price * 0.8 : price",
+        context,
+        &options,
+    )?;
+
+    assert_eq!(result.into_result(), DataValue::Double(100.0));
+    Ok(())
+}
 ```
 
-更多能力:`add_varargs_function` / `batch_add_function`(部分失败语义)/
-`add_function_of_class_method` / `add_static_method`(经 NativeRegistry)/
-`add_operator` / `replace_operator` / `add_alias` / `check`(操作符黑白名单)/
-`set_security_strategy`(成员访问黑白名单)/ `add_macro` /
-`add_compile_time_function` / `get_out_var_names` / `get_out_function_names` /
-`export_parse_cache` → `import_parse_cache` → `execute_with_cache`。端到端示例见
-`tests/stage5c_runner.rs`。
-
-## 构建 / 测试
+Run the repository example:
 
 ```bash
-cargo build
-cargo test          # 全量:lib 单测 + tests/ 各 Stage 端到端
-cargo clippy --all-targets
+cargo run -p qlexpress --example quick_start
 ```
 
-## 当前语义对齐范围与 Rust 实现差异
+Expected output:
 
-- **数值**:`BigInteger` 使用 `num_bigint::BigInt` 任意精度实现；
-  `BigDecimal` 以十进制字符串存储、按需解析。
-- **反射替代**(SPEC §4):Java 的 `Class.forName`/反射成员解析改为显式
-  `NativeRegistry` 注册(类型、构造器、方法、字段)；`@QLFunction` /
-  `@QLAlias` 扫描职责由 `#[derive(QLExpressType)]` 在编译期生成，
-  宿主也可通过 `addObjFunction`/`addStaticFunction` 对应的注册 API 显式接线。
-- **安全策略**:作用于构造器、注册表成员、动态宿主对象以及内建 JDK
-  兼容成员分派，对齐 Java `ReflectLoader.check`；不通过时按「成员不存在」
-  报错。扩展函数先于隔离策略解析，`Express4Runner` 的宿主字段读取保留
-  Java `skipSecurity=true` 边界。
-- **并发编译缓存**:Java `ConcurrentHashMap<String, Future<QCompileCache>>`
-  → 单线程 `Rc` 体系下的 `RefCell<HashMap>`(命中语义一致)。
-- **表达式 trace**:`TraceExpressionVisitor`、`TracePointTree`、
-  `ExpressionTrace` 与 `QTraces` 已形成编译期标注、运行时采集和嵌套
-  lambda 追踪闭环，`get_expression_trace` 返回可序列化追踪结果。
-- **动态代理**:`proxy.QLambdaInvocationHandler` 以显式闭包/trait 适配器
-  替代 Java 运行时接口代理。
-- **运行时反射改注册表**:Rust 无 JVM 运行时反射，等价职责由
-  `ReflectLoader` 门面和 `NativeRegistry` 承担，注册在 `&mut runner` 上进行。
-- **#[derive(QLExpressType)]**:过程宏自动生成 `NativeType` 注册 +
-  `NativeObject` impl，支持字段 getter、alias、skip、name override。
-- **Varargs**:Java 的 `Method.isVarArgs()` + 参数打包由 Rust 闭包切片
-  天然替代——注册的闭包接收 `&[DataValue]`，可自行处理变长参数。
-- **数值提升**:BigInteger(任意精度)/BigDecimal(十进制字符串)的双向转换
-  在构造器/方法闭包内部完成，无需修改 `ParametersTypeConvertor::cast`。
-- **try/catch 控制信号**:对齐 Java `shouldExitTryCatch` 语义——
-  仅传播 `Return` / `Break` / `Continue(null)`（循环控制哨兵），
-  `Continue(non-null)` 作为块表达式结果留在栈上。
-
-## 测试覆盖
-
-```
-cargo test --workspace --all-features: 777 passed / 0 failed / 0 ignored
+```text
+100.0
 ```
 
-| 类别 | 数量 | 说明 |
-|---|---|---|
-| 模块单元测试 | 270 | parser/runtime/operator/security 等 |
-| Java 对齐测试 (`alignment_*`) | 338 | 对齐 Java 测试与官方脚本语义 |
-| Rust 独立测试 (`rust_native_*`) | 62 | sandbox/property/error码/perf |
-| Stage 集成测试 | 107 | QVM、编译、上下文、缓存、runner 与 derive |
+## Common extensions
 
-### 验收门禁
+Register a Rust function:
 
-| 门禁 | 结果 |
-|---|---|
-| 全量测试 | 777 passed / 0 failed / 0 ignored |
-| 格式 | `cargo fmt --all -- --check` 通过 |
-| 静态检查 | `cargo clippy --workspace --all-targets --all-features -- -D warnings` 通过 |
-| 完整性 | 无 `todo!` / `unimplemented!` / `#[ignore]` / `compat.rs` |
+```rust
+use qlexpress::DataValue;
 
-## 构建 / 测试
+runner.add_varargs_function("sumAll", |values: &[DataValue]| {
+    let total = values.iter().filter_map(|value| match value {
+        DataValue::Int(value) => Some(*value),
+        _ => None,
+    }).sum();
+    Ok(DataValue::Int(total))
+});
+```
+
+Expose a host struct:
+
+```rust
+use qlexpress::{QLExpressType, QLSecurityStrategy};
+
+#[derive(QLExpressType)]
+#[qlexpress(name = "com.example.Order")]
+struct Order {
+    id: String,
+    amount: f64,
+    #[qlexpress(skip)]
+    internal_note: String,
+}
+
+let mut runner = Express4Runner::with_init_options(
+    qlexpress::InitOptions::builder()
+        .security_strategy(QLSecurityStrategy::open())
+        .build(),
+);
+runner.register_qlexpress_type::<Order>();
+```
+
+The open policy is shown to make the example explicit. Prefer isolation or a narrow allowlist for
+untrusted scripts. The full examples and limits are in the
+[Usage Guide](docs/Usage-Guide.md).
+
+## Java compatibility
+
+The behavioral authority is Alibaba QLExpress4 `4.2.0-beta` at commit `9065b9ac`. Compatibility
+is verified through upstream script replay, a shared differential corpus, object/semantic
+matrices, and Rust-native integration tests.
+
+| Java design | Rust design | Compatibility intent |
+|:---|:---|:---|
+| `Express4Runner` | `Express4Runner` | Facade and execution behavior |
+| ANTLR syntax tree + visitor | Rust lexer/parser + visitor compiler | Script behavior, not parser implementation identity |
+| JVM reflection | `ReflectLoader` + `NativeRegistry` | Explicit, security-checked host integration |
+| Exceptions | `Result<T, QLException>` | Error category, code, location, and reason |
+| `ConcurrentHashMap<String, Future<...>>` | `RefCell<HashMap<...>>` | Cache-hit semantics in a single-thread runner |
+| Java annotations | `#[derive(QLExpressType)]` + explicit registration | Compile-time field metadata; no runtime method scanning |
+| Dynamic proxies | Explicit closure/trait adapters | Idiomatic Rust replacement |
+
+Detailed mappings:
+
+- [Semantic migration matrix](docs/语义迁移对照表.md)
+- [Object-level mapping](docs/对象级对照表.md)
+- [Name consistency audit](docs/对象名称一致性检查.md)
+
+## Concurrency and security
+
+`Express4Runner` owns `Rc`/`RefCell` state. Create and configure one runner per worker thread, then
+reuse it inside that worker to benefit from compile caching. Do not wrap one runner in a mutex and
+assume Java-equivalent concurrency.
+
+The default native-member policy is `QLSecurityStrategy::Isolation`. Before accepting untrusted
+scripts:
+
+- keep native members on an allowlist;
+- set `timeout_millis` and `max_arr_length`;
+- validate scripts with `CheckOptions`;
+- bound input size outside the engine;
+- run fuzz, replay, and load tests with the host's real registrations and scripts.
+
+## Verification
+
+The current repository gates include:
+
+```bash
+cargo fmt --all -- --check
+cargo clippy --workspace --all-targets --all-features -- -D warnings
+cargo test --workspace --all-features
+RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps
+```
+
+Production-readiness CI additionally runs the pinned Java suite, Java/Rust differential tests,
+official script replay, runner-per-worker concurrency, deterministic security fuzzing, a
+business-host scenario, canary/rollback simulation, load acceptance, and libFuzzer.
+
+The recorded 2026-07-27 local run passed 777 Rust tests, 50/50 differential cases, 228/228 Java
+suite cases, 151/151 Rust replays, 16,000 concurrent executions, a 60-second soak, 25,000
+deterministic security cases, and a 31-second libFuzzer run. Read the commands, measurements, and
+remaining deployment boundary in [Production Acceptance](docs/生产验收.md).
+
+## Documentation
+
+| Document | English | 简体中文 |
+|:---|:---:|:---:|
+| Project overview | [README](README.md) | [README](README.zh-CN.md) |
+| Usage guide | [Usage Guide](docs/Usage-Guide.md) | [使用指南](docs/Usage-Guide.zh_CN.md) |
+| Architecture | [Architecture](docs/qlexpress-Architecture.md) | [架构文档](docs/qlexpress-Architecture.zh_CN.md) |
+| API reference | [docs.rs](https://docs.rs/qlexpress) | Source rustdoc includes bilingual notes |
+| Production acceptance | — | [生产验收](docs/生产验收.md) |
+
+## Development and release
+
+Development happens on `dev`; `main` is the release branch. A `v*` tag contained in `main` runs
+the complete readiness workflow before publishing `qlexpress-derive` and then `qlexpress`.
 
 ```bash
 cargo build --workspace
-cargo test --workspace          # 全量:lib 单测 + tests/ 各 Stage 端到端
-cargo clippy --workspace --all-targets
-cargo doc --workspace --no-deps # 文档生成
+cargo test --workspace --all-features
+cargo publish -p qlexpress-derive --dry-run
+cargo publish -p qlexpress --dry-run
 ```
 
-## 生产验收
-
-仓库提供 Java/Rust 自动差分、Java 官方脚本回放、线程独立 Runner 并发验收、
-负载测试、安全 fuzz、业务宿主集成以及本地灰度/回滚演练。完整命令、门限与
-真实生产环境边界见 [`docs/生产验收.md`](docs/生产验收.md)。
+Do not publish `qlexpress` before the matching exact version of `qlexpress-derive` is available.
 
 ## License
 
-Licensed under the [Apache License, Version 2.0](LICENSE).
+Licensed under the [Apache License, Version 2.0](LICENSE). QLExpress is an Alibaba project; this
+Rust port is maintained independently by the `easy-4-rust` organization.
+
+---
+
+<div align="center">
+
+[Back to top](#readme-top) · [crates.io](https://crates.io/crates/qlexpress) ·
+[docs.rs](https://docs.rs/qlexpress) ·
+[Issues](https://github.com/easy-4-rust/qlexpress-rust/issues)
+
+</div>
