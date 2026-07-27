@@ -101,10 +101,10 @@ cargo test --workspace --all-features: 777 passed / 0 failed / 0 ignored
 
 | 类别 | 数量 | 说明 |
 |---|---|---|
-| Java 对齐测试 (`alignment_*`) | ~180 | 1:1 对齐 Java @Test |
-| Rust 独立测试 (`rust_native_*`) | ~60 | sandbox/property/error码/perf |
-| Stage 0-5 原有 | ~500 | 基线 |
-| 过程宏 fixture | 12 | `stage6_derive_fixture` |
+| 模块单元测试 | 270 | parser/runtime/operator/security 等 |
+| Java 对齐测试 (`alignment_*`) | 338 | 对齐 Java 测试与官方脚本语义 |
+| Rust 独立测试 (`rust_native_*`) | 62 | sandbox/property/error码/perf |
+| Stage 集成测试 | 107 | QVM、编译、上下文、缓存、runner 与 derive |
 
 ### 验收门禁
 
@@ -123,6 +123,12 @@ cargo test --workspace          # 全量:lib 单测 + tests/ 各 Stage 端到端
 cargo clippy --workspace --all-targets
 cargo doc --workspace --no-deps # 文档生成
 ```
+
+## 生产验收
+
+仓库提供 Java/Rust 自动差分、Java 官方脚本回放、线程独立 Runner 并发验收、
+负载测试、安全 fuzz、业务宿主集成以及本地灰度/回滚演练。完整命令、门限与
+真实生产环境边界见 [`docs/生产验收.md`](docs/生产验收.md)。
 
 ## License
 

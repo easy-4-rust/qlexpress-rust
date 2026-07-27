@@ -1,0 +1,50 @@
+{"id":"int-precedence","script":"1 + 2 * 3"}
+{"id":"int-parentheses","script":"(1 + 2) * 3"}
+{"id":"long-arithmetic","script":"2147483648L + 2L"}
+{"id":"double-arithmetic","script":"1.5 * 4"}
+{"id":"big-integer","script":"99999999999999999999999999999999999999 + 1"}
+{"id":"precise-decimal","script":"10 / 4","options":{"precise":true}}
+{"id":"boolean-and","script":"true && false"}
+{"id":"boolean-short-circuit","script":"a = 0; false && ((a = 1) == 1); a"}
+{"id":"boolean-no-short-circuit","script":"a = 0; false && ((a = 1) == 1); a","options":{"short_circuit_disable":true}}
+{"id":"ternary","script":"score >= 80 ? 'allow' : 'review'","context":{"score":88}}
+{"id":"string-concat","script":"'hello' + '-' + 'world'"}
+{"id":"string-interpolation","script":"name = 'QLExpress'; \"hello ${name}\""}
+{"id":"null-value","script":"null"}
+{"id":"list-literal","script":"[1, 2, 3, 'x']"}
+{"id":"list-slice","script":"[1,2,3,4,5][1:4]"}
+{"id":"map-literal","script":"{'a':1,'b':2}"}
+{"id":"map-access","script":"m = {'a':1,'b':2}; m.a + m.b"}
+{"id":"if-expression","script":"if (n > 5) { n * 2 } else { n - 1 }","context":{"n":9}}
+{"id":"while-loop","script":"sum = 0; i = 0; while (i < 10) { sum = sum + i; i = i + 1; }; sum"}
+{"id":"for-loop","script":"sum = 0; for (i = 0; i < 10; i++) { sum = sum + i; }; sum"}
+{"id":"foreach-loop","script":"sum = 0; for (x : [1,2,3,4]) { sum = sum + x; }; sum"}
+{"id":"function-call","script":"function add(a,b) { return a+b; }; add(7,8)"}
+{"id":"recursive-function","script":"function fib(n) { if (n <= 1) { return n; }; return fib(n-1)+fib(n-2); }; fib(10)"}
+{"id":"lambda-call","script":"f = x -> x * 3; f(9)"}
+{"id":"try-catch","script":"try { 1 / 0 } catch(e) { 'caught' }"}
+{"id":"switch-expression","script":"x = 2; switch (x) { case 1: 'one'; case 2: 'two'; default: 'other'; }"}
+{"id":"context-string","script":"tenant + ':' + action","context":{"tenant":"acme","action":"read"}}
+{"id":"context-list","script":"items[0] + items[2]","context":{"items":[10,20,30]}}
+{"id":"context-map","script":"request.amount >= request.limit","context":{"request":{"amount":1200,"limit":1000}}}
+{"id":"cache-enabled","script":"a * b + 1","context":{"a":12,"b":13},"options":{"cache":true}}
+{"id":"trace-enabled","script":"a > 1 && b > 1","context":{"a":2,"b":3},"options":{"trace_expression":true}}
+{"id":"avoid-null","script":"missing.child.value","options":{"avoid_null_pointer":true}}
+{"id":"array-limit-error","script":"new int[11]","options":{"max_arr_length":10}}
+{"id":"divide-by-zero-error","script":"1 % 0"}
+{"id":"missing-function-error","script":"functionThatDoesNotExist()"}
+{"id":"null-field-error","script":"missing.child"}
+{"id":"invalid-index-error","script":"a=[1]; a['x']"}
+{"id":"index-out-of-bound-error","script":"a=[]; a[1]"}
+{"id":"syntax-error","script":"a = (1 +"}
+{"id":"assignment","script":"a = 3; a += 4; a"}
+{"id":"bitwise","script":"(7 & 3) | 8"}
+{"id":"shift","script":"-1 >>> 1"}
+{"id":"numeric-equality","script":"1 == 1L"}
+{"id":"in-operator","script":"3 in [1,2,3]"}
+{"id":"not-in-operator","script":"4 not in [1,2,3]"}
+{"id":"like-operator","script":"'abcdef' like 'abc%'"}
+{"id":"spread-list","script":"[1, ...[2,3], 4]"}
+{"id":"nested-map-list","script":"{'items':[{'id':1},{'id':2}],'ok':true}"}
+{"id":"unicode","script":"'你好' + '世界'"}
+{"id":"cache-trace","script":"x = 4; x * x","options":{"cache":true,"trace_expression":true}}

@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "crates/qlexpress",
     "crates/qlexpress-derive",
+    "crates/qlexpress-verification",
 ]
 
 [workspace.package]

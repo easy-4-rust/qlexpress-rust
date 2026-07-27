@@ -85,3 +85,7 @@ __pycache__/
 Cargo.lock
 *.profraw
 *.profdata
+
+### fuzz runtime output ###
+/fuzz/artifacts/
+/fuzz/target/

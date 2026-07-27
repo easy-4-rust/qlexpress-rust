@@ -67,6 +67,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "qlexpress-verification"
+version = "4.2.0-beta.1"
+dependencies = [
+ "qlexpress-derive",
+ "qlexpress_rust",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "qlexpress_rust"
 version = "4.2.0-beta.1"
 dependencies = [

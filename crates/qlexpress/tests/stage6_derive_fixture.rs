@@ -165,7 +165,7 @@ pub struct Stats {
 }
 
 #[test]
-fn derive_handles_mixed_scalar_kinds() {
+fn derive_converts_mixed_field_values() {
     let s = Stats {
         n: 5,
         f: 1.5,

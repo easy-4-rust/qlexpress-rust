@@ -1,0 +1,22 @@
+[package]
+name = "qlexpress-fuzz"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+qlexpress_rust = { path = "../crates/qlexpress" }
+
+[[bin]]
+name = "parser_sandbox"
+path = "fuzz_targets/parser_sandbox.rs"
+test = false
+doc = false
+bench = false
+
+[workspace]
+members = ["."]

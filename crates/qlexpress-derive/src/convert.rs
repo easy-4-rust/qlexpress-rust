@@ -7,7 +7,11 @@ use proc_macro2::TokenStream;
 use quote::quote;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-enum ScalarKind {
+/// Rust 字段值转换为 `DataValue` 时采用的代码生成策略。
+///
+/// 该枚举对具体 Rust 类型进行归类，例如所有整数类型归为 `Integer`；
+/// 它不是 QLExpress 的运行时类型模型。
+enum FieldConversionKind {
     Bool,
     Integer,
     Float,
@@ -16,16 +20,16 @@ enum ScalarKind {
     Unsupported,
 }
 
-fn scalar_kind(ty: &syn::Type) -> Option<ScalarKind> {
+fn field_conversion_kind(ty: &syn::Type) -> Option<FieldConversionKind> {
     let path = last_path_segment(ty)?;
     match path.ident.to_string().as_str() {
-        "bool" => Some(ScalarKind::Bool),
+        "bool" => Some(FieldConversionKind::Bool),
         "i8" | "u8" | "i16" | "u16" | "i32" | "u32" | "i64" | "u64" | "isize" | "usize"
-        | "i128" | "u128" => Some(ScalarKind::Integer),
-        "f32" | "f64" => Some(ScalarKind::Float),
-        "String" | "str" => Some(ScalarKind::String),
-        "DataValue" => Some(ScalarKind::DataValue),
-        _ => Some(ScalarKind::Unsupported),
+        | "i128" | "u128" => Some(FieldConversionKind::Integer),
+        "f32" | "f64" => Some(FieldConversionKind::Float),
+        "String" | "str" => Some(FieldConversionKind::String),
+        "DataValue" => Some(FieldConversionKind::DataValue),
+        _ => Some(FieldConversionKind::Unsupported),
     }
 }
 
@@ -35,9 +39,11 @@ pub fn expr_to_data_value(ty: &syn::Type, val: TokenStream) -> TokenStream {
         Some(path) => path,
         None => return quote!(::qlexpress_rust::runtime::value::DataValue::Null),
     };
-    match scalar_kind(ty).unwrap_or(ScalarKind::Unsupported) {
-        ScalarKind::Bool => quote!(::qlexpress_rust::runtime::value::DataValue::Bool(#val)),
-        ScalarKind::Integer => {
+    match field_conversion_kind(ty).unwrap_or(FieldConversionKind::Unsupported) {
+        FieldConversionKind::Bool => {
+            quote!(::qlexpress_rust::runtime::value::DataValue::Bool(#val))
+        }
+        FieldConversionKind::Integer => {
             let name = path.ident.to_string();
             if matches!(
                 name.as_str(),
@@ -54,7 +60,7 @@ pub fn expr_to_data_value(ty: &syn::Type, val: TokenStream) -> TokenStream {
                 quote!(::qlexpress_rust::runtime::value::DataValue::Long(#val))
             }
         }
-        ScalarKind::Float => {
+        FieldConversionKind::Float => {
             if path.ident == "f32" {
                 quote!(::qlexpress_rust::runtime::value::DataValue::Double(
                     (#val) as f64
@@ -63,11 +69,13 @@ pub fn expr_to_data_value(ty: &syn::Type, val: TokenStream) -> TokenStream {
                 quote!(::qlexpress_rust::runtime::value::DataValue::Double(#val))
             }
         }
-        ScalarKind::String => {
+        FieldConversionKind::String => {
             quote!(::qlexpress_rust::runtime::value::DataValue::Str((#val).to_string()))
         }
-        ScalarKind::DataValue => quote!(#val),
-        ScalarKind::Unsupported => quote!(::qlexpress_rust::runtime::value::DataValue::Null),
+        FieldConversionKind::DataValue => quote!(#val),
+        FieldConversionKind::Unsupported => {
+            quote!(::qlexpress_rust::runtime::value::DataValue::Null)
+        }
     }
 }
 
