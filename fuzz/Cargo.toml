@@ -9,7 +9,7 @@ cargo-fuzz = true
 
 [dependencies]
 libfuzzer-sys = "0.4"
-qlexpress_rust = { path = "../crates/qlexpress" }
+qlexpress = { path = "../crates/qlexpress" }
 
 [[bin]]
 name = "parser_sandbox"
