@@ -1,4 +1,4 @@
-# qlexpress
+# QlExpress Rust
 
 Alibaba QLExpress4 动态脚本引擎的 Rust 语义迁移实现。
 

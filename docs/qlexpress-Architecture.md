@@ -1,6 +1,6 @@
-# qlexpress Architecture
+# QlExpress Rust Architecture
 
-> **Purpose:** Define the verifiable architecture contract for the qlexpress Rust workspace.<br>
+> **Purpose:** Define the verifiable architecture contract for QlExpress Rust.<br>
 > **Architecture version:** 1.0<br>
 > **Code baseline:** `v0.1.0-alpha.1`; documentation audit from `dev@246da0f`<br>
 > **Upstream authority:** Alibaba QLExpress4 `4.2.0-beta@9065b9ac`<br>

@@ -1,6 +1,6 @@
-# qlexpress 架构文档
+# QlExpress Rust 架构文档
 
-> **文档目的**：定义 qlexpress Rust workspace 可验证的架构合同。<br>
+> **文档目的**：定义 QlExpress Rust 可验证的架构合同。<br>
 > **架构版本**：1.0<br>
 > **代码基线**：`v0.1.0-alpha.1`；文档审计基于 `dev@246da0f`<br>
 > **上游权威**：Alibaba QLExpress4 `4.2.0-beta@9065b9ac`<br>

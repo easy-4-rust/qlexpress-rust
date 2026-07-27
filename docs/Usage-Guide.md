@@ -1,4 +1,4 @@
-# qlexpress Usage Guide
+# QlExpress Rust Usage Guide
 
 > **Purpose:** Provide a source-backed path from first evaluation to safe host integration.<br>
 > **Applies to:** `qlexpress 0.1.0-alpha.1`<br>

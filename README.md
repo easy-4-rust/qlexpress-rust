@@ -2,7 +2,7 @@
 
 <div align="center">
 
-# QlExpress-Rust
+# QlExpress Rust
 
 **An embeddable Rust expression and dynamic scripting engine, behaviorally ported from Alibaba QLExpress4.**
 
@@ -26,7 +26,7 @@
 > **Java baseline:** QLExpress4 `4.2.0-beta`, commit `9065b9ac5d985dcd02e627239aa9cdb78fb2f7f3`<br>
 > **Last verified:** 2026-07-27
 
-`qlexpress` evaluates expressions and rule scripts inside a Rust process. It provides a parser, a
+QlExpress Rust evaluates expressions and rule scripts inside a Rust process. It provides a parser, a
 stack-based QVM, Java-compatible value and error semantics, custom functions and operators,
 explicit native-type registration, security policies, compile caches, and expression tracing.
 
@@ -35,7 +35,7 @@ library and its harness—not proof that an arbitrary business deployment is pro
 Real scripts, data, capacity limits, monitoring, rollout, and rollback must still be accepted in
 each host environment.
 
-## Why qlexpress?
+## Why QlExpress Rust?
 
 - Embed business rules without starting a separate service or JVM.
 - Use a familiar C/Java-like expression language with lists, maps, lambdas, functions, loops,

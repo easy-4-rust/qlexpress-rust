@@ -1,4 +1,4 @@
-# qlexpress-rust 迁移计划（历史入口）
+# QlExpress Rust 迁移计划（历史入口）
 
 本文件保留为早期 Stage 0–7 计划的兼容入口。迁移已经完成，当前事实来源是：
 

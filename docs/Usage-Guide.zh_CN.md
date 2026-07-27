@@ -1,4 +1,4 @@
-# qlexpress 使用指南
+# QlExpress Rust 使用指南
 
 > **文档目的**：提供从首次执行到安全宿主集成的源码可追溯路径。<br>
 > **适用版本**：`qlexpress 0.1.0-alpha.1`<br>

@@ -2,7 +2,7 @@
 
 <div align="center">
 
-# QlExpress-Rust
+# QlExpress Rust
 
 **面向 Rust 应用的嵌入式表达式与动态脚本引擎，按行为语义迁移自 Alibaba QLExpress4。**
 
@@ -26,7 +26,7 @@
 > **Java 基线**：QLExpress4 `4.2.0-beta`，提交 `9065b9ac5d985dcd02e627239aa9cdb78fb2f7f3`<br>
 > **最后核验**：2026-07-27
 
-`qlexpress` 在 Rust 进程内解析并执行表达式与规则脚本。项目提供解析器、栈式
+QlExpress Rust 在 Rust 进程内解析并执行表达式与规则脚本。项目提供解析器、栈式
 QVM、与 Java 对应的值及错误语义、自定义函数和操作符、显式宿主类型注册、
 安全策略、编译缓存与表达式追踪。
 
@@ -34,7 +34,7 @@ QVM、与 Java 对应的值及错误语义、自定义函数和操作符、显�
 任意业务宿主已经达到生产可用。真实脚本、真实数据、容量、监控、灰度与回滚仍需在
 每个宿主环境中重新验收。
 
-## 为什么选择 qlexpress？
+## 为什么选择 QlExpress Rust？
 
 - 无需启动独立服务或 JVM，即可在 Rust 应用中嵌入业务规则。
 - 提供类 C/Java 的脚本语法，支持列表、Map、Lambda、函数、循环、动态字符串和宏。
