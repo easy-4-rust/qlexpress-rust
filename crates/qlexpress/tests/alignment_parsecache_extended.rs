@@ -11,11 +11,11 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use qlexpress_rust::ql_options::QLOptions;
-use qlexpress_rust::runtime::context::express_context::ExpressContext;
-use qlexpress_rust::runtime::context::map_express_context::MapExpressContext;
-use qlexpress_rust::runtime::value::DataValue;
-use qlexpress_rust::Express4Runner;
+use qlexpress::ql_options::QLOptions;
+use qlexpress::runtime::context::express_context::ExpressContext;
+use qlexpress::runtime::context::map_express_context::MapExpressContext;
+use qlexpress::runtime::value::DataValue;
+use qlexpress::Express4Runner;
 
 fn opts() -> QLOptions {
     QLOptions::builder().cache(true).build()
@@ -23,7 +23,7 @@ fn opts() -> QLOptions {
 
 fn empty_ctx() -> Rc<dyn ExpressContext> {
     Rc::new(MapExpressContext::new(Rc::new(RefCell::new(
-        qlexpress_rust::runtime::data::index_map::IndexMap::new(),
+        qlexpress::runtime::data::index_map::IndexMap::new(),
     ))))
 }
 
@@ -58,7 +58,7 @@ fn cache_survives_json_round_trip_function() {
     let script = "function mul(int x) { return x * 2; } mul(5);";
     let cache = runner.export_parse_cache(script).expect("export");
     let json = serde_json::to_string(&cache).expect("serialize");
-    let cache2: qlexpress_rust::api::parsecache::SerializableParseCache =
+    let cache2: qlexpress::api::parsecache::SerializableParseCache =
         serde_json::from_str(&json).expect("deserialize");
     let r = runner
         .execute_with_cache(&cache2, empty_ctx(), &QLOptions::builder().build())
@@ -74,7 +74,7 @@ fn cache_with_loop_and_function() {
         "int total = 0;\nfor (int i = 1; i <= 3; i = i + 1) {\ntotal = total + i;\n}\ntotal;";
     let cache = runner.export_parse_cache(script).expect("export");
     let json = serde_json::to_string(&cache).expect("ser");
-    let cache2: qlexpress_rust::api::parsecache::SerializableParseCache =
+    let cache2: qlexpress::api::parsecache::SerializableParseCache =
         serde_json::from_str(&json).expect("de");
     let r = runner
         .execute_with_cache(&cache2, empty_ctx(), &QLOptions::builder().build())
@@ -87,7 +87,7 @@ fn cache_with_loop_and_function() {
 fn cache_invalid_model_returns_error() {
     // invalid cache JSON → from_str 错误
     let bad = "{ this is not valid cache }";
-    let res: Result<qlexpress_rust::api::parsecache::SerializableParseCache, _> =
+    let res: Result<qlexpress::api::parsecache::SerializableParseCache, _> =
         serde_json::from_str(bad);
     assert!(res.is_err());
 }

@@ -16,9 +16,9 @@ mod alignment_util;
 
 use std::collections::HashMap;
 
-use qlexpress_rust::ql_options::QLOptions;
-use qlexpress_rust::runtime::value::DataValue;
-use qlexpress_rust::Express4Runner;
+use qlexpress::ql_options::QLOptions;
+use qlexpress::runtime::value::DataValue;
+use qlexpress::Express4Runner;
 
 use alignment_util::{expect_err_code, expect_ok};
 
@@ -181,11 +181,11 @@ fn add_function_with_closure() {
     let runner = Express4Runner::new();
     runner.add_function(
         "add",
-        |_ctx: &mut dyn qlexpress_rust::runtime::qcontext::QContext,
-         params: &qlexpress_rust::runtime::parameters::Parameters|
-         -> Result<_, qlexpress_rust::exception::QLException> {
-            let a = qlexpress_rust::runtime::data::convert::to_i64(&params.get_value(0));
-            let b = qlexpress_rust::runtime::data::convert::to_i64(&params.get_value(1));
+        |_ctx: &mut dyn qlexpress::runtime::qcontext::QContext,
+         params: &qlexpress::runtime::parameters::Parameters|
+         -> Result<_, qlexpress::exception::QLException> {
+            let a = qlexpress::runtime::data::convert::to_i64(&params.get_value(0));
+            let b = qlexpress::runtime::data::convert::to_i64(&params.get_value(1));
             Ok(DataValue::Long(a + b))
         },
     );
@@ -204,7 +204,7 @@ fn add_varargs_function_collects_args() {
     let runner = Express4Runner::new();
     runner.add_varargs_function(
         "join",
-        |params: &[DataValue]| -> Result<_, qlexpress_rust::exception::QLException> {
+        |params: &[DataValue]| -> Result<_, qlexpress::exception::QLException> {
             let joined = params
                 .iter()
                 .map(|p| p.string_value_of())
@@ -245,9 +245,9 @@ fn add_operator_bifunction() {
 
 #[test]
 fn security_open_allows_method_call() {
-    use qlexpress_rust::security::ql_security_strategy::QLSecurityStrategy;
+    use qlexpress::security::ql_security_strategy::QLSecurityStrategy;
     let runner = Express4Runner::with_init_options(
-        qlexpress_rust::init_options::InitOptions::builder()
+        qlexpress::init_options::InitOptions::builder()
             .security_strategy(QLSecurityStrategy::open())
             .build(),
     );
@@ -264,21 +264,21 @@ fn security_open_allows_method_call() {
 
 #[test]
 fn security_isolation_blocks_method_call() {
-    use qlexpress_rust::runtime::native_type::NativeType;
-    use qlexpress_rust::security::ql_security_strategy::QLSecurityStrategy;
+    use qlexpress::runtime::native_type::NativeType;
+    use qlexpress::security::ql_security_strategy::QLSecurityStrategy;
     // Register a custom type with a method, then ask isolation to block it.
     let mut nt = NativeType::named("com.example.Calc");
     nt.static_methods.insert(
         "mul".to_string(),
         std::rc::Rc::new(|_bean, args| match args {
-            [qlexpress_rust::runtime::value::DataValue::Int(a), qlexpress_rust::runtime::value::DataValue::Int(b)] => {
-                Ok(qlexpress_rust::runtime::value::DataValue::Int(a * b))
+            [qlexpress::runtime::value::DataValue::Int(a), qlexpress::runtime::value::DataValue::Int(b)] => {
+                Ok(qlexpress::runtime::value::DataValue::Int(a * b))
             }
-            _ => Ok(qlexpress_rust::runtime::value::DataValue::Null),
+            _ => Ok(qlexpress::runtime::value::DataValue::Null),
         }),
     );
     let mut runner = Express4Runner::with_init_options(
-        qlexpress_rust::init_options::InitOptions::builder()
+        qlexpress::init_options::InitOptions::builder()
             .security_strategy(QLSecurityStrategy::isolation())
             .build(),
     );
@@ -397,7 +397,7 @@ fn null_division_yields_arithmetic_error() {
 fn run_script_with(
     script: &str,
     options: &QLOptions,
-) -> Result<DataValue, qlexpress_rust::exception::QLException> {
+) -> Result<DataValue, qlexpress::exception::QLException> {
     let runner = Express4Runner::new();
     let result = runner.execute(script, HashMap::new(), options)?;
     Ok(result.into_result())

@@ -1,11 +1,12 @@
-# qlexpress-rust
+# qlexpress
 
 Alibaba [QLExpress4](https://github.com/alibaba/QLExpress) 动态脚本引擎的 Rust 全量语义迁移
-(逐类对齐 `com.alibaba.qlexpress4` 4.2.0-beta.1)。
+(Rust 首发版本 `0.1.0-alpha.1`，逐类对齐 `com.alibaba.qlexpress4`
+`4.2.0-beta`，基线提交 `9065b9ac`)。
 
 ## 与 QLExpress4 的对应关系
 
-| Java (`com.alibaba.qlexpress4`) | Rust (`qlexpress_rust`) |
+| Java (`com.alibaba.qlexpress4`) | Rust (`qlexpress`) |
 | --- | --- |
 | `Express4Runner` | `express4_runner::Express4Runner`(门面,见下) |
 | `InitOptions` / `QLOptions` / `QLResult` / `CheckOptions` | `init_options` / `ql_options` / `ql_result` / `check_options` |
@@ -21,9 +22,14 @@ Alibaba [QLExpress4](https://github.com/alibaba/QLExpress) 动态脚本引擎的
 
 ## 快速上手
 
+```toml
+[dependencies]
+qlexpress = "=0.1.0-alpha.1"
+```
+
 ```rust
 use std::collections::HashMap;
-use qlexpress_rust::{DataValue, Express4Runner, QLOptions};
+use qlexpress::{DataValue, Express4Runner, QLExpressType, QLOptions};
 
 let runner = Express4Runner::new();
 let options = QLOptions::builder().build();

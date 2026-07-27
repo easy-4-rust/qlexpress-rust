@@ -14,7 +14,7 @@ mod alignment_util;
 use alignment_util::{
     expect_err_code, expect_err_code_with, expect_null, expect_ok, expect_ok_with,
 };
-use qlexpress_rust::ql_options::QLOptions;
+use qlexpress::ql_options::QLOptions;
 
 /// 对应 Java testsuite 脚本 `testsuite/independent/array/array_index_out_of_bound.ql`。
 #[test]

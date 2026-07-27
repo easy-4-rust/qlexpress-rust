@@ -16,39 +16,39 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use qlexpress_rust::aparser::import_manager::ImportManager;
-use qlexpress_rust::aparser::operator_factory::OperatorManager;
-use qlexpress_rust::aparser::qlparser::build_tree;
-use qlexpress_rust::aparser::qvm_instruction_visitor::{
+use qlexpress::aparser::import_manager::ImportManager;
+use qlexpress::aparser::operator_factory::OperatorManager;
+use qlexpress::aparser::qlparser::build_tree;
+use qlexpress::aparser::qvm_instruction_visitor::{
     compile_script, CompileTimeFunctions, UserDefineFunctions,
 };
-use qlexpress_rust::class_supplier::DefaultClassSupplier;
-use qlexpress_rust::exception::error_codes;
-use qlexpress_rust::exception::pure_err_reporter::PureErrReporter;
-use qlexpress_rust::exception::QLException;
-use qlexpress_rust::init_options::InitOptions;
-use qlexpress_rust::ql_options::QLOptions;
-use qlexpress_rust::runtime::class_ref::ClassRef;
-use qlexpress_rust::runtime::context::{
+use qlexpress::class_supplier::DefaultClassSupplier;
+use qlexpress::exception::error_codes;
+use qlexpress::exception::pure_err_reporter::PureErrReporter;
+use qlexpress::exception::QLException;
+use qlexpress::init_options::InitOptions;
+use qlexpress::ql_options::QLOptions;
+use qlexpress::runtime::class_ref::ClassRef;
+use qlexpress::runtime::context::{
     DynamicVariableContext, EmptyContext, ExpressContext, MapExpressContext, QLAliasContext,
 };
-use qlexpress_rust::runtime::data::index_map::IndexMap;
-use qlexpress_rust::runtime::function::{
+use qlexpress::runtime::data::index_map::IndexMap;
+use qlexpress::runtime::function::{
     as_native_method, CustomFunction, FilterExtensionFunction, LazyArgCustomFunction,
     MapExtensionFunction, QMethodFunction,
 };
-use qlexpress_rust::runtime::instruction::Instruction;
-use qlexpress_rust::runtime::jvm_i_method::NativeIMethod;
-use qlexpress_rust::runtime::member::NativeRegistry;
-use qlexpress_rust::runtime::native_type::NativeType;
-use qlexpress_rust::runtime::parameters::Parameters;
-use qlexpress_rust::runtime::qcontext::QContext;
-use qlexpress_rust::runtime::qlambda_definition::QLambdaDefinition;
-use qlexpress_rust::runtime::qlambda_definition_inner::QLambdaDefinitionInner;
-use qlexpress_rust::runtime::qvm_global_scope::QvmGlobalScope;
-use qlexpress_rust::runtime::qvm_runtime::QvmRuntime;
-use qlexpress_rust::runtime::util::method_invoke_utils::find_method_and_invoke;
-use qlexpress_rust::runtime::value::{DataValue, QValue};
+use qlexpress::runtime::instruction::Instruction;
+use qlexpress::runtime::jvm_i_method::NativeIMethod;
+use qlexpress::runtime::member::NativeRegistry;
+use qlexpress::runtime::native_type::NativeType;
+use qlexpress::runtime::parameters::Parameters;
+use qlexpress::runtime::qcontext::QContext;
+use qlexpress::runtime::qlambda_definition::QLambdaDefinition;
+use qlexpress::runtime::qlambda_definition_inner::QLambdaDefinitionInner;
+use qlexpress::runtime::qvm_global_scope::QvmGlobalScope;
+use qlexpress::runtime::qvm_runtime::QvmRuntime;
+use qlexpress::runtime::util::method_invoke_utils::find_method_and_invoke;
+use qlexpress::runtime::value::{DataValue, QValue};
 
 // ---- harness(与 tests/stage3b_compile.rs 同构) -----------------------------
 
@@ -234,12 +234,11 @@ fn empty_context_yields_null_value_not_absent() {
 fn dynamic_variable_context_runs_script_lazily_per_get() {
     let calls = Rc::new(RefCell::new(0u32));
     let counter = Rc::clone(&calls);
-    let runner: qlexpress_rust::runtime::context::DynamicScriptRunner =
-        Rc::new(move |script, _ctx| {
-            *counter.borrow_mut() += 1;
-            assert_eq!(script, "1 + 2");
-            Ok(DataValue::Int(99))
-        });
+    let runner: qlexpress::runtime::context::DynamicScriptRunner = Rc::new(move |script, _ctx| {
+        *counter.borrow_mut() += 1;
+        assert_eq!(script, "1 + 2");
+        Ok(DataValue::Int(99))
+    });
     let context = DynamicVariableContext::new(runner, map_context(vec![("s", DataValue::Int(3))]));
     context.put("dyn", "1 + 2");
     let attachments = HashMap::new();
@@ -309,8 +308,8 @@ fn extension_function_map_and_filter_end_to_end() {
 
 #[test]
 fn extension_function_contract_matches_java() {
-    use qlexpress_rust::runtime::function::ExtensionFunction;
-    use qlexpress_rust::runtime::i_method::IMethod;
+    use qlexpress::runtime::function::ExtensionFunction;
+    use qlexpress::runtime::i_method::IMethod;
 
     let filter = FilterExtensionFunction::instance();
     // Java:getName/getDeclaringClass/getParameterTypes/isVarArgs/isAccess。
@@ -459,9 +458,9 @@ fn qmethod_function_invokes_wrapped_native_method() {
     let function = QMethodFunction::new(Some(DataValue::Int(0)), method);
     let params = Parameters::new(vec![DataValue::Int(19).into(), DataValue::Int(23).into()]);
     let runtime = QvmRuntime::for_test(Rc::new(NativeRegistry::with_builtins()));
-    let mut context = qlexpress_rust::runtime::delegate_qcontext::DelegateQContext::new(
+    let mut context = qlexpress::runtime::delegate_qcontext::DelegateQContext::new(
         Rc::new(runtime),
-        qlexpress_rust::runtime::scope::QScope::global(QvmGlobalScope::empty()),
+        qlexpress::runtime::scope::QScope::global(QvmGlobalScope::empty()),
     );
     assert_eq!(
         function.call(&mut context, &params).unwrap(),
@@ -481,9 +480,9 @@ fn qmethod_function_rejects_mismatched_argument_types() {
     // String 实参无法匹配 int 形参 → Java 抛 INVALID_ARGUMENT。
     let params = Parameters::new(vec![DataValue::Str("x".into()).into()]);
     let runtime = QvmRuntime::for_test(Rc::new(NativeRegistry::with_builtins()));
-    let mut context = qlexpress_rust::runtime::delegate_qcontext::DelegateQContext::new(
+    let mut context = qlexpress::runtime::delegate_qcontext::DelegateQContext::new(
         Rc::new(runtime),
-        qlexpress_rust::runtime::scope::QScope::global(QvmGlobalScope::empty()),
+        qlexpress::runtime::scope::QScope::global(QvmGlobalScope::empty()),
     );
     let err = function.call(&mut context, &params).unwrap_err();
     assert_eq!(err.error_code(), error_codes::INVALID_ARGUMENT);

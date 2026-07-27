@@ -9,8 +9,8 @@
 
 use std::collections::HashMap;
 
-use qlexpress_rust::ql_options::QLOptions;
-use qlexpress_rust::Express4Runner;
+use qlexpress::ql_options::QLOptions;
+use qlexpress::Express4Runner;
 
 fn run_int(script: &str) -> i64 {
     let runner = Express4Runner::new();
@@ -19,8 +19,8 @@ fn run_int(script: &str) -> i64 {
         .expect("ok")
         .into_result();
     match r {
-        qlexpress_rust::runtime::value::DataValue::Long(n) => n,
-        qlexpress_rust::runtime::value::DataValue::Int(n) => n as i64,
+        qlexpress::runtime::value::DataValue::Long(n) => n,
+        qlexpress::runtime::value::DataValue::Int(n) => n as i64,
         other => panic!("expected int/long, got {other:?}"),
     }
 }
@@ -52,7 +52,7 @@ fn for_loop_with_explicit_return_should_return_correctly() {
         .expect("ok")
         .into_result();
     // return inside for:脚本应该立即返回 42
-    assert_eq!(r, qlexpress_rust::runtime::value::DataValue::Long(42));
+    assert_eq!(r, qlexpress::runtime::value::DataValue::Long(42));
 }
 
 #[test]

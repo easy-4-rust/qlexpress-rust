@@ -16,31 +16,31 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use qlexpress_rust::aparser::compile_time_function::{CodeGenerator, CompileTimeFunction};
-use qlexpress_rust::aparser::import_manager::ImportManager;
-use qlexpress_rust::aparser::interpolation_mode::InterpolationMode;
-use qlexpress_rust::aparser::operator_factory::{OperatorFactory, OperatorManager};
-use qlexpress_rust::aparser::qlparser::build_tree;
-use qlexpress_rust::aparser::qvm_instruction_visitor::{
+use qlexpress::aparser::compile_time_function::{CodeGenerator, CompileTimeFunction};
+use qlexpress::aparser::import_manager::ImportManager;
+use qlexpress::aparser::interpolation_mode::InterpolationMode;
+use qlexpress::aparser::operator_factory::{OperatorFactory, OperatorManager};
+use qlexpress::aparser::qlparser::build_tree;
+use qlexpress::aparser::qvm_instruction_visitor::{
     compile_script, CompileTimeFunctions, UserDefineFunctions,
 };
-use qlexpress_rust::class_supplier::DefaultClassSupplier;
-use qlexpress_rust::exception::QLException;
-use qlexpress_rust::init_options::InitOptions;
-use qlexpress_rust::ql_options::QLOptions;
-use qlexpress_rust::ql_precedences;
-use qlexpress_rust::runtime::data::index_map::IndexMap;
-use qlexpress_rust::runtime::function::{CustomFunction, LazyArgCustomFunction};
-use qlexpress_rust::runtime::instruction::{ConstInstruction, Instruction};
-use qlexpress_rust::runtime::member::{NativeRegistry, NativeType};
-use qlexpress_rust::runtime::operator::custom_binary_operator::CustomBinaryOperator;
-use qlexpress_rust::runtime::parameters::Parameters;
-use qlexpress_rust::runtime::qcontext::QContext;
-use qlexpress_rust::runtime::qlambda_definition::QLambdaDefinition;
-use qlexpress_rust::runtime::qlambda_definition_inner::QLambdaDefinitionInner;
-use qlexpress_rust::runtime::qvm_global_scope::QvmGlobalScope;
-use qlexpress_rust::runtime::qvm_runtime::QvmRuntime;
-use qlexpress_rust::runtime::value::{DataValue, QValue};
+use qlexpress::class_supplier::DefaultClassSupplier;
+use qlexpress::exception::QLException;
+use qlexpress::init_options::InitOptions;
+use qlexpress::ql_options::QLOptions;
+use qlexpress::ql_precedences;
+use qlexpress::runtime::data::index_map::IndexMap;
+use qlexpress::runtime::function::{CustomFunction, LazyArgCustomFunction};
+use qlexpress::runtime::instruction::{ConstInstruction, Instruction};
+use qlexpress::runtime::member::{NativeRegistry, NativeType};
+use qlexpress::runtime::operator::custom_binary_operator::CustomBinaryOperator;
+use qlexpress::runtime::parameters::Parameters;
+use qlexpress::runtime::qcontext::QContext;
+use qlexpress::runtime::qlambda_definition::QLambdaDefinition;
+use qlexpress::runtime::qlambda_definition_inner::QLambdaDefinitionInner;
+use qlexpress::runtime::qvm_global_scope::QvmGlobalScope;
+use qlexpress::runtime::qvm_runtime::QvmRuntime;
+use qlexpress::runtime::value::{DataValue, QValue};
 
 // ---- harness --------------------------------------------------------------
 
@@ -150,7 +150,7 @@ impl CompileTimeFunction for FortyTwo {
     fn create_function_instruction(
         &self,
         _function_name: &str,
-        _arguments: &[&qlexpress_rust::aparser::syntax_tree_factory::Node],
+        _arguments: &[&qlexpress::aparser::syntax_tree_factory::Node],
         _operator_factory: &dyn OperatorFactory,
         code_generator: &mut dyn CodeGenerator,
     ) {
@@ -395,7 +395,7 @@ fn new_native_instance() {
         Rc::new(|bean: &DataValue| match bean {
             DataValue::Map(map) => map.borrow().get(&DataValue::Str("x".into())).cloned(),
             _ => None,
-        }) as qlexpress_rust::runtime::member::NativeFieldGetter,
+        }) as qlexpress::runtime::member::NativeFieldGetter,
     );
     point_type.fields = fields;
     registry.register_type(point_type);

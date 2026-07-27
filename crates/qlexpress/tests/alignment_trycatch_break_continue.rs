@@ -12,16 +12,16 @@
 
 use std::collections::HashMap;
 
-use qlexpress_rust::aparser::import_manager::QLImport;
-use qlexpress_rust::default_class_supplier::DefaultClassSupplier;
-use qlexpress_rust::init_options::InitOptions;
-use qlexpress_rust::ql_options::QLOptions;
-use qlexpress_rust::runtime::value::DataValue;
-use qlexpress_rust::security::ql_security_strategy::QLSecurityStrategy;
-use qlexpress_rust::Express4Runner;
+use qlexpress::aparser::import_manager::QLImport;
+use qlexpress::default_class_supplier::DefaultClassSupplier;
+use qlexpress::init_options::InitOptions;
+use qlexpress::ql_options::QLOptions;
+use qlexpress::runtime::value::DataValue;
+use qlexpress::security::ql_security_strategy::QLSecurityStrategy;
+use qlexpress::Express4Runner;
 
 fn runner() -> Express4Runner {
-    use qlexpress_rust::runtime::native_type::NativeType;
+    use qlexpress::runtime::native_type::NativeType;
     use std::rc::Rc;
 
     let mut supplier = DefaultClassSupplier::instance();
@@ -76,15 +76,15 @@ fn opts() -> QLOptions {
 
 fn run(
     script: &str,
-) -> Result<qlexpress_rust::runtime::value::DataValue, qlexpress_rust::exception::QLException> {
+) -> Result<qlexpress::runtime::value::DataValue, qlexpress::exception::QLException> {
     let r = runner().execute(script, HashMap::new(), &opts())?;
     Ok(r.into_result())
 }
 
 fn run_int(script: &str) -> i64 {
     match run(script).expect("script ok") {
-        qlexpress_rust::runtime::value::DataValue::Long(n) => n,
-        qlexpress_rust::runtime::value::DataValue::Int(n) => n as i64,
+        qlexpress::runtime::value::DataValue::Long(n) => n,
+        qlexpress::runtime::value::DataValue::Int(n) => n as i64,
         other => panic!("expected int/long, got {other:?}"),
     }
 }

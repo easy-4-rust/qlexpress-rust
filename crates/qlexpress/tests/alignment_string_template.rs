@@ -8,11 +8,11 @@
 
 use std::collections::HashMap;
 
-use qlexpress_rust::aparser::interpolation_mode::InterpolationMode;
-use qlexpress_rust::init_options::InitOptions;
-use qlexpress_rust::ql_options::QLOptions;
-use qlexpress_rust::runtime::value::DataValue;
-use qlexpress_rust::Express4Runner;
+use qlexpress::aparser::interpolation_mode::InterpolationMode;
+use qlexpress::init_options::InitOptions;
+use qlexpress::ql_options::QLOptions;
+use qlexpress::runtime::value::DataValue;
+use qlexpress::Express4Runner;
 
 fn opts() -> QLOptions {
     QLOptions::builder().build()

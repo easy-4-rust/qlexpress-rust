@@ -8,12 +8,12 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use qlexpress_rust::aparser::import_manager::QLImport;
-use qlexpress_rust::default_class_supplier::DefaultClassSupplier;
-use qlexpress_rust::init_options::InitOptions;
-use qlexpress_rust::ql_options::QLOptions;
-use qlexpress_rust::security::ql_security_strategy::QLSecurityStrategy;
-use qlexpress_rust::Express4Runner;
+use qlexpress::aparser::import_manager::QLImport;
+use qlexpress::default_class_supplier::DefaultClassSupplier;
+use qlexpress::init_options::InitOptions;
+use qlexpress::ql_options::QLOptions;
+use qlexpress::security::ql_security_strategy::QLSecurityStrategy;
+use qlexpress::Express4Runner;
 
 fn runner_with_default_import(imports: Vec<QLImport>) -> Express4Runner {
     let mut supplier = DefaultClassSupplier::instance();
@@ -38,11 +38,11 @@ fn default_import_unqualified_class() {
     let mut runner = runner_with_default_import(vec![QLImport::import_cls("com.example.Calc")]);
 
     // 注册一个 static method 在 Calc 上
-    use qlexpress_rust::runtime::native_type::NativeType;
+    use qlexpress::runtime::native_type::NativeType;
     let mut calc = NativeType::named("com.example.Calc");
     calc.static_methods.insert(
         "answer".to_string(),
-        std::rc::Rc::new(|_bean, _args| Ok(qlexpress_rust::runtime::value::DataValue::Long(42))),
+        std::rc::Rc::new(|_bean, _args| Ok(qlexpress::runtime::value::DataValue::Long(42))),
     );
     runner.register_native_type(calc);
 
@@ -51,7 +51,7 @@ fn default_import_unqualified_class() {
         .execute("Calc.answer()", HashMap::new(), &opts())
         .expect("ok")
         .into_result();
-    assert_eq!(r, qlexpress_rust::runtime::value::DataValue::Long(42));
+    assert_eq!(r, qlexpress::runtime::value::DataValue::Long(42));
 }
 
 #[test]

@@ -7,15 +7,15 @@
 
 use std::collections::HashMap;
 
-use qlexpress_rust::ql_options::QLOptions;
-use qlexpress_rust::runtime::value::DataValue;
-use qlexpress_rust::Express4Runner;
+use qlexpress::ql_options::QLOptions;
+use qlexpress::runtime::value::DataValue;
+use qlexpress::Express4Runner;
 
 fn open_runner() -> Express4Runner {
     Express4Runner::with_init_options(
-        qlexpress_rust::init_options::InitOptions::builder()
+        qlexpress::init_options::InitOptions::builder()
             .security_strategy(
-                qlexpress_rust::security::ql_security_strategy::QLSecurityStrategy::open(),
+                qlexpress::security::ql_security_strategy::QLSecurityStrategy::open(),
             )
             .build(),
     )

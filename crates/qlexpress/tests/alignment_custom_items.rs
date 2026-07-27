@@ -6,11 +6,11 @@
 
 use std::collections::HashMap;
 
-use qlexpress_rust::ql_options::QLOptions;
-use qlexpress_rust::runtime::parameters::Parameters;
-use qlexpress_rust::runtime::qcontext::QContext;
-use qlexpress_rust::runtime::value::DataValue;
-use qlexpress_rust::Express4Runner;
+use qlexpress::ql_options::QLOptions;
+use qlexpress::runtime::parameters::Parameters;
+use qlexpress::runtime::qcontext::QContext;
+use qlexpress::runtime::value::DataValue;
+use qlexpress::Express4Runner;
 
 fn opts() -> QLOptions {
     QLOptions::builder().build()
@@ -38,8 +38,8 @@ fn add_function_with_function_signature() {
         "inc",
         |_ctx: &mut dyn QContext,
          params: &Parameters|
-         -> Result<DataValue, qlexpress_rust::exception::QLException> {
-            let n = qlexpress_rust::runtime::data::convert::to_i64(&params.get_value(0));
+         -> Result<DataValue, qlexpress::exception::QLException> {
+            let n = qlexpress::runtime::data::convert::to_i64(&params.get_value(0));
             Ok(DataValue::Long(n + 1))
         },
     );
@@ -52,7 +52,7 @@ fn add_function_with_predicate() {
     let runner = Express4Runner::new();
     runner.add_function_unary("is_pos", |v: DataValue| -> DataValue {
         // 接受任意 numeric,通过 to_i64 统一处理
-        let n = qlexpress_rust::runtime::data::convert::to_i64(&v);
+        let n = qlexpress::runtime::data::convert::to_i64(&v);
         DataValue::Bool(n > 0)
     });
     let r = runner
@@ -70,9 +70,7 @@ fn add_function_with_runnable_returns_null() {
         "do_nothing",
         |_ctx: &mut dyn QContext,
          _params: &Parameters|
-         -> Result<DataValue, qlexpress_rust::exception::QLException> {
-            Ok(DataValue::Null)
-        },
+         -> Result<DataValue, qlexpress::exception::QLException> { Ok(DataValue::Null) },
     );
     let r = runner
         .execute("do_nothing()", HashMap::new(), &opts())
@@ -101,7 +99,7 @@ fn add_varargs_function() {
     let runner = Express4Runner::new();
     runner.add_varargs_function(
         "join_with",
-        |params: &[DataValue]| -> Result<DataValue, qlexpress_rust::exception::QLException> {
+        |params: &[DataValue]| -> Result<DataValue, qlexpress::exception::QLException> {
             let sep = params
                 .first()
                 .map(|p| p.string_value_of())
@@ -145,9 +143,9 @@ fn replace_default_operator() {
         "add_one",
         |_ctx: &mut dyn QContext,
          params: &Parameters|
-         -> Result<DataValue, qlexpress_rust::exception::QLException> {
-            let a = qlexpress_rust::runtime::data::convert::to_i64(&params.get_value(0));
-            let b = qlexpress_rust::runtime::data::convert::to_i64(&params.get_value(1));
+         -> Result<DataValue, qlexpress::exception::QLException> {
+            let a = qlexpress::runtime::data::convert::to_i64(&params.get_value(0));
+            let b = qlexpress::runtime::data::convert::to_i64(&params.get_value(1));
             Ok(DataValue::Long(a + b + 1)) // adds an extra 1
         },
     );

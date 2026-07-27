@@ -37,11 +37,11 @@ fn field_conversion_kind(ty: &syn::Type) -> Option<FieldConversionKind> {
 pub fn expr_to_data_value(ty: &syn::Type, val: TokenStream) -> TokenStream {
     let path = match last_path_segment(ty) {
         Some(path) => path,
-        None => return quote!(::qlexpress_rust::runtime::value::DataValue::Null),
+        None => return quote!(::qlexpress::runtime::value::DataValue::Null),
     };
     match field_conversion_kind(ty).unwrap_or(FieldConversionKind::Unsupported) {
         FieldConversionKind::Bool => {
-            quote!(::qlexpress_rust::runtime::value::DataValue::Bool(#val))
+            quote!(::qlexpress::runtime::value::DataValue::Bool(#val))
         }
         FieldConversionKind::Integer => {
             let name = path.ident.to_string();
@@ -49,32 +49,32 @@ pub fn expr_to_data_value(ty: &syn::Type, val: TokenStream) -> TokenStream {
                 name.as_str(),
                 "i8" | "u8" | "i16" | "u16" | "i32" | "u32" | "isize" | "usize"
             ) {
-                quote!(::qlexpress_rust::runtime::value::DataValue::Long(
+                quote!(::qlexpress::runtime::value::DataValue::Long(
                     (#val) as i64
                 ))
             } else if name == "u64" {
-                quote!(::qlexpress_rust::runtime::value::DataValue::Long(
+                quote!(::qlexpress::runtime::value::DataValue::Long(
                     (#val).try_into().unwrap_or(0)
                 ))
             } else {
-                quote!(::qlexpress_rust::runtime::value::DataValue::Long(#val))
+                quote!(::qlexpress::runtime::value::DataValue::Long(#val))
             }
         }
         FieldConversionKind::Float => {
             if path.ident == "f32" {
-                quote!(::qlexpress_rust::runtime::value::DataValue::Double(
+                quote!(::qlexpress::runtime::value::DataValue::Double(
                     (#val) as f64
                 ))
             } else {
-                quote!(::qlexpress_rust::runtime::value::DataValue::Double(#val))
+                quote!(::qlexpress::runtime::value::DataValue::Double(#val))
             }
         }
         FieldConversionKind::String => {
-            quote!(::qlexpress_rust::runtime::value::DataValue::Str((#val).to_string()))
+            quote!(::qlexpress::runtime::value::DataValue::Str((#val).to_string()))
         }
         FieldConversionKind::DataValue => quote!(#val),
         FieldConversionKind::Unsupported => {
-            quote!(::qlexpress_rust::runtime::value::DataValue::Null)
+            quote!(::qlexpress::runtime::value::DataValue::Null)
         }
     }
 }

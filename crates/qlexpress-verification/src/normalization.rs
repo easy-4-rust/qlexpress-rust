@@ -1,6 +1,6 @@
 //! Java/Rust 差分结果的稳定规范化。
 
-use qlexpress_rust::runtime::value::DataValue;
+use qlexpress::runtime::value::DataValue;
 
 pub fn normalize(value: &DataValue) -> String {
     match value {

@@ -9,7 +9,7 @@
 
 mod alignment_util;
 
-use qlexpress_rust::runtime::value::DataValue;
+use qlexpress::runtime::value::DataValue;
 
 use alignment_util::{expect_err_code, expect_ok};
 

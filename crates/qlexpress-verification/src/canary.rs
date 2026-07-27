@@ -2,9 +2,9 @@
 
 use std::collections::HashMap;
 
-use qlexpress_rust::ql_options::QLOptions;
-use qlexpress_rust::runtime::value::DataValue;
-use qlexpress_rust::Express4Runner;
+use qlexpress::ql_options::QLOptions;
+use qlexpress::runtime::value::DataValue;
+use qlexpress::Express4Runner;
 
 const STABLE_RULE: &str = "amount >= 1000 ? 'REVIEW' : 'PASS'";
 const GOOD_CANDIDATE_RULE: &str = "1000 > amount ? 'PASS' : 'REVIEW'";

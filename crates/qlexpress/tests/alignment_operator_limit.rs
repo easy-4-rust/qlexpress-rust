@@ -9,12 +9,12 @@
 
 #![allow(clippy::result_large_err)]
 
-use qlexpress_rust::check_options::CheckOptions;
-use qlexpress_rust::exception::error_codes;
-use qlexpress_rust::init_options::InitOptions;
-use qlexpress_rust::operator::operator_check_strategy::OperatorCheckStrategy;
-use qlexpress_rust::ql_options::QLOptions;
-use qlexpress_rust::Express4Runner;
+use qlexpress::check_options::CheckOptions;
+use qlexpress::exception::error_codes;
+use qlexpress::init_options::InitOptions;
+use qlexpress::operator::operator_check_strategy::OperatorCheckStrategy;
+use qlexpress::ql_options::QLOptions;
+use qlexpress::Express4Runner;
 
 fn runner() -> Express4Runner {
     Express4Runner::with_init_options(InitOptions::default())
@@ -28,7 +28,7 @@ fn err(
     runner: &Express4Runner,
     script: &str,
     opts: CheckOptions,
-) -> qlexpress_rust::exception::QLSyntaxException {
+) -> qlexpress::exception::QLSyntaxException {
     runner.check(script, &opts).expect_err("check should fail")
 }
 

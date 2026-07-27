@@ -58,8 +58,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "qlexpress"
+version = "0.1.0-alpha.1"
+dependencies = [
+ "num-bigint",
+ "num-traits",
+ "qlexpress-derive",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "qlexpress-derive"
-version = "4.2.0-beta.1"
+version = "0.1.0-alpha.1"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -68,21 +79,9 @@ dependencies = [
 
 [[package]]
 name = "qlexpress-verification"
-version = "4.2.0-beta.1"
+version = "0.1.0-alpha.1"
 dependencies = [
- "qlexpress-derive",
- "qlexpress_rust",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "qlexpress_rust"
-version = "4.2.0-beta.1"
-dependencies = [
- "num-bigint",
- "num-traits",
- "qlexpress-derive",
+ "qlexpress",
  "serde",
  "serde_json",
 ]

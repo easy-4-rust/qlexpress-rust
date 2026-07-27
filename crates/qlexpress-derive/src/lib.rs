@@ -1,9 +1,9 @@
-//! Procedural macros for qlexpress_rust.
+//! Procedural macros for qlexpress.
 //!
 //! Currently exposes:
 //! - `#[derive(QLExpressType)]` — auto-implement
-//!   `qlexpress_rust::runtime::member::QLExpressNativeType` and
-//!   `qlexpress_rust::runtime::native_object::NativeObject` for a struct.
+//!   `qlexpress::runtime::member::QLExpressNativeType` and
+//!   `qlexpress::runtime::native_object::NativeObject` for a struct.
 //!
 //! See README and the design notes in plan.md Stage 6 for the attribute
 //! grammar and emitted code shape.
@@ -48,7 +48,7 @@ pub fn derive_ql_express_type(input: TokenStream) -> TokenStream {
 }
 
 fn expand(ast: &syn::DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
-    let qlexpress_path: syn::Path = syn::parse_quote!(::qlexpress_rust);
+    let qlexpress_path: syn::Path = syn::parse_quote!(::qlexpress);
 
     let struct_attrs = attrs::ContainerAttrs::from_ast(ast)?;
     let item = attrs::ItemSpec::from_ast(ast)?;

@@ -8,9 +8,9 @@
 
 use std::collections::HashMap;
 
-use qlexpress_rust::ql_options::QLOptions;
-use qlexpress_rust::runtime::value::DataValue;
-use qlexpress_rust::Express4Runner;
+use qlexpress::ql_options::QLOptions;
+use qlexpress::runtime::value::DataValue;
+use qlexpress::Express4Runner;
 
 fn opts() -> QLOptions {
     QLOptions::builder().build()
@@ -57,8 +57,8 @@ fn add_alias() {
     // 自定义函数 zero
     runner.add_function(
         "zero",
-        |_ctx: &mut dyn qlexpress_rust::runtime::qcontext::QContext,
-         _params: &qlexpress_rust::runtime::parameters::Parameters|
+        |_ctx: &mut dyn qlexpress::runtime::qcontext::QContext,
+         _params: &qlexpress::runtime::parameters::Parameters|
          -> Result<_, _> { Ok(DataValue::Int(0)) },
     );
     // 关键字别名
@@ -113,8 +113,8 @@ fn at_function_name() {
     let runner = Express4Runner::new();
     runner.add_function(
         "@",
-        |_ctx: &mut dyn qlexpress_rust::runtime::qcontext::QContext,
-         params: &qlexpress_rust::runtime::parameters::Parameters|
+        |_ctx: &mut dyn qlexpress::runtime::qcontext::QContext,
+         params: &qlexpress::runtime::parameters::Parameters|
          -> Result<_, _> {
             match params.get_value(0) {
                 DataValue::Str(s) => Ok(DataValue::Str(format!("{s},{s}"))),

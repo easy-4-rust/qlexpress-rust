@@ -9,14 +9,14 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use qlexpress_rust::aparser::import_manager::QLImport;
-use qlexpress_rust::default_class_supplier::DefaultClassSupplier;
-use qlexpress_rust::init_options::InitOptions;
-use qlexpress_rust::ql_options::QLOptions;
-use qlexpress_rust::runtime::native_type::NativeType;
-use qlexpress_rust::runtime::value::DataValue;
-use qlexpress_rust::security::ql_security_strategy::QLSecurityStrategy;
-use qlexpress_rust::Express4Runner;
+use qlexpress::aparser::import_manager::QLImport;
+use qlexpress::default_class_supplier::DefaultClassSupplier;
+use qlexpress::init_options::InitOptions;
+use qlexpress::ql_options::QLOptions;
+use qlexpress::runtime::native_type::NativeType;
+use qlexpress::runtime::value::DataValue;
+use qlexpress::security::ql_security_strategy::QLSecurityStrategy;
+use qlexpress::Express4Runner;
 
 fn runner_with(calc: NativeType) -> Express4Runner {
     let mut supplier = DefaultClassSupplier::instance();
@@ -37,7 +37,7 @@ fn opts() -> QLOptions {
 }
 
 fn calc_with_constructor(
-    ctor: impl Fn(&[DataValue]) -> Result<DataValue, qlexpress_rust::exception::QLException> + 'static,
+    ctor: impl Fn(&[DataValue]) -> Result<DataValue, qlexpress::exception::QLException> + 'static,
 ) -> NativeType {
     let mut calc = NativeType::named("com.example.Calc");
     calc.constructor = Some(Rc::new(ctor));
@@ -64,14 +64,14 @@ fn new_instance_with_1arg_constructor() {
 fn new_instance_with_2arg_constructor() {
     let runner = runner_with(calc_with_constructor(|args| {
         if args.len() != 2 {
-            return Err(qlexpress_rust::exception::QLException::for_test(
-                qlexpress_rust::exception::ql_exception::QLExceptionKind::Syntax,
+            return Err(qlexpress::exception::QLException::for_test(
+                qlexpress::exception::ql_exception::QLExceptionKind::Syntax,
                 format!("expected 2 args, got {}", args.len()),
-                qlexpress_rust::exception::error_codes::INVALID_NUMBER,
+                qlexpress::exception::error_codes::INVALID_NUMBER,
             ));
         }
-        let a = qlexpress_rust::runtime::data::convert::to_i64(&args[0]);
-        let b = qlexpress_rust::runtime::data::convert::to_i64(&args[1]);
+        let a = qlexpress::runtime::data::convert::to_i64(&args[0]);
+        let b = qlexpress::runtime::data::convert::to_i64(&args[1]);
         Ok(DataValue::Long(a + b))
     }));
     let r = runner
@@ -125,7 +125,7 @@ fn new_instance_with_string_arg() {
 fn new_instance_returns_data_value_for_use() {
     // 验证 new instance 的结果可以参与后续运算
     let runner = runner_with(calc_with_constructor(|args| {
-        let x = qlexpress_rust::runtime::data::convert::to_i64(&args[0]);
+        let x = qlexpress::runtime::data::convert::to_i64(&args[0]);
         Ok(DataValue::Long(x * 2))
     }));
     let r = runner

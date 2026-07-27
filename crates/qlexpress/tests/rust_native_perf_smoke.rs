@@ -6,9 +6,9 @@
 
 use std::collections::HashMap;
 
-use qlexpress_rust::ql_options::QLOptions;
-use qlexpress_rust::runtime::value::DataValue;
-use qlexpress_rust::Express4Runner;
+use qlexpress::ql_options::QLOptions;
+use qlexpress::runtime::value::DataValue;
+use qlexpress::Express4Runner;
 
 fn opts() -> QLOptions {
     QLOptions::builder().cache(true).build()
@@ -135,9 +135,9 @@ fn deterministic_same_script_same_result() {
 #[test]
 fn list_iteration_performance() {
     let runner = Express4Runner::with_init_options(
-        qlexpress_rust::init_options::InitOptions::builder()
+        qlexpress::init_options::InitOptions::builder()
             .security_strategy(
-                qlexpress_rust::security::ql_security_strategy::QLSecurityStrategy::open(),
+                qlexpress::security::ql_security_strategy::QLSecurityStrategy::open(),
             )
             .build(),
     );
@@ -157,8 +157,8 @@ fn list_iteration_performance() {
 
 #[test]
 fn timeout_works_under_1s() {
-    use qlexpress_rust::init_options::InitOptions;
-    use qlexpress_rust::security::ql_security_strategy::QLSecurityStrategy;
+    use qlexpress::init_options::InitOptions;
+    use qlexpress::security::ql_security_strategy::QLSecurityStrategy;
     let runner = Express4Runner::with_init_options(
         InitOptions::builder()
             .security_strategy(QLSecurityStrategy::open())
@@ -176,7 +176,7 @@ fn timeout_works_under_1s() {
     let elapsed = t0.elapsed();
     assert_eq!(
         e.error_code(),
-        qlexpress_rust::exception::error_codes::SCRIPT_TIME_OUT
+        qlexpress::exception::error_codes::SCRIPT_TIME_OUT
     );
     assert!(
         elapsed.as_millis() < 1000,

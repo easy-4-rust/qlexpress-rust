@@ -8,12 +8,12 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use qlexpress_rust::api::parsecache::SerializableParseCache;
-use qlexpress_rust::init_options::InitOptions;
-use qlexpress_rust::ql_options::QLOptions;
-use qlexpress_rust::runtime::context::EmptyContext;
-use qlexpress_rust::runtime::value::DataValue;
-use qlexpress_rust::Express4Runner;
+use qlexpress::api::parsecache::SerializableParseCache;
+use qlexpress::init_options::InitOptions;
+use qlexpress::ql_options::QLOptions;
+use qlexpress::runtime::context::EmptyContext;
+use qlexpress::runtime::value::DataValue;
+use qlexpress::Express4Runner;
 
 fn trace_runner() -> Express4Runner {
     Express4Runner::with_init_options(InitOptions::builder().trace_expression(true).build())

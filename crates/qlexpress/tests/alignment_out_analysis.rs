@@ -8,7 +8,7 @@
 
 use std::collections::HashSet;
 
-use qlexpress_rust::Express4Runner;
+use qlexpress::Express4Runner;
 
 fn out_vars(script: &str) -> HashSet<String> {
     Express4Runner::new()

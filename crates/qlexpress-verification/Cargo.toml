@@ -1,13 +1,12 @@
 [package]
 name = "qlexpress-verification"
-description = "Production-readiness verification harness for qlexpress-rust"
+description = "Production-readiness verification harness for qlexpress"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 publish = false
 
 [dependencies]
-qlexpress_rust = { path = "../qlexpress" }
-qlexpress-derive = { path = "../qlexpress-derive" }
+qlexpress = { path = "../qlexpress" }
 serde = { workspace = true }
 serde_json = { workspace = true }

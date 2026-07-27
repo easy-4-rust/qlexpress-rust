@@ -1,12 +1,20 @@
 [package]
-name = "qlexpress_rust"
+name = "qlexpress"
 description = "Rust port of Alibaba QLExpress4 dynamic script engine (full semantic migration)"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
+documentation = "https://docs.rs/qlexpress"
+readme = "README.md"
+keywords = ["qlexpress", "expression", "scripting", "interpreter"]
+categories = ["development-tools", "parser-implementations"]
+publish = ["crates-io"]
 
 [lib]
-name = "qlexpress_rust"
+name = "qlexpress"
 path = "src/lib.rs"
 
 [dependencies]
@@ -14,7 +22,7 @@ path = "src/lib.rs"
 # 供 api/parsecache 编译缓存的导出/导入(JSON 序列化)使用,默认启用。
 serde = { workspace = true }
 serde_json = { workspace = true }
-# Stage 6: 反射替代的派生宏,默认启用。
-qlexpress-derive = { path = "../qlexpress-derive" }
+# Stage 6: 反射替代的派生宏,默认启用。本地开发使用 path，发布后使用 crates.io。
+qlexpress-derive = { version = "=0.1.0-alpha.1", path = "../qlexpress-derive" }
 num-bigint = { workspace = true }
 num-traits = { workspace = true }

@@ -14,27 +14,27 @@
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
-use qlexpress_rust::aparser::compile_time_function::{CodeGenerator, CompileTimeFunction};
-use qlexpress_rust::aparser::import_manager::QLImport;
-use qlexpress_rust::aparser::operator_factory::OperatorFactory;
-use qlexpress_rust::aparser::syntax_tree_factory::Node;
-use qlexpress_rust::api::parsecache::LoadedParseCache;
-use qlexpress_rust::check_options::CheckOptions;
-use qlexpress_rust::default_class_supplier::DefaultClassSupplier;
-use qlexpress_rust::exception::error_codes;
-use qlexpress_rust::exception::ql_exception::QLExceptionKind;
-use qlexpress_rust::init_options::InitOptions;
-use qlexpress_rust::ql_options::QLOptions;
-use qlexpress_rust::runtime::class_ref::ClassRef;
-use qlexpress_rust::runtime::function::QMethodFunction;
-use qlexpress_rust::runtime::instruction::ConstInstruction;
-use qlexpress_rust::runtime::jvm_i_method::NativeIMethod;
-use qlexpress_rust::runtime::native_type::NativeType;
-use qlexpress_rust::runtime::parameters::Parameters;
-use qlexpress_rust::runtime::qcontext::QContext;
-use qlexpress_rust::runtime::value::DataValue;
-use qlexpress_rust::security::ql_security_strategy::{NativeMember, QLSecurityStrategy};
-use qlexpress_rust::{CustomFunction, Express4Runner, MapExpressContext};
+use qlexpress::aparser::compile_time_function::{CodeGenerator, CompileTimeFunction};
+use qlexpress::aparser::import_manager::QLImport;
+use qlexpress::aparser::operator_factory::OperatorFactory;
+use qlexpress::aparser::syntax_tree_factory::Node;
+use qlexpress::api::parsecache::LoadedParseCache;
+use qlexpress::check_options::CheckOptions;
+use qlexpress::default_class_supplier::DefaultClassSupplier;
+use qlexpress::exception::error_codes;
+use qlexpress::exception::ql_exception::QLExceptionKind;
+use qlexpress::init_options::InitOptions;
+use qlexpress::ql_options::QLOptions;
+use qlexpress::runtime::class_ref::ClassRef;
+use qlexpress::runtime::function::QMethodFunction;
+use qlexpress::runtime::instruction::ConstInstruction;
+use qlexpress::runtime::jvm_i_method::NativeIMethod;
+use qlexpress::runtime::native_type::NativeType;
+use qlexpress::runtime::parameters::Parameters;
+use qlexpress::runtime::qcontext::QContext;
+use qlexpress::runtime::value::DataValue;
+use qlexpress::security::ql_security_strategy::{NativeMember, QLSecurityStrategy};
+use qlexpress::{CustomFunction, Express4Runner, MapExpressContext};
 
 fn opts() -> QLOptions {
     QLOptions::builder().build()
@@ -173,8 +173,8 @@ fn batch_add_function_partial_failure() {
 #[test]
 fn add_functions_defined_in_script_registers_them() {
     let runner = Express4Runner::new();
-    let context: Rc<dyn qlexpress_rust::ExpressContext> = Rc::new(MapExpressContext::new(Rc::new(
-        std::cell::RefCell::new(qlexpress_rust::runtime::data::index_map::IndexMap::new()),
+    let context: Rc<dyn qlexpress::ExpressContext> = Rc::new(MapExpressContext::new(Rc::new(
+        std::cell::RefCell::new(qlexpress::runtime::data::index_map::IndexMap::new()),
     )));
     let result = runner
         .add_functions_defined_in_script("function triple(x) { return x * 3; }", context, &opts())
@@ -248,14 +248,12 @@ fn replace_default_operator() {
     // Java: replaceDefaultOperator("+", (l, r) -> 拼接)
     assert!(runner.replace_operator(
         "+",
-        Rc::new(
-            |left: &qlexpress_rust::QValue, right: &qlexpress_rust::QValue| {
-                match (left.get(), right.get()) {
-                    (DataValue::Int(a), DataValue::Int(b)) => Ok(DataValue::Str(format!("{a}{b}"))),
-                    _ => Ok(DataValue::Null),
-                }
+        Rc::new(|left: &qlexpress::QValue, right: &qlexpress::QValue| {
+            match (left.get(), right.get()) {
+                (DataValue::Int(a), DataValue::Int(b)) => Ok(DataValue::Str(format!("{a}{b}"))),
+                _ => Ok(DataValue::Null),
             }
-        )
+        })
     ));
     assert_eq!(run_with(&runner, "1 + 2"), DataValue::Str("12".to_string()));
 }
@@ -266,7 +264,7 @@ fn check_rejects_blacklisted_operator() {
     let forbidden: HashSet<String> = ["+".to_string()].into_iter().collect();
     let check_options = CheckOptions::builder()
         .operator_check_strategy(
-            qlexpress_rust::operator::operator_check_strategy::OperatorCheckStrategy::blacklist(
+            qlexpress::operator::operator_check_strategy::OperatorCheckStrategy::blacklist(
                 forbidden,
             ),
         )
@@ -432,15 +430,14 @@ fn parse_cache_export_import_execute_consistent() {
     let cache = runner.export_parse_cache(script).unwrap();
     let loaded: LoadedParseCache = runner.import_parse_cache(&cache).unwrap();
     assert!(loaded.is_bound_to(runner.identity()));
-    let map_context: Rc<dyn qlexpress_rust::ExpressContext> =
-        Rc::new(MapExpressContext::new(Rc::new(std::cell::RefCell::new(
-            qlexpress_rust::runtime::data::index_map::IndexMap::from_entries(
-                context
-                    .into_iter()
-                    .map(|(k, v)| (DataValue::Str(k), v))
-                    .collect(),
-            ),
-        ))));
+    let map_context: Rc<dyn qlexpress::ExpressContext> = Rc::new(MapExpressContext::new(Rc::new(
+        std::cell::RefCell::new(qlexpress::runtime::data::index_map::IndexMap::from_entries(
+            context
+                .into_iter()
+                .map(|(k, v)| (DataValue::Str(k), v))
+                .collect(),
+        )),
+    )));
     let cached = runner
         .execute_with_loaded_cache(&loaded, map_context, &opts())
         .unwrap();
@@ -462,8 +459,8 @@ fn parse_cache_export_import_execute_consistent() {
 fn execute_with_serializable_cache() {
     let runner = Express4Runner::new();
     let cache = runner.export_parse_cache("6 * 7").unwrap();
-    let empty: Rc<dyn qlexpress_rust::ExpressContext> = Rc::new(MapExpressContext::new(Rc::new(
-        std::cell::RefCell::new(qlexpress_rust::runtime::data::index_map::IndexMap::new()),
+    let empty: Rc<dyn qlexpress::ExpressContext> = Rc::new(MapExpressContext::new(Rc::new(
+        std::cell::RefCell::new(qlexpress::runtime::data::index_map::IndexMap::new()),
     )));
     let result = runner.execute_with_cache(&cache, empty, &opts()).unwrap();
     assert_eq!(result.into_result(), DataValue::Int(42));
@@ -522,6 +519,6 @@ fn run_with(runner: &Express4Runner, script: &str) -> DataValue {
 // 保留 QMethodFunction 引用:确认其作为 add_function_of_class_method 的
 // 底层包装类型公开可用(Java QMethodFunction 为 public 类)。
 #[allow(dead_code)]
-fn qmethod_function_is_public(method: Rc<dyn qlexpress_rust::runtime::i_method::IMethod>) {
+fn qmethod_function_is_public(method: Rc<dyn qlexpress::runtime::i_method::IMethod>) {
     let _ = QMethodFunction::new(None, method);
 }

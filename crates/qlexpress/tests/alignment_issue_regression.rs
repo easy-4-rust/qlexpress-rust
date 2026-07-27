@@ -49,21 +49,21 @@ fn ql_alias_function_register() {
     // The Rust equivalent of `@QLFunction` is `runner.add_function`.
     // This test pins the contract: the alias machinery dispatches
     // through the function table rather than the type registry.
-    use qlexpress_rust::ql_options::QLOptions;
-    use qlexpress_rust::Express4Runner;
+    use qlexpress::ql_options::QLOptions;
+    use qlexpress::Express4Runner;
     use std::collections::HashMap;
 
     let runner = Express4Runner::new();
     runner.add_function(
         "shout",
-        |_ctx: &mut dyn qlexpress_rust::runtime::qcontext::QContext,
-         params: &qlexpress_rust::runtime::parameters::Parameters|
+        |_ctx: &mut dyn qlexpress::runtime::qcontext::QContext,
+         params: &qlexpress::runtime::parameters::Parameters|
          -> Result<
-            qlexpress_rust::runtime::value::DataValue,
-            qlexpress_rust::exception::QLException,
+            qlexpress::runtime::value::DataValue,
+            qlexpress::exception::QLException,
         > {
             let s = params.get_value(0).string_value_of();
-            Ok(qlexpress_rust::runtime::value::DataValue::Str(format!(
+            Ok(qlexpress::runtime::value::DataValue::Str(format!(
                 "{s}!"
             )))
         },
@@ -74,7 +74,7 @@ fn ql_alias_function_register() {
         .into_result();
     assert_eq!(
         result,
-        qlexpress_rust::runtime::value::DataValue::Str("hi!".to_string())
+        qlexpress::runtime::value::DataValue::Str("hi!".to_string())
     );
 }
 

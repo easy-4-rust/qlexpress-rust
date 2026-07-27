@@ -7,24 +7,24 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use qlexpress_rust::aparser::operator_factory::OperatorFactory as _;
-use qlexpress_rust::exception::error_codes;
-use qlexpress_rust::exception::pure_err_reporter::PureErrReporter;
-use qlexpress_rust::ql_options::QLOptions;
-use qlexpress_rust::runtime::data::assignable_data_value::AssignableDataValue;
-use qlexpress_rust::runtime::delegate_qcontext::DelegateQContext;
-use qlexpress_rust::runtime::member::{ClassRef, MetaClass, NativeRegistry};
-use qlexpress_rust::runtime::operator::arithmetic::*;
-use qlexpress_rust::runtime::operator::base::{BinaryOperator, UnaryOperator};
-use qlexpress_rust::runtime::operator::bit::*;
-use qlexpress_rust::runtime::operator::compare::*;
-use qlexpress_rust::runtime::operator::instance_of_operator::InstanceOfOperator;
-use qlexpress_rust::runtime::operator::logic::*;
-use qlexpress_rust::runtime::operator::operator_manager::OperatorManager;
-use qlexpress_rust::runtime::qvm_global_scope::QvmGlobalScope;
-use qlexpress_rust::runtime::qvm_runtime::QvmRuntime;
-use qlexpress_rust::runtime::scope::QScope;
-use qlexpress_rust::runtime::value::{DataValue, QValue};
+use qlexpress::aparser::operator_factory::OperatorFactory as _;
+use qlexpress::exception::error_codes;
+use qlexpress::exception::pure_err_reporter::PureErrReporter;
+use qlexpress::ql_options::QLOptions;
+use qlexpress::runtime::data::assignable_data_value::AssignableDataValue;
+use qlexpress::runtime::delegate_qcontext::DelegateQContext;
+use qlexpress::runtime::member::{ClassRef, MetaClass, NativeRegistry};
+use qlexpress::runtime::operator::arithmetic::*;
+use qlexpress::runtime::operator::base::{BinaryOperator, UnaryOperator};
+use qlexpress::runtime::operator::bit::*;
+use qlexpress::runtime::operator::compare::*;
+use qlexpress::runtime::operator::instance_of_operator::InstanceOfOperator;
+use qlexpress::runtime::operator::logic::*;
+use qlexpress::runtime::operator::operator_manager::OperatorManager;
+use qlexpress::runtime::qvm_global_scope::QvmGlobalScope;
+use qlexpress::runtime::qvm_runtime::QvmRuntime;
+use qlexpress::runtime::scope::QScope;
+use qlexpress::runtime::value::{DataValue, QValue};
 
 fn ctx() -> DelegateQContext {
     let global_scope = QScope::global(QvmGlobalScope::empty());
@@ -64,7 +64,7 @@ fn bin_err(
     op: &dyn BinaryOperator,
     l: DataValue,
     r: DataValue,
-) -> qlexpress_rust::exception::QLException {
+) -> qlexpress::exception::QLException {
     op.execute(
         &v(l),
         &v(r),
@@ -620,8 +620,8 @@ fn logic_and_or_truth_rules() {
         bin(&or_word, DataValue::Null, DataValue::Bool(true)),
         DataValue::Bool(true)
     );
-    assert_eq!(or.priority(), qlexpress_rust::ql_precedences::OR);
-    assert_eq!(and.priority(), qlexpress_rust::ql_precedences::AND);
+    assert_eq!(or.priority(), qlexpress::ql_precedences::OR);
+    assert_eq!(and.priority(), qlexpress::ql_precedences::AND);
 }
 
 #[test]

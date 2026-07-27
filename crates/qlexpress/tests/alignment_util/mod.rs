@@ -17,18 +17,18 @@ use std::collections::HashMap;
 
 use std::rc::Rc;
 
-use qlexpress_rust::class_supplier::ClassSupplier;
-use qlexpress_rust::exception::error_codes;
-use qlexpress_rust::exception::ql_exception::{QLException, QLExceptionKind};
-use qlexpress_rust::init_options::InitOptions;
-use qlexpress_rust::ql_options::QLOptions;
-use qlexpress_rust::runtime::native_object::NativeObject;
-use qlexpress_rust::runtime::native_type::NativeType;
-use qlexpress_rust::runtime::parameters::Parameters;
-use qlexpress_rust::runtime::qcontext::QContext;
-use qlexpress_rust::runtime::value::DataValue;
-use qlexpress_rust::security::ql_security_strategy::QLSecurityStrategy;
-use qlexpress_rust::Express4Runner;
+use qlexpress::class_supplier::ClassSupplier;
+use qlexpress::exception::error_codes;
+use qlexpress::exception::ql_exception::{QLException, QLExceptionKind};
+use qlexpress::init_options::InitOptions;
+use qlexpress::ql_options::QLOptions;
+use qlexpress::runtime::native_object::NativeObject;
+use qlexpress::runtime::native_type::NativeType;
+use qlexpress::runtime::parameters::Parameters;
+use qlexpress::runtime::qcontext::QContext;
+use qlexpress::runtime::value::DataValue;
+use qlexpress::security::ql_security_strategy::QLSecurityStrategy;
+use qlexpress::Express4Runner;
 
 /// 测试用类型供应器:模拟 Java `DefaultClassSupplier`(`Class.forName`)
 /// 对常见 JDK 类的解析。Rust 版无 JVM 类路径(架构性偏差,无反射),
@@ -262,7 +262,7 @@ pub fn suite_runner() -> Express4Runner {
             return Err(biz_error("Person constructor expects numeric age"));
         }
         let object: Rc<RefCell<dyn NativeObject>> = Rc::new(RefCell::new(TestPerson {
-            age: qlexpress_rust::runtime::data::convert::to_i64(age),
+            age: qlexpress::runtime::data::convert::to_i64(age),
         }));
         Ok(DataValue::Object(object))
     }));

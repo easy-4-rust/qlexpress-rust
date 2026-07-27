@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use qlexpress_rust::ql_options::{QLOptions, QLOptionsBuilder};
+use qlexpress::ql_options::{QLOptions, QLOptionsBuilder};
 
 #[path = "../../qlexpress/tests/alignment_util/mod.rs"]
 mod alignment_util;

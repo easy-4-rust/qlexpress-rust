@@ -13,15 +13,15 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use qlexpress_rust::check_options::CheckOptions;
-use qlexpress_rust::exception::error_codes;
-use qlexpress_rust::exception::{QLException, QLExceptionKind};
-use qlexpress_rust::init_options::InitOptions;
-use qlexpress_rust::ql_options::QLOptions;
-use qlexpress_rust::runtime::native_object::NativeObject;
-use qlexpress_rust::runtime::value::DataValue;
-use qlexpress_rust::security::ql_security_strategy::QLSecurityStrategy;
-use qlexpress_rust::Express4Runner;
+use qlexpress::check_options::CheckOptions;
+use qlexpress::exception::error_codes;
+use qlexpress::exception::{QLException, QLExceptionKind};
+use qlexpress::init_options::InitOptions;
+use qlexpress::ql_options::QLOptions;
+use qlexpress::runtime::native_object::NativeObject;
+use qlexpress::runtime::value::DataValue;
+use qlexpress::security::ql_security_strategy::QLSecurityStrategy;
+use qlexpress::Express4Runner;
 
 struct HostDesk;
 
@@ -113,10 +113,10 @@ fn runner_load_field_host_api_skips_script_security() {
 
 #[test]
 fn white_list_allows_listed_members_only() {
-    use qlexpress_rust::aparser::import_manager::QLImport;
-    use qlexpress_rust::default_class_supplier::DefaultClassSupplier;
-    use qlexpress_rust::runtime::native_type::NativeType;
-    use qlexpress_rust::security::ql_security_strategy::NativeMember;
+    use qlexpress::aparser::import_manager::QLImport;
+    use qlexpress::default_class_supplier::DefaultClassSupplier;
+    use qlexpress::runtime::native_type::NativeType;
+    use qlexpress::security::ql_security_strategy::NativeMember;
     use std::collections::HashSet;
     use std::rc::Rc;
 
@@ -172,10 +172,10 @@ fn white_list_allows_listed_members_only() {
 
 #[test]
 fn black_list_blocks_listed_members() {
-    use qlexpress_rust::aparser::import_manager::QLImport;
-    use qlexpress_rust::default_class_supplier::DefaultClassSupplier;
-    use qlexpress_rust::runtime::native_type::NativeType;
-    use qlexpress_rust::security::ql_security_strategy::NativeMember;
+    use qlexpress::aparser::import_manager::QLImport;
+    use qlexpress::default_class_supplier::DefaultClassSupplier;
+    use qlexpress::runtime::native_type::NativeType;
+    use qlexpress::security::ql_security_strategy::NativeMember;
     use std::collections::HashSet;
     use std::rc::Rc;
 
@@ -221,7 +221,7 @@ fn check_rejects_disallowed_operator() {
     // Build a custom operator-check-strategy that disallows `+`.
     let result = std::panic::catch_unwind(|| {
         // Construct a whitelist that excludes `+`.
-        qlexpress_rust::operator::operator_check_strategy::OperatorCheckStrategy::default()
+        qlexpress::operator::operator_check_strategy::OperatorCheckStrategy::default()
     });
     // The OperatorCheckStrategy default is allow-all; black/white-list
     // building is internal. We only assert that check() runs on a

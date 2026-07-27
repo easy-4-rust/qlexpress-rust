@@ -2,14 +2,14 @@
 //! Shared mock operators for Stage 3b tests (Stage 4 delivers real ones).
 use std::rc::Rc;
 
-use qlexpress_rust::aparser::operator_factory::OperatorManager;
-use qlexpress_rust::exception::error_reporter::ErrorReporter;
-use qlexpress_rust::exception::QLException;
-use qlexpress_rust::ql_options::QLOptions;
-use qlexpress_rust::ql_precedences;
-use qlexpress_rust::runtime::operator::base::{BinaryOperator, UnaryOperator};
-use qlexpress_rust::runtime::qcontext::QContext;
-use qlexpress_rust::runtime::value::{DataValue, QValue};
+use qlexpress::aparser::operator_factory::OperatorManager;
+use qlexpress::exception::error_reporter::ErrorReporter;
+use qlexpress::exception::QLException;
+use qlexpress::ql_options::QLOptions;
+use qlexpress::ql_precedences;
+use qlexpress::runtime::operator::base::{BinaryOperator, UnaryOperator};
+use qlexpress::runtime::qcontext::QContext;
+use qlexpress::runtime::value::{DataValue, QValue};
 
 // ---- mock operators (Stage 4 delivers the real ones) ---------------------
 

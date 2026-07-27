@@ -9,16 +9,15 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use qlexpress_derive::QLExpressType;
-use qlexpress_rust::aparser::import_manager::QLImport;
-use qlexpress_rust::default_class_supplier::DefaultClassSupplier;
-use qlexpress_rust::init_options::InitOptions;
-use qlexpress_rust::ql_options::QLOptions;
-use qlexpress_rust::runtime::member::QLExpressNativeType;
-use qlexpress_rust::runtime::native_type::NativeType;
-use qlexpress_rust::runtime::value::DataValue;
-use qlexpress_rust::security::ql_security_strategy::QLSecurityStrategy;
-use qlexpress_rust::Express4Runner;
+use qlexpress::aparser::import_manager::QLImport;
+use qlexpress::default_class_supplier::DefaultClassSupplier;
+use qlexpress::init_options::InitOptions;
+use qlexpress::ql_options::QLOptions;
+use qlexpress::runtime::member::QLExpressNativeType;
+use qlexpress::runtime::native_type::NativeType;
+use qlexpress::runtime::value::DataValue;
+use qlexpress::security::ql_security_strategy::QLSecurityStrategy;
+use qlexpress::{Express4Runner, QLExpressType};
 
 #[derive(QLExpressType)]
 #[qlexpress(name = "com.example.Child7")]

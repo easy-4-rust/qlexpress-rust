@@ -2,13 +2,12 @@
 
 use std::collections::HashMap;
 
-use qlexpress_derive::QLExpressType;
-use qlexpress_rust::init_options::InitOptions;
-use qlexpress_rust::ql_options::QLOptions;
-use qlexpress_rust::runtime::member::QLExpressNativeType;
-use qlexpress_rust::runtime::value::DataValue;
-use qlexpress_rust::security::ql_security_strategy::QLSecurityStrategy;
-use qlexpress_rust::Express4Runner;
+use qlexpress::init_options::InitOptions;
+use qlexpress::ql_options::QLOptions;
+use qlexpress::runtime::member::QLExpressNativeType;
+use qlexpress::runtime::value::DataValue;
+use qlexpress::security::ql_security_strategy::QLSecurityStrategy;
+use qlexpress::{Express4Runner, QLExpressType};
 
 #[derive(QLExpressType)]
 #[qlexpress(name = "com.example.risk.Order")]

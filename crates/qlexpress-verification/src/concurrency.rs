@@ -3,9 +3,9 @@
 use std::collections::HashMap;
 use std::thread;
 
-use qlexpress_rust::ql_options::QLOptions;
-use qlexpress_rust::runtime::value::DataValue;
-use qlexpress_rust::Express4Runner;
+use qlexpress::ql_options::QLOptions;
+use qlexpress::runtime::value::DataValue;
+use qlexpress::Express4Runner;
 
 pub fn run(threads: usize, iterations: usize) -> Result<(), String> {
     if threads == 0 || iterations == 0 {

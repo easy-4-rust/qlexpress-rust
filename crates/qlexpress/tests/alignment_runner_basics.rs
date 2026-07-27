@@ -9,12 +9,12 @@
 
 use std::collections::HashMap;
 
-use qlexpress_rust::exception::error_codes;
-use qlexpress_rust::init_options::InitOptions;
-use qlexpress_rust::ql_options::QLOptions;
-use qlexpress_rust::runtime::value::DataValue;
-use qlexpress_rust::security::ql_security_strategy::QLSecurityStrategy;
-use qlexpress_rust::Express4Runner;
+use qlexpress::exception::error_codes;
+use qlexpress::init_options::InitOptions;
+use qlexpress::ql_options::QLOptions;
+use qlexpress::runtime::value::DataValue;
+use qlexpress::security::ql_security_strategy::QLSecurityStrategy;
+use qlexpress::Express4Runner;
 
 fn opts() -> QLOptions {
     QLOptions::builder().build()
@@ -114,7 +114,7 @@ fn variable_starts_with_well_number() {
 #[test]
 fn not_strict_new_lines() {
     let runner = Express4Runner::with_init_options(
-        qlexpress_rust::init_options::InitOptions::builder()
+        qlexpress::init_options::InitOptions::builder()
             .strict_new_lines(false)
             .build(),
     );
@@ -440,8 +440,8 @@ fn empty_map_cache() {
 /// 写回上下文 Map;默认不写回)。
 #[test]
 fn pollute_user_context() {
-    use qlexpress_rust::runtime::data::index_map::IndexMap;
-    use qlexpress_rust::MapExpressContext;
+    use qlexpress::runtime::data::index_map::IndexMap;
+    use qlexpress::MapExpressContext;
 
     let runner = Express4Runner::new();
     let pollute = QLOptions::builder().pollute_user_context(true).build();

@@ -6,9 +6,9 @@
 
 use std::collections::HashMap;
 
-use qlexpress_rust::exception::error_codes;
-use qlexpress_rust::ql_options::QLOptions;
-use qlexpress_rust::Express4Runner;
+use qlexpress::exception::error_codes;
+use qlexpress::ql_options::QLOptions;
+use qlexpress::Express4Runner;
 
 fn opts() -> QLOptions {
     QLOptions::builder().build()
@@ -123,11 +123,11 @@ fn class_not_found() {
 
 #[test]
 fn script_timeout() {
-    use qlexpress_rust::init_options::InitOptions;
+    use qlexpress::init_options::InitOptions;
     let runner = Express4Runner::with_init_options(
         InitOptions::builder()
             .security_strategy(
-                qlexpress_rust::security::ql_security_strategy::QLSecurityStrategy::open(),
+                qlexpress::security::ql_security_strategy::QLSecurityStrategy::open(),
             )
             .build(),
     );
@@ -178,8 +178,8 @@ fn no_suitable_constructor() {
 
 #[test]
 fn operator_not_allowed() {
-    use qlexpress_rust::check_options::CheckOptions;
-    use qlexpress_rust::operator::operator_check_strategy::OperatorCheckStrategy;
+    use qlexpress::check_options::CheckOptions;
+    use qlexpress::operator::operator_check_strategy::OperatorCheckStrategy;
     let runner = Express4Runner::new();
     let opts = CheckOptions::builder()
         .operator_check_strategy(OperatorCheckStrategy::Blacklist(

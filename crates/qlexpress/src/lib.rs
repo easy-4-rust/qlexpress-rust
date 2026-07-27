@@ -1,4 +1,6 @@
-//! qlexpress_rust — full semantic migration of Alibaba QLExpress4 to Rust.
+#![doc = include_str!("../README.md")]
+//!
+//! qlexpress — full semantic migration of Alibaba QLExpress4 to Rust.
 //!
 //! `lib.rs` is a thin index: only `pub mod` declarations plus facade
 //! re-exports. No implementation lives here (see SPEC §2).
@@ -37,6 +39,8 @@ pub use express4_runner::Express4Runner;
 pub use init_options::InitOptions;
 pub use ql_options::{QLOptions, QLOptionsBuilder};
 pub use ql_result::QLResult;
+/// 为宿主类型生成 `NativeType` 与 `NativeObject` 实现的派生宏。
+pub use qlexpress_derive::QLExpressType;
 
 /// 异常体系。对应 Java `com.alibaba.qlexpress4.exception` 公开类。
 pub use exception::{

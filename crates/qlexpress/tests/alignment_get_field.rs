@@ -9,13 +9,12 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use qlexpress_derive::QLExpressType;
-use qlexpress_rust::init_options::InitOptions;
-use qlexpress_rust::ql_options::QLOptions;
-use qlexpress_rust::runtime::member::QLExpressNativeType;
-use qlexpress_rust::runtime::value::DataValue;
-use qlexpress_rust::security::ql_security_strategy::QLSecurityStrategy;
-use qlexpress_rust::Express4Runner;
+use qlexpress::init_options::InitOptions;
+use qlexpress::ql_options::QLOptions;
+use qlexpress::runtime::member::QLExpressNativeType;
+use qlexpress::runtime::value::DataValue;
+use qlexpress::security::ql_security_strategy::QLSecurityStrategy;
+use qlexpress::{Express4Runner, QLExpressType};
 
 #[derive(QLExpressType)]
 pub struct Holder {
@@ -44,7 +43,7 @@ fn get_field_static_via_registry() {
     // Rust 端没有 MetaClass 静态路径,改用 instance 路径等价)。
     let mut runner = open_runner();
     runner.register_qlexpress_type::<Holder>();
-    let holder: Rc<RefCell<dyn qlexpress_rust::runtime::native_object::NativeObject>> = Holder {
+    let holder: Rc<RefCell<dyn qlexpress::runtime::native_object::NativeObject>> = Holder {
         value: 1,
         static_set: 2,
         static_get: 3,
@@ -67,7 +66,7 @@ fn get_field_static_via_registry() {
 fn get_field_instance_with_assignment() {
     let mut runner = open_runner();
     runner.register_qlexpress_type::<Holder>();
-    let holder: Rc<RefCell<dyn qlexpress_rust::runtime::native_object::NativeObject>> = Holder {
+    let holder: Rc<RefCell<dyn qlexpress::runtime::native_object::NativeObject>> = Holder {
         value: 35,
         static_set: 0,
         static_get: 99,
@@ -93,10 +92,10 @@ fn get_field_with_derive_native_object_directly() {
         static_set: 0,
         static_get: 0,
     };
-    let cell: Rc<RefCell<dyn qlexpress_rust::runtime::native_object::NativeObject>> =
+    let cell: Rc<RefCell<dyn qlexpress::runtime::native_object::NativeObject>> =
         holder.into_data_value().as_object_ref().unwrap().clone();
     let bean = DataValue::Object(cell);
-    let native: &dyn qlexpress_rust::runtime::native_object::NativeObject =
+    let native: &dyn qlexpress::runtime::native_object::NativeObject =
         &*bean.as_object_ref().unwrap().borrow();
     assert_eq!(native.get_field("value"), Some(DataValue::Long(42)));
     assert_eq!(native.get_field("static_get"), Some(DataValue::Long(0)));
@@ -111,10 +110,10 @@ fn get_field_no_access_returns_none() {
         static_set: 0,
         static_get: 0,
     };
-    let cell: Rc<RefCell<dyn qlexpress_rust::runtime::native_object::NativeObject>> =
+    let cell: Rc<RefCell<dyn qlexpress::runtime::native_object::NativeObject>> =
         holder.into_data_value().as_object_ref().unwrap().clone();
     let bean = DataValue::Object(cell);
-    let native: &dyn qlexpress_rust::runtime::native_object::NativeObject =
+    let native: &dyn qlexpress::runtime::native_object::NativeObject =
         &*bean.as_object_ref().unwrap().borrow();
     assert_eq!(native.get_field("does_not_exist"), None);
 }
@@ -126,10 +125,10 @@ fn get_field_returns_correct_typename() {
         static_set: 200,
         static_get: 300,
     };
-    let cell: Rc<RefCell<dyn qlexpress_rust::runtime::native_object::NativeObject>> =
+    let cell: Rc<RefCell<dyn qlexpress::runtime::native_object::NativeObject>> =
         holder.into_data_value().as_object_ref().unwrap().clone();
     let bean = DataValue::Object(cell);
-    let native: &dyn qlexpress_rust::runtime::native_object::NativeObject =
+    let native: &dyn qlexpress::runtime::native_object::NativeObject =
         &*bean.as_object_ref().unwrap().borrow();
     // 所有 pub 字段应能 get_field 返回
     assert_eq!(native.get_field("value"), Some(DataValue::Long(100)));

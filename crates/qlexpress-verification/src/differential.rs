@@ -5,12 +5,12 @@ use std::fs::File;
 use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::path::Path;
 
-use qlexpress_rust::init_options::InitOptions;
-use qlexpress_rust::ql_options::{QLOptions, QLOptionsBuilder};
-use qlexpress_rust::runtime::data::index_map::IndexMap;
-use qlexpress_rust::runtime::value::DataValue;
-use qlexpress_rust::security::ql_security_strategy::QLSecurityStrategy;
-use qlexpress_rust::Express4Runner;
+use qlexpress::init_options::InitOptions;
+use qlexpress::ql_options::{QLOptions, QLOptionsBuilder};
+use qlexpress::runtime::data::index_map::IndexMap;
+use qlexpress::runtime::value::DataValue;
+use qlexpress::security::ql_security_strategy::QLSecurityStrategy;
+use qlexpress::Express4Runner;
 use serde::{Deserialize, Serialize};
 
 use crate::normalization::normalize;

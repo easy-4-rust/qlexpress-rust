@@ -9,9 +9,9 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use qlexpress_rust::ql_options::QLOptions;
-use qlexpress_rust::runtime::value::{DataValue, QValue};
-use qlexpress_rust::Express4Runner;
+use qlexpress::ql_options::QLOptions;
+use qlexpress::runtime::value::{DataValue, QValue};
+use qlexpress::Express4Runner;
 
 fn opts_no_cache() -> QLOptions {
     QLOptions::builder().cache(false).build()
@@ -25,7 +25,7 @@ fn doc_add_function_and_operator() {
     // 自定义 varargs 函数 join
     runner.add_varargs_function(
         "join",
-        |params: &[qlexpress_rust::runtime::value::DataValue]| -> Result<_, _> {
+        |params: &[qlexpress::runtime::value::DataValue]| -> Result<_, _> {
             let joined = (0..params.len())
                 .map(|i| params[i].string_value_of())
                 .collect::<Vec<_>>()
@@ -132,7 +132,7 @@ fn add_operator_with_group_precedence() {
                 _ => Ok(DataValue::Null),
             }
         }),
-        qlexpress_rust::ql_precedences::GROUP,
+        qlexpress::ql_precedences::GROUP,
     );
     match runner
         .execute("[{a:1}, {a:5}].*a", HashMap::new(), &opts_no_cache())

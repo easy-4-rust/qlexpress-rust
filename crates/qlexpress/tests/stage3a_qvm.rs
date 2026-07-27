@@ -6,31 +6,31 @@
 
 use std::rc::Rc;
 
-use qlexpress_rust::exception::error_codes;
-use qlexpress_rust::exception::error_reporter::ErrorReporter;
-use qlexpress_rust::exception::pure_err_reporter::PureErrReporter;
-use qlexpress_rust::exception::QLException;
-use qlexpress_rust::ql_options::QLOptions;
-use qlexpress_rust::runtime::data::convert::{math_domain, promote, MathDomain};
-use qlexpress_rust::runtime::delegate_qcontext::DelegateQContext;
-use qlexpress_rust::runtime::instruction::ReturnResultType;
-use qlexpress_rust::runtime::instruction::{
+use qlexpress::exception::error_codes;
+use qlexpress::exception::error_reporter::ErrorReporter;
+use qlexpress::exception::pure_err_reporter::PureErrReporter;
+use qlexpress::exception::QLException;
+use qlexpress::ql_options::QLOptions;
+use qlexpress::runtime::data::convert::{math_domain, promote, MathDomain};
+use qlexpress::runtime::delegate_qcontext::DelegateQContext;
+use qlexpress::runtime::instruction::ReturnResultType;
+use qlexpress::runtime::instruction::{
     BreakContinueInstruction, CallFunctionInstruction, CheckTimeOutInstruction, ConstInstruction,
     DefineFunctionInstruction, DefineLocalInstruction, ForInstruction, GetFieldInstruction,
     IndexInstruction, Instruction, JumpIfPopInstruction, JumpInstruction, LoadInstruction,
     MethodInvokeInstruction, NewListInstruction, OperatorInstruction, PopInstruction,
     QLInstruction, ReturnInstruction, WhileInstruction,
 };
-use qlexpress_rust::runtime::member::NativeRegistry;
-use qlexpress_rust::runtime::operator::base::BinaryOperator;
-use qlexpress_rust::runtime::q_result::QResult;
-use qlexpress_rust::runtime::qcontext::QContext;
-use qlexpress_rust::runtime::qlambda_definition::QLambdaDefinition;
-use qlexpress_rust::runtime::qlambda_definition_inner::{Param, QLambdaDefinitionInner};
-use qlexpress_rust::runtime::qvm_global_scope::QvmGlobalScope;
-use qlexpress_rust::runtime::qvm_runtime::{current_time_millis, run_instructions, QvmRuntime};
-use qlexpress_rust::runtime::scope::QScope;
-use qlexpress_rust::runtime::value::{DataValue, QValue};
+use qlexpress::runtime::member::NativeRegistry;
+use qlexpress::runtime::operator::base::BinaryOperator;
+use qlexpress::runtime::q_result::QResult;
+use qlexpress::runtime::qcontext::QContext;
+use qlexpress::runtime::qlambda_definition::QLambdaDefinition;
+use qlexpress::runtime::qlambda_definition_inner::{Param, QLambdaDefinitionInner};
+use qlexpress::runtime::qvm_global_scope::QvmGlobalScope;
+use qlexpress::runtime::qvm_runtime::{current_time_millis, run_instructions, QvmRuntime};
+use qlexpress::runtime::scope::QScope;
+use qlexpress::runtime::value::{DataValue, QValue};
 
 // ---- helpers -------------------------------------------------------------
 
@@ -127,7 +127,7 @@ impl BinaryOperator for NumOp {
         }
         let domain = math_domain(&l, &r).unwrap_or(MathDomain::Long);
         let (lp, rp) = promote(&l, &r, domain);
-        let ordering = qlexpress_rust::runtime::data::convert::number_compare(&lp, &rp);
+        let ordering = qlexpress::runtime::data::convert::number_compare(&lp, &rp);
         Ok(match self {
             NumOp::Lt => DataValue::Bool(ordering == Some(std::cmp::Ordering::Less)),
             NumOp::Le => DataValue::Bool(matches!(
@@ -142,8 +142,8 @@ impl BinaryOperator for NumOp {
                 }),
                 _ => {
                     let (a, b) = (
-                        qlexpress_rust::runtime::data::convert::to_i64(&lp),
-                        qlexpress_rust::runtime::data::convert::to_i64(&rp),
+                        qlexpress::runtime::data::convert::to_i64(&lp),
+                        qlexpress::runtime::data::convert::to_i64(&rp),
                     );
                     let v = match self {
                         NumOp::Add => a + b,
@@ -479,7 +479,7 @@ fn method_not_found_error_code() {
 fn timeout_instruction_fires_and_is_disabled_by_zero() {
     // 超时指令: start time in the past + timeout 1ms → SCRIPT_TIME_OUT
     let rt = Rc::new(QvmRuntime::new(
-        qlexpress_rust::runtime::trace::QTraces::empty(),
+        qlexpress::runtime::trace::QTraces::empty(),
         Default::default(),
         Rc::new(NativeRegistry::with_builtins()),
         current_time_millis() - 10_000,

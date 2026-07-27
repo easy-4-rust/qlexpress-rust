@@ -14,25 +14,25 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use qlexpress_rust::aparser::import_manager::QLImport;
-use qlexpress_rust::default_class_supplier::DefaultClassSupplier;
-use qlexpress_rust::exception::error_codes;
-use qlexpress_rust::init_options::InitOptions;
-use qlexpress_rust::ql_options::QLOptions;
-use qlexpress_rust::runtime::native_type::NativeType;
-use qlexpress_rust::runtime::value::DataValue;
-use qlexpress_rust::Express4Runner;
+use qlexpress::aparser::import_manager::QLImport;
+use qlexpress::default_class_supplier::DefaultClassSupplier;
+use qlexpress::exception::error_codes;
+use qlexpress::init_options::InitOptions;
+use qlexpress::ql_options::QLOptions;
+use qlexpress::runtime::native_type::NativeType;
+use qlexpress::runtime::value::DataValue;
+use qlexpress::Express4Runner;
 
 fn runner_with(calc: NativeType) -> Express4Runner {
     runner_with_strategy(
         calc,
-        qlexpress_rust::security::ql_security_strategy::QLSecurityStrategy::open(),
+        qlexpress::security::ql_security_strategy::QLSecurityStrategy::open(),
     )
 }
 
 fn runner_with_strategy(
     calc: NativeType,
-    strategy: qlexpress_rust::security::ql_security_strategy::QLSecurityStrategy,
+    strategy: qlexpress::security::ql_security_strategy::QLSecurityStrategy,
 ) -> Express4Runner {
     let mut supplier = DefaultClassSupplier::instance();
     supplier.register("com.example.Calc");
@@ -172,7 +172,7 @@ fn new_instance_int_to_big_integer() {
         // 接受任意参数,返回 BigInt
         let n = args
             .first()
-            .map(qlexpress_rust::runtime::data::convert::to_i64)
+            .map(qlexpress::runtime::data::convert::to_i64)
             .unwrap_or(0);
         Ok(DataValue::big_int(n))
     }));
