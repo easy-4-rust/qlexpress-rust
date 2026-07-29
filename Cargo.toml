@@ -12,7 +12,7 @@ license = "Apache-2.0"
 repository = "https://github.com/easy-4-rust/qlexpress-rust"
 homepage = "https://github.com/easy-4-rust/qlexpress-rust"
 rust-version = "1.85"
-version = "0.1.0-alpha.1"
+version = "0.1.0-alpha.2"
 
 [workspace.metadata.qlexpress]
 java-baseline-version = "4.2.0-beta"

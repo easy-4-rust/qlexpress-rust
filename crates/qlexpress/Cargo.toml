@@ -23,6 +23,6 @@ path = "src/lib.rs"
 serde = { workspace = true }
 serde_json = { workspace = true }
 # Stage 6: 反射替代的派生宏,默认启用。本地开发使用 path，发布后使用 crates.io。
-qlexpress-derive = { version = "=0.1.0-alpha.1", path = "../qlexpress-derive" }
+qlexpress-derive = { version = "=0.1.0-alpha.2", path = "../qlexpress-derive" }
 num-bigint = { workspace = true }
 num-traits = { workspace = true }

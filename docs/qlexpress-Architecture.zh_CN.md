@@ -2,9 +2,9 @@
 
 > **文档目的**：定义 QlExpress Rust 可验证的架构合同。<br>
 > **架构版本**：1.0<br>
-> **代码基线**：`v0.1.0-alpha.1`；文档审计基于 `dev@246da0f`<br>
+> **代码基线**：`v0.1.0-alpha.2`；文档审计基于 `dev` 发布候选<br>
 > **上游权威**：Alibaba QLExpress4 `4.2.0-beta@9065b9ac`<br>
-> **最后核验**：2026-07-27<br>
+> **最后核验**：2026-07-30<br>
 > **状态**：当前态架构基线，待评审
 
 [English](qlexpress-Architecture.md) | [README](../README.zh-CN.md) |
@@ -60,7 +60,7 @@ qlexpress 是一个进程内 Rust 库，将脚本和宿主上下文转换为 `QL
 - 网络服务、分布式调度器、持久化存储或控制面；
 - 在线程间并发共享同一个 `Express4Runner`；
 - 未回放真实脚本和数据时宣称业务宿主生产可用；
-- `0.1.0-alpha.1` 阶段承诺稳定 `1.0` API。
+- `0.1.0-alpha.2` 阶段承诺稳定 `1.0` API。
 
 ## 3. 证据与实现状态
 
@@ -343,7 +343,7 @@ flowchart LR
 ```
 
 两个已发布 crate 使用完全相同的版本。门面依赖
-`qlexpress-derive = "=0.1.0-alpha.1"`，所以必须先发布 derive。Trusted
+`qlexpress-derive = "=0.1.0-alpha.2"`，所以必须先发布 derive。Trusted
 Publishing 的设计使用 GitHub OIDC 和受保护的 `release` Environment。
 
 ## 16. 架构决策与取舍

@@ -59,7 +59,7 @@ dependencies = [
 
 [[package]]
 name = "qlexpress"
-version = "0.1.0-alpha.1"
+version = "0.1.0-alpha.2"
 dependencies = [
  "num-bigint",
  "num-traits",
@@ -70,7 +70,7 @@ dependencies = [
 
 [[package]]
 name = "qlexpress-derive"
-version = "0.1.0-alpha.1"
+version = "0.1.0-alpha.2"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -79,7 +79,7 @@ dependencies = [
 
 [[package]]
 name = "qlexpress-verification"
-version = "0.1.0-alpha.1"
+version = "0.1.0-alpha.2"
 dependencies = [
  "qlexpress",
  "serde",

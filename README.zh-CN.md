@@ -21,10 +21,10 @@
 
 ---
 
-> **当前版本**：`0.1.0-alpha.1`<br>
+> **当前版本**：`0.1.0-alpha.2`<br>
 > **成熟度**：Alpha 预览版；`1.0` 之前公共 API 仍可能调整<br>
 > **Java 基线**：QLExpress4 `4.2.0-beta`，提交 `9065b9ac5d985dcd02e627239aa9cdb78fb2f7f3`<br>
-> **最后核验**：2026-07-27
+> **最后核验**：2026-07-30
 
 QlExpress Rust 在 Rust 进程内解析并执行表达式与规则脚本。项目提供解析器、栈式
 QVM、与 Java 对应的值及错误语义、自定义函数和操作符、显式宿主类型注册、
@@ -53,7 +53,7 @@ QVM、与 Java 对应的值及错误语义、自定义函数和操作符、显�
 - 它不是 Java ABI 或 JVM 的替代品。
 - 单个 `Express4Runner` 不是 `Send`/`Sync`；多线程应采用“每个 worker 一个 runner”。
 - Rust 原生方法和构造器必须显式注册；派生宏不能扫描独立 `impl` 块。
-- `0.1.0-alpha.1` 是 Alpha 版本，不代表稳定的 `1.0` 兼容承诺。
+- `0.1.0-alpha.2` 是 Alpha 版本，不代表稳定的 `1.0` 兼容承诺。
 
 ## 架构
 
@@ -120,7 +120,7 @@ Express4Runner::execute
 添加依赖：
 
 ```bash
-cargo add qlexpress@0.1.0-alpha.1
+cargo add qlexpress@0.1.0-alpha.2
 ```
 
 执行脚本：

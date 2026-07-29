@@ -14,6 +14,12 @@ fn opts() -> QLOptions {
     QLOptions::builder().cache(true).build()
 }
 
+/// cargo-llvm-cov/LLVM_PROFILE_FILE 插桩会显著改变 debug 构建耗时。
+/// 覆盖率构建仍执行并断言语义结果，但性能阈值只由普通测试和独立 load 门禁判定。
+fn coverage_instrumented() -> bool {
+    std::env::var_os("LLVM_PROFILE_FILE").is_some()
+}
+
 fn run_int(runner: &Express4Runner, script: &str) -> i64 {
     let r = runner
         .execute(script, HashMap::new(), &opts())
@@ -39,10 +45,12 @@ fn compile_cache_hit_speedup() {
     let t1 = std::time::Instant::now();
     let _ = run_int(&runner, script);
     let hot = t1.elapsed();
-    assert!(
-        hot < cold * 3,
-        "cache hit ({hot:?}) should be at most 3x cold ({cold:?})"
-    );
+    if !coverage_instrumented() {
+        assert!(
+            hot < cold * 3,
+            "cache hit ({hot:?}) should be at most 3x cold ({cold:?})"
+        );
+    }
 }
 
 #[test]
@@ -54,10 +62,12 @@ fn run_100_times_under_1s() {
         let _ = run_int(&runner, script);
     }
     let elapsed = t0.elapsed();
-    assert!(
-        elapsed.as_secs() < 1,
-        "100 runs should < 1s, took {elapsed:?}"
-    );
+    if !coverage_instrumented() {
+        assert!(
+            elapsed.as_secs() < 1,
+            "100 runs should < 1s, took {elapsed:?}"
+        );
+    }
 }
 
 #[test]
@@ -72,10 +82,12 @@ fn medium_script_under_500ms() {
     let r = run_int(&runner, script);
     let elapsed = t0.elapsed();
     assert_eq!(r, 499500);
-    assert!(
-        elapsed.as_millis() < 500,
-        "medium script should < 500ms, took {elapsed:?}"
-    );
+    if !coverage_instrumented() {
+        assert!(
+            elapsed.as_millis() < 500,
+            "medium script should < 500ms, took {elapsed:?}"
+        );
+    }
 }
 
 #[test]
@@ -91,10 +103,12 @@ fn large_script_under_1s() {
     let r = run_int(&runner, &script);
     let elapsed = t0.elapsed();
     assert!(r > 0);
-    assert!(
-        elapsed.as_secs() < 1,
-        "large script should < 1s, took {elapsed:?}"
-    );
+    if !coverage_instrumented() {
+        assert!(
+            elapsed.as_secs() < 1,
+            "large script should < 1s, took {elapsed:?}"
+        );
+    }
 }
 
 #[test]
@@ -111,10 +125,12 @@ fn recursive_fibonacci_20_under_200ms() {
     let r = run_int(&runner, script);
     let elapsed = t0.elapsed();
     assert_eq!(r, 6765);
-    assert!(
-        elapsed.as_millis() < 200,
-        "fib(20) should < 200ms, took {elapsed:?}"
-    );
+    if !coverage_instrumented() {
+        assert!(
+            elapsed.as_millis() < 200,
+            "fib(20) should < 200ms, took {elapsed:?}"
+        );
+    }
 }
 
 #[test]
@@ -149,10 +165,12 @@ fn list_iteration_performance() {
     let t0 = std::time::Instant::now();
     let _ = run_int(&runner, script);
     let elapsed = t0.elapsed();
-    assert!(
-        elapsed.as_millis() < 200,
-        "list iteration should < 200ms, took {elapsed:?}"
-    );
+    if !coverage_instrumented() {
+        assert!(
+            elapsed.as_millis() < 200,
+            "list iteration should < 200ms, took {elapsed:?}"
+        );
+    }
 }
 
 #[test]

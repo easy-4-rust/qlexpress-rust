@@ -1,7 +1,7 @@
 # QlExpress Rust 使用指南
 
 > **文档目的**：提供从首次执行到安全宿主集成的源码可追溯路径。<br>
-> **适用版本**：`qlexpress 0.1.0-alpha.1`<br>
+> **适用版本**：`qlexpress 0.1.0-alpha.2`<br>
 > **Rust 基线**：MSRV 1.85，Edition 2021<br>
 > **最后核验**：2026-07-27<br>
 > **状态**：Alpha 文档；`1.0` 之前 API 仍可能变化
@@ -33,7 +33,7 @@
 ## 2. 安装与运行
 
 ```bash
-cargo add qlexpress@0.1.0-alpha.1
+cargo add qlexpress@0.1.0-alpha.2
 ```
 
 ```rust

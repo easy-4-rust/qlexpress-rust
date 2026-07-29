@@ -1,7 +1,7 @@
 # QlExpress Rust Usage Guide
 
 > **Purpose:** Provide a source-backed path from first evaluation to safe host integration.<br>
-> **Applies to:** `qlexpress 0.1.0-alpha.1`<br>
+> **Applies to:** `qlexpress 0.1.0-alpha.2`<br>
 > **Rust baseline:** MSRV 1.85, Edition 2021<br>
 > **Last verified:** 2026-07-27<br>
 > **Status:** Alpha documentation; APIs may change before `1.0`
@@ -33,7 +33,7 @@ Runner initialization and execution options have different lifetimes:
 ## 2. Install and run
 
 ```bash
-cargo add qlexpress@0.1.0-alpha.1
+cargo add qlexpress@0.1.0-alpha.2
 ```
 
 ```rust

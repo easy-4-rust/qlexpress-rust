@@ -21,10 +21,10 @@
 
 ---
 
-> **Release:** `0.1.0-alpha.1`<br>
+> **Release:** `0.1.0-alpha.2`<br>
 > **Maturity:** alpha preview; APIs may change before `1.0`<br>
 > **Java baseline:** QLExpress4 `4.2.0-beta`, commit `9065b9ac5d985dcd02e627239aa9cdb78fb2f7f3`<br>
-> **Last verified:** 2026-07-27
+> **Last verified:** 2026-07-30
 
 QlExpress Rust evaluates expressions and rule scripts inside a Rust process. It provides a parser, a
 stack-based QVM, Java-compatible value and error semantics, custom functions and operators,
@@ -56,7 +56,7 @@ each host environment.
 - A single `Express4Runner` is not `Send` or `Sync`; use one runner per worker thread.
 - Rust native methods and constructors are registered explicitly; derive cannot inspect `impl`
   blocks.
-- `0.1.0-alpha.1` is an alpha release, not a stable `1.0` compatibility promise.
+- `0.1.0-alpha.2` is an alpha release, not a stable `1.0` compatibility promise.
 
 ## Architecture
 
@@ -123,7 +123,7 @@ security, failure handling, and architecture decisions.
 Add the crate:
 
 ```bash
-cargo add qlexpress@0.1.0-alpha.1
+cargo add qlexpress@0.1.0-alpha.2
 ```
 
 Evaluate a script:

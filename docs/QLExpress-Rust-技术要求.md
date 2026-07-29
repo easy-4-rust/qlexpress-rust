@@ -160,6 +160,7 @@ cargo run -p qlexpress-verification -- security-fuzz
 cargo run -p qlexpress-verification -- business-host
 cargo run -p qlexpress-verification -- canary
 cargo run -p qlexpress-verification -- load
+cargo +nightly fuzz run parser_sandbox fuzz/corpus/parser_sandbox -- -max_total_time=30
 
 # 覆盖率
 cargo llvm-cov --workspace --all-features --summary-only

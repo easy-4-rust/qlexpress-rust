@@ -2,12 +2,12 @@
 
 Alibaba QLExpress4 动态脚本引擎的 Rust 语义迁移实现。
 
-当前 `0.1.0-alpha.1` 对齐 Java `4.2.0-beta`，提供表达式解析、QVM 执行、
+当前 `0.1.0-alpha.2` 对齐 Java `4.2.0-beta`，提供表达式解析、QVM 执行、
 宿主函数与类型注册、安全策略、编译缓存以及表达式追踪能力。
 
 ```toml
 [dependencies]
-qlexpress = "=0.1.0-alpha.1"
+qlexpress = "=0.1.0-alpha.2"
 ```
 
 ```rust

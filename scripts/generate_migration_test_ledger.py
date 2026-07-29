@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from collections import Counter
 from pathlib import Path
 
@@ -172,12 +173,75 @@ def escape(value: str) -> str:
     return value.replace("|", r"\|").replace("\n", " ")
 
 
+def braced_body(text: str, start: int) -> str:
+    brace = text.find("{", start)
+    if brace < 0:
+        return ""
+    depth = 0
+    in_string = False
+    escaped = False
+    for index in range(brace, len(text)):
+        char = text[index]
+        if in_string:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+            continue
+        if char == '"':
+            in_string = True
+        elif char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return text[brace : index + 1]
+    return text[brace:]
+
+
+def unique_matches(pattern: str, body: str, limit: int = 8) -> list[str]:
+    return list(dict.fromkeys(re.findall(pattern, body)))[:limit]
+
+
+def source_signals(java_root: Path, item: dict) -> str:
+    """Extract review signals from the exact Java method body, not its name alone."""
+    path = java_root / item["file"]
+    text = path.read_text(encoding="utf-8", errors="replace")
+    line_offset = sum(len(line) for line in text.splitlines(keepends=True)[: item["line"] - 1])
+    method = re.search(rf"\b{re.escape(item['name'])}\s*\(", text[line_offset:])
+    body = braced_body(text, line_offset + (method.start() if method else 0))
+    assertions = unique_matches(
+        r"\b(assert(?:Equals|NotEquals|True|False|Null|NotNull|Same|Throws|Timeout|ArrayEquals)|fail)\s*\(",
+        body,
+    )
+    calls = unique_matches(
+        r"\.(execute|check|getOutVarNames|getOutVarAttrs|getOutFunctionNames|"
+        r"exportParseCache|load|addFunction|addMacro|addOperator|replaceOperator|"
+        r"invoke|run|compile|parse)\s*\(",
+        body,
+    )
+    mutations = unique_matches(
+        r"\.(put|set|add|remove|clear|close|shutdown|register)\s*\(",
+        body,
+        limit=5,
+    )
+    parts = [
+        "入口=" + (",".join(calls) if calls else "构造/直接调用"),
+        "断言=" + (",".join(assertions) if assertions else "异常/套件内断言"),
+        "副作用=" + (",".join(mutations) if mutations else "局部 fixture/无外部持久化"),
+    ]
+    return "；".join(parts)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--inventory", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     inventory = json.loads(args.inventory.read_text(encoding="utf-8"))
+    java_root = Path(inventory["java_root"])
     rows = []
     for item in inventory["java_tests"]:
         family = Path(item["file"]).name
@@ -203,13 +267,13 @@ def main() -> None:
         "",
         "## SOURCE_PARITY",
         "",
-        "| # | Java 来源测试 | 注解 | 迁移状态 | Rust 证据 | 已核对契约 |",
-        "|---:|---|---|---|---|---|",
+        "| # | Java 来源测试 | 注解 | 源方法体信号 | 迁移状态 | Rust 证据 | 已核对契约 |",
+        "|---:|---|---|---|---|---|---|",
     ]
     for index, (item, status, evidence, contract) in enumerate(rows, 1):
         source = f"`{item['file']}:{item['line']}#{item['name']}`"
         lines.append(
-            f"| {index} | {source} | `{item['kind']}` | **{status}** | "
+            f"| {index} | {source} | `{item['kind']}` | {escape(source_signals(java_root, item))} | **{status}** | "
             f"{escape(evidence)} | {escape(contract)}；逐项保留输入、结果/错误、可观察副作用与隔离语义 |"
         )
 

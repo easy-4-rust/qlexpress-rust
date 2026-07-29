@@ -2,9 +2,9 @@
 
 > **Purpose:** Define the verifiable architecture contract for QlExpress Rust.<br>
 > **Architecture version:** 1.0<br>
-> **Code baseline:** `v0.1.0-alpha.1`; documentation audit from `dev@246da0f`<br>
+> **Code baseline:** `v0.1.0-alpha.2`; documentation audit from the `dev` release candidate<br>
 > **Upstream authority:** Alibaba QLExpress4 `4.2.0-beta@9065b9ac`<br>
-> **Last verified:** 2026-07-27<br>
+> **Last verified:** 2026-07-30<br>
 > **Status:** Current-state baseline, ready for review
 
 [简体中文](qlexpress-Architecture.zh_CN.md) | [README](../README.md) |
@@ -60,7 +60,7 @@ Host decision, telemetry, or downstream action
 - a network service, distributed scheduler, persistent store, or control plane;
 - sharing one `Express4Runner` concurrently across threads;
 - asserting production readiness for a host that has not replayed its real scripts and data;
-- stable `1.0` API compatibility while the project remains `0.1.0-alpha.1`.
+- stable `1.0` API compatibility while the project remains `0.1.0-alpha.2`.
 
 ## 3. Evidence and implementation status
 
@@ -350,7 +350,7 @@ flowchart LR
 ```
 
 The two published crates share an exact version. The facade depends on
-`qlexpress-derive = "=0.1.0-alpha.1"`, so the derive crate must become available first.
+`qlexpress-derive = "=0.1.0-alpha.2"`, so the derive crate must become available first.
 Trusted Publishing is designed to use GitHub OIDC and the protected `release` environment.
 
 ## 16. Decisions and trade-offs
