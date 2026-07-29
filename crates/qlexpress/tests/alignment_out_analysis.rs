@@ -7,7 +7,10 @@
 #![allow(clippy::result_large_err)]
 
 use std::collections::HashSet;
+use std::rc::Rc;
 
+use qlexpress::default_class_supplier::DefaultClassSupplier;
+use qlexpress::init_options::InitOptions;
 use qlexpress::Express4Runner;
 
 fn out_vars(script: &str) -> HashSet<String> {
@@ -18,6 +21,24 @@ fn out_vars(script: &str) -> HashSet<String> {
 
 fn set(items: &[&str]) -> HashSet<String> {
     items.iter().map(|s| s.to_string()).collect()
+}
+
+fn out_attrs(script: &str) -> Vec<String> {
+    let mut supplier = DefaultClassSupplier::instance();
+    supplier.register("java.lang.Math");
+    let runner = Express4Runner::with_init_options(
+        InitOptions::builder()
+            .class_supplier(Rc::new(supplier))
+            .build(),
+    );
+    let mut attrs = runner
+        .get_out_var_attrs(script)
+        .unwrap_or_else(|err| panic!("get_out_var_attrs failed for {script:?}: {err:?}"))
+        .into_iter()
+        .map(|parts| parts.join("."))
+        .collect::<Vec<_>>();
+    attrs.sort();
+    attrs
 }
 
 /// 对应 Java `Express4RunnerTest#getOutVarNamesTest`(声明与赋值的
@@ -76,4 +97,83 @@ fn out_functions() {
         .get_out_function_names("cc(a,bc(2,m,1))\ndd(c)")
         .unwrap();
     assert_eq!(names, set(&["cc", "bc", "dd"]));
+
+    assert_eq!(
+        runner
+            .get_out_function_names("time('2025-09-8')+sum(1,sub(3,2))")
+            .unwrap(),
+        set(&["time", "sum", "sub"])
+    );
+    assert_eq!(
+        runner
+            .get_out_function_names("function add(a,b) {a+b}\n add(1,2)+sub(3,1)")
+            .unwrap(),
+        set(&["sub"])
+    );
+    assert!(runner
+        .get_out_function_names(
+            "function add(a,b) {\n function sub(a,b) { a-b }\n add(1,2)+sub(3,1) \n}\n",
+        )
+        .unwrap()
+        .is_empty());
+    assert_eq!(
+        runner
+            .get_out_function_names(
+                "function add(a,b) {\n function sub(a,b) { a-b }\n add(1,2)+sub(3,1) \n}\nsub(3,1)",
+            )
+            .unwrap(),
+        set(&["sub"])
+    );
+    assert!(runner
+        .get_out_function_names("function recur(a,b) {\n recur(1,2) \n}\nrecur(3,1)")
+        .unwrap()
+        .is_empty());
+    assert!(runner
+        .get_out_function_names("add(1,2); function add(a,b) {\n a+b \n}")
+        .unwrap()
+        .is_empty());
+}
+
+/// 完整移植 Java `Express4RunnerTest#getOutVarAttrsTest`，覆盖属性链去重、
+/// 赋值左值、已声明变量、类限定名、函数作用域和两种 switch 分支。
+#[test]
+fn out_var_attrs_matches_java_contract_matrix() {
+    assert_eq!(
+        out_attrs("a.b.c+a.b.c-a.b.d*c.m"),
+        ["a.b.c", "a.b.d", "c.m"]
+    );
+    assert_eq!(out_attrs("a=2;test(a.b.c,c.m)"), ["c.m"]);
+    assert_eq!(out_attrs("a.b=2;test(c.m)"), ["a.b", "c.m"]);
+    assert_eq!(out_attrs("java.lang.Math.abs(c)"), ["c"]);
+    assert!(out_attrs("hello()").is_empty());
+    assert_eq!(out_attrs("a=a+1"), ["a"]);
+    assert_eq!(out_attrs("a+=1"), ["a"]);
+    assert!(out_attrs("a=1;a=a+1").is_empty());
+    assert!(out_attrs("a=1;a+=1").is_empty());
+    assert_eq!(out_attrs("int a=a+1;"), ["a"]);
+    assert!(out_attrs("int a=1;a=a+1").is_empty());
+
+    assert_eq!(
+        out_attrs(
+            "function sub(a, b) {\n    return a.field - b.name;\n}\nreturn sub(x.prop, y.value);",
+        ),
+        ["x.prop", "y.value"]
+    );
+    assert_eq!(
+        out_attrs(
+            "int globalVar = 1;\nint x = 2;\nswitch (x) {\n\
+             case 1:\nint localVar = 10;\nglobalVar = localVar + e0.externalVar;\nbreak;\n\
+             case 2:\nint y = e1.externalVar2 + 10;\nbreak;\n}\nreturn globalVar;",
+        ),
+        ["e0.externalVar", "e1.externalVar2"]
+    );
+    assert_eq!(
+        out_attrs(
+            "int x = 2;\nresult = switch (x) {\n\
+             case 1 -> e0.prop1 + 10\n\
+             case 2 -> e1.prop2 * 2\n\
+             default -> e2.prop3\n}",
+        ),
+        ["e0.prop1", "e1.prop2", "e2.prop3"]
+    );
 }

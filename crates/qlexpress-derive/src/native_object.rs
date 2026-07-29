@@ -40,6 +40,16 @@ pub fn generate(
     }
 
     let alias_lookup = build_alias_lookup(item);
+    let setter_arms: Vec<TokenStream> = item
+        .fields
+        .iter()
+        .filter(|f| !f.attrs.skip && !f.attrs.readonly)
+        .map(|field| gen_setter_arm(field, qlexpress_path))
+        .collect();
+    let mut setter_combined = TokenStream::new();
+    for arm in setter_arms {
+        setter_combined.extend(arm);
+    }
 
     quote! {
         impl #qlexpress_path::runtime::native_object::NativeObject for #ident {
@@ -55,6 +65,18 @@ pub fn generate(
                 match canonical {
                     #getter_combined
                     _ => None,
+                }
+            }
+
+            fn set_field(
+                &mut self,
+                name: &str,
+                value: &#qlexpress_path::runtime::value::DataValue,
+            ) -> bool {
+                let canonical = #alias_lookup.get(name).copied().unwrap_or(name);
+                match canonical {
+                    #setter_combined
+                    _ => false,
                 }
             }
 
@@ -80,6 +102,20 @@ pub fn generate(
                 self
             }
         }
+    }
+}
+
+fn gen_setter_arm(f: &FieldSpec, qlexpress_path: &syn::Path) -> TokenStream {
+    let name = f.ident.to_string();
+    let field_ident = &f.ident;
+    let assignment = crate::convert::assign_data_value_to_field(
+        &f.ty,
+        quote!(self.#field_ident),
+        quote!(value),
+        qlexpress_path,
+    );
+    quote! {
+        #name => { #assignment },
     }
 }
 

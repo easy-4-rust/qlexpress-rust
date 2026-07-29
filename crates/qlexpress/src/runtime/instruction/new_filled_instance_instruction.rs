@@ -84,6 +84,15 @@ impl QLInstruction for NewFilledInstanceInstruction {
         let init_items = q_context.pop_n(self.keys.len());
         for (i, field_name) in self.keys.iter().enumerate() {
             let init_value = init_items.get_value(i);
+            // Java `ReflectLoader.loadField` 返回可写 `FieldValue`。Rust
+            // 宿主对象没有运行时反射，先通过显式 `NativeObject::set_field`
+            // 复现字段写入；失败后继续走 load_field，以区分字段不存在
+            // （Java 忽略）和字段存在但只读/类型不兼容（赋值错误）。
+            if let DataValue::Object(object) = &instance {
+                if object.borrow_mut().set_field(field_name, &init_value) {
+                    continue;
+                }
+            }
             let Some(field_value) = q_context.registry().load_field(&instance, field_name) else {
                 // ignore field that don't exist
                 continue;

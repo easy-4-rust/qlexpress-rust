@@ -20,6 +20,68 @@ enum FieldConversionKind {
     Unsupported,
 }
 
+/// 为 `NativeObject::set_field` 生成单个字段的类型安全赋值表达式。
+///
+/// 结果为 `bool`：只有 Java `ObjTypeConvertor` 可接受的标量转换才写入。
+/// 不支持的宿主类型保持只读，由运行时报告 `INVALID_ASSIGNMENT`。
+pub fn assign_data_value_to_field(
+    ty: &syn::Type,
+    field: TokenStream,
+    value: TokenStream,
+    qlexpress_path: &syn::Path,
+) -> TokenStream {
+    let Some(path) = last_path_segment(ty) else {
+        return quote!(false);
+    };
+    match field_conversion_kind(ty).unwrap_or(FieldConversionKind::Unsupported) {
+        FieldConversionKind::Bool => quote! {
+            if let #qlexpress_path::runtime::value::DataValue::Bool(converted) = #value {
+                #field = *converted;
+                true
+            } else {
+                false
+            }
+        },
+        FieldConversionKind::Integer => {
+            let field_type = &path.ident;
+            quote! {
+                if #value.is_number() {
+                    #field =
+                        #qlexpress_path::runtime::data::convert::to_i64(#value) as #field_type;
+                    true
+                } else {
+                    false
+                }
+            }
+        }
+        FieldConversionKind::Float => {
+            let field_type = &path.ident;
+            quote! {
+                if #value.is_number() {
+                    #field =
+                        #qlexpress_path::runtime::data::convert::to_f64(#value) as #field_type;
+                    true
+                } else {
+                    false
+                }
+            }
+        }
+        FieldConversionKind::String => quote! {
+            if let #qlexpress_path::runtime::value::DataValue::Str(converted) = #value {
+                #field = converted.clone();
+                true
+            } else {
+                false
+            }
+        },
+        FieldConversionKind::DataValue => quote! {
+            #field = #value.clone();
+            true
+        },
+        FieldConversionKind::Unsupported => quote!(false),
+    }
+}
+
 fn field_conversion_kind(ty: &syn::Type) -> Option<FieldConversionKind> {
     let path = last_path_segment(ty)?;
     match path.ident.to_string().as_str() {

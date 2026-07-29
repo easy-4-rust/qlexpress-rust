@@ -187,6 +187,29 @@ impl DataValue {
             DataValue::BigDec(value) => value.clone(),
             DataValue::Char(value) => value.to_string(),
             DataValue::Str(value) => value.clone(),
+            DataValue::List(value) => format!(
+                "[{}]",
+                value
+                    .borrow()
+                    .iter()
+                    .map(DataValue::string_value_of)
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ),
+            DataValue::Map(value) => format!(
+                "{{{}}}",
+                value
+                    .borrow()
+                    .entries()
+                    .iter()
+                    .map(|(key, value)| format!(
+                        "{}={}",
+                        key.string_value_of(),
+                        value.string_value_of()
+                    ))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ),
             other => format!("{other:?}"),
         }
     }
@@ -298,6 +321,28 @@ mod tests {
         assert_ne!(DataValue::Null, DataValue::Int(0));
         assert_eq!(DataValue::Char('a'), DataValue::Char('a'));
         assert_ne!(DataValue::Char('a'), DataValue::Str("a".into()));
+    }
+
+    #[test]
+    fn string_value_of_collections_matches_java_to_string_shape() {
+        let list = DataValue::list(vec![
+            DataValue::Int(1),
+            DataValue::Str("two".to_string()),
+            DataValue::Null,
+        ]);
+        assert_eq!(list.string_value_of(), "[1, two, null]");
+
+        let map = DataValue::map(IndexMap::from_entries(vec![
+            (
+                DataValue::Str("name".to_string()),
+                DataValue::Str("QlExpress Rust".to_string()),
+            ),
+            (DataValue::Str("items".to_string()), list),
+        ]));
+        assert_eq!(
+            map.string_value_of(),
+            "{name=QlExpress Rust, items=[1, two, null]}"
+        );
     }
 
     #[test]

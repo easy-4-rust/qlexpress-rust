@@ -15,12 +15,16 @@
 
 #![allow(clippy::result_large_err)]
 
+use qlexpress::default_class_supplier::DefaultClassSupplier;
+use qlexpress::init_options::InitOptions;
 use qlexpress::ql_options::QLOptions as QlOpts;
 use qlexpress::runtime::member::{QLExpressNativeType, QLExpressRegistryExt};
 use qlexpress::runtime::native_object::NativeObject;
 use qlexpress::runtime::native_registry::NativeRegistry;
 use qlexpress::runtime::value::DataValue;
+use qlexpress::security::ql_security_strategy::QLSecurityStrategy;
 use qlexpress::{Express4Runner, QLExpressType};
+use std::rc::Rc;
 
 // ---------------- Fixture 1: simple scalars ----------------
 
@@ -60,6 +64,18 @@ fn derive_native_object_get_field() {
     assert_eq!(native.native_type_name(), "Point");
 }
 
+#[test]
+fn derive_native_object_writes_supported_fields() {
+    let bean: DataValue = Point { x: 1, y: 2 }.into_data_value();
+    let object = bean.as_object_ref().expect("derived object");
+    assert!(object.borrow_mut().set_field("x", &DataValue::Int(42)));
+    assert_eq!(object.borrow().get_field("x"), Some(DataValue::Long(42)));
+    assert!(!object
+        .borrow_mut()
+        .set_field("x", &DataValue::Str("invalid".to_string())));
+    assert!(!object.borrow_mut().set_field("missing", &DataValue::Int(1)));
+}
+
 // ---------------- Fixture 2: name override + skip + alias ----------------
 
 #[derive(QLExpressType)]
@@ -68,6 +84,8 @@ pub struct Rect {
     pub w: i64,
     #[qlexpress(skip)]
     pub internal_id: i64,
+    #[qlexpress(readonly)]
+    pub immutable: i64,
     #[qlexpress(alias("height", "h"))]
     pub h: i64,
 }
@@ -83,6 +101,7 @@ fn derive_skips_marked_field() {
     let nt = Rect::build_native_type();
     assert!(!nt.fields.contains_key("internal_id"));
     assert!(nt.fields.contains_key("w"));
+    assert!(nt.fields.contains_key("immutable"));
     assert!(nt.fields.contains_key("h"));
 }
 
@@ -99,16 +118,70 @@ fn derive_native_object_resolves_alias() {
     let bean: DataValue = Rect {
         w: 5,
         internal_id: 999,
+        immutable: 7,
         h: 8,
     }
     .into_data_value();
     let obj = bean.as_object_ref().unwrap();
-    let native: &dyn NativeObject = &*obj.borrow();
-    assert_eq!(native.get_field("h"), Some(DataValue::Long(8)));
-    assert_eq!(native.get_field("height"), Some(DataValue::Long(8)));
-    assert_eq!(native.get_field("w"), Some(DataValue::Long(5)));
-    // skipped fields are not visible via get_field
-    assert_eq!(native.get_field("internal_id"), None);
+    {
+        let borrowed = obj.borrow();
+        let native: &dyn NativeObject = &*borrowed;
+        assert_eq!(native.get_field("h"), Some(DataValue::Long(8)));
+        assert_eq!(native.get_field("height"), Some(DataValue::Long(8)));
+        assert_eq!(native.get_field("w"), Some(DataValue::Long(5)));
+        // skipped fields are not visible via get_field
+        assert_eq!(native.get_field("internal_id"), None);
+    }
+    assert!(!bean
+        .as_object_ref()
+        .expect("rect object")
+        .borrow_mut()
+        .set_field("immutable", &DataValue::Long(9)));
+}
+
+// ---------------- Fixture 7: Java classified object literal ----------------
+
+#[derive(Default, QLExpressType)]
+#[qlexpress(name = "com.example.ClassifiedRecord")]
+struct ClassifiedRecord {
+    name: String,
+    score: i64,
+}
+
+#[test]
+fn classified_object_literal_constructs_and_populates_native_object() {
+    let mut supplier = DefaultClassSupplier::instance();
+    supplier.register("com.example.ClassifiedRecord");
+    let mut runner = Express4Runner::with_init_options(
+        InitOptions::builder()
+            .class_supplier(Rc::new(supplier))
+            .security_strategy(QLSecurityStrategy::open())
+            .build(),
+    );
+    let mut native_type = ClassifiedRecord::build_native_type();
+    native_type.constructor = Some(Rc::new(|args| {
+        assert!(
+            args.is_empty(),
+            "classified object uses the no-arg constructor"
+        );
+        Ok(ClassifiedRecord::default().into_data_value())
+    }));
+    runner.register_native_type(native_type);
+
+    let result = runner
+        .execute(
+            "{'@class':'com.example.ClassifiedRecord', 'name':'alice', 'score':7}",
+            std::collections::HashMap::new(),
+            &opts(),
+        )
+        .expect("classified object literal executes")
+        .into_result();
+    let object = result.as_object_ref().expect("native object result");
+    assert_eq!(
+        object.borrow().get_field("name"),
+        Some(DataValue::Str("alice".to_string()))
+    );
+    assert_eq!(object.borrow().get_field("score"), Some(DataValue::Long(7)));
 }
 
 // ---------------- Fixture 3: registry path ----------------

@@ -72,6 +72,16 @@ fn opts() -> QLOptions {
     QLOptions::builder().build()
 }
 
+fn builtin_runner() -> Express4Runner {
+    Express4Runner::with_init_options(
+        InitOptions::builder()
+            .security_strategy(
+                qlexpress::security::ql_security_strategy::QLSecurityStrategy::open(),
+            )
+            .build(),
+    )
+}
+
 // ---------- method matching & boxing ----------
 
 #[test]
@@ -182,4 +192,133 @@ fn new_instance_int_to_big_integer() {
         .expect("ok")
         .into_result();
     assert_eq!(r, DataValue::big_int(5));
+}
+
+#[test]
+fn builtin_string_method_contract_matrix() {
+    let runner = builtin_runner();
+    let cases = [
+        ("'qlexpress'.length()", DataValue::Int(9)),
+        ("''.isEmpty()", DataValue::Bool(true)),
+        ("'qlexpress'.charAt(2)", DataValue::Char('e')),
+        ("'qlexpress'.contains('expr')", DataValue::Bool(true)),
+        ("'qlexpress'.startsWith('ql')", DataValue::Bool(true)),
+        ("'qlexpress'.endsWith('ss')", DataValue::Bool(true)),
+        ("'qlexpress'.indexOf('express')", DataValue::Int(2)),
+        (
+            "'QlExpress'.toUpperCase()",
+            DataValue::Str("QLEXPRESS".to_string()),
+        ),
+        (
+            "'QlExpress'.toLowerCase()",
+            DataValue::Str("qlexpress".to_string()),
+        ),
+        ("'  ql  '.trim()", DataValue::Str("ql".to_string())),
+        (
+            "'qlexpress'.substring(2, 7)",
+            DataValue::Str("expre".to_string()),
+        ),
+        (
+            "'qlexpress'.replace('express', 'rust')",
+            DataValue::Str("qlrust".to_string()),
+        ),
+        ("'QL'.equals('QL')", DataValue::Bool(true)),
+        ("'QL'.equals(1)", DataValue::Bool(false)),
+        ("'QL'.equalsIgnoreCase('ql')", DataValue::Bool(true)),
+        ("'a,b,c'.split(',').size()", DataValue::Int(3)),
+        ("'ql'.toString()", DataValue::Str("ql".to_string())),
+    ];
+    for (script, expected) in cases {
+        let result = runner
+            .execute(script, HashMap::new(), &opts())
+            .unwrap_or_else(|error| panic!("{script:?} failed: {error}"))
+            .into_result();
+        assert_eq!(result, expected, "{script}");
+    }
+}
+
+#[test]
+fn builtin_list_and_map_mutation_contracts() {
+    let runner = builtin_runner();
+    let list_result = runner
+        .execute(
+            "l=[1,2]; empty=l.isEmpty(); first=l.get(0); l.add(3); old=l.set(1,20); \
+             removed=l.remove(0); has=l.contains(20); index=l.indexOf(3); \
+             l.addAll([4,5]); sub=l.subList(1,3); size=l.size(); \
+             [empty,first,old,removed,has,index,size,sub,l.toString()]",
+            HashMap::new(),
+            &opts(),
+        )
+        .expect("list methods")
+        .into_result();
+    assert_eq!(
+        list_result,
+        DataValue::list(vec![
+            DataValue::Bool(false),
+            DataValue::Int(1),
+            DataValue::Int(2),
+            DataValue::Int(1),
+            DataValue::Bool(true),
+            DataValue::Int(1),
+            DataValue::Int(4),
+            DataValue::list(vec![DataValue::Int(3), DataValue::Int(4)]),
+            DataValue::Str("[20, 3, 4, 5]".to_string()),
+        ])
+    );
+
+    let map_result = runner
+        .execute(
+            "m={:}; empty=m.isEmpty(); previous=m.put('a',1); m.put('b',2); \
+             value=m.get('a'); hasKey=m.containsKey('b'); hasValue=m.containsValue(2); \
+             removed=m.remove('a'); size=m.size(); \
+             [empty,previous,value,hasKey,hasValue,removed,size,m.keySet(),m.values()]",
+            HashMap::new(),
+            &opts(),
+        )
+        .expect("map methods")
+        .into_result();
+    assert_eq!(
+        map_result,
+        DataValue::list(vec![
+            DataValue::Bool(true),
+            DataValue::Null,
+            DataValue::Int(1),
+            DataValue::Bool(true),
+            DataValue::Bool(true),
+            DataValue::Int(1),
+            DataValue::Int(1),
+            DataValue::list(vec![DataValue::Str("b".to_string())]),
+            DataValue::list(vec![DataValue::Int(2)]),
+        ])
+    );
+}
+
+#[test]
+fn builtin_number_and_boolean_method_contracts() {
+    let runner = builtin_runner();
+    let result = runner
+        .execute(
+            "[3.8.intValue(), 3.longValue(), 3.doubleValue(), 3.floatValue(), \
+             258.shortValue(), 258.byteValue(), 3.compareTo(2), \
+             3.toString(), true.booleanValue(), false.toString()]",
+            HashMap::new(),
+            &opts(),
+        )
+        .expect("number and boolean methods")
+        .into_result();
+    assert_eq!(
+        result,
+        DataValue::list(vec![
+            DataValue::Int(3),
+            DataValue::Long(3),
+            DataValue::Double(3.0),
+            DataValue::Float(3.0),
+            DataValue::Short(258),
+            DataValue::Byte(2),
+            DataValue::Int(1),
+            DataValue::Str("3".to_string()),
+            DataValue::Bool(true),
+            DataValue::Str("false".to_string()),
+        ])
+    );
 }

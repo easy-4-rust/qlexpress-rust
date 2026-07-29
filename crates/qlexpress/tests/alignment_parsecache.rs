@@ -133,3 +133,54 @@ fn cache_imported_to_other_runner_works() {
     let result = runner_b.execute_with_cache(&cache, empty_ctx(), &QLOptions::builder().build());
     assert!(result.is_ok(), "imported cache should work on any runner");
 }
+
+#[test]
+fn instruction_family_matrix_survives_json_round_trip() {
+    // Rust serde/指令枚举是 Java ObjectMapper 模型的替代组件。该矩阵不是
+    // 为覆盖率拼行数，而是保证每个高风险控制流/集合/调用指令族在 JSON
+    // 往返后仍与直接编译执行产生完全相同的公开结果。
+    let runner = Express4Runner::with_init_options(
+        InitOptions::builder()
+            .security_strategy(QLSecurityStrategy::open())
+            .build(),
+    );
+    let scripts = [
+        "a = 1; a += 2; ++a; a--",
+        "if (false) { 10 } else if (true) { 20 } else { 30 }",
+        "sum = 0; i = 0; while (i < 4) { i++; if (i == 2) { continue; }\nsum += i; }\nsum",
+        "sum = 0; for (item : [1, 2, 3]) { sum += item; } sum",
+        "value = 2; switch (value) { case 1 -> 10 case 2 -> 20 default -> 30 }",
+        "try { throw 'boom'; } catch (error) { 42 } finally { marker = 1; }",
+        "twice = (x) -> { return x * 2; }; twice(9)",
+        "\"value=${1 + 2}\"",
+        "values = [1, 2, 3, 4]; values[1:3]",
+        "int[] values = {1, 2, 3}; values[1]",
+        "map = {'a': 1}; map.a = 7; map.a",
+        "false && (1 / 0)",
+    ];
+
+    for script in scripts {
+        let direct = runner
+            .execute(
+                script,
+                std::collections::HashMap::new(),
+                &QLOptions::builder().build(),
+            )
+            .unwrap_or_else(|error| panic!("direct execution failed for {script:?}: {error}"))
+            .into_result();
+        let exported = runner
+            .export_parse_cache(script)
+            .unwrap_or_else(|error| panic!("export failed for {script:?}: {error}"));
+        let json = serde_json::to_vec(&exported).expect("serialize parse cache");
+        let imported: SerializableParseCache =
+            serde_json::from_slice(&json).expect("deserialize parse cache");
+        let replayed = runner
+            .execute_with_cache(&imported, empty_ctx(), &QLOptions::builder().build())
+            .unwrap_or_else(|error| panic!("cached execution failed for {script:?}: {error}"))
+            .into_result();
+        assert_eq!(
+            replayed, direct,
+            "parse-cache semantic drift for {script:?}"
+        );
+    }
+}
