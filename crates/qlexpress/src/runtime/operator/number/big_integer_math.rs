@@ -219,4 +219,108 @@ mod tests {
             DataValue::BigInt(huge * BigInt::from(2))
         );
     }
+
+    #[test]
+    fn java_big_integer_domain_operation_matrix() {
+        assert_eq!(
+            BigIntegerMath::abs_impl(&DataValue::big_int(-7)).unwrap(),
+            DataValue::big_int(7)
+        );
+        assert_eq!(
+            BigIntegerMath::subtract_impl(&DataValue::big_int(7), &DataValue::Int(9)).unwrap(),
+            DataValue::big_int(-2)
+        );
+        assert_eq!(
+            BigIntegerMath::multiply_impl(&DataValue::big_int(7), &DataValue::Int(9)).unwrap(),
+            DataValue::big_int(63)
+        );
+        assert_eq!(
+            BigIntegerMath::divide_impl(&DataValue::big_int(7), &DataValue::Int(2)).unwrap(),
+            DataValue::BigDec("3.5".into())
+        );
+        assert_eq!(
+            BigIntegerMath::compare_to_impl(&DataValue::big_int(7), &DataValue::big_int(9)),
+            -1
+        );
+        assert_eq!(
+            BigIntegerMath::compare_to_impl(&DataValue::big_int(9), &DataValue::big_int(9)),
+            0
+        );
+        assert_eq!(
+            BigIntegerMath::compare_to_impl(&DataValue::big_int(10), &DataValue::big_int(9)),
+            1
+        );
+        assert_eq!(
+            BigIntegerMath::int_div_impl(&DataValue::big_int(-7), &DataValue::Int(3)).unwrap(),
+            DataValue::big_int(-2)
+        );
+        assert_eq!(
+            BigIntegerMath::unary_minus_impl(&DataValue::big_int(7)).unwrap(),
+            DataValue::big_int(-7)
+        );
+        assert_eq!(
+            BigIntegerMath::unary_plus_impl(&DataValue::big_int(-7)).unwrap(),
+            DataValue::big_int(-7)
+        );
+        assert_eq!(
+            BigIntegerMath::bitwise_negate_impl(&DataValue::big_int(0)).unwrap(),
+            DataValue::big_int(-1)
+        );
+        assert_eq!(
+            BigIntegerMath::or_impl(&DataValue::big_int(0b1010), &DataValue::big_int(0b0101))
+                .unwrap(),
+            DataValue::big_int(0b1111)
+        );
+        assert_eq!(
+            BigIntegerMath::and_impl(&DataValue::big_int(0b1010), &DataValue::big_int(0b0110))
+                .unwrap(),
+            DataValue::big_int(0b0010)
+        );
+        assert_eq!(
+            BigIntegerMath::xor_impl(&DataValue::big_int(0b1010), &DataValue::big_int(0b0110))
+                .unwrap(),
+            DataValue::big_int(0b1100)
+        );
+        assert_eq!(
+            BigIntegerMath::left_shift_impl(&DataValue::big_int(1), &DataValue::Int(5)).unwrap(),
+            DataValue::big_int(32)
+        );
+        assert_eq!(
+            BigIntegerMath::right_shift_impl(&DataValue::big_int(-8), &DataValue::Int(2)).unwrap(),
+            DataValue::big_int(-2)
+        );
+        // BigInteger 的负移位距离会切换方向。
+        assert_eq!(
+            BigIntegerMath::left_shift_impl(&DataValue::big_int(8), &DataValue::Int(-2)).unwrap(),
+            DataValue::big_int(2)
+        );
+        assert_eq!(
+            BigIntegerMath::right_shift_impl(&DataValue::big_int(2), &DataValue::Int(-3)).unwrap(),
+            DataValue::big_int(16)
+        );
+    }
+
+    #[test]
+    fn java_big_integer_error_edges() {
+        assert_eq!(
+            BigIntegerMath::int_div_impl(&DataValue::big_int(1), &DataValue::Int(0))
+                .unwrap_err()
+                .reason(),
+            "/ by zero"
+        );
+        assert_eq!(
+            BigIntegerMath::remainder_impl(&DataValue::big_int(1), &DataValue::Int(0))
+                .unwrap_err()
+                .reason(),
+            "/ by zero"
+        );
+        for modulus in [0, -1] {
+            assert_eq!(
+                BigIntegerMath::mod_impl(&DataValue::big_int(1), &DataValue::Int(modulus))
+                    .unwrap_err()
+                    .reason(),
+                "BigInteger: modulus not positive"
+            );
+        }
+    }
 }

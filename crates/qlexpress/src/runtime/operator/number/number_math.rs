@@ -502,4 +502,121 @@ mod tests {
         let r = NumberMath::left_shift(&DataValue::Long(1), &DataValue::Int(64)).unwrap();
         assert_eq!(r, DataValue::Long(1));
     }
+
+    #[test]
+    fn java_number_math_dispatch_and_conversion_matrix() {
+        assert_eq!(
+            NumberMath::abs(&DataValue::Int(-7)).unwrap(),
+            DataValue::Int(7)
+        );
+        assert_eq!(
+            NumberMath::abs(&DataValue::Long(-7)).unwrap(),
+            DataValue::Long(7)
+        );
+        assert_eq!(
+            NumberMath::abs(&DataValue::Double(-7.5)).unwrap(),
+            DataValue::Double(7.5)
+        );
+        assert_eq!(
+            NumberMath::abs(&DataValue::big_int(-7)).unwrap(),
+            DataValue::big_int(7)
+        );
+        assert_eq!(
+            NumberMath::abs(&DataValue::BigDec("-7.5".into())).unwrap(),
+            DataValue::BigDec("7.5".into())
+        );
+
+        assert_eq!(
+            NumberMath::subtract(&DataValue::Int(7), &DataValue::Long(9)).unwrap(),
+            DataValue::Long(-2)
+        );
+        assert_eq!(
+            NumberMath::multiply(&DataValue::big_int(7), &DataValue::Int(9)).unwrap(),
+            DataValue::big_int(63)
+        );
+        assert_eq!(
+            NumberMath::compare_to(&DataValue::Int(7), &DataValue::Double(7.0)).unwrap(),
+            0
+        );
+
+        assert_eq!(
+            NumberMath::to_big_decimal(&DataValue::Double(1.5)),
+            DataValue::BigDec("1.5".into())
+        );
+        assert_eq!(
+            NumberMath::to_big_integer(&DataValue::BigDec("-7.9".into())),
+            DataValue::big_int(-7)
+        );
+    }
+
+    #[test]
+    fn java_number_math_integer_only_operations_and_error_contracts() {
+        assert_eq!(
+            NumberMath::or(&DataValue::Int(0b1010), &DataValue::Int(0b0101)).unwrap(),
+            DataValue::Int(0b1111)
+        );
+        assert_eq!(
+            NumberMath::and(&DataValue::Long(0b1010), &DataValue::Int(0b0110)).unwrap(),
+            DataValue::Long(0b0010)
+        );
+        assert_eq!(
+            NumberMath::xor(&DataValue::big_int(0b1010), &DataValue::Int(0b0110)).unwrap(),
+            DataValue::big_int(0b1100)
+        );
+        assert_eq!(
+            NumberMath::int_div(&DataValue::Long(-7), &DataValue::Int(3)).unwrap(),
+            DataValue::Long(-2)
+        );
+        assert_eq!(
+            NumberMath::mod_op(&DataValue::Int(-7), &DataValue::Int(3)).unwrap(),
+            DataValue::Int(2)
+        );
+        assert_eq!(
+            NumberMath::remainder(&DataValue::big_int(-7), &DataValue::Int(3)).unwrap(),
+            DataValue::big_int(-1)
+        );
+        assert_eq!(
+            NumberMath::right_shift(&DataValue::big_int(-8), &DataValue::Int(2)).unwrap(),
+            DataValue::big_int(-2)
+        );
+        assert_eq!(
+            NumberMath::right_shift_unsigned(&DataValue::Int(-1), &DataValue::Int(1)).unwrap(),
+            DataValue::Int(i32::MAX)
+        );
+        assert_eq!(
+            NumberMath::bitwise_negate(&DataValue::Long(0)).unwrap(),
+            DataValue::Long(-1)
+        );
+        assert_eq!(
+            NumberMath::unary_minus(&DataValue::BigDec("7.5".into())).unwrap(),
+            DataValue::BigDec("-7.5".into())
+        );
+        assert_eq!(
+            NumberMath::unary_plus(&DataValue::Float(-7.5)).unwrap(),
+            DataValue::Double(-7.5)
+        );
+
+        for error in [
+            NumberMath::abs(&DataValue::Str("x".into())).unwrap_err(),
+            NumberMath::add(&DataValue::Str("x".into()), &DataValue::Int(1)).unwrap_err(),
+            NumberMath::compare_to(&DataValue::Str("x".into()), &DataValue::Int(1)).unwrap_err(),
+            NumberMath::right_shift_unsigned(&DataValue::big_int(1), &DataValue::Int(1))
+                .unwrap_err(),
+        ] {
+            assert_eq!(error.error_code(), ARITHMETIC_EXCEPTION);
+        }
+    }
+
+    #[test]
+    fn java_number_type_predicates_are_exact_variants() {
+        assert!(NumberMath::is_floating_point(&DataValue::Double(1.0)));
+        assert!(NumberMath::is_floating_point(&DataValue::Float(1.0)));
+        assert!(NumberMath::is_integer(&DataValue::Int(1)));
+        assert!(NumberMath::is_short(&DataValue::Short(1)));
+        assert!(NumberMath::is_byte(&DataValue::Byte(1)));
+        assert!(NumberMath::is_long(&DataValue::Long(1)));
+        assert!(NumberMath::is_big_decimal(&DataValue::BigDec("1".into())));
+        assert!(NumberMath::is_big_integer(&DataValue::big_int(1)));
+        assert!(!NumberMath::is_integer(&DataValue::Long(1)));
+    }
 }

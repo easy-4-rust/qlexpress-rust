@@ -98,9 +98,13 @@ impl IntegerMath {
 
     /// Java `intDivImpl`(除零抛 ArithmeticException "/ by zero")。
     pub fn int_div_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
-        match int_value(left).checked_div(int_value(right)) {
-            Some(v) => Ok(DataValue::Int(v)),
-            None => Err(number_math::arithmetic_exception("/ by zero")),
+        let dividend = int_value(left);
+        let divisor = int_value(right);
+        if divisor == 0 {
+            Err(number_math::arithmetic_exception("/ by zero"))
+        } else {
+            // Java 对 MIN_VALUE / -1 不抛溢出异常，而是按补码回绕为 MIN_VALUE。
+            Ok(DataValue::Int(dividend.wrapping_div(divisor)))
         }
     }
 
@@ -119,9 +123,13 @@ impl IntegerMath {
 
     /// Java `remainderImpl`(int 取余,符号跟随被除数;除零抛 "/ by zero")。
     pub fn remainder_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
-        match int_value(left).checked_rem(int_value(right)) {
-            Some(v) => Ok(DataValue::Int(v)),
-            None => Err(number_math::arithmetic_exception("/ by zero")),
+        let dividend = int_value(left);
+        let divisor = int_value(right);
+        if divisor == 0 {
+            Err(number_math::arithmetic_exception("/ by zero"))
+        } else {
+            // Java 对 MIN_VALUE % -1 返回 0。
+            Ok(DataValue::Int(dividend.wrapping_rem(divisor)))
         }
     }
 
@@ -215,6 +223,22 @@ mod tests {
         assert_eq!(
             IntegerMath::mod_impl(&DataValue::Int(-7), &DataValue::Int(3)).unwrap(),
             DataValue::Int(2)
+        );
+    }
+
+    #[test]
+    fn java_min_value_division_and_remainder_do_not_throw() {
+        assert_eq!(
+            IntegerMath::int_div_impl(&DataValue::Int(i32::MIN), &DataValue::Int(-1)).unwrap(),
+            DataValue::Int(i32::MIN)
+        );
+        assert_eq!(
+            IntegerMath::remainder_impl(&DataValue::Int(i32::MIN), &DataValue::Int(-1)).unwrap(),
+            DataValue::Int(0)
+        );
+        assert_eq!(
+            IntegerMath::int_div_impl(&DataValue::Int(-7), &DataValue::Int(3)).unwrap(),
+            DataValue::Int(-2)
         );
     }
 }

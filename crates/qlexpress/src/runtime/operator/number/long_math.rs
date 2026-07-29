@@ -73,9 +73,13 @@ impl LongMath {
 
     /// Java `intDivImpl`(除零抛 ArithmeticException "/ by zero")。
     pub fn int_div_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
-        match long_value(left).checked_div(long_value(right)) {
-            Some(v) => Ok(DataValue::Long(v)),
-            None => Err(number_math::arithmetic_exception("/ by zero")),
+        let dividend = long_value(left);
+        let divisor = long_value(right);
+        if divisor == 0 {
+            Err(number_math::arithmetic_exception("/ by zero"))
+        } else {
+            // Java 对 MIN_VALUE / -1 不抛溢出异常，而是按补码回绕为 MIN_VALUE。
+            Ok(DataValue::Long(dividend.wrapping_div(divisor)))
         }
     }
 
@@ -84,9 +88,13 @@ impl LongMath {
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/LongMath.java`，方法 `remainderImpl`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `remainderImpl`。
     pub fn remainder_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
-        match long_value(left).checked_rem(long_value(right)) {
-            Some(v) => Ok(DataValue::Long(v)),
-            None => Err(number_math::arithmetic_exception("/ by zero")),
+        let dividend = long_value(left);
+        let divisor = long_value(right);
+        if divisor == 0 {
+            Err(number_math::arithmetic_exception("/ by zero"))
+        } else {
+            // Java 对 MIN_VALUE % -1 返回 0。
+            Ok(DataValue::Long(dividend.wrapping_rem(divisor)))
         }
     }
 
@@ -201,5 +209,101 @@ mod tests {
     fn long_remainder_by_zero() {
         let err = LongMath::remainder_impl(&DataValue::Long(1), &DataValue::Long(0)).unwrap_err();
         assert_eq!(err.reason(), "/ by zero");
+    }
+
+    #[test]
+    fn java_long_domain_operation_matrix() {
+        assert_eq!(
+            LongMath::abs_impl(&DataValue::Long(-7)).unwrap(),
+            DataValue::Long(7)
+        );
+        assert_eq!(
+            LongMath::subtract_impl(&DataValue::Long(7), &DataValue::Int(9)).unwrap(),
+            DataValue::Long(-2)
+        );
+        assert_eq!(
+            LongMath::multiply_impl(&DataValue::Long(7), &DataValue::Int(9)).unwrap(),
+            DataValue::Long(63)
+        );
+        assert_eq!(
+            LongMath::divide_impl(&DataValue::Long(7), &DataValue::Int(2)).unwrap(),
+            DataValue::BigDec("3.5".into())
+        );
+        assert_eq!(
+            LongMath::compare_to_impl(&DataValue::Long(7), &DataValue::Long(9)),
+            -1
+        );
+        assert_eq!(
+            LongMath::compare_to_impl(&DataValue::Long(9), &DataValue::Long(9)),
+            0
+        );
+        assert_eq!(
+            LongMath::compare_to_impl(&DataValue::Long(10), &DataValue::Long(9)),
+            1
+        );
+        assert_eq!(
+            LongMath::int_div_impl(&DataValue::Long(-7), &DataValue::Long(3)).unwrap(),
+            DataValue::Long(-2)
+        );
+        assert_eq!(
+            LongMath::remainder_impl(&DataValue::Long(-7), &DataValue::Long(3)).unwrap(),
+            DataValue::Long(-1)
+        );
+        assert_eq!(
+            LongMath::mod_impl(&DataValue::Long(-7), &DataValue::Long(3)).unwrap(),
+            DataValue::Long(2)
+        );
+        assert_eq!(
+            LongMath::unary_minus_impl(&DataValue::Long(7)).unwrap(),
+            DataValue::Long(-7)
+        );
+        assert_eq!(
+            LongMath::unary_plus_impl(&DataValue::Long(-7)).unwrap(),
+            DataValue::Long(-7)
+        );
+        assert_eq!(
+            LongMath::bitwise_negate_impl(&DataValue::Long(0)).unwrap(),
+            DataValue::Long(-1)
+        );
+        assert_eq!(
+            LongMath::or_impl(&DataValue::Long(0b1010), &DataValue::Long(0b0101)).unwrap(),
+            DataValue::Long(0b1111)
+        );
+        assert_eq!(
+            LongMath::and_impl(&DataValue::Long(0b1010), &DataValue::Long(0b0110)).unwrap(),
+            DataValue::Long(0b0010)
+        );
+        assert_eq!(
+            LongMath::xor_impl(&DataValue::Long(0b1010), &DataValue::Long(0b0110)).unwrap(),
+            DataValue::Long(0b1100)
+        );
+        assert_eq!(
+            LongMath::right_shift_impl(&DataValue::Long(-8), &DataValue::Int(2)).unwrap(),
+            DataValue::Long(-2)
+        );
+    }
+
+    #[test]
+    fn java_long_min_value_division_and_error_edges() {
+        assert_eq!(
+            LongMath::int_div_impl(&DataValue::Long(i64::MIN), &DataValue::Long(-1)).unwrap(),
+            DataValue::Long(i64::MIN)
+        );
+        assert_eq!(
+            LongMath::remainder_impl(&DataValue::Long(i64::MIN), &DataValue::Long(-1)).unwrap(),
+            DataValue::Long(0)
+        );
+        assert_eq!(
+            LongMath::int_div_impl(&DataValue::Long(1), &DataValue::Long(0))
+                .unwrap_err()
+                .reason(),
+            "/ by zero"
+        );
+        assert_eq!(
+            LongMath::mod_impl(&DataValue::Long(1), &DataValue::Long(0))
+                .unwrap_err()
+                .reason(),
+            "BigInteger: modulus not positive"
+        );
     }
 }
