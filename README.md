@@ -258,15 +258,19 @@ Production-readiness CI additionally runs the pinned Java suite, Java/Rust diffe
 official script replay, runner-per-worker concurrency, deterministic security fuzzing, a
 business-host scenario, canary/rollback simulation, load acceptance, and libFuzzer.
 
-The recorded 2026-07-27 local run passed 777 Rust tests, 50/50 differential cases, 228/228 Java
-suite cases, 151/151 Rust replays, 16,000 concurrent executions, a 60-second soak, 25,000
-deterministic security cases, and a 31-second libFuzzer run. Read the commands, measurements, and
-remaining deployment boundary in [Production Acceptance](docs/生产验收.md).
+The recorded 2026-07-29 audit found 803 Rust test functions and passed the full workspace,
+50/50 differential cases, 225 Maven tests, and 151/151 independent Java resource-script replays.
+The extended production run also records 228/228 Java official-suite cases, 16,000 concurrent
+executions, a 60-second soak, 25,000 deterministic security cases, and a 31-second libFuzzer run.
+Read the commands, measurements, and remaining deployment boundary in
+[Production Acceptance](docs/生产验收.md).
 
 ## Documentation
 
 | Document | English | 简体中文 |
 |:---|:---:|:---:|
+| Migration technical requirements | [Technical Requirements](docs/QLExpress-Rust-技术要求.md) | [技术要求](docs/QLExpress-Rust-技术要求.md) |
+| Migration test ledgers | [Test Ledgers](docs/迁移测试对照表.md) | [迁移测试对照表](docs/迁移测试对照表.md) |
 | Project overview | [README](README.md) | [README](README.zh-CN.md) |
 | Usage guide | [Usage Guide](docs/Usage-Guide.md) | [使用指南](docs/Usage-Guide.zh_CN.md) |
 | Architecture | [Architecture](docs/qlexpress-Architecture.md) | [架构文档](docs/qlexpress-Architecture.zh_CN.md) |

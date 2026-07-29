@@ -252,15 +252,18 @@ Production Readiness CI 还会执行固定 Java 基线测试、Java/Rust 自动�
 回放、每 worker 独立 runner 的并发验收、确定性安全 fuzz、业务宿主集成、灰度/
 回滚模拟、负载验收和 libFuzzer。
 
-2026-07-27 的已记录本地结果包括：777 个 Rust 测试、50/50 差分、228/228 Java
-官方套件、151/151 Rust 回放、16,000 次并发执行、60 秒 soak、25,000 个确定性
-安全用例和 31 秒 libFuzzer。命令、实测值与剩余生产边界见
+2026-07-29 的审计结果包括：803 个 Rust 测试函数且全工作区通过、50/50 差分、
+225 个 Maven 测试，以及 151/151 个独立 Java 资源脚本回放。
+扩展生产验收还记录了 228/228 个 Java 官方套件用例、16,000 次并发执行、
+60 秒 soak、25,000 个确定性安全用例和 31 秒 libFuzzer。命令、实测值与剩余生产边界见
 [生产验收](docs/生产验收.md)。
 
 ## 文档导航
 
 | 文档 | English | 简体中文 |
 |:---|:---:|:---:|
+| 迁移技术要求 | [Technical Requirements](docs/QLExpress-Rust-技术要求.md) | [技术要求](docs/QLExpress-Rust-技术要求.md) |
+| 迁移测试台账 | [Test Ledgers](docs/迁移测试对照表.md) | [迁移测试对照表](docs/迁移测试对照表.md) |
 | 项目概览 | [README](README.md) | [README](README.zh-CN.md) |
 | 使用指南 | [Usage Guide](docs/Usage-Guide.md) | [使用指南](docs/Usage-Guide.zh_CN.md) |
 | 架构 | [Architecture](docs/qlexpress-Architecture.md) | [架构文档](docs/qlexpress-Architecture.zh_CN.md) |

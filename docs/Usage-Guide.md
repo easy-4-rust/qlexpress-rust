@@ -238,7 +238,7 @@ Supported helper attributes:
 | Struct | `name = "..."` | Override the registered type name |
 | Struct | `expose_fields` | Also expose fields through method-style resolution |
 | Field | `skip` | Do not expose this field |
-| Field | `readonly` | Reserve read-only intent; no setter is generated |
+| Field | `readonly` | Generate read access only; script assignment and classified-object population reject writes |
 | Field | `alias("a", "b")` | Add alternative field names |
 
 Current derive limits: named-field structs only, no generic structs, and no automatic method or

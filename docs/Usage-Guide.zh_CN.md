@@ -236,7 +236,7 @@ assert_eq!(result.into_result(), DataValue::Bool(true));
 | 结构体 | `name = "..."` | 覆盖注册类型名 |
 | 结构体 | `expose_fields` | 同时通过方法式解析暴露字段 |
 | 字段 | `skip` | 不暴露该字段 |
-| 字段 | `readonly` | 保留只读意图；当前不生成 setter |
+| 字段 | `readonly` | 仅生成读取能力；脚本赋值和分类对象填充会拒绝写入 |
 | 字段 | `alias("a", "b")` | 添加字段别名 |
 
 当前限制：仅支持具名字段结构体，不支持泛型结构体，也不会自动发现方法和构造器。
