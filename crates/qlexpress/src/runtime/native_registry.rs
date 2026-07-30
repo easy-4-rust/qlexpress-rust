@@ -9,6 +9,8 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
+use regex::Regex;
+
 use crate::exception::error_codes;
 use crate::exception::ql_exception::QLExceptionKind;
 use crate::exception::QLException;
@@ -730,16 +732,25 @@ impl NativeRegistry {
         }
         let param_name = param.java_name();
         let arg_name = arg.java_name();
-        if param_name == "java.lang.Number" && is_numeric_java_name(arg_name) {
+        if builtin_assignable(param_name, arg_name) {
             return true;
         }
-        if let (Some(param_item), Some(arg_item)) =
-            (param_name.strip_suffix("[]"), arg_name.strip_suffix("[]"))
-        {
-            return self.is_assignable(
-                &ClassRef::Named(param_item.to_string()),
-                &ClassRef::Named(arg_item.to_string()),
-            );
+        if let Some(arg_item) = arg.component_type() {
+            if matches!(
+                param_name,
+                "java.lang.Cloneable" | "java.io.Serializable"
+            ) {
+                return true;
+            }
+            if let Some(param_item) = param.component_type() {
+                // Java 原语数组不协变；引用数组才递归执行组件可赋值判断。
+                if matches!(param_item, ClassRef::Primitive(_))
+                    || matches!(arg_item, ClassRef::Primitive(_))
+                {
+                    return param_item == arg_item;
+                }
+                return self.is_assignable(&param_item, &arg_item);
+            }
         }
         self.type_extends(arg_name, param_name, &mut Vec::new())
     }
@@ -971,15 +982,52 @@ fn runtime_class_ref(value: &DataValue) -> ClassRef {
 fn is_numeric_java_name(name: &str) -> bool {
     matches!(
         name,
-        "java.lang.Byte"
+        "byte"
+            | "java.lang.Byte"
+            | "short"
             | "java.lang.Short"
+            | "int"
             | "java.lang.Integer"
+            | "long"
             | "java.lang.Long"
+            | "float"
             | "java.lang.Float"
+            | "double"
             | "java.lang.Double"
             | "java.math.BigInteger"
             | "java.math.BigDecimal"
     )
+}
+
+/// JDK 内建类层级；Java 侧由 `Class#isAssignableFrom` 提供。
+fn builtin_assignable(param_name: &str, arg_name: &str) -> bool {
+    if param_name == "java.lang.Number" && is_numeric_java_name(arg_name) {
+        return true;
+    }
+    let boxed_scalar = is_numeric_java_name(arg_name)
+        || matches!(arg_name, "java.lang.Boolean" | "java.lang.Character");
+    match param_name {
+        "java.lang.Comparable" => boxed_scalar || arg_name == "java.lang.String",
+        "java.io.Serializable" => {
+            boxed_scalar
+                || arg_name == "java.lang.String"
+                || arg_name.starts_with('[')
+        }
+        "java.lang.CharSequence" => arg_name == "java.lang.String",
+        "java.util.List" | "java.util.Collection" | "java.lang.Iterable" => matches!(
+            arg_name,
+            "java.util.ArrayList" | "java.util.LinkedList" | "java.util.List"
+        ),
+        "java.util.Set" => matches!(
+            arg_name,
+            "java.util.HashSet" | "java.util.LinkedHashSet" | "java.util.TreeSet"
+        ),
+        "java.util.Map" => matches!(
+            arg_name,
+            "java.util.HashMap" | "java.util.LinkedHashMap" | "java.util.TreeMap"
+        ),
+        _ => false,
+    }
 }
 
 fn convert_candidate_arguments(
@@ -987,11 +1035,7 @@ fn convert_candidate_arguments(
     parameter_types: &[ClassRef],
     var_args: bool,
 ) -> Vec<DataValue> {
-    let target_types = parameter_types
-        .iter()
-        .map(ClassRef::to_target_type)
-        .collect::<Vec<_>>();
-    ParametersTypeConvertor::cast(arguments, &target_types, var_args)
+    ParametersTypeConvertor::cast(arguments, parameter_types, var_args)
 }
 
 fn wrap_method_candidate(candidate: &NativeMethodCandidate) -> NativeMethod {
@@ -1020,9 +1064,89 @@ fn int_arg(args: &[DataValue], i: usize) -> Option<i64> {
     })
 }
 
-/// 取第 `i` 个字符串参数(Java `String.valueOf(arg)`)。
-fn str_arg(args: &[DataValue], i: usize) -> Option<String> {
-    args.get(i).map(|v| v.string_value_of())
+/// 严格读取 Java `String` 实参；反射不会把任意对象隐式 `toString()`。
+fn string_arg(args: &[DataValue], index: usize) -> Option<&str> {
+    match args.get(index) {
+        Some(DataValue::Str(value)) => Some(value),
+        _ => None,
+    }
+}
+
+/// Java `String.compareTo` 按 UTF-16 code unit 字典序比较并返回首个差值。
+fn java_string_compare_to(left: &str, right: &str) -> i32 {
+    let mut left_units = left.encode_utf16();
+    let mut right_units = right.encode_utf16();
+    loop {
+        match (left_units.next(), right_units.next()) {
+            (Some(left), Some(right)) if left != right => {
+                return i32::from(left) - i32::from(right);
+            }
+            (Some(_), Some(_)) => {}
+            (Some(_), None) => {
+                return left_units.count().saturating_add(1) as i32;
+            }
+            (None, Some(_)) => {
+                return -(right_units.count().saturating_add(1) as i32);
+            }
+            (None, None) => return 0,
+        }
+    }
+}
+
+/// Java `String.indexOf(String, int)` 的 UTF-16 索引规则。
+fn java_string_index_of(value: &str, needle: &str, from_index: i64) -> i32 {
+    let value_units: Vec<u16> = value.encode_utf16().collect();
+    let needle_units: Vec<u16> = needle.encode_utf16().collect();
+    let start = usize::try_from(from_index.max(0))
+        .unwrap_or(usize::MAX)
+        .min(value_units.len());
+    if needle_units.is_empty() {
+        return start as i32;
+    }
+    value_units[start..]
+        .windows(needle_units.len())
+        .position(|candidate| candidate == needle_units.as_slice())
+        .map(|offset| (start + offset) as i32)
+        .unwrap_or(-1)
+}
+
+/// Java `String.split(regex, limit)`，包括零宽首匹配和尾空串规则。
+fn java_regex_split(value: &str, pattern: &str, limit: i32) -> Result<DataValue, QLException> {
+    let regex = Regex::new(pattern).map_err(|error| {
+        QLException::host_error(
+            QLExceptionKind::Runtime,
+            error.to_string(),
+            "java.util.regex.PatternSyntaxException",
+        )
+    })?;
+    let mut parts = Vec::new();
+    let mut previous_end = 0usize;
+    for matched in regex.find_iter(value) {
+        if limit > 0 && parts.len() >= limit.saturating_sub(1) as usize {
+            break;
+        }
+        // Java Pattern.split:输入开头的零宽匹配不产生前导空元素。
+        if matched.start() == 0 && matched.end() == 0 && parts.is_empty() {
+            previous_end = matched.end();
+            continue;
+        }
+        parts.push(value[previous_end..matched.start()].to_string());
+        previous_end = matched.end();
+    }
+    parts.push(value[previous_end..].to_string());
+    if limit == 0 {
+        while parts.last().is_some_and(String::is_empty) {
+            parts.pop();
+        }
+    }
+    // Java 对空输入始终返回一个包含空字符串的数组。
+    if value.is_empty() && parts.is_empty() {
+        parts.push(String::new());
+    }
+    Ok(DataValue::array_with_component(
+        parts.into_iter().map(DataValue::Str).collect(),
+        ClassRef::from_name("java.lang.String"),
+    ))
 }
 
 /// 参数不匹配错误,对应 Java `QLErrorCodes.INVOKE_METHOD_WITH_WRONG_ARGUMENTS`。
@@ -1135,25 +1259,45 @@ fn string_method(name: &str) -> Option<NativeMethod> {
                 .ok_or_else(|| wrong_args("charAt")),
             _ => Err(wrong_args("charAt")),
         }),
-        "contains" => Rc::new(|bean, args| match (bean, str_arg(args, 0)) {
-            (DataValue::Str(s), Some(sub)) => Ok(DataValue::Bool(s.contains(&sub))),
+        "contains" => Rc::new(|bean, args| match (bean, string_arg(args, 0)) {
+            (DataValue::Str(s), Some(sub)) => Ok(DataValue::Bool(s.contains(sub))),
             _ => Err(wrong_args("contains")),
         }),
-        "startsWith" => Rc::new(|bean, args| match (bean, str_arg(args, 0)) {
-            (DataValue::Str(s), Some(p)) => Ok(DataValue::Bool(s.starts_with(&p))),
+        "startsWith" => Rc::new(|bean, args| match (bean, string_arg(args, 0), args.len()) {
+            (DataValue::Str(s), Some(prefix), 1) => {
+                Ok(DataValue::Bool(s.starts_with(prefix)))
+            }
+            (DataValue::Str(s), Some(prefix), 2) => {
+                let Some(offset) = int_arg(args, 1) else {
+                    return Err(wrong_args("startsWith"));
+                };
+                let units: Vec<u16> = s.encode_utf16().collect();
+                let prefix_units: Vec<u16> = prefix.encode_utf16().collect();
+                let matches = usize::try_from(offset)
+                    .ok()
+                    .and_then(|offset| units.get(offset..offset.saturating_add(prefix_units.len())))
+                    .is_some_and(|candidate| candidate == prefix_units.as_slice());
+                Ok(DataValue::Bool(matches))
+            }
             _ => Err(wrong_args("startsWith")),
         }),
-        "endsWith" => Rc::new(|bean, args| match (bean, str_arg(args, 0)) {
-            (DataValue::Str(s), Some(p)) => Ok(DataValue::Bool(s.ends_with(&p))),
+        "endsWith" => Rc::new(|bean, args| match (bean, string_arg(args, 0)) {
+            (DataValue::Str(s), Some(p)) => Ok(DataValue::Bool(s.ends_with(p))),
             _ => Err(wrong_args("endsWith")),
         }),
-        "indexOf" => Rc::new(|bean, args| match (bean, str_arg(args, 0)) {
-            (DataValue::Str(s), Some(sub)) => {
-                Ok(DataValue::Int(
-                    s.find(&sub)
-                        .map(|byte_index| s[..byte_index].encode_utf16().count() as i32)
-                        .unwrap_or(-1),
-                ))
+        "indexOf" => Rc::new(|bean, args| match (bean, string_arg(args, 0), args.len()) {
+            (DataValue::Str(s), Some(sub), 1) => {
+                Ok(DataValue::Int(java_string_index_of(s, sub, 0)))
+            }
+            (DataValue::Str(s), Some(sub), 2) => {
+                let Some(from_index) = int_arg(args, 1) else {
+                    return Err(wrong_args("indexOf"));
+                };
+                Ok(DataValue::Int(java_string_index_of(
+                    s,
+                    sub,
+                    from_index,
+                )))
             }
             _ => Err(wrong_args("indexOf")),
         }),
@@ -1191,9 +1335,9 @@ fn string_method(name: &str) -> Option<NativeMethod> {
             _ => Err(wrong_args("substring")),
         }),
         "replace" => Rc::new(
-            |bean, args| match (bean, str_arg(args, 0), str_arg(args, 1)) {
+            |bean, args| match (bean, string_arg(args, 0), string_arg(args, 1)) {
                 (DataValue::Str(s), Some(from), Some(to)) => {
-                    Ok(DataValue::Str(s.replace(&from, &to)))
+                    Ok(DataValue::Str(s.replace(from, to)))
                 }
                 _ => Err(wrong_args("replace")),
             },
@@ -1203,18 +1347,29 @@ fn string_method(name: &str) -> Option<NativeMethod> {
             (DataValue::Str(_), Some(_)) => Ok(DataValue::Bool(false)),
             _ => Err(wrong_args("equals")),
         }),
-        "equalsIgnoreCase" => Rc::new(|bean, args| match (bean, str_arg(args, 0)) {
+        "equalsIgnoreCase" => Rc::new(|bean, args| match (bean, string_arg(args, 0)) {
             (DataValue::Str(s), Some(o)) => {
-                Ok(DataValue::Bool(java_string_equals_ignore_case(s, &o)))
+                Ok(DataValue::Bool(java_string_equals_ignore_case(s, o)))
             }
+            (DataValue::Str(_), [DataValue::Null]) => Ok(DataValue::Bool(false)),
             _ => Err(wrong_args("equalsIgnoreCase")),
         }),
-        "split" => Rc::new(|bean, args| match (bean, str_arg(args, 0)) {
-            (DataValue::Str(s), Some(sep)) => Ok(DataValue::list(
-                s.split(&sep)
-                    .map(|p| DataValue::Str(p.to_string()))
-                    .collect(),
-            )),
+        "compareTo" => Rc::new(|bean, args| match (bean, string_arg(args, 0)) {
+            (DataValue::Str(left), Some(right)) if args.len() == 1 => {
+                Ok(DataValue::Int(java_string_compare_to(left, right)))
+            }
+            _ => Err(wrong_args("compareTo")),
+        }),
+        "split" => Rc::new(|bean, args| match (bean, string_arg(args, 0), args.len()) {
+            (DataValue::Str(value), Some(pattern), 1) => {
+                java_regex_split(value, pattern, 0)
+            }
+            (DataValue::Str(value), Some(pattern), 2) => {
+                let Some(limit) = int_arg(args, 1) else {
+                    return Err(wrong_args("split"));
+                };
+                java_regex_split(value, pattern, limit as i32)
+            }
             _ => Err(wrong_args("split")),
         }),
         "toString" => Rc::new(|bean, _| Ok(DataValue::Str(bean.string_value_of()))),

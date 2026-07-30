@@ -748,13 +748,14 @@ impl<'a> QvmInstructionVisitor<'a> {
             "char" => TargetType::Character,
             _ => return None,
         };
-        Some(ClassRef::Primitive(target))
+        // Java `BuiltInTypesSet` 返回包装类，而不是 `int.class` 等原语类。
+        Some(ClassRef::Boxed(target))
     }
 
     /// Java `parseDeclTypeNoArr`.
     fn parse_decl_type_no_arr(&mut self, node: &Node) -> ClassRef {
         let Node::DeclTypeNoArr(ctx) = node else {
-            return ClassRef::Primitive(TargetType::Any);
+            return object_cls();
         };
         if let Some(primitive) = &ctx.primitive_type {
             let text = primitive.text();
@@ -764,21 +765,21 @@ impl<'a> QvmInstructionVisitor<'a> {
         }
         match &ctx.cls_type {
             Some(cls_type) => self.parse_cls_ids(cls_type_children(cls_type)),
-            None => ClassRef::Primitive(TargetType::Any),
+            None => object_cls(),
         }
     }
 
     /// Java `parseDeclType` (base type wrapped in `dims` array layers).
     fn parse_decl_type(&mut self, node: &Node) -> ClassRef {
         let Node::DeclType(ctx) = node else {
-            return ClassRef::Primitive(TargetType::Any);
+            return object_cls();
         };
         let base_cls = if let Some(primitive) = &ctx.primitive_type {
-            Self::built_in_cls(&primitive.text()).unwrap_or(ClassRef::Primitive(TargetType::Any))
+            Self::built_in_cls(&primitive.text()).unwrap_or_else(object_cls)
         } else if let Some(cls_type) = &ctx.cls_type {
             self.parse_cls_ids(cls_type_children(cls_type))
         } else {
-            ClassRef::Primitive(TargetType::Any)
+            object_cls()
         };
         let layers = ctx.dims.as_ref().map_or(0, |d| dims_dim_count(d));
         wrap_in_array(base_cls, layers)
@@ -827,55 +828,16 @@ fn dims_dim_count(dims: &Node) -> usize {
 /// `[]` to the Java-style name (Rust has no array class object; only used
 /// for `MetaClass` constants and error messages).
 fn wrap_in_array(base_type: ClassRef, layers: usize) -> ClassRef {
-    if layers == 0 {
-        return base_type;
-    }
-    let mut name = base_type.java_name().to_string();
+    let mut result = base_type;
     for _ in 0..layers {
-        name.push_str("[]");
+        result = ClassRef::array_of(result);
     }
-    ClassRef::Named(name)
+    result
 }
 
 /// Java `Object.class` (untyped declaration target).
 fn object_cls() -> ClassRef {
     ClassRef::Named("java.lang.Object".to_string())
-}
-
-/// 数组组件和原语默认值仍使用的转换目标。
-///
-/// Lambda 参数、foreach 变量和局部变量本身保留完整 [`ClassRef`]；这里只
-/// 为尚以 [`TargetType`] 存储组件类型的数组指令提取原语类型。
-fn decl_target_type(cls: &ClassRef) -> Option<TargetType> {
-    match cls {
-        ClassRef::Primitive(target) => Some(*target),
-        ClassRef::Named(_) => None,
-    }
-}
-
-/// Default value for an uninitialized typed local declaration.
-///
-/// Mirrors Java `DefineLocal` defaults:
-/// - boolean → false
-/// - numeric primitives (byte/short/int/long/float/double) → 0 (numeric 0)
-/// - char → '\0'
-/// - big integer / big decimal → 0 / "0"
-/// - object / array / Any → null (Java `Nothing`)
-fn default_value_for_target(target: Option<TargetType>) -> DataValue {
-    use crate::runtime::data::convert::obj_type_convertor::TargetType;
-    match target {
-        None => DataValue::NULL_VALUE,
-        Some(TargetType::Boolean) => DataValue::Bool(false),
-        Some(TargetType::Byte)
-        | Some(TargetType::Short)
-        | Some(TargetType::Int)
-        | Some(TargetType::Long) => DataValue::Long(0),
-        Some(TargetType::Float) | Some(TargetType::Double) => DataValue::Double(0.0),
-        Some(TargetType::BigInteger) => DataValue::big_int(0),
-        Some(TargetType::BigDecimal) => DataValue::BigDec("0".to_string()),
-        Some(TargetType::Character) => DataValue::Char(0),
-        Some(TargetType::Any) => DataValue::NULL_VALUE,
-    }
 }
 
 /// Java `blockExpr`: reduce `{ ... }` used as an expression body.
@@ -1767,16 +1729,17 @@ impl<'a> Visitor for QvmInstructionVisitor<'a> {
             };
             match &declarator.initializer {
                 None => {
-                    // Java semantics for uninitialized typed local:
-                    // primitive numeric → 0 / 0L / 0.0, bool → false,
-                    // object/array → null. Mirrors Java `DefineLocal`
-                    // picking the type's default value.
+                    // Java `visitLocalVariableDeclaration` 无论声明类型为何，都
+                    // 为缺省初始化器压入 `null`，再由 DefineLocal 执行转换。
                     let reporter = variable_declarator
                         .stop_token()
                         .map(|t| self.new_reporter_with_token(t))
                         .unwrap_or_else(|| Rc::new(PureErrReporter::INSTANCE));
-                    let default = default_value_for_target(decl_target_type(&decl_cls));
-                    self.add_instruction(Box::new(ConstInstruction::new(reporter, default, None)));
+                    self.add_instruction(Box::new(ConstInstruction::new(
+                        reporter,
+                        DataValue::Null,
+                        None,
+                    )));
                 }
                 Some(initializer) => self.parse_initializer(initializer, &decl_cls),
             }
@@ -2671,7 +2634,7 @@ impl<'a> QvmInstructionVisitor<'a> {
         match pathable {
             Node::TypeExpr(_) => {
                 let text = pathable.start_token().map(Token::text).unwrap_or_default();
-                let cls = Self::built_in_cls(text).unwrap_or(ClassRef::Primitive(TargetType::Any));
+                let cls = Self::built_in_cls(text).unwrap_or_else(object_cls);
                 let dim_part_num = self.parse_dim_parts(0, path_parts);
                 let cls = wrap_in_array(cls, dim_part_num);
                 let reporter = self.reporter_of(pathable);

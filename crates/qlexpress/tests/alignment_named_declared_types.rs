@@ -11,6 +11,7 @@ use qlexpress::exception::QLException;
 use qlexpress::init_options::InitOptions;
 use qlexpress::ql_options::QLOptions;
 use qlexpress::runtime::context::{ExpressContext, MapExpressContext};
+use qlexpress::runtime::class_ref::ClassRef;
 use qlexpress::runtime::data::index_map::IndexMap;
 use qlexpress::runtime::native_object::NativeObject;
 use qlexpress::runtime::native_type::NativeType;
@@ -166,6 +167,85 @@ fn named_cast_accepts_registered_subclass_and_rejects_unrelated_value() {
     assert_eq!(error.error_code(), error_codes::INCOMPATIBLE_TYPE_CAST);
 }
 
+/// SOURCE_PARITY: `InstanceOfOperator` 必须复用注册类型层级，而不是只按
+/// 宿主类型名做精确比较。
+#[test]
+fn named_instanceof_accepts_registered_subclass() {
+    let runner = runner();
+    let mut context = HashMap::new();
+    context.insert("value".to_string(), child_value());
+    let result = runner
+        .execute(
+            "value instanceof Parent;",
+            context,
+            &QLOptions::default(),
+        )
+        .expect("registered Child is an instanceof Parent")
+        .into_result();
+    assert_eq!(result, DataValue::Bool(true));
+}
+
+/// SOURCE_PARITY: `new Parent[n]` 在空数组上也保留组件类，并在后续写入
+/// 时执行 `Parent.class.isInstance(value)`。
+#[test]
+fn named_array_preserves_component_type_and_checks_writes() {
+    let runner = runner();
+    let empty = runner
+        .execute("new Parent[0];", HashMap::new(), &QLOptions::default())
+        .expect("create empty Parent array")
+        .into_result();
+    let DataValue::Array(array) = empty else {
+        panic!("Parent[] expected");
+    };
+    assert_eq!(
+        array.borrow().component_type(),
+        &ClassRef::Named("test.Parent".to_string())
+    );
+
+    let mut accepted = HashMap::new();
+    accepted.insert("value".to_string(), child_value());
+    let result = runner
+        .execute(
+            "Parent[] values = new Parent[1]; values[0] = value; values[0] != null;",
+            accepted,
+            &QLOptions::default(),
+        )
+        .expect("registered Child can be stored in Parent[]")
+        .into_result();
+    assert_eq!(result, DataValue::Bool(true));
+
+    let error = runner
+        .execute(
+            "Parent[] values = new Parent[1]; values[0] = 'wrong';",
+            HashMap::new(),
+            &QLOptions::default(),
+        )
+        .unwrap_err();
+    assert_eq!(
+        error.error_code(),
+        error_codes::INCOMPATIBLE_ASSIGNMENT_TYPE
+    );
+}
+
+/// SOURCE_PARITY: QLExpress 的 `BuiltInTypesSet` 把脚本关键字 `int`
+/// 映射到 `Integer.class`，因此 `new int[n]` 是可空的 `Integer[]`。
+#[test]
+fn script_int_array_uses_boxed_integer_component() {
+    let value = runner()
+        .execute("new int[1];", HashMap::new(), &QLOptions::default())
+        .expect("create int-keyword array")
+        .into_result();
+    let DataValue::Array(array) = value else {
+        panic!("Integer[] expected");
+    };
+    let array = array.borrow();
+    assert_eq!(
+        array.component_type(),
+        &ClassRef::from_name("java.lang.Integer")
+    );
+    assert_eq!(array.as_slice(), &[DataValue::Null]);
+}
+
 /// SOURCE_PARITY: `SerializableParseCacheExporter/Importer` 必须往返保存
 /// `Param.clazz` 的具名类，而不是导出后还原成 Object。
 #[test]
@@ -188,4 +268,27 @@ fn serializable_parse_cache_preserves_named_parameter_class() {
         .expect("named parameter cache import and execute")
         .into_result();
     assert_eq!(result, DataValue::Bool(true));
+}
+
+/// SOURCE_PARITY: parse-cache 的数组类名使用 Java `Class#getName()` 二进制
+/// 描述符，并能在不依赖 JVM `Class.forName` 的 Rust 导入器中往返。
+#[test]
+fn serializable_parse_cache_preserves_java_array_binary_name() {
+    let runner = runner();
+    let script = "new int[][] {new int[] {1, 2}};";
+    let cache = runner
+        .export_parse_cache(script)
+        .expect("array cache export");
+    let json = serde_json::to_string(&cache).expect("serialize array cache");
+    assert!(json.contains("[Ljava.lang.Integer;"));
+    let restored = serde_json::from_str(&json).expect("deserialize array cache");
+    let value = runner
+        .execute_with_cache(
+            &restored,
+            express_context("unused", DataValue::Null),
+            &QLOptions::default(),
+        )
+        .expect("array cache import and execute")
+        .into_result();
+    assert_eq!(value.runtime_type_name(), "[[Ljava.lang.Integer;");
 }

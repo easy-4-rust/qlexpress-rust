@@ -14,6 +14,7 @@ use crate::runtime::member_resolver::MemberResolver;
 use crate::runtime::parameters::Parameters;
 use crate::runtime::qcontext::QContext;
 use crate::runtime::value::DataValue;
+use crate::utils::basic_util::BasicUtil;
 
 /// 把(静态/实例)方法包装为脚本函数。
 /// 对应 Java: com.alibaba.qlexpress4.runtime.function.QMethodFunction
@@ -54,12 +55,13 @@ impl CustomFunction for QMethodFunction {
         for i in 0..parameters.size() {
             // Java: Value v = parameters.get(i); params[i] = v.get(); type[i] = v.getType();
             let value = parameters.get(i);
-            let (data, type_name) = match value {
-                Some(v) => (v.get(), v.type_name()),
-                None => (DataValue::Null, "com.alibaba.qlexpress4.runtime.Nothing"),
+            let data = match value {
+                Some(v) => v.get(),
+                None => DataValue::Null,
             };
+            let value_type = BasicUtil::type_of_value(&data);
             params.push(data);
-            types.push(ClassRef::from_name(type_name));
+            types.push(value_type);
         }
 
         // Java: resolved == null 即实参类型不匹配,抛 INVALID_ARGUMENT。
@@ -83,14 +85,9 @@ impl CustomFunction for QMethodFunction {
         }
 
         // Java: ParametersTypeConvertor.cast(params, method.getParameterTypes(), method.isVarArgs())。
-        let target_types: Vec<_> = self
-            .method
-            .parameter_types()
-            .iter()
-            .map(|class_ref| class_ref.to_target_type())
-            .collect();
+        let parameter_types = self.method.parameter_types();
         let convert_result =
-            ParametersTypeConvertor::cast(&params, &target_types, self.method.is_var_args());
+            ParametersTypeConvertor::cast(&params, &parameter_types, self.method.is_var_args());
         // Java: MethodHandler.Access.accessMethodValue(method, object, convertResult)。
         Access::access_method_value(
             &self.method,

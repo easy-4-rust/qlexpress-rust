@@ -157,7 +157,7 @@ impl ObjTypeConvertor {
             return QConverted::converted(value.clone());
         };
         match target {
-            ClassRef::Primitive(target) => Self::cast(value, *target),
+            ClassRef::Primitive(target) | ClassRef::Boxed(target) => Self::cast(value, *target),
             ClassRef::Named(_) if value.is_null() => QConverted::converted(value.clone()),
             ClassRef::Named(name) if name == "java.lang.Object" => {
                 QConverted::converted(value.clone())

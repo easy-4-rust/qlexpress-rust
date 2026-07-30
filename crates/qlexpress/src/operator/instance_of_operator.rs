@@ -40,7 +40,7 @@ impl BinaryOperator for InstanceOfOperator {
         &self,
         left: &QValue,
         right: &QValue,
-        _q_context: &mut dyn QContext,
+        q_context: &mut dyn QContext,
         _ql_options: &crate::ql_options::QLOptions,
         error_reporter: &dyn ErrorReporter,
     ) -> Result<DataValue, QLException> {
@@ -67,10 +67,11 @@ impl BinaryOperator for InstanceOfOperator {
         if source_object.is_null() {
             return Ok(DataValue::Bool(false));
         }
-        Ok(DataValue::Bool(is_assignable_from(
-            &class_ref,
-            &source_object,
-        )))
+        Ok(DataValue::Bool(
+            q_context
+                .registry()
+                .is_value_assignable(&class_ref, &source_object),
+        ))
     }
 
     /// 对应 Java 方法: `getOperator()` —— `"instanceof"`。
@@ -81,60 +82,6 @@ impl BinaryOperator for InstanceOfOperator {
     /// 对应 Java 方法: `getPriority()` —— QLPrecedences.COMPARE。
     fn priority(&self) -> i32 {
         ql_precedences::COMPARE
-    }
-}
-
-/// Java `Class.isAssignableFrom(source.getClass())` 的内建类型近似:
-/// 同名类、`java.lang.Object`、`java.lang.Number` 接收各数值装箱类型、
-/// `java.lang.Comparable`/`java.io.Serializable` 接收装箱类型与字符串;
-/// 宿主对象按 `native_type_name` 精确匹配(对齐 cast.rs 的既有口径)。
-fn is_assignable_from(target: &ClassRef, source: &DataValue) -> bool {
-    let target_name = target.java_name();
-    if target_name == "java.lang.Object" {
-        return true;
-    }
-    let source_name = match source {
-        DataValue::Object(obj) => obj.borrow().native_type_name().to_string(),
-        other => other.data_type_name().to_string(),
-    };
-    if target_name == source_name {
-        return true;
-    }
-    let is_boxed_number = matches!(
-        source_name.as_str(),
-        "java.lang.Byte"
-            | "java.lang.Short"
-            | "java.lang.Integer"
-            | "java.lang.Long"
-            | "java.lang.Float"
-            | "java.lang.Double"
-            | "java.math.BigInteger"
-            | "java.math.BigDecimal"
-    );
-    match target_name {
-        "java.lang.Number" => is_boxed_number,
-        "java.lang.Comparable" | "java.io.Serializable" => {
-            is_boxed_number
-                || matches!(
-                    source_name.as_str(),
-                    "java.lang.String" | "java.lang.Boolean" | "java.lang.Character"
-                )
-        }
-        // Java 集合接口层级:`new ArrayList() instanceof List` 为 true。
-        // (对齐测试 extensionfunction/extension_function.ql 发现。)
-        "java.util.List" | "java.util.Collection" | "java.lang.Iterable" => matches!(
-            source_name.as_str(),
-            "java.util.ArrayList" | "java.util.LinkedList" | "java.util.List"
-        ),
-        "java.util.Set" => matches!(
-            source_name.as_str(),
-            "java.util.HashSet" | "java.util.LinkedHashSet" | "java.util.TreeSet"
-        ),
-        "java.util.Map" => matches!(
-            source_name.as_str(),
-            "java.util.HashMap" | "java.util.LinkedHashMap" | "java.util.TreeMap"
-        ),
-        _ => false,
     }
 }
 

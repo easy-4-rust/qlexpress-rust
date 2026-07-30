@@ -182,10 +182,8 @@ impl MemberResolver {
             return MatchPriority::Lambda.priority();
         }
 
-        // Java 的 UNBOX 分支:包装类与原语类互转。Rust 中
-        // 常规解析会把包装类归一到 `Primitive`；显式注册的方法签名仍可
-        // 以 `Named("java.lang.*")` 保留包装类型，此时必须维持 Java 的
-        // UNBOX 优先级，避免与完全相同签名混淆。
+        // Java 的 UNBOX 分支：包装类与原语类互转。ClassRef 显式保留
+        // Primitive/Boxed 身份，避免把该分支误判为完全相同签名。
         if is_boxing_pair(param_type, arg_type) {
             return MatchPriority::Unbox.priority();
         }
@@ -310,7 +308,7 @@ impl MemberResolver {
     fn adapt_2_var_arg_types(parameter_types: &[ClassRef], arg_length: usize) -> Vec<ClassRef> {
         let var_item_type = parameter_types
             .last()
-            .cloned()
+            .and_then(ClassRef::component_type)
             .unwrap_or_else(|| ClassRef::Named("java.lang.Object".to_string()));
         let mut var_param_types: Vec<ClassRef> =
             parameter_types[..parameter_types.len().saturating_sub(1)].to_vec();
@@ -326,22 +324,27 @@ fn default_assignable(param_type: &ClassRef, arg_type: &ClassRef) -> bool {
 }
 
 fn is_boxing_pair(left: &ClassRef, right: &ClassRef) -> bool {
-    fn primitive_wrapper(class_ref: &ClassRef) -> Option<&'static str> {
+    fn scalar_target(
+        class_ref: &ClassRef,
+    ) -> Option<(
+        crate::runtime::data::convert::obj_type_convertor::TargetType,
+        bool,
+    )> {
         match class_ref {
-            ClassRef::Primitive(target) => Some(target.java_name()),
-            ClassRef::Named(_) => None,
+            ClassRef::Primitive(target) => Some((*target, true)),
+            ClassRef::Boxed(target) => Some((*target, false)),
+            ClassRef::Named(name) => match ClassRef::from_name(name) {
+                ClassRef::Boxed(target) => Some((target, false)),
+                _ => None,
+            },
         }
     }
 
-    match (left, right) {
-        (ClassRef::Primitive(_), ClassRef::Named(right_name)) => {
-            primitive_wrapper(left) == Some(right_name.as_str())
-        }
-        (ClassRef::Named(left_name), ClassRef::Primitive(_)) => {
-            primitive_wrapper(right) == Some(left_name.as_str())
-        }
-        _ => false,
-    }
+    matches!(
+        (scalar_target(left), scalar_target(right)),
+        (Some((left_target, left_primitive)), Some((right_target, right_primitive)))
+            if left_target == right_target && left_primitive != right_primitive
+    )
 }
 
 /// 对应 Java `CacheUtil.isFunctionInterface`:是否为函数式接口类型。
@@ -352,7 +355,7 @@ fn is_function_interface(class_ref: &ClassRef) -> bool {
         ClassRef::Named(name) => {
             name.starts_with("java.util.function.") || name == "java.lang.Runnable"
         }
-        ClassRef::Primitive(_) => false,
+        ClassRef::Primitive(_) | ClassRef::Boxed(_) => false,
     }
 }
 
@@ -369,13 +372,13 @@ fn is_nothing(class_ref: &ClassRef) -> bool {
 /// 对应 Java `BasicUtil.numberPromoteLevel(Class)`。
 fn number_promote_level(class_ref: &ClassRef) -> Option<u8> {
     let kind = match class_ref.java_name() {
-        "java.lang.Byte" => NumKind::Byte,
-        "java.lang.Short" => NumKind::Short,
-        "java.lang.Integer" => NumKind::Int,
-        "java.lang.Long" => NumKind::Long,
+        "byte" | "java.lang.Byte" => NumKind::Byte,
+        "short" | "java.lang.Short" => NumKind::Short,
+        "int" | "java.lang.Integer" => NumKind::Int,
+        "long" | "java.lang.Long" => NumKind::Long,
         "java.math.BigInteger" => NumKind::BigInteger,
-        "java.lang.Float" => NumKind::Float,
-        "java.lang.Double" => NumKind::Double,
+        "float" | "java.lang.Float" => NumKind::Float,
+        "double" | "java.lang.Double" => NumKind::Double,
         "java.math.BigDecimal" => NumKind::BigDecimal,
         _ => return None,
     };
@@ -486,7 +489,7 @@ mod tests {
         let constructors = vec![
             (vec![named("java.lang.String")], false),
             (vec![named("java.lang.Object")], false),
-            (vec![named("java.lang.String")], true),
+            (vec![ClassRef::array_of(named("java.lang.String"))], true),
         ];
         assert_eq!(
             MemberResolver::resolve_constructor(

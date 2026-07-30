@@ -441,22 +441,11 @@ pub(crate) fn java_value_string(value: &DataValue) -> String {
         DataValue::Long(v) => v.to_string(),
         DataValue::BigInt(v) => v.to_string(),
         DataValue::BigDec(v) => v.clone(),
-        DataValue::Float(v) => java_f64_to_string(*v as f64),
-        DataValue::Double(v) => java_f64_to_string(*v),
+        DataValue::Float(v) => crate::runtime::data::convert::java_f32_to_string(*v),
+        DataValue::Double(v) => crate::runtime::data::convert::java_f64_to_string(*v),
         DataValue::Char(v) => String::from_utf16_lossy(&[*v]),
         DataValue::Str(v) => v.clone(),
         other => format!("{other:?}"),
-    }
-}
-
-/// Java `Double.toString` 的常用路径近似:整数值带 `.0` 后缀
-/// (Rust `f64::to_string` 会输出 "1",Java 输出 "1.0")。
-/// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.NumberMath#javaF64ToString。
-pub(crate) fn java_f64_to_string(v: f64) -> String {
-    if v.is_finite() && v.fract() == 0.0 && v.abs() < 1e16 {
-        format!("{v:.1}")
-    } else {
-        v.to_string()
     }
 }
 

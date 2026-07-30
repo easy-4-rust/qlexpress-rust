@@ -49,7 +49,7 @@ impl AssignableDataValue {
         AssignableDataValue {
             symbol_name: Some(symbol_name.into()),
             value,
-            define_type: Some(ClassRef::Primitive(define_type)),
+            define_type: Some(ClassRef::from(define_type)),
             type_registry: None,
         }
     }

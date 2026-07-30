@@ -155,14 +155,11 @@ impl QLInstruction for MultiNewArrayInstruction {
 }
 
 fn wrap_array_type(component_type: &ClassRef, dimensions: usize) -> ClassRef {
-    if dimensions == 0 {
-        return component_type.clone();
+    let mut result = component_type.clone();
+    for _ in 0..dimensions {
+        result = ClassRef::array_of(result);
     }
-    ClassRef::Named(format!(
-        "{}{}",
-        component_type.java_name(),
-        "[]".repeat(dimensions)
-    ))
+    result
 }
 
 fn default_array_item(component_type: &ClassRef) -> DataValue {
@@ -179,6 +176,7 @@ fn default_array_item(component_type: &ClassRef) -> DataValue {
         ClassRef::Primitive(TargetType::BigInteger)
         | ClassRef::Primitive(TargetType::BigDecimal)
         | ClassRef::Primitive(TargetType::Any)
+        | ClassRef::Boxed(_)
         | ClassRef::Named(_) => DataValue::Null,
     }
 }

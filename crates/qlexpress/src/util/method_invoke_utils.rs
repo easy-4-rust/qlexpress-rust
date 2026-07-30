@@ -42,12 +42,9 @@ pub fn invoke_i_method(
     params: &[DataValue],
     error_reporter: &dyn ErrorReporter,
 ) -> Result<QValue, QLException> {
-    let target_types: Vec<_> = method
-        .parameter_types()
-        .iter()
-        .map(|class_ref| class_ref.to_target_type())
-        .collect();
-    let convert_result = ParametersTypeConvertor::cast(params, &target_types, method.is_var_args());
+    let parameter_types = method.parameter_types();
+    let convert_result =
+        ParametersTypeConvertor::cast(params, &parameter_types, method.is_var_args());
     // Java: MethodHandler.Access.accessMethodValue(必要时 setAccessible(true))。
     if !method.is_access() {
         method.set_accessible(true);

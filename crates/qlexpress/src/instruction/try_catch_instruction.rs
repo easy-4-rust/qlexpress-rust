@@ -243,7 +243,11 @@ impl QLInstruction for TryCatchInstruction {
         PrintlnUtils::println_by_cur_depth(depth as i32 + 1, "Body", debug);
         self.body.println(depth + 2, debug);
         for (clz, handler) in &self.exception_table {
-            PrintlnUtils::println_by_cur_depth(depth as i32 + 1, clz.simple_name(), debug);
+            PrintlnUtils::println_by_cur_depth(
+                depth as i32 + 1,
+                &clz.simple_name(),
+                debug,
+            );
             handler.println(depth + 2, debug);
         }
         if let Some(final_body) = &self.final_body {

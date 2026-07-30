@@ -515,9 +515,24 @@ impl<'a> SerializableParseCacheExporter<'a> {
             },
             DataValue::Bool(v) => typed_constant("BOOLEAN", Value::from(*v)),
             DataValue::Str(v) => typed_constant("STRING", Value::from(v.clone())),
-            DataValue::Char(v) => {
-                typed_constant("CHAR", Value::from(String::from_utf16_lossy(&[*v])))
-            }
+            DataValue::Char(v) => match char::from_u32(u32::from(*v)) {
+                Some(character) => typed_constant("CHAR", Value::from(character.to_string())),
+                None => {
+                    // Rust/serde_json 的字符串不能承载 Java 未配对 surrogate。
+                    // 禁止静默替换为 U+FFFD；由平台适配台账记录该不可无损边界。
+                    return Err(SerializableParseCacheException::new(
+                        Some(&self.script),
+                        owner.map(|inst| source_of(inst.error_reporter())).as_ref(),
+                        error_codes::SERIALIZABLE_PARSE_CACHE_UNSUPPORTED_CONSTANT,
+                        &crate::exception::error_codes::format_msg(
+                            error_codes::error_msg(
+                                error_codes::SERIALIZABLE_PARSE_CACHE_UNSUPPORTED_CONSTANT,
+                            ),
+                            &[format!("java.lang.Character(U+{v:04X})")],
+                        ),
+                    ));
+                }
+            },
             DataValue::Byte(v) => typed_constant("INT", Value::from(*v)),
             DataValue::Short(v) => typed_constant("INT", Value::from(*v)),
             DataValue::Int(v) => typed_constant("INT", Value::from(*v)),

@@ -80,7 +80,7 @@ impl BasicUtil {
             }
             DataValue::Array(values) => {
                 let values = values.borrow();
-                ClassRef::Named(format!("{}[]", values.component_type().java_name()))
+                ClassRef::array_of(values.component_type().clone())
             }
             DataValue::Object(object) => {
                 ClassRef::Named(object.borrow().native_type_name().to_string())
@@ -88,7 +88,7 @@ impl BasicUtil {
             DataValue::Lambda(_) => {
                 ClassRef::Named("com.alibaba.qlexpress4.runtime.QLambda".to_string())
             }
-            _ => ClassRef::Named(value.data_type_name().to_string()),
+            _ => ClassRef::from_name(value.data_type_name()),
         }
     }
 
@@ -173,9 +173,11 @@ mod tests {
             types,
             vec![
                 ClassRef::Named("com.alibaba.qlexpress4.runtime.Nothing".into()),
-                ClassRef::Named("java.lang.Integer".into()),
-                ClassRef::Named("java.lang.String[]".into()),
-                ClassRef::Named("java.lang.Object[]".into()),
+                ClassRef::Boxed(
+                    crate::runtime::data::convert::obj_type_convertor::TargetType::Int,
+                ),
+                ClassRef::from_name("java.lang.String[]"),
+                ClassRef::from_name("java.lang.Object[]"),
             ]
         );
     }

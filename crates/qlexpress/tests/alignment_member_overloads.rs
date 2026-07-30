@@ -231,7 +231,7 @@ fn method_registry() -> Rc<NativeRegistry> {
     );
     child3.add_method_candidate(
         "getMethod6",
-        method(vec![named("java.lang.Object[]")], false, |_, _| {
+        method(vec![ClassRef::array_of(named("java.lang.Object"))], false, |_, _| {
             Ok(DataValue::Int(10))
         }),
     );
@@ -284,21 +284,27 @@ fn method_registry() -> Rc<NativeRegistry> {
     child9.add_method_candidate(
         "addField",
         method(
-            vec![primitive(TargetType::Int), named("java.lang.String")],
+            vec![
+                primitive(TargetType::Int),
+                ClassRef::array_of(named("java.lang.String")),
+            ],
             true,
             |_, _| Ok(DataValue::Str("1".to_string())),
         ),
     );
     child9.add_method_candidate(
         "addField1",
-        method(vec![named("java.lang.Object")], true, |_, _| {
+        method(vec![ClassRef::array_of(named("java.lang.Object"))], true, |_, _| {
             Ok(DataValue::Str("1".to_string()))
         }),
     );
     child9.add_method_candidate(
         "addField2",
         method(
-            vec![named("java.lang.Object"), named("java.lang.Object")],
+            vec![
+                named("java.lang.Object"),
+                ClassRef::array_of(named("java.lang.Object")),
+            ],
             true,
             |_, _| Ok(DataValue::Str("1".to_string())),
         ),
@@ -306,7 +312,10 @@ fn method_registry() -> Rc<NativeRegistry> {
     child9.add_method_candidate(
         "addField3",
         method(
-            vec![named("java.lang.Object"), primitive(TargetType::Int)],
+            vec![
+                named("java.lang.Object"),
+                ClassRef::array_of(ClassRef::Boxed(TargetType::Int)),
+            ],
             true,
             |_, _| Ok(DataValue::Str("1".to_string())),
         ),
@@ -613,7 +622,7 @@ fn constructor_registry() -> Rc<NativeRegistry> {
         Ok(FixtureObject::with_marker("test.Child3", DataValue::Int(1)))
     }));
     child3.add_constructor_candidate(constructor(
-        vec![named("java.lang.Object[]")],
+        vec![ClassRef::array_of(named("java.lang.Object"))],
         false,
         |_| Ok(FixtureObject::with_marker("test.Child3", DataValue::Int(2))),
     ));
@@ -683,7 +692,10 @@ fn constructor_registry() -> Rc<NativeRegistry> {
 
     let mut child9 = NativeType::named("test.Child9");
     child9.add_constructor_candidate(constructor(
-        vec![primitive(TargetType::Int), named("java.lang.String")],
+        vec![
+            primitive(TargetType::Int),
+            ClassRef::array_of(named("java.lang.String")),
+        ],
         true,
         |_| Ok(FixtureObject::data("test.Child9")),
     ));

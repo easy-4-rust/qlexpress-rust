@@ -102,7 +102,7 @@ impl DataValue {
             DataValue::Str(_) => "java.lang.String",
             DataValue::List(_) => "java.util.ArrayList",
             DataValue::Map(_) => "java.util.LinkedHashMap",
-            DataValue::Array(_) => "java.lang.Object[]",
+            DataValue::Array(_) => "[Ljava.lang.Object;",
             DataValue::Lambda(_) => "com.alibaba.qlexpress4.runtime.QLambda",
             DataValue::Object(_) => "com.alibaba.qlexpress4.NativeObject",
         }
@@ -117,7 +117,9 @@ impl DataValue {
         match self {
             DataValue::Object(object) => object.borrow().native_type_name().to_string(),
             DataValue::Array(array) => {
-                format!("{}[]", array.borrow().component_type().java_name())
+                ClassRef::array_of(array.borrow().component_type().clone())
+                    .java_name()
+                    .to_string()
             }
             _ => self.data_type_name().to_string(),
         }
@@ -232,18 +234,10 @@ impl DataValue {
             DataValue::Int(value) => value.to_string(),
             DataValue::Long(value) => value.to_string(),
             DataValue::Float(value) => {
-                if value.fract() == 0.0 && value.is_finite() {
-                    format!("{value:.1}")
-                } else {
-                    value.to_string()
-                }
+                crate::runtime::data::convert::java_f32_to_string(*value)
             }
             DataValue::Double(value) => {
-                if value.fract() == 0.0 && value.is_finite() {
-                    format!("{value:.1}")
-                } else {
-                    value.to_string()
-                }
+                crate::runtime::data::convert::java_f64_to_string(*value)
             }
             DataValue::BigInt(value) => value.to_string(),
             DataValue::BigDec(value) => value.clone(),

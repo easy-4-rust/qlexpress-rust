@@ -191,11 +191,83 @@ pub fn to_big_dec_string(value: &DataValue) -> String {
         DataValue::Int(v) => v.to_string(),
         DataValue::Long(v) => v.to_string(),
         DataValue::BigInt(v) => v.to_string(),
-        DataValue::Float(v) => v.to_string(),
-        DataValue::Double(v) => v.to_string(),
+        DataValue::Float(v) => java_f32_to_string(*v),
+        DataValue::Double(v) => java_f64_to_string(*v),
         DataValue::BigDec(v) => v.clone(),
         _ => "0".to_string(),
     }
+}
+
+/// Java `Float.toString(float)` 的最短可往返文本和指数展示阈值。
+pub fn java_f32_to_string(value: f32) -> String {
+    java_binary_float_to_string(value as f64, format!("{value:e}"))
+}
+
+/// Java `Double.toString(double)` 的最短可往返文本和指数展示阈值。
+pub fn java_f64_to_string(value: f64) -> String {
+    java_binary_float_to_string(value, format!("{value:e}"))
+}
+
+fn java_binary_float_to_string(value: f64, scientific: String) -> String {
+    if value.is_nan() {
+        return "NaN".to_string();
+    }
+    if value == f64::INFINITY {
+        return "Infinity".to_string();
+    }
+    if value == f64::NEG_INFINITY {
+        return "-Infinity".to_string();
+    }
+    if value == 0.0 {
+        return if value.is_sign_negative() {
+            "-0.0".to_string()
+        } else {
+            "0.0".to_string()
+        };
+    }
+
+    let negative = value.is_sign_negative();
+    let unsigned = scientific.strip_prefix('-').unwrap_or(&scientific);
+    let (mantissa, exponent_text) = unsigned
+        .split_once('e')
+        .expect("Rust lower-exp formatting always contains e");
+    let exponent: i32 = exponent_text
+        .parse()
+        .expect("Rust lower-exp exponent is a signed integer");
+    let sign = if negative { "-" } else { "" };
+
+    // Java 使用科学记数法的边界：m >= 10^7 或 m < 10^-3。
+    if !(-3..7).contains(&exponent) {
+        let mantissa = if mantissa.contains('.') {
+            mantissa.to_string()
+        } else {
+            format!("{mantissa}.0")
+        };
+        return format!("{sign}{mantissa}E{exponent}");
+    }
+
+    let digits = mantissa.replace('.', "");
+    let decimal_position = 1 + exponent;
+    if decimal_position <= 0 {
+        return format!(
+            "{sign}0.{}{}",
+            "0".repeat((-decimal_position) as usize),
+            digits
+        );
+    }
+    let decimal_position = decimal_position as usize;
+    if decimal_position >= digits.len() {
+        return format!(
+            "{sign}{}{}.0",
+            digits,
+            "0".repeat(decimal_position - digits.len())
+        );
+    }
+    format!(
+        "{sign}{}.{}",
+        &digits[..decimal_position],
+        &digits[decimal_position..]
+    )
 }
 
 /// Java `BigDecimal.toBigInteger()`：向零截断小数部分。

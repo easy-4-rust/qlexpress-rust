@@ -253,7 +253,17 @@ fn java_new_array_test() {
         })
         .collect::<Vec<_>>();
     assert_eq!(arrays.len(), 3);
-    assert!(arrays.iter().all(|array| array.clz() == TargetType::Int));
+    assert_eq!(
+        arrays
+            .iter()
+            .map(|array| array.clz().clone())
+            .collect::<Vec<_>>(),
+        vec![
+            ClassRef::Boxed(TargetType::Int),
+            ClassRef::Boxed(TargetType::Int),
+            ClassRef::from_name("java.lang.Integer[]"),
+        ]
+    );
     assert_eq!(arrays.last().unwrap().length(), 2);
 }
 
@@ -275,14 +285,14 @@ fn java_instance_of_test() {
 fn java_instance_of_string_array_test() {
     assert_instanceof_meta(
         "1 instanceof java.lang.String[][][]",
-        "java.lang.String[][][]",
+        "[[[Ljava.lang.String;",
     );
 }
 
 #[test]
 /// Java `SyntaxTreeFactoryTest#instanceOfIntArrTest`。
 fn java_instance_of_int_array_test() {
-    assert_instanceof_meta("1 instanceof int[][][]", "java.lang.Integer[][][]");
+    assert_instanceof_meta("1 instanceof int[][][]", "[[[Ljava.lang.Integer;");
 }
 
 #[test]

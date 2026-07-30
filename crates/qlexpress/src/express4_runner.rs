@@ -1314,7 +1314,9 @@ impl Express4Runner {
         let i_method = Rc::new(NativeIMethod::new(
             method_name,
             ClassRef::Named(class_name.to_string()),
-            vec![ClassRef::Named("java.lang.Object".to_string())],
+            vec![ClassRef::array_of(ClassRef::Named(
+                "java.lang.Object".to_string(),
+            ))],
             true,
             Rc::new(move |bean, args| {
                 let flat: Vec<DataValue> = match args {

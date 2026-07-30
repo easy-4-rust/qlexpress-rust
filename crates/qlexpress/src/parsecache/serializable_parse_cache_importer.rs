@@ -727,9 +727,10 @@ impl<'a> SerializableParseCacheImporter<'a> {
         class_name: &str,
         owner: Option<&SerializableInstruction>,
     ) -> ImportResult<ClassRef> {
-        if let Some(component_name) = class_name.strip_suffix("[]") {
-            let component = self.load_class(component_name, owner)?;
-            return Ok(ClassRef::Named(format!("{}[]", component.java_name())));
+        let parsed = ClassRef::from_name(class_name);
+        if let Some(component) = parsed.component_type() {
+            let loaded_component = self.load_class(component.java_name(), owner)?;
+            return Ok(ClassRef::array_of(loaded_component));
         }
         // Java primitiveClass:boolean/byte/char/short/int/long/float/double/void
         match class_name {
@@ -739,8 +740,8 @@ impl<'a> SerializableParseCacheImporter<'a> {
             "void" => return Ok(ClassRef::Named("void".to_string())),
             _ => {}
         }
-        // Rust 补充:Java 包装类名同样可确定为转换目标(ClassRef::from_name)
-        if let ClassRef::Primitive(_) = ClassRef::from_name(class_name) {
+        // Java 包装类与 BigInteger/BigDecimal 可在无宿主 classpath 时确定。
+        if let ClassRef::Boxed(_) = ClassRef::from_name(class_name) {
             return Ok(ClassRef::from_name(class_name));
         }
         // `java.lang.Object`:Java 的 Class.forName 恒可加载(Rust 无 classpath,
