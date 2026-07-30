@@ -24,6 +24,7 @@ pub struct BlackOperatorCheckStrategy {
 
 impl BlackOperatorCheckStrategy {
     /// Java 构造器 `BlackOperatorCheckStrategy(Set<String>)`。
+    /// 对应 Java: com.alibaba.qlexpress4.operator.BlackOperatorCheckStrategy#new。
     pub fn new(forbidden_operators: HashSet<String>) -> Self {
         BlackOperatorCheckStrategy {
             forbidden_operators,
@@ -31,11 +32,13 @@ impl BlackOperatorCheckStrategy {
     }
 
     /// Java `isAllowed(String)` —— 操作符不在黑名单中即允许。
+    /// 对应 Java: com.alibaba.qlexpress4.operator.BlackOperatorCheckStrategy#isAllowed。
     pub fn is_allowed(&self, operator: &str) -> bool {
         !self.forbidden_operators.contains(operator)
     }
 
     /// Java `getOperators()` —— 返回黑名单本身。
+    /// 对应 Java: com.alibaba.qlexpress4.operator.BlackOperatorCheckStrategy#operators。
     pub fn operators(&self) -> &HashSet<String> {
         &self.forbidden_operators
     }

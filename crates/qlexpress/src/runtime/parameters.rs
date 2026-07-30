@@ -8,6 +8,7 @@ use crate::runtime::value::{DataValue, QValue};
 /// Java `Parameters`. Elements keep their original stack order: index 0 is
 /// the deepest of the popped elements (Java `StackSwapParameters`).
 #[derive(Clone, Debug)]
+/// 对应 Java: com.alibaba.qlexpress4.runtime.Parameters。
 pub struct Parameters {
     values: Vec<QValue>,
 }
@@ -33,6 +34,7 @@ impl Parameters {
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/Parameters.java`，方法 `get`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `get(int)`: stack element at position `i`, `None` when `i`
     /// exceeds the parameters' length (Java returns `null`).
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.Parameters#get。
     pub fn get(&self, i: usize) -> Option<&QValue> {
         self.values.get(i)
     }
@@ -41,6 +43,7 @@ impl Parameters {
     /// 无显式参数；返回：`usize`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/Parameters.java`，方法 `size`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `size()`.
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.Parameters#size。
     pub fn size(&self) -> usize {
         self.values.len()
     }

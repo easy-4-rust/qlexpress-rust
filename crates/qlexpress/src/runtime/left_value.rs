@@ -9,6 +9,7 @@ use crate::runtime::value::{DataValue, Value};
 /// `LeftValue` 接口的 Rust 实现，保留对应对象的领域职责与公开契约。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/LeftValue.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// An assignable `Value`, mirroring Java `LeftValue`.
+/// 对应 Java: com.alibaba.qlexpress4.runtime.LeftValue。
 pub trait LeftValue: Value {
     /// 处理 defined type 对应的接口职责。
     /// 无显式参数；返回：`Option<TargetType>`。
@@ -71,6 +72,7 @@ impl dyn LeftValue {
     /// 无显式参数；返回：`String`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/LeftValue.java`，方法 `debugValue`；Rust 侧按所有权与 `Result` 语义适配。
     /// Helper to format this value for error messages.
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.LeftValue#debugValue。
     pub fn debug_value(&self) -> String {
         format!("{:?}", self.get())
     }

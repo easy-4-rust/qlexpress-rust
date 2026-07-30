@@ -24,6 +24,7 @@ use super::serializable_source::SerializableSource;
 /// 说明:Java 用 `LinkedHashMap` 保持操作数插入序;Rust 用
 /// `serde_json::Map`(默认 BTree 序)。键值集合完全一致,顺序不影响语义。
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+/// 对应 Java: com.alibaba.qlexpress4.api.parsecache.SerializableInstruction。
 pub struct SerializableInstruction {
     /// 指令操作码。对应 Java 字段 `opcode`。
     #[serde(default, skip_serializing_if = "Option::is_none")]

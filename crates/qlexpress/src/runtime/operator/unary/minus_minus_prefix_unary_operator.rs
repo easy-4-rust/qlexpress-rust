@@ -86,6 +86,7 @@ impl UnaryOperator for MinusMinusPrefixUnaryOperator {
 ///
 /// `pub(crate)`:Java 中该逻辑经 `NumberMath` 被前缀/后缀 `--` 共享,
 /// Rust 侧由后缀操作符复用本函数。
+/// 对应 Java: com.alibaba.qlexpress4.runtime.operator.unary.MinusMinusPrefixUnaryOperator#numberSubOne。
 pub(crate) fn number_sub_one(operand: &DataValue) -> DataValue {
     match operand {
         DataValue::Byte(v) => DataValue::Int((*v as i32).wrapping_sub(1)),

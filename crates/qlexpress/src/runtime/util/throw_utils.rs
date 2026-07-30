@@ -14,6 +14,7 @@ use crate::exception::QLException;
 /// `QLRuntimeException` analogue), so — exactly like the Java `instanceof`
 /// branch — the error passes through unchanged. The extra arguments are
 /// kept for call-site parity with Java and to document intent.
+/// 对应 Java: com.alibaba.qlexpress4.runtime.util.ThrowUtils#wrapThrowable。
 pub fn wrap_throwable(
     err: QLException,
     error_reporter: &dyn ErrorReporter,
@@ -44,6 +45,7 @@ pub fn wrap_throwable(
 /// [`QLException`] whose code is already `INVALID_ARGUMENT` (argument
 /// errors) or another code (business errors), mirroring how the Java
 /// catch sites re-report only the message.
+/// 对应 Java: com.alibaba.qlexpress4.runtime.util.ThrowUtils#reportUserDefinedException。
 pub fn report_user_defined_exception(
     error_reporter: &dyn ErrorReporter,
     err: &QLException,

@@ -8,6 +8,7 @@ use crate::runtime::value::{DataValue, Value};
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/data/AssignableDataValue.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Mirrors Java `AssignableDataValue`: a symbol table entry with an optional
 /// declared type.
+/// 对应 Java: com.alibaba.qlexpress4.runtime.data.AssignableDataValue。
 pub struct AssignableDataValue {
     symbol_name: Option<String>,
     value: DataValue,
@@ -19,6 +20,7 @@ impl AssignableDataValue {
     /// 参数：`symbol_name`、`value`；返回：`Self`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/data/AssignableDataValue.java`，构造器 `<init>`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `AssignableDataValue(String symbolName, Object value)`.
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.data.AssignableDataValue#new。
     pub fn new(symbol_name: impl Into<String>, value: DataValue) -> Self {
         AssignableDataValue {
             symbol_name: Some(symbol_name.into()),
@@ -32,6 +34,7 @@ impl AssignableDataValue {
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/data/AssignableDataValue.java`，方法 `withType`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `AssignableDataValue(String symbolName, Object value,
     /// Class<?> defineType)`.
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.data.AssignableDataValue#withType。
     pub fn with_type(
         symbol_name: impl Into<String>,
         value: DataValue,

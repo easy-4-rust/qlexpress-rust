@@ -24,6 +24,7 @@ impl QLFunctionUtil {
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/annotation/QLFunction.java`，方法 `containsQlFunctionForMethod`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `containsQLFunctionForMethod`: whether any `QLFunction` names
     /// were declared for the method.
+    /// 对应 Java: com.alibaba.qlexpress4.utils.QLFunctionUtil#containsQlFunctionForMethod。
     pub fn contains_ql_function_for_method(ql_function_names: Option<&[String]>) -> bool {
         ql_function_names.is_some()
     }

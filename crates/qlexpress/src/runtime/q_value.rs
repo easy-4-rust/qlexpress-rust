@@ -54,6 +54,7 @@ impl QValue {
     }
 
     /// 判断是否为 Java `LeftValue`。Rust 便捷方法。
+    /// 对应 Java: 无（Rust 原生适配）。
     pub fn is_left(&self) -> bool {
         matches!(self, QValue::Left(_))
     }

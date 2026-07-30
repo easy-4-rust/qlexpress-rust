@@ -25,6 +25,7 @@ impl QLStringUtils {
     /// Recognized escapes: `\b \t \n \f \r \" \' \\ \$`. An unknown escape
     /// silently drops both characters (as in the Java switch with no
     /// default branch).
+    /// 对应 Java: com.alibaba.qlexpress4.utils.QLStringUtils#parseStringEscapeStartEnd。
     pub fn parse_string_escape_start_end(origin_str: &str, start: usize, end: usize) -> String {
         const INIT: u8 = 0;
         const ESCAPE: u8 = 1;

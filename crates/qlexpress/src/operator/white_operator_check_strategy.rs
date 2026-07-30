@@ -26,16 +26,19 @@ impl WhiteOperatorCheckStrategy {
     /// Java 构造器 `WhiteOperatorCheckStrategy(Set<String>)`。
     ///
     /// 与 Java 一致：传入 `null` 时退化为空集；Rust 侧以 `Default` 表达。
+    /// 对应 Java: com.alibaba.qlexpress4.operator.WhiteOperatorCheckStrategy#new。
     pub fn new(allowed_operators: HashSet<String>) -> Self {
         WhiteOperatorCheckStrategy { allowed_operators }
     }
 
     /// Java `isAllowed(String)` —— 操作符必须在白名单中才允许。
+    /// 对应 Java: com.alibaba.qlexpress4.operator.WhiteOperatorCheckStrategy#isAllowed。
     pub fn is_allowed(&self, operator: &str) -> bool {
         self.allowed_operators.contains(operator)
     }
 
     /// Java `getOperators()` —— 返回白名单本身。
+    /// 对应 Java: com.alibaba.qlexpress4.operator.WhiteOperatorCheckStrategy#operators。
     pub fn operators(&self) -> &HashSet<String> {
         &self.allowed_operators
     }

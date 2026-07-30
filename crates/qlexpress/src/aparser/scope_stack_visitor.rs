@@ -18,6 +18,7 @@ use super::syntax_tree_factory::{
 /// Java `ScopeStackVisitor` 的 `existStack` 字段。
 /// The `existStack` field of Java `ScopeStackVisitor`.
 #[derive(Clone, Debug)]
+/// 对应 Java: com.alibaba.qlexpress4.aparser.ScopeStackVisitor。
 pub struct ScopeStack<S: ExistStack> {
     stack: S,
 }
@@ -41,6 +42,7 @@ impl<S: ExistStack> ScopeStack<S> {
     /// 无显式参数；返回：无。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/ScopeStackVisitor.java`，方法 `pop`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `pop()`.
+    /// 对应 Java: com.alibaba.qlexpress4.aparser.ScopeStackVisitor#pop。
     pub fn pop(&mut self) {
         self.stack = self.stack.pop();
     }
@@ -49,6 +51,7 @@ impl<S: ExistStack> ScopeStack<S> {
     /// 无显式参数；返回：`&S`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/ScopeStackVisitor.java`，方法 `stack`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `getStack()`.
+    /// 对应 Java: com.alibaba.qlexpress4.aparser.ScopeStackVisitor#stack。
     pub fn stack(&self) -> &S {
         &self.stack
     }
@@ -57,6 +60,7 @@ impl<S: ExistStack> ScopeStack<S> {
     /// 无显式参数；返回：`&mut S`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/ScopeStackVisitor.java`，方法 `stackMut`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `getStack()` mutable (for `add`).
+    /// 对应 Java: com.alibaba.qlexpress4.aparser.ScopeStackVisitor#stackMut。
     pub fn stack_mut(&mut self) -> &mut S {
         &mut self.stack
     }
@@ -67,6 +71,7 @@ impl<S: ExistStack> ScopeStack<S> {
 /// The scope-aware `visit*` overrides of Java `ScopeStackVisitor`, provided
 /// as default methods. Concrete visitors implement [`ScopedVisitor`] and
 /// forward from their [`Visitor`] implementation.
+/// 对应 Java: com.alibaba.qlexpress4.aparser.ScopeStackVisitor。
 pub trait ScopedVisitor: Visitor<T = ()> {
     /// 处理 scope stack 对应的接口职责。
     /// 无显式参数；返回：`&mut ScopeStack<ExistVarStack>`。

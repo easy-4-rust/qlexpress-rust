@@ -148,6 +148,7 @@ impl QvmGlobalScope {
     }
 
     /// 外部变量上下文(Java `externalVariable` 字段)。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.QvmGlobalScope#externalVariable。
     pub fn external_variable(&self) -> &Rc<dyn ExpressContext> {
         &self.external_variable
     }

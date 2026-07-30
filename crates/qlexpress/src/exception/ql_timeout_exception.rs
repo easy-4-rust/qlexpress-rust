@@ -5,6 +5,7 @@ use crate::runtime::value::DataValue;
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/QLTimeoutException.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Script-timeout error, mirroring Java `QLTimeoutException`.
 #[derive(Clone, Debug)]
+/// 对应 Java: com.alibaba.qlexpress4.exception.QLTimeoutException。
 pub struct QLTimeoutException {
     inner: QLException,
 }
@@ -15,6 +16,7 @@ impl QLTimeoutException {
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/QLTimeoutException.java`，方法 `forTest`；Rust 侧按所有权与 `Result` 语义适配。
     /// Mirrors the Java "Visible for test"
     /// `QLTimeoutException(catchObj, reason, errorCode)` constructor.
+    /// 对应 Java: com.alibaba.qlexpress4.exception.QLTimeoutException#forTest。
     pub fn for_test(catch_obj: Option<DataValue>, reason: &str, error_code: &str) -> Self {
         let mut inner = QLException::for_test(QLExceptionKind::Timeout, reason, error_code);
         if let Some(obj) = catch_obj {

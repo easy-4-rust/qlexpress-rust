@@ -196,6 +196,7 @@ impl MemberResolver {
     }
 
     /// 在带 `varargs` 标记的签名列表中选择最佳候选下标。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.MemberResolver#resolveCandidateIndex。
     pub fn resolve_candidate_index(
         candidates: &[(Vec<ClassRef>, bool)],
         arg_types: &[ClassRef],

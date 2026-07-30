@@ -24,6 +24,7 @@ enum FieldConversionKind {
 ///
 /// 结果为 `bool`：只有 Java `ObjTypeConvertor` 可接受的标量转换才写入。
 /// 不支持的宿主类型保持只读，由运行时报告 `INVALID_ASSIGNMENT`。
+/// 对应 Java: 无（Rust 原生适配）。
 pub fn assign_data_value_to_field(
     ty: &syn::Type,
     field: TokenStream,
@@ -96,6 +97,7 @@ fn field_conversion_kind(ty: &syn::Type) -> Option<FieldConversionKind> {
 }
 
 /// 生成把 Rust 字段值包装为 `DataValue` 的表达式。
+/// 对应 Java: 无（Rust 原生适配）。
 pub fn expr_to_data_value(ty: &syn::Type, val: TokenStream) -> TokenStream {
     let path = match last_path_segment(ty) {
         Some(path) => path,

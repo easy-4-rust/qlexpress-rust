@@ -37,6 +37,7 @@ impl ReflectLoader {
     }
 
     /// 以既有注册表创建加载器。Rust 宿主集成便捷入口，Java 无同名方法。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.ReflectLoader#fromRegistry。
     pub fn from_registry(registry: Rc<NativeRegistry>, allow_private_access: bool) -> Self {
         Self {
             registry,
@@ -45,11 +46,13 @@ impl ReflectLoader {
     }
 
     /// 获取底层原生注册表。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.ReflectLoader#registry。
     pub fn registry(&self) -> &Rc<NativeRegistry> {
         &self.registry
     }
 
     /// 当注册表尚未被运行时共享时获取可变引用，供宿主注册成员。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.ReflectLoader#registryMut。
     pub fn registry_mut(&mut self) -> Option<&mut NativeRegistry> {
         Rc::get_mut(&mut self.registry)
     }

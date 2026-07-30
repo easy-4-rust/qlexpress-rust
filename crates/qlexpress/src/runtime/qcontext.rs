@@ -24,6 +24,7 @@ use crate::runtime::value::{DataValue, QValue};
 /// Method set = Java `QRuntime` (time/attachments/registry/traces) + Java
 /// `QScope` (symbols, functions, operand stack, scope chain) + Java
 /// `QContext` (`getCurrentScope`/`closeScope`).
+/// 对应 Java: com.alibaba.qlexpress4.runtime.QContext。
 pub trait QContext {
     // ---- Java QRuntime ----
 

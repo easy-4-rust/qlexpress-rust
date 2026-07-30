@@ -45,10 +45,9 @@ fn add_function_with_java_functional_test() {
     runner.add_function_unary("isPos", |value: DataValue| {
         DataValue::Bool(qlexpress::runtime::data::convert::to_i64(&value) > 0)
     });
-    runner.add_function(
-        "notify",
-        |_ctx: &mut dyn QContext, _params: &Parameters| Ok(DataValue::Null),
-    );
+    runner.add_function("notify", |_ctx: &mut dyn QContext, _params: &Parameters| {
+        Ok(DataValue::Null)
+    });
     runner.add_function_unary("print", |_value: DataValue| DataValue::Null);
 
     assert_eq!(run_int(&runner, "inc(1)"), 2);

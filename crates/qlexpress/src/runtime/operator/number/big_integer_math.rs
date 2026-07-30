@@ -25,6 +25,7 @@ impl BigIntegerMath {
     /// 参数：`number`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/BigIntegerMath.java`，方法 `absImpl`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `absImpl`。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.BigIntegerMath#absImpl。
     pub fn abs_impl(number: &DataValue) -> Result<DataValue, QLException> {
         Ok(DataValue::BigInt(big_value(number).abs()))
     }
@@ -33,6 +34,7 @@ impl BigIntegerMath {
     /// 参数：`left`、`right`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/BigIntegerMath.java`，方法 `addImpl`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `addImpl`。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.BigIntegerMath#addImpl。
     pub fn add_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
         Ok(DataValue::BigInt(big_value(left) + big_value(right)))
     }
@@ -41,6 +43,7 @@ impl BigIntegerMath {
     /// 参数：`left`、`right`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/BigIntegerMath.java`，方法 `subtractImpl`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `subtractImpl`。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.BigIntegerMath#subtractImpl。
     pub fn subtract_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
         Ok(DataValue::BigInt(big_value(left) - big_value(right)))
     }
@@ -49,11 +52,13 @@ impl BigIntegerMath {
     /// 参数：`left`、`right`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/BigIntegerMath.java`，方法 `multiplyImpl`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `multiplyImpl`。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.BigIntegerMath#multiplyImpl。
     pub fn multiply_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
         Ok(DataValue::BigInt(big_value(left) * big_value(right)))
     }
 
     /// Java `divideImpl`:委托 BigDecimalMath。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.BigIntegerMath#divideImpl。
     pub fn divide_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
         BigDecimalMath::divide_impl(left, right)
     }
@@ -62,6 +67,7 @@ impl BigIntegerMath {
     /// 参数：`left`、`right`；返回：`i32`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/BigIntegerMath.java`，方法 `compareToImpl`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `compareToImpl`。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.BigIntegerMath#compareToImpl。
     pub fn compare_to_impl(left: &DataValue, right: &DataValue) -> i32 {
         match big_value(left).cmp(&big_value(right)) {
             std::cmp::Ordering::Less => -1,
@@ -71,6 +77,7 @@ impl BigIntegerMath {
     }
 
     /// Java `intDivImpl`(截断向零;除零抛 "/ by zero")。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.BigIntegerMath#intDivImpl。
     pub fn int_div_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
         let divisor = big_value(right);
         if divisor.is_zero() {
@@ -82,6 +89,7 @@ impl BigIntegerMath {
 
     /// Java `modImpl`:BigInteger.mod 恒非负,模数非正抛
     /// ArithmeticException("BigInteger: modulus not positive")。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.BigIntegerMath#modImpl。
     pub fn mod_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
         let modulus = big_value(right);
         if modulus <= BigInt::zero() {
@@ -98,6 +106,7 @@ impl BigIntegerMath {
     }
 
     /// Java `remainderImpl`:BigInteger.remainder 符号跟随被除数。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.BigIntegerMath#remainderImpl。
     pub fn remainder_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
         let divisor = big_value(right);
         if divisor.is_zero() {
@@ -111,6 +120,7 @@ impl BigIntegerMath {
     /// 参数：`left`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/BigIntegerMath.java`，方法 `unaryMinusImpl`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `unaryMinusImpl`。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.BigIntegerMath#unaryMinusImpl。
     pub fn unary_minus_impl(left: &DataValue) -> Result<DataValue, QLException> {
         Ok(DataValue::BigInt(-big_value(left)))
     }
@@ -119,11 +129,13 @@ impl BigIntegerMath {
     /// 参数：`left`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/BigIntegerMath.java`，方法 `unaryPlusImpl`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `unaryPlusImpl`。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.BigIntegerMath#unaryPlusImpl。
     pub fn unary_plus_impl(left: &DataValue) -> Result<DataValue, QLException> {
         Ok(DataValue::BigInt(big_value(left)))
     }
 
     /// Java `bitwiseNegateImpl`(`BigInteger.not` == 按位取反 == -x-1)。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.BigIntegerMath#bitwiseNegateImpl。
     pub fn bitwise_negate_impl(left: &DataValue) -> Result<DataValue, QLException> {
         Ok(DataValue::BigInt(!big_value(left)))
     }
@@ -132,6 +144,7 @@ impl BigIntegerMath {
     /// 参数：`left`、`right`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/BigIntegerMath.java`，方法 `orImpl`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `orImpl`。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.BigIntegerMath#orImpl。
     pub fn or_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
         Ok(DataValue::BigInt(big_value(left) | big_value(right)))
     }
@@ -140,6 +153,7 @@ impl BigIntegerMath {
     /// 参数：`left`、`right`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/BigIntegerMath.java`，方法 `andImpl`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `andImpl`。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.BigIntegerMath#andImpl。
     pub fn and_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
         Ok(DataValue::BigInt(big_value(left) & big_value(right)))
     }
@@ -148,11 +162,13 @@ impl BigIntegerMath {
     /// 参数：`left`、`right`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/BigIntegerMath.java`，方法 `xorImpl`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `xorImpl`。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.BigIntegerMath#xorImpl。
     pub fn xor_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
         Ok(DataValue::BigInt(big_value(left) ^ big_value(right)))
     }
 
     /// Java `leftShiftImpl`(`BigInteger.shiftLeft(int)`；负距离等价右移)。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.BigIntegerMath#leftShiftImpl。
     pub fn left_shift_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
         let distance = convert::to_i64(right) as i32;
         if distance < 0 {
@@ -162,6 +178,7 @@ impl BigIntegerMath {
     }
 
     /// Java `rightShiftImpl`(`BigInteger.shiftRight(int)`,算术右移)。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.BigIntegerMath#rightShiftImpl。
     pub fn right_shift_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
         let distance = convert::to_i64(right) as i32;
         if distance < 0 {

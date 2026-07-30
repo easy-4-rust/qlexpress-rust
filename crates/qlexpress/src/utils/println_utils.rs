@@ -18,6 +18,7 @@ impl PrintlnUtils {
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/utils/PrintlnUtils.java`，方法 `buildIndentString`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `buildIndentString`: indent with `"  "` per level, the last
     /// level being `"| "`.
+    /// 对应 Java: com.alibaba.qlexpress4.utils.PrintlnUtils#buildIndentString。
     pub fn build_indent_string(indent: i32, origin_str: &str) -> String {
         let mut builder = String::new();
         for i in 0..indent {

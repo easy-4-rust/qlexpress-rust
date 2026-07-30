@@ -47,6 +47,8 @@ struct DifferentialRecord {
     trace_count: usize,
 }
 
+/// 对应 Java: 无（Rust 原生适配）。
+
 pub fn run(corpus: &Path, output: &Path) -> Result<(), String> {
     let input =
         File::open(corpus).map_err(|error| format!("open corpus {}: {error}", corpus.display()))?;

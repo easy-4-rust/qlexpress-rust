@@ -92,8 +92,11 @@ const TIMEOUT_CHECK_GAP: i32 = 5;
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/QvmInstructionVisitor.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Java `QvmInstructionVisitor.Context`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+/// 对应 Java: com.alibaba.qlexpress4.aparser.QvmInstructionVisitor。
 pub enum Context {
+    /// 普通语句块。
     Block,
+    /// 宏展开语句块。
     Macro,
 }
 
@@ -126,6 +129,7 @@ pub type UserDefineFunctions = HashMap<String, Rc<dyn CustomFunction>>;
 /// `QvmInstructionVisitor` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/QvmInstructionVisitor.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Java `QvmInstructionVisitor`.
+/// 对应 Java: com.alibaba.qlexpress4.aparser.QvmInstructionVisitor。
 pub struct QvmInstructionVisitor<'a> {
     script: &'a str,
     /// `RefCell` because `visitImportCls`/`visitImportPack` mutate it
@@ -170,6 +174,7 @@ impl<'a> QvmInstructionVisitor<'a> {
     /// Java main constructor: `new QvmInstructionVisitor(script,
     /// importManager, globalScope, operatorFactory, compileTimeFunctions,
     /// userDefineFunctions, initOptions)`.
+    /// 对应 Java: com.alibaba.qlexpress4.aparser.QvmInstructionVisitor#new。
     pub fn new(
         script: &'a str,
         import_manager: &'a RefCell<ImportManager<'a>>,
@@ -199,6 +204,7 @@ impl<'a> QvmInstructionVisitor<'a> {
     /// compileTimeFunctions, userDefineFunctions, initOptions)` —
     /// used by `Express4Runner.parseMacroDefine` with `Context.MACRO`.
     #[allow(clippy::too_many_arguments)]
+    /// 对应 Java: com.alibaba.qlexpress4.aparser.QvmInstructionVisitor#withContext。
     pub fn with_context(
         script: &'a str,
         import_manager: &'a RefCell<ImportManager<'a>>,
@@ -268,6 +274,7 @@ impl<'a> QvmInstructionVisitor<'a> {
     /// 无显式参数；返回：`&[Instruction]`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/instruction/QLInstruction.java`，方法 `instructions`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `getInstructions`.
+    /// 对应 Java: com.alibaba.qlexpress4.aparser.QvmInstructionVisitor#instructions。
     pub fn instructions(&self) -> &[Instruction] {
         &self.instruction_list
     }
@@ -276,6 +283,7 @@ impl<'a> QvmInstructionVisitor<'a> {
     /// 无显式参数；返回：`Vec<Instruction>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/QvmInstructionVisitor.java`，方法 `takeInstructions`；Rust 侧按所有权与 `Result` 语义适配。
     /// Take the compiled instruction list (sub-visitor handover).
+    /// 对应 Java: com.alibaba.qlexpress4.aparser.QvmInstructionVisitor#takeInstructions。
     pub fn take_instructions(self) -> Vec<Instruction> {
         self.instruction_list
     }
@@ -284,6 +292,7 @@ impl<'a> QvmInstructionVisitor<'a> {
     /// 无显式参数；返回：`usize`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/QvmInstructionVisitor.java`，方法 `maxStackSize`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `getMaxStackSize`.
+    /// 对应 Java: com.alibaba.qlexpress4.aparser.QvmInstructionVisitor#maxStackSize。
     pub fn max_stack_size(&self) -> usize {
         self.max_stack_size as usize
     }
@@ -292,6 +301,7 @@ impl<'a> QvmInstructionVisitor<'a> {
     /// 无显式参数；返回：`Option<&QLSyntaxException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/QvmInstructionVisitor.java`，方法 `syntaxError`；Rust 侧按所有权与 `Result` 语义适配。
     /// The first recorded syntax error, if any (Java: thrown).
+    /// 对应 Java: com.alibaba.qlexpress4.aparser.QvmInstructionVisitor#syntaxError。
     pub fn syntax_error(&self) -> Option<&QLSyntaxException> {
         self.syntax_error.as_ref()
     }
@@ -301,6 +311,7 @@ impl<'a> QvmInstructionVisitor<'a> {
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/QvmInstructionVisitor.java`，方法 `compile`；Rust 侧按所有权与 `Result` 语义适配。
     /// Compile `tree` and return the instructions plus max stack size, or
     /// the first syntax error (Java: the exception unwinds `accept`).
+    /// 对应 Java: com.alibaba.qlexpress4.aparser.QvmInstructionVisitor#compile。
     pub fn compile(mut self, tree: &Node) -> Result<(Vec<Instruction>, usize), QLSyntaxException> {
         tree.accept(&mut self);
         match self.syntax_error {
@@ -3549,6 +3560,7 @@ impl CodeGenerator for VisitorCodeGenerator<'_, '_> {
 /// Returns the instructions and the max operand-stack size (for
 /// `QLambdaDefinitionInner`), or the first syntax error.
 #[allow(clippy::too_many_arguments)]
+/// 对应 Java: com.alibaba.qlexpress4.aparser.QvmInstructionVisitor#compileScript。
 pub fn compile_script<'a>(
     script: &'a str,
     tree: &Node,

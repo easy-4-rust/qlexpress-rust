@@ -38,8 +38,11 @@ pub struct QScope {
 
 /// 作用域节点负载:全局作用域或块作用域(Java `QvmBlockScope`)。
 /// Java 无同名类(Rust 适配枚举)。
+/// 对应 Java: com.alibaba.qlexpress4.runtime.scope.QScope。
 pub enum QScopeKind {
+    /// 全局执行作用域。
     Global(QvmGlobalScope),
+    /// 块级执行作用域。
     Block(QvmBlockScope),
 }
 
@@ -60,6 +63,7 @@ impl QScope {
     /// Java `new QvmBlockScope(parent, symbolTable, maxStackSize, ...)`:
     /// child scope with a **fresh** operand stack (used by lambda
     /// invocation and for/while scopes).
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.scope.QScope#blockFreshStack。
     pub fn block_fresh_stack(
         parent: &ScopeRef,
         symbol_table: SymbolTable,
@@ -77,6 +81,7 @@ impl QScope {
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/scope/QScope.java`，方法 `newScope`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `QvmBlockScope.newScope()`: child scope **reusing** the parent
     /// operand stack.
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.scope.QScope#newScope。
     pub fn new_scope(this: &ScopeRef) -> ScopeRef {
         let stack = this
             .borrow()
@@ -95,6 +100,7 @@ impl QScope {
     /// 参数：`this`；返回：`Option<ScopeRef>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/scope/QScope.java`，方法 `parent`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `getParent()`.
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.scope.QScope#parent。
     pub fn parent(this: &ScopeRef) -> Option<ScopeRef> {
         this.borrow().parent.as_ref().map(Rc::clone)
     }
@@ -105,6 +111,7 @@ impl QScope {
     /// 返回 `Result`(Stage 5a 接线改动):全局作用域的外部变量查询走
     /// `ExpressContext`,其动态求值(如 `DynamicVariableContext`)可能失败,
     /// 与 Java 中 `ExpressContext.get` 抛运行期异常上抛一致。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.scope.QScope#getSymbol。
     pub fn get_symbol(
         this: &ScopeRef,
         var_name: &str,
@@ -129,6 +136,7 @@ impl QScope {
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/Value.java`，方法 `getSymbolValue`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java default `getSymbolValue`: inner data, `None` when absent
     /// (Java `null`).
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.scope.QScope#getSymbolValue。
     pub fn get_symbol_value(
         this: &ScopeRef,
         var_name: &str,
@@ -140,6 +148,7 @@ impl QScope {
     /// 参数：`this`、`var_name`、`var_clz`、`value`；返回：无。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/scope/QScope.java`，方法 `defineLocalSymbol`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `QvmBlockScope.defineLocalSymbol`.
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.scope.QScope#defineLocalSymbol。
     pub fn define_local_symbol(
         this: &ScopeRef,
         var_name: &str,
@@ -165,6 +174,7 @@ impl QScope {
     /// 参数：`this`、`function_name`、`function`；返回：无。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/scope/QScope.java`，方法 `defineFunction`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `QvmBlockScope.defineFunction`.
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.scope.QScope#defineFunction。
     pub fn define_function(this: &ScopeRef, function_name: &str, function: Rc<dyn CustomFunction>) {
         let mut borrowed = this.borrow_mut();
         match &mut borrowed.kind {
@@ -181,6 +191,7 @@ impl QScope {
     /// 参数：`this`、`function_name`；返回：`Option<Rc<dyn CustomFunction>>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/annotation/QLFunction.java`，方法 `getFunction`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `getFunction`: local table first, then the parent chain.
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.scope.QScope#getFunction。
     pub fn get_function(this: &ScopeRef, function_name: &str) -> Option<Rc<dyn CustomFunction>> {
         let (local, parent) = {
             let borrowed = this.borrow();
@@ -202,6 +213,7 @@ impl QScope {
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/annotation/QLFunction.java`，方法 `functionTable`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `getFunctionTable`: the current scope's own table (not merged
     /// with parents).
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.scope.QScope#functionTable。
     pub fn function_table(this: &ScopeRef) -> HashMap<String, Rc<dyn CustomFunction>> {
         let borrowed = this.borrow();
         match &borrowed.kind {
@@ -214,6 +226,7 @@ impl QScope {
     /// 参数：`this`；返回：`Rc<RefCell<FixedSizeStack>>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/scope/QScope.java`，方法 `stack`；Rust 侧按所有权与 `Result` 语义适配。
     /// The shared operand stack handle.
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.scope.QScope#stack。
     pub fn stack(this: &ScopeRef) -> Rc<RefCell<FixedSizeStack>> {
         this.borrow()
             .stack
@@ -226,6 +239,7 @@ impl QScope {
     /// 参数：`this`、`value`；返回：无。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/scope/QScope.java`，方法 `push`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `push(Value)`.
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.scope.QScope#push。
     pub fn push(this: &ScopeRef, value: QValue) {
         Self::stack(this).borrow_mut().push(value);
     }
@@ -235,6 +249,7 @@ impl QScope {
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/scope/QScope.java`，方法 `pop`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `pop()`: top element. Panics on empty stack, like Java's
     /// `FixedSizeStack` array access.
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.scope.QScope#pop。
     pub fn pop(this: &ScopeRef) -> QValue {
         Self::stack(this).borrow_mut().pop()
     }
@@ -244,6 +259,7 @@ impl QScope {
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/scope/QScope.java`，方法 `popN`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `pop(int number)`: the top `number` elements in stack order
     /// (deepest first).
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.scope.QScope#popN。
     pub fn pop_n(this: &ScopeRef, number: usize) -> Parameters {
         Self::stack(this).borrow_mut().pop_n(number)
     }
@@ -252,6 +268,7 @@ impl QScope {
     /// 参数：`this`；返回：`QValue`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/scope/QScope.java`，方法 `peek`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `peek()`: top element without popping.
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.scope.QScope#peek。
     pub fn peek(this: &ScopeRef) -> QValue {
         Self::stack(this).borrow().peak()
     }
@@ -260,6 +277,7 @@ impl QScope {
     /// 参数：`this`；返回：`bool`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/scope/QScope.java`，方法 `stackIsEmpty`；Rust 侧按所有权与 `Result` 语义适配。
     /// Whether the operand stack is empty.
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.scope.QScope#stackIsEmpty。
     pub fn stack_is_empty(this: &ScopeRef) -> bool {
         Self::stack(this).borrow().is_empty()
     }

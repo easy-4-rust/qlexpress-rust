@@ -13,16 +13,27 @@ use super::{to_big_dec_string, to_big_int, to_f64, to_i64};
 /// Conversion target, standing in for the Java `Class<?>` parameter of
 /// `ObjTypeConvertor.cast`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+/// 对应 Java: com.alibaba.qlexpress4.runtime.data.convert.ObjTypeConvertor。
 pub enum TargetType {
+    /// Java `Boolean` 类型或语义类别。
     Boolean,
+    /// Java `Byte` 类型或语义类别。
     Byte,
+    /// Java `Short` 类型或语义类别。
     Short,
+    /// Java `Int` 类型或语义类别。
     Int,
+    /// Java `Long` 类型或语义类别。
     Long,
+    /// Java `Float` 类型或语义类别。
     Float,
+    /// Java `Double` 类型或语义类别。
     Double,
+    /// Java `BigInteger` 类型或语义类别。
     BigInteger,
+    /// Java `BigDecimal` 类型或语义类别。
     BigDecimal,
+    /// Java `Character` 类型或语义类别。
     Character,
     /// Java `Object.class` — accepts any value unchanged.
     Any,
@@ -33,6 +44,7 @@ impl TargetType {
     /// 无显式参数；返回：`&'static str`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/data/convert/ObjTypeConvertor.java`，方法 `javaName`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `Class.getName()`-style display, used in error messages.
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.data.convert.ObjTypeConvertor#javaName。
     pub fn java_name(self) -> &'static str {
         match self {
             TargetType::Boolean => "java.lang.Boolean",
@@ -55,6 +67,7 @@ impl TargetType {
 /// Result of a conversion attempt, mirroring Java
 /// `ObjTypeConvertor.QConverted`.
 #[derive(Clone, Debug, PartialEq)]
+/// 对应 Java: com.alibaba.qlexpress4.runtime.data.convert.ObjTypeConvertor。
 pub struct QConverted {
     convertible: bool,
     /// The converted value; `DataValue::Null` when not convertible
@@ -162,6 +175,7 @@ impl ObjTypeConvertor {
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/data/convert/ObjTypeConvertor.java`，方法 `castOpt`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `ObjTypeConvertor.cast` overload taking a nullable `Class<?>`;
     /// `None` mirrors `type == null` (no conversion needed).
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.data.convert.ObjTypeConvertor#castOpt。
     pub fn cast_opt(value: &DataValue, target: Option<TargetType>) -> QConverted {
         match target {
             None => QConverted::converted(value.clone()),

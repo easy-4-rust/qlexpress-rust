@@ -22,10 +22,15 @@ use crate::runtime::value::DataValue;
 /// - `catch_type`: type-name filter (Java FQN, e.g. `java.lang.Exception`);
 ///   `None` matches any exception (`finally`-style handlers).
 #[derive(Clone, Debug)]
+/// 对应 Java: com.alibaba.qlexpress4.runtime.ExceptionTable。
 pub struct ExceptionTableEntry {
+    /// 异常处理区间的起始指令位置（包含）。
     pub start_pc: usize,
+    /// 异常处理区间的结束指令位置（不包含）。
     pub end_pc: usize,
+    /// 匹配异常后跳转的处理器指令位置。
     pub handler_pc: usize,
+    /// 可捕获的 Java 异常类型；为空表示 finally/catch-all。
     pub catch_type: Option<String>,
 }
 
@@ -77,6 +82,7 @@ impl ExceptionTable {
     /// Locate the first handler matching `pc` whose `catch_type` matches
     /// `exception.data_type_name()`. When `catch_type` is `None`, the
     /// handler matches any exception.
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.ExceptionTable#lookup。
     pub fn lookup(&self, pc: usize, exception: &DataValue) -> Option<usize> {
         let exc_type = exception.data_type_name();
         self.entries

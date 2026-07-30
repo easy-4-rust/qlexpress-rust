@@ -67,6 +67,7 @@ fn domain_of(value: &DataValue) -> Option<MathDomain> {
 }
 
 /// Java `NumberMath.getMath(left, right)` 提升矩阵：取两侧数域的较高者。
+/// 对应 Java: 无（Rust 原生适配）。
 pub fn math_domain(left: &DataValue, right: &DataValue) -> Option<MathDomain> {
     let l = domain_of(left)?;
     let r = domain_of(right)?;
@@ -92,6 +93,7 @@ pub fn number_compare(left: &DataValue, right: &DataValue) -> Option<Ordering> {
 }
 
 /// 按指定数域提升两侧操作数（Java `NumberMath` 操作数提升）。
+/// 对应 Java: 无（Rust 原生适配）。
 pub fn promote(left: &DataValue, right: &DataValue, domain: MathDomain) -> (DataValue, DataValue) {
     let conv = |v: &DataValue| -> DataValue {
         match domain {
@@ -109,6 +111,7 @@ pub fn promote(left: &DataValue, right: &DataValue, domain: MathDomain) -> (Data
 /// 参数：`value`；返回：`f64`。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/NumberMath.java`，方法 `toF64`；Rust 侧按所有权与 `Result` 语义适配。
 /// Java `Number.doubleValue()`。
+/// 对应 Java: 无（Rust 原生适配）。
 pub fn to_f64(value: &DataValue) -> f64 {
     match value {
         DataValue::Byte(v) => *v as f64,
@@ -127,6 +130,7 @@ pub fn to_f64(value: &DataValue) -> f64 {
 
 /// 转换为 `i128`。对任意精度整数保留低 128 位，等价于 Java
 /// `BigInteger.longValue()` 的二进制补码截断规则扩展到 128 位。
+/// 对应 Java: 无（Rust 原生适配）。
 pub fn to_i128(value: &DataValue) -> i128 {
     match value {
         DataValue::Byte(v) => *v as i128,
@@ -145,6 +149,7 @@ pub fn to_i128(value: &DataValue) -> i128 {
 /// 参数：`value`；返回：`i64`。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/NumberMath.java`，方法 `toI64`；Rust 侧按所有权与 `Result` 语义适配。
 /// Java `Number.longValue()`。
+/// 对应 Java: 无（Rust 原生适配）。
 pub fn to_i64(value: &DataValue) -> i64 {
     match value {
         DataValue::Byte(v) => *v as i64,
@@ -160,6 +165,7 @@ pub fn to_i64(value: &DataValue) -> i64 {
 }
 
 /// 转换到 Java `BigInteger` 数域。
+/// 对应 Java: 无（Rust 原生适配）。
 pub fn to_big_int(value: &DataValue) -> BigInt {
     match value {
         DataValue::Byte(v) => BigInt::from(*v),
@@ -177,6 +183,7 @@ pub fn to_big_int(value: &DataValue) -> BigInt {
 /// Java `NumberMath.toBigDecimal(n)` 在本项目的字符串存储形态：
 /// 整数保留精确位数；二进制浮点使用最短可往返表示
 /// （近似 Java `new BigDecimal(double)` 的精确展开，详见 stage notes）。
+/// 对应 Java: 无（Rust 原生适配）。
 pub fn to_big_dec_string(value: &DataValue) -> String {
     match value {
         DataValue::Byte(v) => v.to_string(),
@@ -192,11 +199,13 @@ pub fn to_big_dec_string(value: &DataValue) -> String {
 }
 
 /// Java `BigDecimal.toBigInteger()`：向零截断小数部分。
+/// 对应 Java: 无（Rust 原生适配）。
 pub fn big_dec_to_i128(dec: &str) -> i128 {
     big_int_low_i128(&big_dec_to_big_int(dec))
 }
 
 /// Java `BigDecimal.toBigInteger()`：向零截断小数部分并保持任意精度。
+/// 对应 Java: 无（Rust 原生适配）。
 pub fn big_dec_to_big_int(dec: &str) -> BigInt {
     let (negative, int_part, _) = split_decimal(dec);
     let digits = int_part.trim_start_matches('0');
@@ -240,6 +249,7 @@ fn big_int_low_i64(value: &BigInt) -> i64 {
 
 /// 按数值比较两个十进制字符串（与 `BigDecimal.compareTo` 一致，忽略 scale：
 /// `1.0 == 1.00`）。
+/// 对应 Java: 无（Rust 原生适配）。
 pub fn big_dec_compare(a: &str, b: &str) -> Ordering {
     let (neg_a, int_a, frac_a) = split_decimal(a);
     let (neg_b, int_b, frac_b) = split_decimal(b);

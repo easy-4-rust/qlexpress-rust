@@ -9,13 +9,17 @@ pub mod default_err_reporter;
 pub mod error_codes;
 pub mod error_reporter;
 pub mod ex_message_util;
+/// `exception_factory` 子模块。
 pub mod exception_factory;
 pub mod lsp;
 pub mod pure_err_reporter;
 pub mod ql_exception;
 pub mod ql_runtime_exception;
+/// `ql_syntax_exception` 子模块。
 pub mod ql_syntax_exception;
+/// `ql_timeout_exception` 子模块。
 pub mod ql_timeout_exception;
+/// `user_define_exception` 子模块。
 pub mod user_define_exception;
 
 pub use default_err_reporter::DefaultErrReporter;

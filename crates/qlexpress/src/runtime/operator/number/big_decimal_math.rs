@@ -439,11 +439,13 @@ impl BigDecimalMath {
     /// 参数：`number`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/BigDecimalMath.java`，方法 `absImpl`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `absImpl`。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.BigDecimalMath#absImpl。
     pub fn abs_impl(number: &DataValue) -> Result<DataValue, QLException> {
         Ok(DataValue::BigDec(dec_of(number).abs().to_plain_string()))
     }
 
     /// Java `addImpl`(精确,scale 取两边较大)。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.BigDecimalMath#addImpl。
     pub fn add_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
         Ok(DataValue::BigDec(
             add_sub(&dec_of(left), &dec_of(right), false).to_plain_string(),
@@ -454,6 +456,7 @@ impl BigDecimalMath {
     /// 参数：`left`、`right`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/BigDecimalMath.java`，方法 `subtractImpl`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `subtractImpl`。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.BigDecimalMath#subtractImpl。
     pub fn subtract_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
         Ok(DataValue::BigDec(
             add_sub(&dec_of(left), &dec_of(right), true).to_plain_string(),
@@ -461,6 +464,7 @@ impl BigDecimalMath {
     }
 
     /// Java `multiplyImpl`(精确,scale 相加)。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.BigDecimalMath#multiplyImpl。
     pub fn multiply_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
         Ok(DataValue::BigDec(
             mul_dec(&dec_of(left), &dec_of(right)).to_plain_string(),
@@ -468,6 +472,7 @@ impl BigDecimalMath {
     }
 
     /// Java `divideImpl`(精度与舍入语义见文件头注释)。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.BigDecimalMath#divideImpl。
     pub fn divide_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
         let big_left = dec_of(left);
         let big_right = dec_of(right);
@@ -494,6 +499,7 @@ impl BigDecimalMath {
     }
 
     /// Java `compareToImpl`(忽略 scale:`1.0 == 1.00`)。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.BigDecimalMath#compareToImpl。
     pub fn compare_to_impl(left: &DataValue, right: &DataValue) -> i32 {
         match convert::big_dec_compare(
             &convert::to_big_dec_string(left),
@@ -509,6 +515,7 @@ impl BigDecimalMath {
     /// 参数：`left`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/BigDecimalMath.java`，方法 `unaryMinusImpl`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `unaryMinusImpl`。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.BigDecimalMath#unaryMinusImpl。
     pub fn unary_minus_impl(left: &DataValue) -> Result<DataValue, QLException> {
         Ok(DataValue::BigDec(dec_of(left).negate().to_plain_string()))
     }
@@ -517,11 +524,13 @@ impl BigDecimalMath {
     /// 参数：`left`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/BigDecimalMath.java`，方法 `unaryPlusImpl`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `unaryPlusImpl`。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.BigDecimalMath#unaryPlusImpl。
     pub fn unary_plus_impl(left: &DataValue) -> Result<DataValue, QLException> {
         Ok(DataValue::BigDec(dec_of(left).to_plain_string()))
     }
 
     /// Java `remainderImpl`:`BigDecimal.remainder` = 被除数 - 商(向零取整)×除数。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.BigDecimalMath#remainderImpl。
     pub fn remainder_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
         let l = dec_of(left);
         let r = dec_of(right);
@@ -554,6 +563,7 @@ impl BigDecimalMath {
     }
 
     /// Java `modImpl`:remainder 为负则加除数(结果符号跟除数)。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.BigDecimalMath#modImpl。
     pub fn mod_impl(self_value: &DataValue, divisor: &DataValue) -> Result<DataValue, QLException> {
         let remainder = Self::remainder_impl(self_value, divisor)?;
         if let DataValue::BigDec(rem_str) = &remainder {

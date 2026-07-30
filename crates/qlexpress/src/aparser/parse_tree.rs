@@ -45,6 +45,7 @@ impl Node {
 
     /// 第一个 token 的 1 起始行号(若有)。Java 无同名方法(Rust 便捷方法)。
     /// 1-based line of the first token, if any.
+    /// 对应 Java: com.alibaba.qlexpress4.aparser.ParseTree#line。
     pub fn line(&self) -> Option<i32> {
         self.start_token().map(Token::line)
     }

@@ -68,6 +68,7 @@ impl BinaryOperator for InOperator {
 /// - **Map 不在其列**:Java 的 `Map` 不是 `Collection`,右操作数为 map
 ///   时落入 else 分支,抛 `INVALID_BINARY_OPERAND`(不是 key 也不是
 ///   value 包含)。
+/// 对应 Java: com.alibaba.qlexpress4.runtime.operator.collection.InOperator#opIn。
 pub(crate) fn op_in(
     left: &QValue,
     right: &QValue,

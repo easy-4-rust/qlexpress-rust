@@ -31,6 +31,7 @@ impl IndexMap {
     /// 参数：`key`；返回：`Option<&DataValue>`。
     /// Rust 原生适配；承接当前文件既有 rustdoc 标注的 Java 职责；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `Map.get`.
+    /// 对应 Java: 无（Rust 原生适配）。
     pub fn get(&self, key: &DataValue) -> Option<&DataValue> {
         self.entries.iter().find(|(k, _)| k == key).map(|(_, v)| v)
     }
@@ -39,6 +40,7 @@ impl IndexMap {
     /// 参数：`key`；返回：`bool`。
     /// Rust 原生适配；承接当前文件既有 rustdoc 标注的 Java 职责；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `Map.containsKey`.
+    /// 对应 Java: 无（Rust 原生适配）。
     pub fn contains_key(&self, key: &DataValue) -> bool {
         self.get(key).is_some()
     }
@@ -48,6 +50,7 @@ impl IndexMap {
     /// Rust 原生适配；承接当前文件既有 rustdoc 标注的 Java 职责；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `Map.put`: replaces the value in place when the key exists,
     /// otherwise appends (preserving insertion order). Returns the old value.
+    /// 对应 Java: 无（Rust 原生适配）。
     pub fn insert(&mut self, key: DataValue, value: DataValue) -> Option<DataValue> {
         for (k, v) in &mut self.entries {
             if *k == key {
@@ -62,6 +65,7 @@ impl IndexMap {
     /// 参数：`key`；返回：`Option<DataValue>`。
     /// Rust 原生适配；承接当前文件既有 rustdoc 标注的 Java 职责；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `Map.remove`, keeping the order of remaining entries.
+    /// 对应 Java: 无（Rust 原生适配）。
     pub fn remove(&mut self, key: &DataValue) -> Option<DataValue> {
         let index = self.entries.iter().position(|(k, _)| k == key)?;
         Some(self.entries.remove(index).1)
@@ -71,6 +75,7 @@ impl IndexMap {
     /// 无显式参数；返回：无。
     /// Rust 原生适配；承接当前文件既有 rustdoc 标注的 Java 职责；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `Map.clear`.
+    /// 对应 Java: 无（Rust 原生适配）。
     pub fn clear(&mut self) {
         self.entries.clear();
     }

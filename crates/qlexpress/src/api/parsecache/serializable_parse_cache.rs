@@ -17,6 +17,7 @@ use super::serializable_trace_point::SerializableTracePoint;
 /// - `tracePoints`(List&lt;SerializableTracePoint&gt;):表达式 trace 点(可选)。
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+/// 对应 Java: com.alibaba.qlexpress4.api.parsecache.SerializableParseCache。
 pub struct SerializableParseCache {
     /// 模型版本。对应 Java 字段 `modelVersion`。
     #[serde(default)]

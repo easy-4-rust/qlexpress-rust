@@ -13,6 +13,7 @@ const SNIPPET_EXTENSION_LEN: usize = 20;
 /// A formatted error message plus the snippet extracted around the error,
 /// mirroring Java `ExMessageUtil.ExMessage`.
 #[derive(Clone, Debug, PartialEq, Eq)]
+/// 对应 Java: com.alibaba.qlexpress4.exception.ExMessageUtil。
 pub struct ExMessage {
     message: String,
     snippet: String,
@@ -21,6 +22,7 @@ pub struct ExMessage {
 impl ExMessage {
     /// 创建格式化错误消息及其脚本片段。
     /// 承接 Java `ExMessageUtil#format` 的二元返回结果。
+    /// 对应 Java: com.alibaba.qlexpress4.exception.ExMessageUtil#new。
     pub fn new(message: String, snippet: String) -> Self {
         ExMessage { message, snippet }
     }
@@ -50,6 +52,7 @@ impl ExMessageUtil {
     ///
     /// Positions are in characters (Java `String.charAt` semantics); this
     /// port operates on `Vec<char>` to stay correct for non-ASCII scripts.
+    /// 对应 Java: com.alibaba.qlexpress4.exception.ExMessageUtil#format。
     pub fn format(
         script: &str,
         token_start_pos: i32,

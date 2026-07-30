@@ -63,6 +63,7 @@ impl SerializableParseCacheException {
     }
 
     /// 取出内部 [`QLException`](Java 多态持有的等价物)。
+    /// 对应 Java: com.alibaba.qlexpress4.api.parsecache.SerializableParseCacheException#intoQlException。
     pub fn into_ql_exception(self) -> QLException {
         self.inner
     }

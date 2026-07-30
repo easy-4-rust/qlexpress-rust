@@ -12,6 +12,7 @@ use crate::runtime::value::{DataValue, QValue};
 /// [`OperatorManager::add_binary_operator`](crate::aparser::operator_factory::OperatorManager::add_binary_operator)
 /// and adapted into a [`BinaryOperator`](super::base::BinaryOperator) by the
 /// operator manager (Java `OperatorManager.adapt2BinOp`).
+/// 对应 Java: com.alibaba.qlexpress4.runtime.operator.CustomBinaryOperator。
 pub trait CustomBinaryOperator {
     /// 处理 execute 对应的接口职责。
     /// 参数：`left`、`right`；返回：`Result<DataValue, QLException>`。

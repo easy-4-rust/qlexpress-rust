@@ -159,6 +159,7 @@ const EOF: i32 = token::EOF;
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/QLParser.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Java `QLParseBacktrack` vs fatal syntax error.
 #[derive(Debug)]
+/// 对应 Java: com.alibaba.qlexpress4.aparser.QLParser。
 pub enum ParseFail {
     /// Java `QLParseBacktrack`: speculative parse miss, caller backtracks.
     Backtrack,
@@ -196,6 +197,7 @@ type PResult<T> = Result<T, ParseFail>;
 /// [`Node::Program`] syntax tree. When `print_tree` is set, `printer`
 /// receives the token stream and the tree text (Java debug feature).
 #[allow(clippy::too_many_arguments)]
+/// 对应 Java: com.alibaba.qlexpress4.aparser.QLParser#buildTree。
 pub fn build_tree(
     script: &str,
     operator_manager: Option<&dyn ParserOperatorManager>,
@@ -227,6 +229,7 @@ pub fn build_tree(
 /// `QLParser` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/QLParser.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Java `QLParser`.
+/// 对应 Java: com.alibaba.qlexpress4.aparser.QLParser。
 pub struct QLParser<'a> {
     script: &'a str,
     tokens: &'a [Token],
@@ -240,6 +243,7 @@ impl<'a> QLParser<'a> {
     /// 参数：`script`、`tokens`、`operator_manager`、`strict_new_lines`；返回：`Self`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/QLParser.java`，构造器 `<init>`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `new QLParser(script, tokens, operatorManager, strictNewLines)`.
+    /// 对应 Java: com.alibaba.qlexpress4.aparser.QLParser#new。
     pub fn new(
         script: &'a str,
         tokens: &'a [Token],
@@ -259,6 +263,7 @@ impl<'a> QLParser<'a> {
     /// 无显式参数；返回：`Result<Node, QLSyntaxException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/QLParser.java`，方法 `program`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `program()`.
+    /// 对应 Java: com.alibaba.qlexpress4.aparser.QLParser#program。
     pub fn program(&mut self) -> Result<Node, QLSyntaxException> {
         self.program_internal().map_err(QLSyntaxException::from)
     }

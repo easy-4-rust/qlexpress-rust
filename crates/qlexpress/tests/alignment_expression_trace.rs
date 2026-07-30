@@ -5,6 +5,8 @@
 //! - Java `Express4RunnerTest#expressionTraceTest`
 //! - Java `SerializableParseCacheTest#tracePointsAreOptionalAndRoundTripWhenExported`
 
+#![allow(clippy::result_large_err)]
+
 use std::collections::HashMap;
 use std::rc::Rc;
 

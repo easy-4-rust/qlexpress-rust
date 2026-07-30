@@ -261,7 +261,15 @@ impl NativeObject for TestPerson {
 /// 对应 Java `TestSuiteRunner.prepareRunner`:注册四个测试函数,
 /// 并使用开放安全策略 + JDK 类型供应器(同 `handleFile`)。
 pub fn suite_runner() -> Express4Runner {
-    let mut runner = Express4Runner::with_init_options(jdk_init_options());
+    suite_runner_with_init_options(jdk_init_options())
+}
+
+/// 使用指定初始化选项创建套件 Runner，同时注册 Java 套件的四个函数。
+///
+/// 对应 Java `TestSuiteRunner#prepareRunner(InitOptions)`；供 debug 与
+/// 自定义初始化策略测试复用相同宿主装配逻辑。
+pub fn suite_runner_with_init_options(init_options: InitOptions) -> Express4Runner {
+    let mut runner = Express4Runner::with_init_options(init_options);
     let mut person = NativeType::named("com.alibaba.qlexpress4.inport.Person");
     person.constructor = Some(Rc::new(|args| {
         let [age] = args else {

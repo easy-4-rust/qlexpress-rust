@@ -13,6 +13,7 @@ use crate::utils::println_utils::PrintlnUtils;
 /// One node of the expression-execution trace tree, mirroring Java
 /// `ExpressionTrace`.
 #[derive(Clone, Debug)]
+/// 对应 Java: com.alibaba.qlexpress4.runtime.trace.ExpressionTrace。
 pub struct ExpressionTrace {
     trace_type: TraceType,
     token: String,
@@ -122,6 +123,7 @@ impl ExpressionTrace {
     /// 参数：`indent`；返回：`String`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/trace/ExpressionTrace.java`，方法 `toPrettyString`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `toPrettyString`: indented, recursive rendering.
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.trace.ExpressionTrace#toPrettyString。
     pub fn to_pretty_string(&self, indent: i32) -> String {
         let value_part = if self.evaluated {
             match &self.value {

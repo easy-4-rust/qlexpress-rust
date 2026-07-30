@@ -58,6 +58,7 @@ impl TryCatchInstruction {
 
     /// 标记 try/catch 用作表达式(`1 + try{...}catch{...}` 形式)。
     /// 此时 catch body 的 `Continue(value)` 是表达式结果值,不是循环控制信号。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.instruction.TryCatchInstruction#withExpressionForm。
     pub fn with_expression_form(mut self, is_expr: bool) -> Self {
         self.is_expression_form = is_expr;
         self

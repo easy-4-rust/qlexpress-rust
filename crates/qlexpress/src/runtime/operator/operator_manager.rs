@@ -166,6 +166,7 @@ impl OperatorManager {
 
     /// Java `addBinaryOperator`:词素未被内建/已注册自定义占用时注册
     /// 成功,返回 true。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.OperatorManager#addBinaryOperator。
     pub fn add_binary_operator(
         &mut self,
         operator_name: impl Into<String>,
@@ -195,6 +196,7 @@ impl OperatorManager {
 
     /// Java `replaceDefaultOperator`:仅当词素是内建操作符时替换成功,
     /// 沿用原操作符优先级。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.OperatorManager#replaceDefaultOperator。
     pub fn replace_default_operator(
         &mut self,
         operator_name: &str,
@@ -219,6 +221,7 @@ impl OperatorManager {
     }
 
     /// Java `addOperatorAlias`:为既有(内建或自定义)操作符注册新词素。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.OperatorManager#addOperatorAlias。
     pub fn add_operator_alias(&mut self, lexeme: impl Into<String>, operator: &str) -> bool {
         let lexeme = lexeme.into();
         let origin = self
@@ -242,6 +245,7 @@ impl OperatorManager {
     }
 
     /// Java `addKeyWordAlias`:`lexeme` 映射到关键字 token 类型。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.OperatorManager#addKeyWordAlias。
     pub fn add_key_word_alias(&mut self, lexeme: impl Into<String>, key_word: &str) -> bool {
         match aliasable_keyword_id(key_word) {
             Some(id) => {
@@ -254,18 +258,21 @@ impl OperatorManager {
 
     /// 供其他 Stage 4 agent 补注册内建二元操作符(assign/collection/
     /// string 等,对齐 Java static 块的完整清单)。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.OperatorManager#registerDefaultBinaryOperator。
     pub fn register_default_binary_operator(&mut self, operator: Rc<dyn BinaryOperator>) {
         self.default_binary_operator_map
             .insert(operator.operator().to_string(), operator);
     }
 
     /// 供其他 Stage 4 agent 补注册前缀一元操作符。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.OperatorManager#registerDefaultPrefixUnaryOperator。
     pub fn register_default_prefix_unary_operator(&mut self, operator: Rc<dyn UnaryOperator>) {
         self.default_prefix_unary_operator_map
             .insert(operator.operator().to_string(), operator);
     }
 
     /// 供其他 Stage 4 agent 补注册后缀一元操作符。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.OperatorManager#registerDefaultSuffixUnaryOperator。
     pub fn register_default_suffix_unary_operator(&mut self, operator: Rc<dyn UnaryOperator>) {
         self.default_suffix_unary_operator_map
             .insert(operator.operator().to_string(), operator);
@@ -274,6 +281,7 @@ impl OperatorManager {
     /// 把本管理器的内建操作符灌入 aparser 的 OperatorManager
     /// (aparser 侧表默认空,Stage 4 负责填充;本函数即 Java static
     /// 块语义向编译期组件的投影)。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.OperatorManager#populateAparserOperatorManager。
     pub fn populate_aparser_operator_manager(&self, target: &mut AParserOperatorManager) {
         for operator in self.default_binary_operator_map.values() {
             target.register_default_binary_operator(Rc::clone(operator));
@@ -358,6 +366,7 @@ fn aliasable_keyword_id(key_word: &str) -> Option<i32> {
 
 /// Java static 块 `binaryOperatorList` 全量(注册顺序与 Java 一致;
 /// assign/collection/string 三项来自其他 Stage 4 agent 的目录)。
+/// 对应 Java: com.alibaba.qlexpress4.runtime.operator.OperatorManager#defaultBinaryOperators。
 pub fn default_binary_operators() -> Vec<Rc<dyn BinaryOperator>> {
     vec![
         Rc::new(AssignOperator::get_instance()),
@@ -406,6 +415,7 @@ pub fn default_binary_operators() -> Vec<Rc<dyn BinaryOperator>> {
 }
 
 /// Java static 块 `prefixUnaryOperatorList` 全量(顺序与 Java 一致)。
+/// 对应 Java: com.alibaba.qlexpress4.runtime.operator.OperatorManager#defaultPrefixUnaryOperators。
 pub fn default_prefix_unary_operators() -> Vec<Rc<dyn UnaryOperator>> {
     vec![
         Rc::new(PlusUnaryOperator::get_instance()),
@@ -418,6 +428,7 @@ pub fn default_prefix_unary_operators() -> Vec<Rc<dyn UnaryOperator>> {
 }
 
 /// Java static 块 `suffixUnaryOperatorList` 全量。
+/// 对应 Java: com.alibaba.qlexpress4.runtime.operator.OperatorManager#defaultSuffixUnaryOperators。
 pub fn default_suffix_unary_operators() -> Vec<Rc<dyn UnaryOperator>> {
     vec![
         Rc::new(PlusPlusSuffixUnaryOperator::get_instance()),

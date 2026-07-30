@@ -21,6 +21,7 @@ impl ParametersTypeConvertor {
     /// For varargs, the last entry of `param_types` is the item type (Java
     /// reads the component type of the trailing array parameter); trailing
     /// arguments are collected into a [`DataValue::Array`].
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.data.convert.ParametersTypeConvertor#cast。
     pub fn cast(
         arguments: &[DataValue],
         param_types: &[TargetType],

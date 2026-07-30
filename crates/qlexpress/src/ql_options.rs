@@ -14,6 +14,7 @@ pub type Attachments = HashMap<String, DataValue>;
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/QLOptions.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Per-execution options, mirroring Java `QLOptions`.
 #[derive(Clone, Debug)]
+/// 对应 Java: com.alibaba.qlexpress4.QLOptions。
 pub struct QLOptions {
     /// Precise evaluate based on BigDecimal. Default false.
     precise: bool,
@@ -111,6 +112,7 @@ impl Default for QLOptions {
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/QLOptions.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Java `QLOptions.Builder`.
 #[derive(Clone, Debug)]
+/// 对应 Java: com.alibaba.qlexpress4.QLOptions。
 pub struct QLOptionsBuilder {
     precise: bool,
     pollute_user_context: bool,

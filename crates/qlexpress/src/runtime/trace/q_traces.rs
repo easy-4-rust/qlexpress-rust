@@ -70,6 +70,7 @@ impl QTraces {
     /// 对命中的运行时追踪节点执行原地修改。
     ///
     /// 这是 Java 取到对象引用后调用 `valueEvaluated` 的 Rust 等价实现。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.trace.QTraces#withExpressionTraceByKey。
     pub fn with_expression_trace_by_key(
         &self,
         trace_key: Option<i32>,

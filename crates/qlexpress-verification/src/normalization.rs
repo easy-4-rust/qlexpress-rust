@@ -2,6 +2,8 @@
 
 use qlexpress::runtime::value::DataValue;
 
+/// 对应 Java: 无（Rust 原生适配）。
+
 pub fn normalize(value: &DataValue) -> String {
     match value {
         DataValue::Null => "null".to_string(),

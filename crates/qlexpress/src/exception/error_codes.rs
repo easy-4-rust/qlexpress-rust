@@ -5,84 +5,147 @@
 //! (`%s`, `%d`); substitute them with [`format_msg`].
 
 // ---- syntax error ----
+/// `SYNTAX_ERROR` 错误码或错误消息模板。
 pub const SYNTAX_ERROR: &str = "SYNTAX_ERROR";
+/// `MISSING_INDEX` 错误码或错误消息模板。
 pub const MISSING_INDEX: &str = "MISSING_INDEX";
+/// `INVALID_NUMBER` 错误码或错误消息模板。
 pub const INVALID_NUMBER: &str = "INVALID_NUMBER";
+/// `CLASS_NOT_FOUND` 错误码或错误消息模板。
 pub const CLASS_NOT_FOUND: &str = "CLASS_NOT_FOUND";
 /// Stage 6 / FixedSizeStack: emitted when an operand-stack push would
 /// exceed the declared capacity (mirrors Java's StackOverflowError).
 pub const STACK_OVERFLOW: &str = "STACK_OVERFLOW";
 
 // ---- runtime error ----
+/// `INVALID_INDEX` 错误码或错误消息模板。
 pub const INVALID_INDEX: &str = "INVALID_INDEX";
+/// `INDEX_OUT_BOUND` 错误码或错误消息模板。
 pub const INDEX_OUT_BOUND: &str = "INDEX_OUT_BOUND";
+/// `NONINDEXABLE_OBJECT` 错误码或错误消息模板。
 pub const NONINDEXABLE_OBJECT: &str = "NONINDEXABLE_OBJECT";
+/// `NONTRAVERSABLE_OBJECT` 错误码或错误消息模板。
 pub const NONTRAVERSABLE_OBJECT: &str = "NONTRAVERSABLE_OBJECT";
+/// `NULL_FIELD_ACCESS` 错误码或错误消息模板。
 pub const NULL_FIELD_ACCESS: &str = "NULL_FIELD_ACCESS";
+/// `NULL_METHOD_ACCESS` 错误码或错误消息模板。
 pub const NULL_METHOD_ACCESS: &str = "NULL_METHOD_ACCESS";
+/// `FIELD_NOT_FOUND` 错误码或错误消息模板。
 pub const FIELD_NOT_FOUND: &str = "FIELD_NOT_FOUND";
+/// `SET_FIELD_UNKNOWN_ERROR` 错误码或错误消息模板。
 pub const SET_FIELD_UNKNOWN_ERROR: &str = "SET_FIELD_UNKNOWN_ERROR";
+/// `GET_FIELD_UNKNOWN_ERROR` 错误码或错误消息模板。
 pub const GET_FIELD_UNKNOWN_ERROR: &str = "GET_FIELD_UNKNOWN_ERROR";
+/// `INVOKE_METHOD_WITH_WRONG_ARGUMENTS` 错误码或错误消息模板。
 pub const INVOKE_METHOD_WITH_WRONG_ARGUMENTS: &str = "INVOKE_METHOD_WITH_WRONG_ARGUMENTS";
+/// `INVOKE_METHOD_INNER_ERROR` 错误码或错误消息模板。
 pub const INVOKE_METHOD_INNER_ERROR: &str = "INVOKE_METHOD_INNER_ERROR";
+/// `INVOKE_METHOD_UNKNOWN_ERROR` 错误码或错误消息模板。
 pub const INVOKE_METHOD_UNKNOWN_ERROR: &str = "INVOKE_METHOD_UNKNOWN_ERROR";
+/// `INVOKE_FUNCTION_INNER_ERROR` 错误码或错误消息模板。
 pub const INVOKE_FUNCTION_INNER_ERROR: &str = "INVOKE_FUNCTION_INNER_ERROR";
+/// `FUNCTION_NOT_FOUND` 错误码或错误消息模板。
 pub const FUNCTION_NOT_FOUND: &str = "FUNCTION_NOT_FOUND";
+/// `FUNCTION_TYPE_MISMATCH` 错误码或错误消息模板。
 pub const FUNCTION_TYPE_MISMATCH: &str = "FUNCTION_TYPE_MISMATCH";
+/// `INVOKE_LAMBDA_ERROR` 错误码或错误消息模板。
 pub const INVOKE_LAMBDA_ERROR: &str = "INVOKE_LAMBDA_ERROR";
+/// `NULL_CALL` 错误码或错误消息模板。
 pub const NULL_CALL: &str = "NULL_CALL";
+/// `OBJECT_NOT_CALLABLE` 错误码或错误消息模板。
 pub const OBJECT_NOT_CALLABLE: &str = "OBJECT_NOT_CALLABLE";
+/// `METHOD_NOT_FOUND` 错误码或错误消息模板。
 pub const METHOD_NOT_FOUND: &str = "METHOD_NOT_FOUND";
+/// `INVOKE_CONSTRUCTOR_UNKNOWN_ERROR` 错误码或错误消息模板。
 pub const INVOKE_CONSTRUCTOR_UNKNOWN_ERROR: &str = "INVOKE_CONSTRUCTOR_UNKNOWN_ERROR";
+/// `INVOKE_CONSTRUCTOR_INNER_ERROR` 错误码或错误消息模板。
 pub const INVOKE_CONSTRUCTOR_INNER_ERROR: &str = "INVOKE_CONSTRUCTOR_INNER_ERROR";
+/// `NO_SUITABLE_CONSTRUCTOR` 错误码或错误消息模板。
 pub const NO_SUITABLE_CONSTRUCTOR: &str = "NO_SUITABLE_CONSTRUCTOR";
+/// `EXECUTE_BLOCK_ERROR` 错误码或错误消息模板。
 pub const EXECUTE_BLOCK_ERROR: &str = "EXECUTE_BLOCK_ERROR";
+/// `INCOMPATIBLE_TYPE_CAST` 错误码或错误消息模板。
 pub const INCOMPATIBLE_TYPE_CAST: &str = "INCOMPATIBLE_TYPE_CAST";
+/// `INVALID_CAST_TARGET` 错误码或错误消息模板。
 pub const INVALID_CAST_TARGET: &str = "INVALID_CAST_TARGET";
+/// `SCRIPT_TIME_OUT` 错误码或错误消息模板。
 pub const SCRIPT_TIME_OUT: &str = "SCRIPT_TIME_OUT";
+/// `INCOMPATIBLE_ASSIGNMENT_TYPE` 错误码或错误消息模板。
 pub const INCOMPATIBLE_ASSIGNMENT_TYPE: &str = "INCOMPATIBLE_ASSIGNMENT_TYPE";
+/// `FOR_EACH_ITERABLE_REQUIRED` 错误码或错误消息模板。
 pub const FOR_EACH_ITERABLE_REQUIRED: &str = "FOR_EACH_ITERABLE_REQUIRED";
+/// `FOR_EACH_TYPE_MISMATCH` 错误码或错误消息模板。
 pub const FOR_EACH_TYPE_MISMATCH: &str = "FOR_EACH_TYPE_MISMATCH";
+/// `FOR_EACH_UNKNOWN_ERROR` 错误码或错误消息模板。
 pub const FOR_EACH_UNKNOWN_ERROR: &str = "FOR_EACH_UNKNOWN_ERROR";
+/// `FOR_INIT_ERROR` 错误码或错误消息模板。
 pub const FOR_INIT_ERROR: &str = "FOR_INIT_ERROR";
+/// `FOR_BODY_ERROR` 错误码或错误消息模板。
 pub const FOR_BODY_ERROR: &str = "FOR_BODY_ERROR";
+/// `FOR_UPDATE_ERROR` 错误码或错误消息模板。
 pub const FOR_UPDATE_ERROR: &str = "FOR_UPDATE_ERROR";
+/// `FOR_CONDITION_ERROR` 错误码或错误消息模板。
 pub const FOR_CONDITION_ERROR: &str = "FOR_CONDITION_ERROR";
+/// `FOR_CONDITION_BOOL_REQUIRED` 错误码或错误消息模板。
 pub const FOR_CONDITION_BOOL_REQUIRED: &str = "FOR_CONDITION_BOOL_REQUIRED";
+/// `WHILE_CONDITION_BOOL_REQUIRED` 错误码或错误消息模板。
 pub const WHILE_CONDITION_BOOL_REQUIRED: &str = "WHILE_CONDITION_BOOL_REQUIRED";
+/// `WHILE_CONDITION_ERROR` 错误码或错误消息模板。
 pub const WHILE_CONDITION_ERROR: &str = "WHILE_CONDITION_ERROR";
+/// `CONDITION_BOOL_REQUIRED` 错误码或错误消息模板。
 pub const CONDITION_BOOL_REQUIRED: &str = "CONDITION_BOOL_REQUIRED";
+/// `ARRAY_SIZE_NUM_REQUIRED` 错误码或错误消息模板。
 pub const ARRAY_SIZE_NUM_REQUIRED: &str = "ARRAY_SIZE_NUM_REQUIRED";
+/// `EXCEED_MAX_ARR_LENGTH` 错误码或错误消息模板。
 pub const EXCEED_MAX_ARR_LENGTH: &str = "EXCEED_MAX_ARR_LENGTH";
+/// `INCOMPATIBLE_ARRAY_ITEM_TYPE` 错误码或错误消息模板。
 pub const INCOMPATIBLE_ARRAY_ITEM_TYPE: &str = "INCOMPATIBLE_ARRAY_ITEM_TYPE";
+/// `INVALID_ASSIGNMENT` 错误码或错误消息模板。
 pub const INVALID_ASSIGNMENT: &str = "INVALID_ASSIGNMENT";
+/// `EXECUTE_OPERATOR_EXCEPTION` 错误码或错误消息模板。
 pub const EXECUTE_OPERATOR_EXCEPTION: &str = "EXECUTE_OPERATOR_EXCEPTION";
+/// `INVALID_ARITHMETIC` 错误码或错误消息模板。
 pub const INVALID_ARITHMETIC: &str = "INVALID_ARITHMETIC";
+/// `INVALID_BINARY_OPERAND` 错误码或错误消息模板。
 pub const INVALID_BINARY_OPERAND: &str = "INVALID_BINARY_OPERAND";
+/// `INVALID_UNARY_OPERAND` 错误码或错误消息模板。
 pub const INVALID_UNARY_OPERAND: &str = "INVALID_UNARY_OPERAND";
+/// `EXECUTE_FINAL_BLOCK_ERROR` 错误码或错误消息模板。
 pub const EXECUTE_FINAL_BLOCK_ERROR: &str = "EXECUTE_FINAL_BLOCK_ERROR";
+/// `EXECUTE_TRY_BLOCK_ERROR` 错误码或错误消息模板。
 pub const EXECUTE_TRY_BLOCK_ERROR: &str = "EXECUTE_TRY_BLOCK_ERROR";
+/// `EXECUTE_CATCH_HANDLER_ERROR` 错误码或错误消息模板。
 pub const EXECUTE_CATCH_HANDLER_ERROR: &str = "EXECUTE_CATCH_HANDLER_ERROR";
 
 // ---- operator restriction error ----
+/// `OPERATOR_NOT_ALLOWED` 错误码或错误消息模板。
 pub const OPERATOR_NOT_ALLOWED: &str = "OPERATOR_NOT_ALLOWED";
 
 // ---- serializable parse cache error ----
+/// `SERIALIZABLE_PARSE_CACHE_UNSUPPORTED_VERSION` 错误码或错误消息模板。
 pub const SERIALIZABLE_PARSE_CACHE_UNSUPPORTED_VERSION: &str =
     "SERIALIZABLE_PARSE_CACHE_UNSUPPORTED_VERSION";
+/// `SERIALIZABLE_PARSE_CACHE_INVALID_MODEL` 错误码或错误消息模板。
 pub const SERIALIZABLE_PARSE_CACHE_INVALID_MODEL: &str = "SERIALIZABLE_PARSE_CACHE_INVALID_MODEL";
+/// `SERIALIZABLE_PARSE_CACHE_UNSUPPORTED_INSTRUCTION` 错误码或错误消息模板。
 pub const SERIALIZABLE_PARSE_CACHE_UNSUPPORTED_INSTRUCTION: &str =
     "SERIALIZABLE_PARSE_CACHE_UNSUPPORTED_INSTRUCTION";
+/// `SERIALIZABLE_PARSE_CACHE_UNSUPPORTED_CONSTANT` 错误码或错误消息模板。
 pub const SERIALIZABLE_PARSE_CACHE_UNSUPPORTED_CONSTANT: &str =
     "SERIALIZABLE_PARSE_CACHE_UNSUPPORTED_CONSTANT";
+/// `SERIALIZABLE_PARSE_CACHE_CLASS_NOT_FOUND` 错误码或错误消息模板。
 pub const SERIALIZABLE_PARSE_CACHE_CLASS_NOT_FOUND: &str =
     "SERIALIZABLE_PARSE_CACHE_CLASS_NOT_FOUND";
+/// `SERIALIZABLE_PARSE_CACHE_OPERATOR_NOT_FOUND` 错误码或错误消息模板。
 pub const SERIALIZABLE_PARSE_CACHE_OPERATOR_NOT_FOUND: &str =
     "SERIALIZABLE_PARSE_CACHE_OPERATOR_NOT_FOUND";
 
 // ---- user defined exception ----
+/// `INVALID_ARGUMENT` 错误码或错误消息模板。
 pub const INVALID_ARGUMENT: &str = "INVALID_ARGUMENT";
+/// `BIZ_EXCEPTION` 错误码或错误消息模板。
 pub const BIZ_EXCEPTION: &str = "BIZ_EXCEPTION";
+/// `QL_THROW` 错误码或错误消息模板。
 pub const QL_THROW: &str = "QL_THROW";
 
 /// 处理 error msg 对应的领域职责。
@@ -91,6 +154,7 @@ pub const QL_THROW: &str = "QL_THROW";
 /// Returns the Java message template for an error code (verbatim from
 /// `QLErrorCodes`). Unknown codes yield an empty string, mirroring the
 /// empty-message codes in Java.
+/// 对应 Java: 无（Rust 原生适配）。
 pub fn error_msg(code: &str) -> &'static str {
     match code {
         SYNTAX_ERROR => "",
@@ -184,6 +248,7 @@ pub fn error_msg(code: &str) -> &'static str {
 /// Java `String.format` subset used by QLExpress error templates: replaces
 /// `%s` / `%d` placeholders in order with the given pre-rendered arguments.
 /// Missing placeholders and extra arguments are tolerated (as in Java usage).
+/// 对应 Java: 无（Rust 原生适配）。
 pub fn format_msg(format: &str, args: &[String]) -> String {
     let mut result = String::with_capacity(format.len() + args.len() * 8);
     let mut arg_iter = args.iter();

@@ -41,14 +41,23 @@ pub const CHAR: &str = "char";
 /// - `Boolean` ↔ Rust `bool`（`DataValue::Bool`）
 /// - `Char` ↔ Rust `char`（`DataValue::Char`）
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+/// 对应 Java: com.alibaba.qlexpress4.aparser.BuiltInTypesSet。
 pub enum BuiltInType {
+    /// Java `Byte` 类型或语义类别。
     Byte,
+    /// Java `Short` 类型或语义类别。
     Short,
+    /// Java `Int` 类型或语义类别。
     Int,
+    /// Java `Long` 类型或语义类别。
     Long,
+    /// Java `Float` 类型或语义类别。
     Float,
+    /// Java `Double` 类型或语义类别。
     Double,
+    /// Java `Boolean` 类型或语义类别。
     Boolean,
+    /// Java `Char` 类型或语义类别。
     Char,
 }
 
@@ -86,6 +95,7 @@ impl BuiltInType {
 ///
 /// 与 Java 一致：传入字面量文本，命中 8 个内建类型之一则返回 `Some`，
 /// 否则返回 `None`（Java 返回 `null`）。
+/// 对应 Java: com.alibaba.qlexpress4.aparser.BuiltInTypesSet#getCls。
 pub fn get_cls(lexeme: &str) -> Option<BuiltInType> {
     match lexeme {
         BYTE => Some(BuiltInType::Byte),

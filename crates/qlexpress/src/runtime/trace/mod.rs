@@ -3,6 +3,7 @@
 pub mod expression_trace;
 pub mod q_traces;
 pub mod trace_point_tree;
+/// `trace_type` 子模块。
 pub mod trace_type;
 
 pub use expression_trace::ExpressionTrace;

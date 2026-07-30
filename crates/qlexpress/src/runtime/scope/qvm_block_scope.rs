@@ -41,6 +41,7 @@ impl QvmBlockScope {
     }
 
     /// 可变函数表,供 `QScope::define_function` 使用。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.scope.QvmBlockScope#functionTableMut。
     pub(crate) fn function_table_mut(&mut self) -> &mut HashMap<String, Rc<dyn CustomFunction>> {
         &mut self.function_table
     }

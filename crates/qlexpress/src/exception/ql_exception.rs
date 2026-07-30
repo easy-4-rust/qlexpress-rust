@@ -21,6 +21,7 @@ use crate::runtime::value::DataValue;
 /// error type plus this discriminant so the engine can use
 /// `Result<T, QLException>` everywhere (SPEC §3.4).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+/// 对应 Java: com.alibaba.qlexpress4.exception.QLException。
 pub enum QLExceptionKind {
     /// `QLSyntaxException` — parse/scan time error.
     Syntax,
@@ -35,6 +36,7 @@ pub enum QLExceptionKind {
 /// The engine's single error type, mirroring Java `QLException`
 /// (and subclasses, via [`QLExceptionKind`]).
 #[derive(Clone, Debug)]
+/// 对应 Java: com.alibaba.qlexpress4.exception.QLException。
 pub struct QLException {
     kind: QLExceptionKind,
     /// Fully formatted message (Java `RuntimeException.message`).
@@ -104,6 +106,7 @@ impl QLException {
     /// 参数：`catch_obj`；返回：`Self`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/QLException.java`，方法 `withCatchObj`；Rust 侧按所有权与 `Result` 语义适配。
     /// Builder-style setter for the catchable attachment.
+    /// 对应 Java: com.alibaba.qlexpress4.exception.QLException#withCatchObj。
     pub fn with_catch_obj(mut self, catch_obj: DataValue) -> Self {
         self.catch_obj = Some(catch_obj);
         self
@@ -114,6 +117,7 @@ impl QLException {
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/QLException.java`，方法 `forTest`；Rust 侧按所有权与 `Result` 语义适配。
     /// Constructor mirroring the Java "Visible for test"
     /// `QLRuntimeException(catchObj, reason, errorCode)`.
+    /// 对应 Java: com.alibaba.qlexpress4.exception.QLException#forTest。
     pub fn for_test(kind: QLExceptionKind, reason: impl Into<String>, error_code: &str) -> Self {
         QLException::new(
             kind,
@@ -165,6 +169,7 @@ impl QLException {
     /// 无显式参数；返回：`i32`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/QLException.java`，方法 `lineNo`；Rust 侧按所有权与 `Result` 语义适配。
     /// Line no, 1-based.
+    /// 对应 Java: com.alibaba.qlexpress4.exception.QLException#lineNo。
     pub fn line_no(&self) -> i32 {
         self.diagnostic.range().start().line() + 1
     }
@@ -173,6 +178,7 @@ impl QLException {
     /// 无显式参数；返回：`i32`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/QLException.java`，方法 `colNo`；Rust 侧按所有权与 `Result` 语义适配。
     /// Column no, 1-based.
+    /// 对应 Java: com.alibaba.qlexpress4.exception.QLException#colNo。
     pub fn col_no(&self) -> i32 {
         self.diagnostic.range().start().character() + 1
     }
@@ -203,6 +209,7 @@ impl QLException {
     /// Report a scanner/syntax error, mirroring Java
     /// `QLException.reportScannerErr`.
     #[allow(clippy::too_many_arguments)]
+    /// 对应 Java: com.alibaba.qlexpress4.exception.QLException#reportScannerErr。
     pub fn report_scanner_err(
         script: &str,
         token_start_pos: i32,
@@ -245,6 +252,7 @@ impl QLException {
     /// `QLException.reportRuntimeErrWithAttach`. A `SCRIPT_TIME_OUT` code
     /// yields [`QLExceptionKind::Timeout`].
     #[allow(clippy::too_many_arguments)]
+    /// 对应 Java: com.alibaba.qlexpress4.exception.QLException#reportRuntimeErrWithAttach。
     pub fn report_runtime_err_with_attach(
         script: &str,
         token_start_pos: i32,

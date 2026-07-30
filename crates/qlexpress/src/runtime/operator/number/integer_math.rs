@@ -24,11 +24,13 @@ impl IntegerMath {
     /// 参数：`number`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/IntegerMath.java`，方法 `absImpl`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `absImpl`。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.IntegerMath#absImpl。
     pub fn abs_impl(number: &DataValue) -> Result<DataValue, QLException> {
         Ok(DataValue::Int(int_value(number).wrapping_abs()))
     }
 
     /// Java `addImpl`(int 溢出回绕)。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.IntegerMath#addImpl。
     pub fn add_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
         Ok(DataValue::Int(
             int_value(left).wrapping_add(int_value(right)),
@@ -39,6 +41,7 @@ impl IntegerMath {
     /// 参数：`left`、`right`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/IntegerMath.java`，方法 `subtractImpl`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `subtractImpl`。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.IntegerMath#subtractImpl。
     pub fn subtract_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
         Ok(DataValue::Int(
             int_value(left).wrapping_sub(int_value(right)),
@@ -49,6 +52,7 @@ impl IntegerMath {
     /// 参数：`left`、`right`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/IntegerMath.java`，方法 `multiplyImpl`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `multiplyImpl`。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.IntegerMath#multiplyImpl。
     pub fn multiply_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
         Ok(DataValue::Int(
             int_value(left).wrapping_mul(int_value(right)),
@@ -56,6 +60,7 @@ impl IntegerMath {
     }
 
     /// Java `divideImpl`:委托 BigDecimalMath(整型除法结果是 BigDecimal)。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.IntegerMath#divideImpl。
     pub fn divide_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
         BigDecimalMath::divide_impl(left, right)
     }
@@ -64,6 +69,7 @@ impl IntegerMath {
     /// 参数：`left`、`right`；返回：`i32`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/IntegerMath.java`，方法 `compareToImpl`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `compareToImpl`。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.IntegerMath#compareToImpl。
     pub fn compare_to_impl(left: &DataValue, right: &DataValue) -> i32 {
         match int_value(left).cmp(&int_value(right)) {
             std::cmp::Ordering::Less => -1,
@@ -76,6 +82,7 @@ impl IntegerMath {
     /// 参数：`left`、`right`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/IntegerMath.java`，方法 `orImpl`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `orImpl`。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.IntegerMath#orImpl。
     pub fn or_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
         Ok(DataValue::Int(int_value(left) | int_value(right)))
     }
@@ -84,6 +91,7 @@ impl IntegerMath {
     /// 参数：`left`、`right`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/IntegerMath.java`，方法 `andImpl`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `andImpl`。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.IntegerMath#andImpl。
     pub fn and_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
         Ok(DataValue::Int(int_value(left) & int_value(right)))
     }
@@ -92,11 +100,13 @@ impl IntegerMath {
     /// 参数：`left`、`right`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/IntegerMath.java`，方法 `xorImpl`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `xorImpl`。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.IntegerMath#xorImpl。
     pub fn xor_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
         Ok(DataValue::Int(int_value(left) ^ int_value(right)))
     }
 
     /// Java `intDivImpl`(除零抛 ArithmeticException "/ by zero")。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.IntegerMath#intDivImpl。
     pub fn int_div_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
         let dividend = int_value(left);
         let divisor = int_value(right);
@@ -110,6 +120,7 @@ impl IntegerMath {
 
     /// Java `modImpl`:`toBigInteger(l).mod(toBigInteger(r)).intValue()`
     /// —— BigInteger.mod 恒非负,模数必须为正。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.IntegerMath#modImpl。
     pub fn mod_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
         let modulus = convert::to_i128(right);
         if modulus <= 0 {
@@ -122,6 +133,7 @@ impl IntegerMath {
     }
 
     /// Java `remainderImpl`(int 取余,符号跟随被除数;除零抛 "/ by zero")。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.IntegerMath#remainderImpl。
     pub fn remainder_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
         let dividend = int_value(left);
         let divisor = int_value(right);
@@ -137,6 +149,7 @@ impl IntegerMath {
     /// 参数：`left`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/IntegerMath.java`，方法 `unaryMinusImpl`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `unaryMinusImpl`。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.IntegerMath#unaryMinusImpl。
     pub fn unary_minus_impl(left: &DataValue) -> Result<DataValue, QLException> {
         Ok(DataValue::Int(int_value(left).wrapping_neg()))
     }
@@ -145,6 +158,7 @@ impl IntegerMath {
     /// 参数：`left`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/IntegerMath.java`，方法 `unaryPlusImpl`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `unaryPlusImpl`。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.IntegerMath#unaryPlusImpl。
     pub fn unary_plus_impl(left: &DataValue) -> Result<DataValue, QLException> {
         Ok(DataValue::Int(int_value(left)))
     }
@@ -153,11 +167,13 @@ impl IntegerMath {
     /// 参数：`left`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/IntegerMath.java`，方法 `bitwiseNegateImpl`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `bitwiseNegateImpl`。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.IntegerMath#bitwiseNegateImpl。
     pub fn bitwise_negate_impl(left: &DataValue) -> Result<DataValue, QLException> {
         Ok(DataValue::Int(!int_value(left)))
     }
 
     /// Java `leftShiftImpl`(距离按 31 掩码,`wrapping_shl` 同语义)。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.IntegerMath#leftShiftImpl。
     pub fn left_shift_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
         Ok(DataValue::Int(
             int_value(left).wrapping_shl(int_value(right) as u32),
@@ -165,6 +181,7 @@ impl IntegerMath {
     }
 
     /// Java `rightShiftImpl`(算术右移,符号扩展)。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.IntegerMath#rightShiftImpl。
     pub fn right_shift_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
         Ok(DataValue::Int(
             int_value(left).wrapping_shr(int_value(right) as u32),
@@ -172,6 +189,7 @@ impl IntegerMath {
     }
 
     /// Java `rightShiftUnsignedImpl`(逻辑右移,高位补零)。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.IntegerMath#rightShiftUnsignedImpl。
     pub fn right_shift_unsigned_impl(
         left: &DataValue,
         right: &DataValue,

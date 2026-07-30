@@ -15,6 +15,7 @@ use crate::runtime::value::DataValue;
 /// like the Java version, the catch object is *not* propagated here (Java
 /// passes `null` to the exception constructor).
 #[derive(Clone, Copy, Debug, Default)]
+/// 对应 Java: com.alibaba.qlexpress4.exception.PureErrReporter。
 pub struct PureErrReporter;
 
 impl PureErrReporter {

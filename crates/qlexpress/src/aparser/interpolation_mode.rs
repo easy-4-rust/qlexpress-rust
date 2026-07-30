@@ -3,6 +3,7 @@
 /// How to manage string interpolation, e.g. `"a ${t-c} b"`, mirroring Java
 /// `InterpolationMode`.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+/// 对应 Java: com.alibaba.qlexpress4.aparser.InterpolationMode。
 pub enum InterpolationMode {
     /// Implement interpolation using a QLExpress script. (Java default.)
     #[default]

@@ -18,28 +18,31 @@ from pathlib import Path
 
 
 RUST_OBLIGATIONS = [
-    ("OWN-01", "所有权/共享状态", "每次执行独立作用域；共享注册表只读或同步保护", "`q_scope.rs` unit tests; `qlexpress-verification concurrency`", "PENDING"),
-    ("ERR-01", "错误模型", "Java 异常类型、错误码、reason、cause、行列位置映射到 `QLException`/`Result`", "`rust_native_error_code_coverage.rs`; Runner cause tests", "PENDING"),
-    ("SER-01", "序列化", "全部可缓存指令 serde 往返且导入后结果一致", "`alignment_parsecache.rs`; `stage5b_parsecache.rs`", "PENDING"),
-    ("MACRO-01", "过程宏", "derive getter、alias、skip、readonly、可写字段和注册扩展", "`stage6_derive_fixture.rs`", "PENDING"),
-    ("REG-01", "显式反射替代", "构造器/静态方法/实例成员只能经 NativeRegistry 暴露", "`alignment_get_field.rs`; `alignment_member_overloads.rs`", "PENDING"),
-    ("THREAD-01", "并发模型", "线程本地 Runner + ConcurrentParseCache 首次编译去重", "`java_concurrent_cache_test`; `qlexpress-verification concurrency`", "PENDING"),
-    ("SEC-01", "安全边界", "open/isolation/white/black 策略覆盖字段、方法、构造器与恶意输入", "`alignment_security.rs`; fuzz", "PENDING"),
-    ("HOST-01", "宿主集成", "上下文、注册函数、错误、缓存和并发业务宿主路径", "`qlexpress-verification business-host`", "PENDING"),
-    ("OPS-01", "灰度/回滚", "候选版本可进行金丝雀比对，失败时停止并回滚路由", "`qlexpress-verification canary`", "PENDING"),
-    ("LOAD-01", "稳定性", "并发、持续负载、超时与缓存重复执行无语义漂移", "`qlexpress-verification load`", "PENDING"),
-    ("FEATURE-01", "构建矩阵", "workspace/all-features、rustdoc、MSRV/feature 组合", "CI workflows", "PENDING"),
+    ("OWN-01", "所有权/共享状态", "每次执行独立作用域；共享注册表只读或同步保护", "`q_scope.rs` unit tests; `qlexpress-verification concurrency`"),
+    ("ERR-01", "错误模型", "Java 异常类型、错误码、reason、cause、行列位置映射到 `QLException`/`Result`", "`rust_native_error_code_coverage.rs`; Runner cause tests"),
+    ("SER-01", "序列化", "全部可缓存指令 serde 往返且导入后结果一致", "`alignment_parsecache.rs`; `stage5b_parsecache.rs`"),
+    ("MACRO-01", "过程宏", "derive getter、alias、skip、readonly、可写字段和注册扩展", "`stage6_derive_fixture.rs`"),
+    ("REG-01", "显式反射替代", "构造器/静态方法/实例成员只能经 NativeRegistry 暴露", "`alignment_get_field.rs`; `alignment_member_overloads.rs`"),
+    ("THREAD-01", "并发模型", "线程本地 Runner + ConcurrentParseCache 首次编译去重", "`java_concurrent_cache_test`; `qlexpress-verification concurrency`"),
+    ("SEC-01", "安全边界", "open/isolation/white/black 策略覆盖字段、方法、构造器与恶意输入", "`alignment_security.rs`; fuzz"),
+    ("HOST-01", "宿主集成", "上下文、注册函数、错误、缓存和并发业务宿主路径", "`qlexpress-verification business-host`"),
+    ("OPS-01", "灰度/回滚", "候选版本可进行金丝雀比对，失败时停止并回滚路由", "`qlexpress-verification canary`"),
+    ("LOAD-01", "稳定性", "并发、持续负载、超时与缓存重复执行无语义漂移", "`qlexpress-verification load`"),
+    ("FEATURE-01", "构建矩阵", "workspace/all-features、rustdoc、MSRV/feature 组合", "CI workflows"),
+    ("DOC-01", "公开 API 注释", "公开对象/方法具有中文 rustdoc；Java 对偶或 Rust 适配来源可追溯", "`audit_migration_layout.py --require-source-comments`; `-W missing-docs`"),
 ]
 
 
 VALUE_ADD = [
-    ("VAL-01", "Java/Rust 自动差分", "同一输入比较值或标准化错误", "`run_differential.py`", "PENDING"),
-    ("VAL-02", "真实脚本回放", "Java `src/test/resources` 独立 `.ql` 语料", "`qlexpress-verification replay`", "PENDING"),
-    ("VAL-03", "属性/大集合", "大整数、集合、索引与确定性属性", "`rust_native_property_collections.rs`", "PENDING"),
-    ("VAL-04", "数值边界", "提升矩阵、BigInteger、除零及 MIN/-1 JVM 回绕", "number-domain unit matrix", "PENDING"),
-    ("VAL-05", "语法/安全 fuzz", "解析器与执行器 hostile corpus + cargo-fuzz", "`qlexpress-verification security-fuzz`; `fuzz/`", "PENDING"),
-    ("VAL-06", "表达式追踪", "静态 trace 节点形状、短路和缓存执行重置", "`alignment_expression_trace.rs`", "PENDING"),
+    ("VAL-01", "Java/Rust 自动差分", "同一输入比较值或标准化错误", "`run_differential.py`"),
+    ("VAL-02", "真实脚本回放", "Java `src/test/resources` 独立 `.ql` 语料", "`qlexpress-verification replay`"),
+    ("VAL-03", "属性/大集合", "大整数、集合、索引与确定性属性", "`rust_native_property_collections.rs`"),
+    ("VAL-04", "数值边界", "提升矩阵、BigInteger、除零及 MIN/-1 JVM 回绕", "number-domain unit matrix"),
+    ("VAL-05", "语法/安全 fuzz", "解析器与执行器 hostile corpus + cargo-fuzz", "`qlexpress-verification security-fuzz`; `fuzz/`"),
+    ("VAL-06", "表达式追踪", "静态 trace 节点形状、短路和缓存执行重置", "`alignment_expression_trace.rs`"),
 ]
+
+ACCEPTANCE_STATUSES = {"PASS", "PENDING", "BLOCKED"}
 
 
 def escape(value: str) -> str:
@@ -186,8 +189,36 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--inventory", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--acceptance",
+        type=Path,
+        help="可选的仓库级验收结果 JSON；未提供时 Rust/增强门禁保持 PENDING",
+    )
     args = parser.parse_args()
     inventory = json.loads(args.inventory.read_text(encoding="utf-8"))
+    acceptance = (
+        json.loads(args.acceptance.read_text(encoding="utf-8"))
+        if args.acceptance
+        else {}
+    )
+    acceptance_statuses = acceptance.get("statuses", {})
+    expected_acceptance_ids = {
+        row[0] for row in RUST_OBLIGATIONS + VALUE_ADD
+    }
+    if args.acceptance:
+        missing_ids = expected_acceptance_ids - acceptance_statuses.keys()
+        unknown_ids = acceptance_statuses.keys() - expected_acceptance_ids
+        invalid = {
+            key: value
+            for key, value in acceptance_statuses.items()
+            if value not in ACCEPTANCE_STATUSES
+        }
+        if missing_ids or unknown_ids or invalid:
+            raise ValueError(
+                "invalid acceptance statuses: "
+                f"missing={sorted(missing_ids)}, unknown={sorted(unknown_ids)}, "
+                f"invalid={invalid}"
+            )
     java_root = Path(inventory["java_root"])
     rust_root = Path(inventory["rust_root"]).resolve()
     rows = []
@@ -208,9 +239,12 @@ def main() -> None:
         "",
         f"- Java：`{java_sha}`，静态识别 **{len(rows)}** 个测试方法。",
         f"- Rust 审计基线：`{rust_sha}`；当前工作树静态识别 **{inventory['summary']['rust_tests']}** 个测试函数。",
-        "- Java/Rust 覆盖率：等待本轮 JaCoCo 与 `cargo-llvm-cov` 重跑，禁止沿用旧数字。",
+        "- Java/Rust 覆盖率：" + acceptance.get(
+            "coverage_summary",
+            "等待本轮 JaCoCo 与 `cargo-llvm-cov` 重跑，禁止沿用旧数字。",
+        ),
         f"- SOURCE_PARITY 状态：{', '.join(f'{key}={value}' for key, value in sorted(counts.items()))}。",
-        "- `MISSING`/`PARTIAL` 未清零前，不得据此台账宣称迁移完成。",
+        "- `MISSING`/`PARTIAL`/`PENDING`/`BLOCKED` 未清零前，不得据此台账宣称迁移完成。",
         "",
         "## SOURCE_PARITY",
         "",
@@ -234,7 +268,8 @@ def main() -> None:
         ]
     )
     for row in RUST_OBLIGATIONS:
-        lines.append("| " + " | ".join(escape(cell) for cell in row) + " |")
+        status = acceptance_statuses.get(row[0], "PENDING")
+        lines.append("| " + " | ".join(escape(cell) for cell in (*row, status)) + " |")
 
     lines.extend(
         [
@@ -246,7 +281,8 @@ def main() -> None:
         ]
     )
     for row in VALUE_ADD:
-        lines.append("| " + " | ".join(escape(cell) for cell in row) + " |")
+        status = acceptance_statuses.get(row[0], "PENDING")
+        lines.append("| " + " | ".join(escape(cell) for cell in (*row, status)) + " |")
 
     lines.extend(
         [
@@ -256,7 +292,7 @@ def main() -> None:
             "- `EXACT` 只由紧邻 Rust `#[test]` 的显式 `JavaClass#method` 来源标记产生。",
             "- `ADAPTED` 不是删减：它表示 JVM 反射、PF4J、Spring、并发对象模型或 checked exception",
             "  被 Rust 原生注册表、宿主接口、所有权和 `Result` 模型替代，外部可观察契约仍需通过。",
-            "- `PARTIAL` 与 `MISSING` 是阻断状态；同名 Rust 测试、家族级映射和绿灯套件均不能自动升级。",
+            "- `PARTIAL`、`MISSING`、`PENDING` 与 `BLOCKED` 均阻断完成结论；同名 Rust 测试、家族级映射和绿灯套件不能自动升级。",
             "- 图级调用路径证据本轮不可用：两个仓库均无 `.codegraph/`，未擅自创建索引。",
             "",
         ]

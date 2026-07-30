@@ -15,6 +15,7 @@ pub mod compile_time_function;
 pub mod exist_stack;
 pub mod generator_scope;
 pub mod import_manager;
+/// `interpolation_mode` 子模块。
 pub mod interpolation_mode;
 pub mod macro_define;
 pub mod operator_factory;

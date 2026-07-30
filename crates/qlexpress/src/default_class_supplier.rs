@@ -22,6 +22,7 @@ impl DefaultClassSupplier {
     /// Java `DefaultClassSupplier.getInstance()`。Java 通过 `Class.forName`
     /// 天然能解析 JDK 类型；Rust 预注册运行时内建实现与常用接口，保证默认
     /// `java.lang` / `java.util` / `java.math` 导入具有同样的可解析性。
+    /// 对应 Java: com.alibaba.qlexpress4.DefaultClassSupplier#instance。
     pub fn instance() -> Self {
         let mut supplier = DefaultClassSupplier::default();
         for qualified_name in [
@@ -54,6 +55,7 @@ impl DefaultClassSupplier {
     }
 
     /// 注册一个可加载类型名(Rust 替代类路径可见性)。
+    /// 对应 Java: com.alibaba.qlexpress4.DefaultClassSupplier#register。
     pub fn register(&mut self, qualified_name: impl Into<String>) {
         self.registered.insert(qualified_name.into());
     }

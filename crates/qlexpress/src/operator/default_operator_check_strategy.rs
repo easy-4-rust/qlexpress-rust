@@ -27,22 +27,26 @@ impl DefaultOperatorCheckStrategy {
     /// 无显式参数；返回：`Self`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/operator/DefaultOperatorCheckStrategy.java`，方法 `instance`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `DefaultOperatorCheckStrategy.getInstance()`。
+    /// 对应 Java: com.alibaba.qlexpress4.operator.DefaultOperatorCheckStrategy#instance。
     pub fn instance() -> Self {
         DefaultOperatorCheckStrategy
     }
 
     /// Java `isAllowed(String)` —— 永远返回 `true`。
+    /// 对应 Java: com.alibaba.qlexpress4.operator.DefaultOperatorCheckStrategy#isAllowed。
     pub fn is_allowed(&self, _operator: &str) -> bool {
         true
     }
 
     /// Java `getOperators()` —— 永远返回空集。
+    /// 对应 Java: com.alibaba.qlexpress4.operator.DefaultOperatorCheckStrategy#operators。
     pub fn operators(&self) -> &'static HashSet<String> {
         empty_set()
     }
 
     /// 供 [`crate::operator::operator_check_strategy::OperatorCheckStrategy::operators`]
     /// 在 `AllowAll` 分支共享同一空集。
+    /// 对应 Java: com.alibaba.qlexpress4.operator.DefaultOperatorCheckStrategy#emptySet。
     pub(crate) fn empty_set() -> &'static HashSet<String> {
         empty_set()
     }

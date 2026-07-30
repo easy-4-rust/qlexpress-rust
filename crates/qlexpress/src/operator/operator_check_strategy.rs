@@ -34,6 +34,7 @@ pub use super::white_operator_check_strategy::WhiteOperatorCheckStrategy;
 ///
 /// 下游消费者（`CheckOptions` 等）直接持有该枚举做 `Clone`/`PartialEq`。
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
+/// 对应 Java: com.alibaba.qlexpress4.operator.OperatorCheckStrategy。
 pub enum OperatorCheckStrategy {
     /// Java `OperatorCheckStrategy.allowAll()`。
     #[default]
@@ -49,6 +50,7 @@ impl OperatorCheckStrategy {
     /// 无显式参数；返回：`Self`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/operator/OperatorCheckStrategy.java`，方法 `allowAll`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `OperatorCheckStrategy.allowAll()`。
+    /// 对应 Java: com.alibaba.qlexpress4.operator.OperatorCheckStrategy#allowAll。
     pub fn allow_all() -> Self {
         OperatorCheckStrategy::AllowAll
     }
@@ -57,6 +59,7 @@ impl OperatorCheckStrategy {
     /// 参数：`allowed_operators`；返回：`Self`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/operator/OperatorCheckStrategy.java`，方法 `whitelist`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `OperatorCheckStrategy.whitelist(Set<String>)`。
+    /// 对应 Java: com.alibaba.qlexpress4.operator.OperatorCheckStrategy#whitelist。
     pub fn whitelist(allowed_operators: HashSet<String>) -> Self {
         OperatorCheckStrategy::Whitelist(allowed_operators)
     }
@@ -65,11 +68,13 @@ impl OperatorCheckStrategy {
     /// 参数：`forbidden_operators`；返回：`Self`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/operator/OperatorCheckStrategy.java`，方法 `blacklist`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `OperatorCheckStrategy.blacklist(Set<String>)`。
+    /// 对应 Java: com.alibaba.qlexpress4.operator.OperatorCheckStrategy#blacklist。
     pub fn blacklist(forbidden_operators: HashSet<String>) -> Self {
         OperatorCheckStrategy::Blacklist(forbidden_operators)
     }
 
     /// Java `isAllowed(String)` —— 判断操作符是否被允许。
+    /// 对应 Java: com.alibaba.qlexpress4.operator.OperatorCheckStrategy#isAllowed。
     pub fn is_allowed(&self, operator: &str) -> bool {
         match self {
             OperatorCheckStrategy::AllowAll => true,
@@ -79,6 +84,7 @@ impl OperatorCheckStrategy {
     }
 
     /// Java `getOperators()`：返回配置集合；`AllowAll` 返回空集。
+    /// 对应 Java: com.alibaba.qlexpress4.operator.OperatorCheckStrategy#operators。
     pub fn operators(&self) -> &HashSet<String> {
         match self {
             OperatorCheckStrategy::AllowAll => DefaultOperatorCheckStrategy::empty_set(),

@@ -114,6 +114,7 @@ impl<T: QLInstruction + ?Sized> QLInstruction for Rc<T> {
 
 /// 共享的 trace 记录辅助:Java
 /// `ExpressionTrace t = traces.getExpressionTraceByKey(key); if (t != null) { ... }`。
+/// 对应 Java: com.alibaba.qlexpress4.runtime.instruction.QLInstruction#withTrace。
 pub(crate) fn with_trace(
     q_context: &dyn QContext,
     trace_key: Option<i32>,

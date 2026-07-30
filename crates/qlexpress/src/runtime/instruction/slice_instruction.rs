@@ -18,9 +18,13 @@ use std::rc::Rc;
 /// Java `SliceInstruction.Mode`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SliceMode {
+    /// 仅省略切片左边界。
     Left,
+    /// 仅省略切片右边界。
     Right,
+    /// 同时提供切片左右边界。
     Both,
+    /// 省略左右边界并复制完整序列。
     Copy,
 }
 

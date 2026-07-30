@@ -13,7 +13,9 @@ use super::token::Token;
 /// mirroring Java `ParseTree` children.
 #[derive(Clone, Copy, Debug)]
 pub enum ChildRef<'a> {
+    /// 非终结语法树节点。
     Node(&'a Node),
+    /// 终结符语法树节点。
     Term(&'a TerminalNode),
 }
 
@@ -22,6 +24,7 @@ impl<'a> ChildRef<'a> {
     /// 无显式参数；返回：`String`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/ParseTree.java`，方法 `text`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `ParseTree.getText`.
+    /// 对应 Java: com.alibaba.qlexpress4.aparser.RuleContext#text。
     pub fn text(&self) -> String {
         match self {
             ChildRef::Node(n) => n.text(),
@@ -33,6 +36,7 @@ impl<'a> ChildRef<'a> {
     /// 无显式参数；返回：`Option<&'a Token>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/RuleContext.java`，方法 `startToken`；Rust 侧按所有权与 `Result` 语义适配。
     /// First token covered by this child (Java bounds computation).
+    /// 对应 Java: com.alibaba.qlexpress4.aparser.RuleContext#startToken。
     pub fn start_token(&self) -> Option<&'a Token> {
         match self {
             ChildRef::Node(n) => n.start_token(),
@@ -44,6 +48,7 @@ impl<'a> ChildRef<'a> {
     /// 无显式参数；返回：`Option<&'a Token>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/RuleContext.java`，方法 `stopToken`；Rust 侧按所有权与 `Result` 语义适配。
     /// Last token covered by this child.
+    /// 对应 Java: com.alibaba.qlexpress4.aparser.RuleContext#stopToken。
     pub fn stop_token(&self) -> Option<&'a Token> {
         match self {
             ChildRef::Node(n) => n.stop_token(),
@@ -66,13 +71,19 @@ pub trait HasChildren {
 // Helper constructors used by the `children()` implementations.
 // ---------------------------------------------------------------------------
 
+/// 对应 Java: com.alibaba.qlexpress4.aparser.RuleContext#n。
+
 pub(crate) fn n(node: &Node) -> ChildRef<'_> {
     ChildRef::Node(node)
 }
 
+/// 对应 Java: com.alibaba.qlexpress4.aparser.RuleContext#t。
+
 pub(crate) fn t(term: &TerminalNode) -> ChildRef<'_> {
     ChildRef::Term(term)
 }
+
+/// 对应 Java: com.alibaba.qlexpress4.aparser.RuleContext#pushOpt。
 
 pub(crate) fn push_opt<'a>(out: &mut Vec<ChildRef<'a>>, opt: &'a Option<Box<Node>>) {
     if let Some(node) = opt {
@@ -80,11 +91,15 @@ pub(crate) fn push_opt<'a>(out: &mut Vec<ChildRef<'a>>, opt: &'a Option<Box<Node
     }
 }
 
+/// 对应 Java: com.alibaba.qlexpress4.aparser.RuleContext#pushOptTerm。
+
 pub(crate) fn push_opt_term<'a>(out: &mut Vec<ChildRef<'a>>, opt: &'a Option<TerminalNode>) {
     if let Some(term) = opt {
         out.push(t(term));
     }
 }
+
+/// 对应 Java: com.alibaba.qlexpress4.aparser.RuleContext#pushAll。
 
 pub(crate) fn push_all<'a>(out: &mut Vec<ChildRef<'a>>, list: &'a [Node]) {
     for node in list {

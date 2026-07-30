@@ -57,6 +57,7 @@ impl ClassRef {
     /// 转为参数转换目标(Java `ParametersTypeConvertor.cast` 的 `Class<?>[]`
     /// 元素)。具名类型在 Java 中是任意 `Class`,对应转换目标的 `Any`
     /// (接受任意值,不转换)。
+    /// 对应 Java: 无（Rust 原生适配）。
     pub fn to_target_type(&self) -> TargetType {
         match self {
             ClassRef::Primitive(target) => *target,

@@ -81,6 +81,7 @@ impl<T: ExtensionFunction> IMethod for T {
 /// 把 [`ExtensionFunction`] 适配为可直接注册进 `NativeType`/`NativeRegistry`
 /// 的原生方法闭包(Rust 适配辅助,Java 无对应物):
 /// 闭包忽略注册表的接收者分派,直接转发 `invoke(target, args)`。
+/// 对应 Java: com.alibaba.qlexpress4.runtime.function.ExtensionFunction#asNativeMethod。
 pub fn as_native_method<F: ExtensionFunction + 'static>(
     extension: F,
 ) -> crate::runtime::native_type::NativeMethod {
@@ -89,17 +90,20 @@ pub fn as_native_method<F: ExtensionFunction + 'static>(
 }
 
 /// 可共享的扩展函数句柄(Rust 适配辅助,等价于 Java 单例 `INSTANCE` 的共享语义)。
+/// 对应 Java: com.alibaba.qlexpress4.runtime.function.ExtensionFunction。
 pub struct SharedExtension<F: ExtensionFunction> {
     extension: F,
 }
 
 impl<F: ExtensionFunction> SharedExtension<F> {
     /// 创建共享扩展函数适配器。Rust 共享适配入口，Java 无同名方法。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.function.ExtensionFunction#new。
     pub fn new(extension: F) -> Self {
         SharedExtension { extension }
     }
 
     /// 取内部扩展函数。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.function.ExtensionFunction#inner。
     pub fn inner(&self) -> &F {
         &self.extension
     }

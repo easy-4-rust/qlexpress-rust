@@ -7,12 +7,14 @@ use super::ql_exception::{QLException, QLExceptionKind};
 /// Wrapper around the unified [`QLException`] with
 /// [`QLExceptionKind::Syntax`]; convert with [`Self::into_exception`].
 #[derive(Clone, Debug)]
+/// 对应 Java: com.alibaba.qlexpress4.exception.QLSyntaxException。
 pub struct QLSyntaxException {
     inner: QLException,
 }
 
 impl QLSyntaxException {
     /// Wrap an already-built [`QLException`] (must have `Syntax` kind).
+    /// 对应 Java: com.alibaba.qlexpress4.exception.QLSyntaxException#fromException。
     pub(crate) fn from_exception(inner: QLException) -> Self {
         debug_assert_eq!(inner.kind(), QLExceptionKind::Syntax);
         QLSyntaxException { inner }

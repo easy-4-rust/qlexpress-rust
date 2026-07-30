@@ -10,6 +10,8 @@ const STABLE_RULE: &str = "amount >= 1000 ? 'REVIEW' : 'PASS'";
 const GOOD_CANDIDATE_RULE: &str = "1000 > amount ? 'PASS' : 'REVIEW'";
 const BAD_CANDIDATE_RULE: &str = "amount >= 1000 ? 'PASS' : 'REVIEW'";
 
+/// 对应 Java: 无（Rust 原生适配）。
+
 pub fn run() -> Result<(), String> {
     let good = exercise(GOOD_CANDIDATE_RULE)?;
     if good.rolled_back || good.mismatches != 0 {

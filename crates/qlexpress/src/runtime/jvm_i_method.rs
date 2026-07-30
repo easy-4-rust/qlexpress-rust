@@ -54,6 +54,7 @@ impl NativeIMethod {
 
     /// 便捷构造:从 [`NativeMethod`] 包装(对应 `QMethodFunction` 把注册的
     /// Java 方法包成函数的场景)。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.JvmIMethod#fromNative。
     pub fn from_native(
         name: impl Into<String>,
         declaring_class: ClassRef,

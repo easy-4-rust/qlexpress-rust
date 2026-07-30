@@ -29,7 +29,8 @@ workspace 总覆盖率须另列，禁止把 derive、verification 或测试代�
 3. [语义迁移对照表](语义迁移对照表.md) 的语法、运行时、异常、缓存、安全、
    宿主扩展和运维契约均有可执行证据；
 4. [迁移测试对照表](迁移测试对照表.md) 的 `SOURCE_PARITY`、
-   `RUST_OBLIGATION`、`VALUE_ADD` 三台账无 `MISSING` 或 `BLOCKED`；
+   `RUST_OBLIGATION`、`VALUE_ADD` 三台账无 `MISSING`、`PARTIAL`、
+   `PENDING` 或 `BLOCKED`；
 5. Java 原测试、Java/Rust 差分、真实脚本回放、Rust 全测试和生产门禁均通过；
 6. Rust 核心生产代码行覆盖率不低于固定 Java 基线，且新增/变更高风险路径
    有分支、错误和副作用断言。
@@ -126,10 +127,12 @@ flowchart LR
 
 | 口径 | 覆盖/总数 | 覆盖率 | 结论 |
 |---|---:|---:|---|
-| `crates/qlexpress/src/**` 核心行 | 20,217 / 23,787 | **84.99%** | 高于 Java 行基线 |
-| workspace 行 | 20,480 / 24,792 | 82.61% | 单独披露，不作为核心对标 |
-| workspace function | 2,480 / 2,970 | 83.50% | 持续提升 |
-| workspace region | 31,175 / 38,179 | 81.65% | 持续提升 |
+| `crates/qlexpress/src/**` 核心行 | 21,667 / 24,822 | **87.29%** | 高于 Java 行基线 |
+| `crates/qlexpress/src/**` 核心分支 | 2,347 / 3,118 | **75.27%** | nightly 显式分支口径 |
+| workspace 行 | 21,948 / 25,843 | **84.93%** | 单独披露，不作为核心对标 |
+| workspace 分支 | 2,379 / 3,164 | **75.19%** | nightly 显式分支口径 |
+| workspace function | 2,642 / 3,083 | **85.70%** | 持续提升 |
+| workspace region | 33,288 / 39,660 | **83.93%** | 持续提升 |
 
 覆盖率只是一道门槛。新增测试必须能杀死合理 mutant，例如参数顺序交换、
 错误码替换、短路分支误执行、字段未写回、MIN/-1 误报除零、缓存导入不执行等。
@@ -163,7 +166,10 @@ cargo run -p qlexpress-verification -- load
 cargo +nightly fuzz run parser_sandbox fuzz/corpus/parser_sandbox -- -max_total_time=30
 
 # 覆盖率
-cargo llvm-cov --workspace --all-features --summary-only
+cargo llvm-cov --workspace --all-features --json \
+  --output-path target/verification/coverage/workspace.json
+cargo +nightly llvm-cov --workspace --all-features --branch --json \
+  --output-path target/verification/coverage/workspace-branch.json
 ```
 
 Java Maven 测试必须使用 JDK 17 运行；当前 JaCoCo 0.8.7 不能对 JDK 21

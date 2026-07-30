@@ -10,12 +10,14 @@ use crate::runtime::native_object::NativeObject;
 use crate::runtime::value::DataValue;
 
 /// 只保存 Java 全限定类型名的原生对象。Rust 适配对象，Java 无同名类。
+/// 对应 Java: 无（Rust 原生适配）。
 pub struct OpaqueNativeObject {
     type_name: String,
 }
 
 impl OpaqueNativeObject {
     /// 以 Java 全限定类型名创建对象。Rust 适配入口，Java 无同名方法。
+    /// 对应 Java: 无（Rust 原生适配）。
     pub fn new(type_name: impl Into<String>) -> Self {
         Self {
             type_name: type_name.into(),
@@ -23,6 +25,7 @@ impl OpaqueNativeObject {
     }
 
     /// 包装成 QLExpress 栈值。Rust 适配入口，Java 无同名方法。
+    /// 对应 Java: 无（Rust 原生适配）。
     pub fn into_data_value(self) -> DataValue {
         DataValue::Object(std::rc::Rc::new(std::cell::RefCell::new(self)))
     }

@@ -15,6 +15,7 @@ use crate::runtime::value::{DataValue, Value};
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/data/FieldValue.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Mirrors Java `FieldValue`: an l-value defined by a pair of accessor
 /// operations plus the declared field type.
+/// 对应 Java: com.alibaba.qlexpress4.runtime.data.FieldValue。
 pub struct FieldValue {
     get_op: Box<dyn Fn() -> DataValue>,
     set_op: RefCell<Box<dyn FnMut(DataValue) -> bool>>,

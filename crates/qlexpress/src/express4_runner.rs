@@ -145,6 +145,7 @@ impl Express4Runner {
     }
 
     /// runner 身份令牌(Java `this`)。
+    /// 对应 Java: com.alibaba.qlexpress4.Express4Runner#identity。
     pub fn identity(&self) -> usize {
         self.identity
     }
@@ -291,6 +292,7 @@ impl Express4Runner {
     /// SPEC §3.6 契约名 `execute_to_last_instruction`;现版 Java
     /// `Express4Runner` 无同名方法(旧版调试入口),Rust 以
     /// 「执行 + 返回指令」对齐其语义。
+    /// 对应 Java: com.alibaba.qlexpress4.Express4Runner#executeToLastInstruction。
     pub fn execute_to_last_instruction(
         &self,
         script: &str,
@@ -516,6 +518,7 @@ impl Express4Runner {
     /// 把可序列化 parse cache 加载后放入编译缓存(后续
     /// `execute(..., cache=true)` 直接命中)。Java 无同名方法,等价于
     /// 「预热 `compileCache`」的宿主操作。
+    /// 对应 Java: com.alibaba.qlexpress4.Express4Runner#setParseCache。
     pub fn set_parse_cache(&self, cache: &SerializableParseCache) -> ImportResult<()> {
         let loaded = self.import_parse_cache(cache)?;
         let script = loaded.get_script().unwrap_or_default().to_string();
@@ -541,6 +544,7 @@ impl Express4Runner {
 
     /// 以共享句柄注册脚本函数(`putIfAbsent` 语义;Java 无同名重载,
     /// 对应 `addFunction` 的 `Rc` 形态,便于同一函数多处注册/取回)。
+    /// 对应 Java: com.alibaba.qlexpress4.Express4Runner#addFunctionShared。
     pub fn add_function_shared(
         &self,
         name: impl Into<String>,
@@ -816,12 +820,14 @@ impl Express4Runner {
 
     /// 注册原生类型(SPEC §4 宿主 API;Java 无同名方法,对应
     /// 「让类对脚本可见」的显式注册)。
+    /// 对应 Java: com.alibaba.qlexpress4.Express4Runner#registerNativeType。
     pub fn register_native_type(&mut self, native_type: NativeType) {
         self.registry_mut().register_type(native_type);
     }
 
     /// 通过 `#[derive(QLExpressType)]` 宏注册原生类型。对应
     /// Java `ReflectLoader.register` 的 Rust 形态。
+    /// 对应 Java: com.alibaba.qlexpress4.Express4Runner#registerQlexpressType。
     pub fn register_qlexpress_type<T>(&mut self)
     where
         T: crate::runtime::member::QLExpressNativeType,

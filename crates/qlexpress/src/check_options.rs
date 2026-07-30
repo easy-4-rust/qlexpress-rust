@@ -6,6 +6,7 @@ use crate::operator::operator_check_strategy::OperatorCheckStrategy;
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/CheckOptions.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Validation options, mirroring Java `CheckOptions`.
 #[derive(Clone, Debug, PartialEq, Eq)]
+/// 对应 Java: com.alibaba.qlexpress4.CheckOptions。
 pub struct CheckOptions {
     /// Operator check strategy. Default `OperatorCheckStrategy::allow_all()`.
     operator_check_strategy: OperatorCheckStrategy,
@@ -44,6 +45,7 @@ impl Default for CheckOptions {
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/CheckOptions.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Java `CheckOptions.Builder`.
 #[derive(Clone, Debug)]
+/// 对应 Java: com.alibaba.qlexpress4.CheckOptions。
 pub struct CheckOptionsBuilder {
     operator_check_strategy: OperatorCheckStrategy,
     disable_function_calls: bool,

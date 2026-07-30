@@ -60,11 +60,13 @@ impl DataValue {
     pub const NULL_VALUE: DataValue = DataValue::Null;
 
     /// 判断是否为 Java `null`。对应 `DataValue#get() == null`。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.data.DataValue#isNull。
     pub fn is_null(&self) -> bool {
         matches!(self, DataValue::Null)
     }
 
     /// 判断是否为 Java `Number`。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.data.DataValue#isNumber。
     pub fn is_number(&self) -> bool {
         matches!(
             self,
@@ -103,6 +105,7 @@ impl DataValue {
     }
 
     /// 读取布尔值；非布尔返回 `None`。Rust 便捷方法。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.data.DataValue#asBool。
     pub fn as_bool(&self) -> Option<bool> {
         match self {
             DataValue::Bool(value) => Some(*value),
@@ -111,6 +114,7 @@ impl DataValue {
     }
 
     /// 读取字符串切片；非字符串返回 `None`。Rust 便捷方法。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.data.DataValue#asStr。
     pub fn as_str(&self) -> Option<&str> {
         match self {
             DataValue::Str(value) => Some(value),
@@ -119,31 +123,37 @@ impl DataValue {
     }
 
     /// 创建 Java `ArrayList` 值。Rust 便捷构造方法。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.data.DataValue#list。
     pub fn list(items: Vec<DataValue>) -> DataValue {
         DataValue::List(Rc::new(RefCell::new(items)))
     }
 
     /// 创建 Java 数组值。Rust 便捷构造方法。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.data.DataValue#array。
     pub fn array(items: Vec<DataValue>) -> DataValue {
         DataValue::Array(Rc::new(RefCell::new(items)))
     }
 
     /// 创建 Java `LinkedHashMap` 值。Rust 便捷构造方法。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.data.DataValue#map。
     pub fn map(map: IndexMap) -> DataValue {
         DataValue::Map(Rc::new(RefCell::new(map)))
     }
 
     /// 从整数创建 Java `BigInteger` 值。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.data.DataValue#bigInt。
     pub fn big_int(value: impl Into<BigInt>) -> DataValue {
         DataValue::BigInt(value.into())
     }
 
     /// 判断是否为宿主对象。Rust 便捷方法。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.data.DataValue#isObject。
     pub fn is_object(&self) -> bool {
         matches!(self, DataValue::Object(_))
     }
 
     /// 借用宿主对象引用。Rust 宿主集成便捷方法。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.data.DataValue#asObjectRef。
     pub fn as_object_ref(&self) -> Option<&Rc<RefCell<dyn NativeObject>>> {
         match self {
             DataValue::Object(reference) => Some(reference),
@@ -152,6 +162,7 @@ impl DataValue {
     }
 
     /// 将宿主对象向下转换为具体 Rust 类型。Rust 宿主集成便捷方法。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.data.DataValue#downcastObject。
     pub fn downcast_object<T: 'static>(&self) -> Option<Rc<RefCell<T>>> {
         use std::any::Any;
         let reference = self.as_object_ref()?;
@@ -161,6 +172,7 @@ impl DataValue {
     }
 
     /// 按 Java `String.valueOf` 规则渲染值。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.data.DataValue#stringValueOf。
     pub fn string_value_of(&self) -> String {
         match self {
             DataValue::Null => "null".to_string(),

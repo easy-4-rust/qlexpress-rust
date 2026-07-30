@@ -9,6 +9,7 @@ use crate::runtime::value::{DataValue, QValue};
 /// 参数：`origin`；返回：`QValue`。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/util/ValueUtils.java`，方法 `toImmutable`；Rust 侧按所有权与 `Result` 语义适配。
 /// Java `ValueUtils.toImmutable(Value)`.
+/// 对应 Java: com.alibaba.qlexpress4.runtime.util.ValueUtils#toImmutable。
 pub fn to_immutable(origin: &QValue) -> QValue {
     origin.to_immutable()
 }
@@ -19,6 +20,7 @@ pub fn to_immutable(origin: &QValue) -> QValue {
 /// Java `ValueUtils.assertType(obj, Number.class, ...)` specialised to the
 /// only usage in the VM (index/slice operands): returns the value as an
 /// integer when it is a `Number`, else reports the given error.
+/// 对应 Java: com.alibaba.qlexpress4.runtime.util.ValueUtils#assertNumber。
 pub fn assert_number(
     obj: &DataValue,
     err_code: &str,
@@ -35,6 +37,7 @@ pub fn assert_number(
 /// 参数：`length`、`ql_index`；返回：`i64`。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/util/ValueUtils.java`，方法 `javaIndex`；Rust 侧按所有权与 `Result` 语义适配。
 /// Java `ValueUtils.javaIndex`: negative QL indices count from the end.
+/// 对应 Java: com.alibaba.qlexpress4.runtime.util.ValueUtils#javaIndex。
 pub fn java_index(length: i64, ql_index: i64) -> i64 {
     if ql_index < 0 {
         length + ql_index

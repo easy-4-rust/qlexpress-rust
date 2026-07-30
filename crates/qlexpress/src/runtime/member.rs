@@ -38,6 +38,7 @@ pub use crate::runtime::util::method_invoke_utils::{find_method_and_invoke, invo
 /// for the script engine. The trait is also a [`NativeObject`] so that
 /// the engine can dispatch field/method access through the registry
 /// *or* through `DataValue::Object(Rc<RefCell<T>>)` directly.
+/// 对应 Java: 无（Rust 原生适配）。
 pub trait QLExpressNativeType: NativeObject + 'static {
     /// Canonical Java-style name (e.g. `"com.example.Calc"`).
     /// Defaults to the Rust type identifier when unspecified.
@@ -82,6 +83,7 @@ pub trait QLExpressNativeType: NativeObject + 'static {
 /// `QLExpressRegistryExt` 接口的 Rust 实现，保留对应对象的领域职责与公开契约。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/QRuntime.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Convenience: register `T` into a registry by-name.
+/// 对应 Java: 无（Rust 原生适配）。
 pub trait QLExpressRegistryExt {
     /// 将派生宏生成的宿主类型元数据注册进 QLExpress 注册表。
     /// 替代 Java `ReflectLoader` 的运行时反射发现。

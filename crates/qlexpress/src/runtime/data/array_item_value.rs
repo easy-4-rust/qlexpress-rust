@@ -13,6 +13,7 @@ use crate::runtime::value::{DataValue, Value};
 ///
 /// Java aliases a live Java array; Rust uses a shared `Rc<RefCell<Vec>>` so
 /// the l-value and the owning array observe the same storage.
+/// 对应 Java: com.alibaba.qlexpress4.runtime.data.ArrayItemValue。
 pub struct ArrayItemValue {
     array: Rc<RefCell<Vec<DataValue>>>,
     index: usize,

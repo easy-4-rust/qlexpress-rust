@@ -11,6 +11,7 @@ use crate::runtime::value::DataValue;
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/DefaultErrReporter.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Reporter bound to a script position, mirroring Java `DefaultErrReporter`.
 #[derive(Clone, Debug)]
+/// 对应 Java: com.alibaba.qlexpress4.exception.DefaultErrReporter。
 pub struct DefaultErrReporter {
     script: String,
     token_start_pos: i32,

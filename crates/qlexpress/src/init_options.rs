@@ -16,6 +16,7 @@ pub type DebugInfoConsumer = Rc<dyn Fn(String)>;
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/InitOptions.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Initialization options, mirroring Java `InitOptions`.
 #[derive(Clone)]
+/// 对应 Java: com.alibaba.qlexpress4.InitOptions。
 pub struct InitOptions {
     class_supplier: Rc<dyn ClassSupplier>,
     /// Default imports for scripts; Java defaults to packs `java.lang`,
@@ -133,6 +134,7 @@ impl std::fmt::Debug for InitOptions {
 /// `InitOptionsBuilder` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/InitOptions.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Java `InitOptions.Builder`.
+/// 对应 Java: com.alibaba.qlexpress4.InitOptions。
 pub struct InitOptionsBuilder {
     class_supplier: Rc<dyn ClassSupplier>,
     default_import: Vec<QLImport>,
@@ -229,6 +231,7 @@ impl InitOptionsBuilder {
     /// Java validates `selectorStart ∈ { "${", "$[", "#{", "#[" }` and
     /// throws `IllegalArgumentException` otherwise; Rust panics with the
     /// same message.
+    /// 对应 Java: com.alibaba.qlexpress4.InitOptions#selectorStart。
     pub fn selector_start(mut self, selector_start: impl Into<String>) -> Self {
         let selector_start = selector_start.into();
         assert!(
@@ -245,6 +248,7 @@ impl InitOptionsBuilder {
     /// Java validates `selectorEnd` is non-empty and throws
     /// `IllegalArgumentException` otherwise; Rust panics with the same
     /// message.
+    /// 对应 Java: com.alibaba.qlexpress4.InitOptions#selectorEnd。
     pub fn selector_end(mut self, selector_end: impl Into<String>) -> Self {
         let selector_end = selector_end.into();
         assert!(

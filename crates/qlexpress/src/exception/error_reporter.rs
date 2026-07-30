@@ -12,6 +12,7 @@ use crate::runtime::value::DataValue;
 ///
 /// The single required method is [`Self::report_format_with_catch`]; the
 /// others are the Java `default` convenience methods.
+/// 对应 Java: com.alibaba.qlexpress4.exception.ErrorReporter。
 pub trait ErrorReporter {
     /// 校验或报告 with catch。
     /// 参数：`catch_obj`、`error_code`、`reason`；返回：`QLException`。

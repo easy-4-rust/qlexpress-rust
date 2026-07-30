@@ -7,7 +7,7 @@ use crate::runtime::java_collector::JavaCollector;
 use crate::runtime::native_object::NativeObject;
 use crate::runtime::value::DataValue;
 
-/// 保存流元素并实现 QLExpress 测试所需的 `map`/`collect`。
+/// 保存流元素并实现 QLExpress 测试所需的 `filter`/`map`/`collect`。
 /// 对应 Java: java.util.stream.Stream
 ///
 /// `parallelStream` 在 Rust 适配层保持 Java 的结果与 encounter order；
@@ -23,6 +23,7 @@ impl JavaStream {
     }
 
     /// 转换为脚本宿主对象。
+    /// 对应 Java: 无（Rust 原生适配）。
     pub fn into_data_value(self) -> DataValue {
         DataValue::Object(std::rc::Rc::new(std::cell::RefCell::new(self)))
     }
@@ -35,6 +36,27 @@ impl NativeObject for JavaStream {
 
     fn call_method(&mut self, name: &str, args: &[DataValue]) -> Result<DataValue, QLException> {
         match (name, args) {
+            ("filter", [DataValue::Lambda(predicate)]) => {
+                let mut filtered = Vec::with_capacity(self.items.len());
+                for item in &self.items {
+                    match predicate
+                        .call(std::slice::from_ref(item))?
+                        .value()
+                        .as_bool()
+                    {
+                        Some(true) => filtered.push(item.clone()),
+                        Some(false) => {}
+                        None => {
+                            return Err(QLException::for_test(
+                                QLExceptionKind::Runtime,
+                                "stream filter predicate must return boolean",
+                                error_codes::INVOKE_LAMBDA_ERROR,
+                            ));
+                        }
+                    }
+                }
+                Ok(JavaStream::new(filtered).into_data_value())
+            }
             ("map", [DataValue::Lambda(lambda)]) => {
                 let mut mapped = Vec::with_capacity(self.items.len());
                 for item in &self.items {

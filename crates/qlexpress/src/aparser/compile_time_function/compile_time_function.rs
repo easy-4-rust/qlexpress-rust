@@ -10,6 +10,7 @@ use super::code_generator::CodeGenerator;
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/compiletimefunction/CompileTimeFunction.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Java `CompileTimeFunction`: creates the instructions for a function
 /// call at compile time.
+/// 对应 Java: com.alibaba.qlexpress4.aparser.compiletimefunction.CompileTimeFunction。
 pub trait CompileTimeFunction {
     /// 构建 function instruction。
     /// 参数：`function_name`、`arguments`、`operator_factory`、`code_generator`；返回：无。

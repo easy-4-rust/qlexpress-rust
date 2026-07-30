@@ -10,6 +10,7 @@ use std::collections::HashSet;
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/security/QLSecurityStrategy.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Identifies a native member (method/field) for security checks.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+/// 对应 Java: com.alibaba.qlexpress4.security.QLSecurityStrategy。
 pub struct NativeMember {
     /// Native type name (as registered in the native registry).
     pub type_name: String,
@@ -33,6 +34,7 @@ impl NativeMember {
 /// Mirroring Java `QLSecurityStrategy`: decides whether a native member may
 /// be accessed from a script.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
+/// 对应 Java: com.alibaba.qlexpress4.security.QLSecurityStrategy。
 pub enum QLSecurityStrategy {
     /// Java `QLSecurityStrategy.open()`: allow everything.
     Open,
@@ -50,6 +52,7 @@ impl QLSecurityStrategy {
     /// 无显式参数；返回：`Self`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/security/QLSecurityStrategy.java`，方法 `open`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `QLSecurityStrategy.open()`.
+    /// 对应 Java: com.alibaba.qlexpress4.security.QLSecurityStrategy#open。
     pub fn open() -> Self {
         QLSecurityStrategy::Open
     }
@@ -58,6 +61,7 @@ impl QLSecurityStrategy {
     /// 无显式参数；返回：`Self`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/security/QLSecurityStrategy.java`，方法 `isolation`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `QLSecurityStrategy.isolation()`.
+    /// 对应 Java: com.alibaba.qlexpress4.security.QLSecurityStrategy#isolation。
     pub fn isolation() -> Self {
         QLSecurityStrategy::Isolation
     }
@@ -66,6 +70,7 @@ impl QLSecurityStrategy {
     /// 参数：`black_list`；返回：`Self`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/security/QLSecurityStrategy.java`，方法 `blackList`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `QLSecurityStrategy.blackList(...)`.
+    /// 对应 Java: com.alibaba.qlexpress4.security.QLSecurityStrategy#blackList。
     pub fn black_list(black_list: HashSet<NativeMember>) -> Self {
         QLSecurityStrategy::BlackList(black_list)
     }
@@ -74,6 +79,7 @@ impl QLSecurityStrategy {
     /// 参数：`white_list`；返回：`Self`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/security/QLSecurityStrategy.java`，方法 `whiteList`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `QLSecurityStrategy.whiteList(...)`.
+    /// 对应 Java: com.alibaba.qlexpress4.security.QLSecurityStrategy#whiteList。
     pub fn white_list(white_list: HashSet<NativeMember>) -> Self {
         QLSecurityStrategy::WhiteList(white_list)
     }
@@ -82,6 +88,7 @@ impl QLSecurityStrategy {
     /// 参数：`member`；返回：`bool`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/security/QLSecurityStrategy.java`，方法 `check`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `check(Member)`: true when the member is secure to access.
+    /// 对应 Java: com.alibaba.qlexpress4.security.QLSecurityStrategy#check。
     pub fn check(&self, member: &NativeMember) -> bool {
         match self {
             QLSecurityStrategy::Open => true,

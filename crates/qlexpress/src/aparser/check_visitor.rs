@@ -22,6 +22,7 @@ use crate::operator::operator_check_strategy::OperatorCheckStrategy;
 /// `CheckVisitor` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/CheckVisitor.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Java `CheckVisitor`.
+/// 对应 Java: com.alibaba.qlexpress4.aparser.CheckVisitor。
 pub struct CheckVisitor<'a> {
     operator_check_strategy: &'a OperatorCheckStrategy,
     disable_function_calls: bool,
@@ -35,6 +36,7 @@ impl<'a> CheckVisitor<'a> {
     /// 参数：`check_options`、`script`；返回：`Self`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/CheckVisitor.java`，构造器 `<init>`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `new CheckVisitor(checkOptions, script)`.
+    /// 对应 Java: com.alibaba.qlexpress4.aparser.CheckVisitor#new。
     pub fn new(check_options: &'a CheckOptions, script: &'a str) -> Self {
         CheckVisitor {
             operator_check_strategy: check_options.check_strategy(),
@@ -48,6 +50,7 @@ impl<'a> CheckVisitor<'a> {
     /// 参数：`check_options`；返回：`Self`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/CheckVisitor.java`，方法 `withoutScript`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `new CheckVisitor(checkOptions)` (empty script for reporting).
+    /// 对应 Java: com.alibaba.qlexpress4.aparser.CheckVisitor#withoutScript。
     pub fn without_script(check_options: &'a CheckOptions) -> Self {
         Self::new(check_options, "")
     }
@@ -56,6 +59,7 @@ impl<'a> CheckVisitor<'a> {
     /// 参数：`tree`；返回：`Result<(), QLSyntaxException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/CheckVisitor.java`，方法 `check`；Rust 侧按所有权与 `Result` 语义适配。
     /// Visit `tree`, returning the first violation like Java's throw.
+    /// 对应 Java: com.alibaba.qlexpress4.aparser.CheckVisitor#check。
     pub fn check(&mut self, tree: &Node) -> Result<(), QLSyntaxException> {
         tree.accept(self);
         match self.violation.take() {

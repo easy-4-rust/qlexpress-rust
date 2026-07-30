@@ -42,6 +42,7 @@ use crate::exception::ql_syntax_exception::QLSyntaxException;
 /// `script` is treated as empty when `None`-equivalent (Java maps `null` to
 /// `""`); pass `Some(operator_manager)` to enable word-operator aliases.
 #[allow(clippy::too_many_arguments)]
+/// 对应 Java: com.alibaba.qlexpress4.aparser.QLexer#tokenize。
 pub fn tokenize(
     script: &str,
     operator_manager: Option<&dyn ParserOperatorManager>,

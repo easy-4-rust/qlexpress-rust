@@ -14,8 +14,10 @@ mod alignment_util;
 use alignment_util::{
     expect_err_code, expect_err_code_with, expect_null, expect_ok, expect_ok_with,
 };
+use qlexpress::init_options::InitOptions;
 use qlexpress::ql_options::QLOptions;
 use qlexpress::runtime::value::DataValue;
+use qlexpress::security::ql_security_strategy::QLSecurityStrategy;
 
 /// 逐项对应 Java `TestSuiteRunner#assertTest`，验证测试路径附件、
 /// `BIZ_EXCEPTION` 错误码/原因，以及函数名和变量名可共存。
@@ -56,6 +58,135 @@ fn suite_runner_assert_contract() {
             &QLOptions::builder().build(),
         )
         .expect("variable may share function name");
+}
+
+// Java source: TestSuiteRunner#suiteTestReportsAllFailures
+// ADAPTED: Java AssertionError.suppressed 在 Rust 中表示为错误 Vec；汇总顺序、
+// 总数、路径、错误码和 reason 仍逐项保持一致。
+#[test]
+fn suite_test_reports_all_failures() {
+    let cases = [
+        ("/00_success.ql", "assert(true)"),
+        ("/01_first_failure.ql", "assert(false, 'first failure')"),
+        ("/02_second_failure.ql", "assert(false, 'second failure')"),
+    ];
+    let mut passed = 0_usize;
+    let mut failures = Vec::new();
+    for (path, script) in cases {
+        let runner = alignment_util::suite_runner();
+        let options = QLOptions::builder()
+            .attachments(std::collections::HashMap::from([(
+                "TEST_PATH".to_string(),
+                DataValue::Str(path.to_string()),
+            )]))
+            .build();
+        match runner.execute(script, std::collections::HashMap::new(), &options) {
+            Ok(_) => passed += 1,
+            Err(error) => failures.push((path, error)),
+        }
+    }
+
+    let mut summary = format!(
+        "Test suite completed: total {}, passed {passed}, failed {}",
+        passed + failures.len(),
+        failures.len()
+    );
+    summary.push_str("\nFailed QL test files:");
+    for (index, (path, error)) in failures.iter().enumerate() {
+        summary.push_str(&format!(
+            "\n\n{}) {path} - QLException:\n{}",
+            index + 1,
+            error
+        ));
+    }
+
+    assert_eq!(failures.len(), 2);
+    assert!(summary.starts_with("Test suite completed: total 3, passed 1, failed 2"));
+    assert!(summary.contains("Failed QL test files:"));
+    assert!(summary.contains("/01_first_failure.ql"));
+    assert!(summary.contains("first failure"));
+    assert!(summary.contains("/02_second_failure.ql"));
+    assert!(summary.contains("second failure"));
+    assert_eq!(failures[0].1.error_code(), "BIZ_EXCEPTION");
+    assert_eq!(
+        failures[0].1.reason(),
+        "/01_first_failure.ql: first failure"
+    );
+    assert_eq!(
+        failures[1].1.reason(),
+        "/02_second_failure.ql: second failure"
+    );
+}
+
+// Java source: TestSuiteRunner#featureDebug
+#[test]
+fn feature_debug_executes_switch_fallthrough_with_debug_output() {
+    let debug_lines = std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
+    let captured = std::rc::Rc::clone(&debug_lines);
+    let init_options = InitOptions::builder()
+        .class_supplier(std::rc::Rc::new(alignment_util::JdkClassSupplier))
+        .security_strategy(QLSecurityStrategy::open())
+        .debug(true)
+        .debug_info_consumer(std::rc::Rc::new(move |line| {
+            captured.borrow_mut().push(line);
+        }))
+        .build();
+    let runner = alignment_util::suite_runner_with_init_options(init_options);
+    let script = r#"/*
+{
+  "noReturn": true
+}
+*/
+int x = 10;
+String result;
+
+switch (x) {
+  case 10:
+  case 9:
+    result = "A";
+    break;
+  case 8:
+    result = "B";
+    break;
+  default:
+    result = "F";
+}
+
+assert(result == "A");
+
+function stest(y) {
+    switch (y) {
+      case 10:
+      case 9:
+        return "A";
+      case 8:
+        return "B";
+      default:
+        return "F";
+    }
+}
+
+assert(stest(9) == "A");
+assert(stest(10) == "A");"#;
+    let options = QLOptions::builder()
+        .attachments(std::collections::HashMap::from([(
+            "TEST_PATH".to_string(),
+            DataValue::Str("/independent/switch/switch_fallthrough.ql".to_string()),
+        )]))
+        .build();
+
+    let result = runner
+        .execute(script, std::collections::HashMap::new(), &options)
+        .expect("debug suite file");
+    assert!(result.result().is_null());
+    let debug_lines = debug_lines.borrow();
+    assert!(!debug_lines.is_empty());
+    assert!(debug_lines
+        .iter()
+        .any(|line| line.contains("Compile consume time")));
+    assert!(debug_lines
+        .iter()
+        .any(|line| line.contains("Execute consume time")));
 }
 
 /// 对应 Java testsuite 脚本 `testsuite/independent/array/array_index_out_of_bound.ql`。

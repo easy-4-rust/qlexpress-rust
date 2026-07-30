@@ -37,6 +37,7 @@ impl BaseBinaryOperator {
     /// Java `isInstanceofComparable(value)`:Rust 中内建可比较类型为
     /// 数值、字符串、布尔、字符(Java 的 String/Boolean/Character 均
     /// implements Comparable)。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.base.BaseBinaryOperator#isInstanceofComparable。
     pub(crate) fn is_instanceof_comparable(value: &QValue) -> bool {
         let data = value.get();
         matches!(
@@ -47,11 +48,13 @@ impl BaseBinaryOperator {
     }
 
     /// Java `isBothBoolean(left, right)`。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.base.BaseBinaryOperator#isBothBoolean。
     pub(crate) fn is_both_boolean(left: &QValue, right: &QValue) -> bool {
         matches!(left.get(), DataValue::Bool(_)) && matches!(right.get(), DataValue::Bool(_))
     }
 
     /// Java `isBooleanAndNull(left, right)`:一侧 Boolean 一侧 null。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.base.BaseBinaryOperator#isBooleanAndNull。
     pub(crate) fn is_boolean_and_null(left: &QValue, right: &QValue) -> bool {
         let l = left.get();
         let r = right.get();
@@ -60,17 +63,20 @@ impl BaseBinaryOperator {
     }
 
     /// Java `isBothNumber(left, right)`。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.base.BaseBinaryOperator#isBothNumber。
     pub(crate) fn is_both_number(left: &QValue, right: &QValue) -> bool {
         left.get().is_number() && right.get().is_number()
     }
 
     /// Java `isBothNumberOrChar(leftValue, rightValue)`。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.base.BaseBinaryOperator#isBothNumberOrChar。
     pub(crate) fn is_both_number_or_char(left_value: &DataValue, right_value: &DataValue) -> bool {
         (left_value.is_number() || matches!(left_value, DataValue::Char(_)))
             && (right_value.is_number() || matches!(right_value, DataValue::Char(_)))
     }
 
     /// Java `char2Number(charOrNumber)`:Character → int(码点)。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.base.BaseBinaryOperator#char2number。
     pub(crate) fn char2number(char_or_number: &DataValue) -> DataValue {
         match char_or_number {
             DataValue::Char(c) => DataValue::Int(*c as i32),
@@ -79,6 +85,7 @@ impl BaseBinaryOperator {
     }
 
     /// Java `isNumberCharacter(left, right)`:一侧 Number 一侧 Character。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.base.BaseBinaryOperator#isNumberCharacter。
     pub(crate) fn is_number_character(left: &QValue, right: &QValue) -> bool {
         let l = left.get();
         let r = right.get();
@@ -87,12 +94,14 @@ impl BaseBinaryOperator {
     }
 
     /// Java `isNumber(value)`。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.base.BaseBinaryOperator#isNumber。
     pub(crate) fn is_number(value: &QValue) -> bool {
         value.get().is_number()
     }
 
     /// Java `assertLeftValue(left, errorReporter)`:赋值类操作符要求
     /// 左操作数为 LeftValue,否则报 INVALID_ASSIGNMENT("on the left side")。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.base.BaseBinaryOperator#assertLeftValue。
     pub(crate) fn assert_left_value(
         left: &QValue,
         error_reporter: &dyn ErrorReporter,
@@ -112,6 +121,7 @@ impl BaseBinaryOperator {
     /// 语义要点:QLExpress 只支持 String 与 Number 的 `+`;任一操作数为
     /// String 时按 Java 字符串拼接(null 拼作 "null",double 带 `.0`);
     /// Character 按码点转 int 后相加;precise 模式强转 BigDecimal 计算。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.base.BaseBinaryOperator#plus。
     pub fn plus(
         operator: &str,
         left: &QValue,
@@ -171,6 +181,7 @@ impl BaseBinaryOperator {
     }
 
     /// Java `minus(left, right, qlOptions, errorReporter)`(支持 Number/Char)。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.base.BaseBinaryOperator#minus。
     pub fn minus(
         operator: &str,
         left: &QValue,
@@ -215,6 +226,7 @@ impl BaseBinaryOperator {
     }
 
     /// Java `multiply(...)`(仅 Number,不含 Character)。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.base.BaseBinaryOperator#multiply。
     pub fn multiply(
         operator: &str,
         left: &QValue,
@@ -248,6 +260,7 @@ impl BaseBinaryOperator {
     /// 语义要点:Java 在此 catch ArithmeticException 并改报
     /// INVALID_ARITHMETIC(消息取原异常 message,如 "Division by zero");
     /// 浮点除零不抛异常(IEEE Infinity/NaN)。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.base.BaseBinaryOperator#divide。
     pub fn divide(
         operator: &str,
         left: &QValue,
@@ -277,6 +290,7 @@ impl BaseBinaryOperator {
     }
 
     /// Java `remainder(...)`(Java 不 catch ArithmeticException,原样上抛)。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.base.BaseBinaryOperator#remainder。
     pub fn remainder(
         operator: &str,
         left: &QValue,
@@ -307,6 +321,7 @@ impl BaseBinaryOperator {
 
     /// Java `bitwiseAnd(...)`:Boolean 操作数按逻辑与(null 视为 false),
     /// 数值按整型域位与。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.base.BaseBinaryOperator#bitwiseAnd。
     pub fn bitwise_and(
         operator: &str,
         left: &QValue,
@@ -334,6 +349,7 @@ impl BaseBinaryOperator {
     /// 参数：`operator`、`left`、`right`、`error_reporter`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/base/BaseBinaryOperator.java`，方法 `bitwiseOr`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `bitwiseOr(...)`。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.base.BaseBinaryOperator#bitwiseOr。
     pub fn bitwise_or(
         operator: &str,
         left: &QValue,
@@ -360,6 +376,7 @@ impl BaseBinaryOperator {
     /// 参数：`operator`、`left`、`right`、`error_reporter`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/base/BaseBinaryOperator.java`，方法 `bitwiseXor`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `bitwiseXor(...)`。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.base.BaseBinaryOperator#bitwiseXor。
     pub fn bitwise_xor(
         operator: &str,
         left: &QValue,
@@ -386,6 +403,7 @@ impl BaseBinaryOperator {
     /// 参数：`operator`、`left`、`right`、`error_reporter`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/base/BaseBinaryOperator.java`，方法 `leftShift`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `leftShift(...)`。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.base.BaseBinaryOperator#leftShift。
     pub fn left_shift(
         operator: &str,
         left: &QValue,
@@ -407,6 +425,7 @@ impl BaseBinaryOperator {
     /// 参数：`operator`、`left`、`right`、`error_reporter`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/base/BaseBinaryOperator.java`，方法 `rightShift`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `rightShift(...)`。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.base.BaseBinaryOperator#rightShift。
     pub fn right_shift(
         operator: &str,
         left: &QValue,
@@ -428,6 +447,7 @@ impl BaseBinaryOperator {
     /// 参数：`operator`、`left`、`right`、`error_reporter`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/base/BaseBinaryOperator.java`，方法 `rightShiftUnsigned`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `rightShiftUnsigned(...)`。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.base.BaseBinaryOperator#rightShiftUnsigned。
     pub fn right_shift_unsigned(
         operator: &str,
         left: &QValue,
@@ -451,6 +471,7 @@ impl BaseBinaryOperator {
     /// NumberMath.compareTo;Number/Character 混合把字符按码点转 int;
     /// 同类型 Comparable(String/Boolean/Character)按自然序;其余报
     /// INVALID_BINARY_OPERAND。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.base.BaseBinaryOperator#compare。
     pub fn compare(
         operator: &str,
         left: &QValue,
@@ -515,6 +536,7 @@ impl BaseBinaryOperator {
     /// 语义要点:数值/数值-字符/同类型 Comparable 走 `compare == 0`
     /// (即 `1 == 1L == 1.0`、`'a' == 97`);其余走 `Objects.equals`
     /// (Rust:DataValue 结构相等,跨数值类型变体不等)。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.base.BaseBinaryOperator#equals。
     pub fn equals(
         operator: &str,
         left: &QValue,
@@ -536,6 +558,7 @@ impl BaseBinaryOperator {
     /// Java `in(left, right, errorReporter)`:右操作数为集合/数组时逐项
     /// equals,为 String 时 `contains(String.valueOf(left))`;两侧 null
     /// 相等规则:null in null == true,一侧 null == false。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.base.BaseBinaryOperator#contains。
     pub fn contains(
         operator: &str,
         left: &QValue,
@@ -591,6 +614,7 @@ impl BaseBinaryOperator {
 
     /// Java `like(left, right, errorReporter)`:仅 String 操作数,
     /// 模式仅支持 `%` 通配(matchPattern 双指针回溯算法,逐行对齐 Java)。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.base.BaseBinaryOperator#like。
     pub fn like(
         operator: &str,
         left: &QValue,
@@ -619,6 +643,7 @@ impl BaseBinaryOperator {
     /// Java `buildInvalidOperandTypeException(left, right, errorReporter)`
     /// —— INVALID_BINARY_OPERAND,参数顺序:
     /// 操作符、左类型名、左值、右类型名、右值。
+    /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.base.BaseBinaryOperator#buildInvalidOperandTypeException。
     pub fn build_invalid_operand_type_exception(
         operator: &str,
         left: &QValue,

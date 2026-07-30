@@ -38,11 +38,13 @@ impl BatchAddFunctionResult {
     }
 
     /// 记录一个失败函数名(Java 侧 `fail.add(name)`)。
+    /// 对应 Java: com.alibaba.qlexpress4.api.BatchAddFunctionResult#addFail。
     pub fn add_fail(&mut self, name: impl Into<String>) {
         self.fail.push(name.into());
     }
 
     /// 是否全部成功(便捷方法,Java 无对应,等价 `getFail().isEmpty()`)。
+    /// 对应 Java: com.alibaba.qlexpress4.api.BatchAddFunctionResult#isAllSucc。
     pub fn is_all_succ(&self) -> bool {
         self.fail.is_empty()
     }

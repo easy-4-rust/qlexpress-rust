@@ -16,6 +16,7 @@ use crate::runtime::qlambda_definition_inner::Param;
 /// Java `CodeGenerator`: the tool `QvmInstructionVisitor` passes to a
 /// [`CompileTimeFunction`](super::CompileTimeFunction)
 /// so it can emit instructions during compilation.
+/// 对应 Java: com.alibaba.qlexpress4.aparser.compiletimefunction.CodeGenerator。
 pub trait CodeGenerator {
     /// 添加或注册 instruction。
     /// 参数：`instruction`；返回：无。

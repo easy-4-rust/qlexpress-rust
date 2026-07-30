@@ -40,6 +40,7 @@ pub struct NativeMethodCandidate {
 
 impl NativeMethodCandidate {
     /// 创建一个显式签名的方法候选。
+    /// 对应 Java: 无（Rust 原生适配）。
     pub fn new(parameter_types: Vec<ClassRef>, var_args: bool, method: NativeMethod) -> Self {
         Self {
             parameter_types,
@@ -51,6 +52,7 @@ impl NativeMethodCandidate {
 
 /// 带 Java 形参签名的构造器候选。
 #[derive(Clone)]
+/// 对应 Java: 无（Rust 原生适配）。
 pub struct NativeConstructorCandidate {
     /// Java `Constructor#getParameterTypes()`；可变参数末项保存组件类型。
     pub parameter_types: Vec<ClassRef>,
@@ -62,6 +64,7 @@ pub struct NativeConstructorCandidate {
 
 impl NativeConstructorCandidate {
     /// 创建一个显式签名的构造器候选。
+    /// 对应 Java: 无（Rust 原生适配）。
     pub fn new(
         parameter_types: Vec<ClassRef>,
         var_args: bool,
@@ -136,6 +139,7 @@ impl NativeType {
     }
 
     /// 注册一个同名静态方法候选。
+    /// 对应 Java: 无（Rust 原生适配）。
     pub fn add_static_method_candidate(
         &mut self,
         name: impl Into<String>,
@@ -148,6 +152,7 @@ impl NativeType {
     }
 
     /// 注册一个构造器候选。
+    /// 对应 Java: 无（Rust 原生适配）。
     pub fn add_constructor_candidate(&mut self, candidate: NativeConstructorCandidate) {
         self.constructor_candidates.push(candidate);
     }

@@ -48,6 +48,7 @@ use crate::utils::basic_util;
 /// 一部分,不过策略(Java 中它们也走反射,`isolation` 默认下同样被拦);
 /// 注册表自身默认策略为 `open`(Java `InitOptions` 默认 `isolation`,
 /// 由 `Express4Runner` 构造时显式接线,见 `set_security_strategy`)。
+/// 对应 Java: 无（Rust 原生适配）。
 pub struct NativeRegistry {
     /// 类型名 -> 注册类型(Java 侧为 `ClassLoader` 可加载的所有类)。
     types: HashMap<String, NativeType>,
@@ -108,6 +109,7 @@ impl Default for NativeRegistry {
 
 impl NativeRegistry {
     /// 预置内建类型的注册表(SPEC §4:String/List/Map/数值 常用方法子集)。
+    /// 对应 Java: 无（Rust 原生适配）。
     pub fn with_builtins() -> Self {
         let mut registry = NativeRegistry::new();
         registry.register_builtin_types();
@@ -186,6 +188,7 @@ impl NativeRegistry {
     }
 
     /// 按实参类型选择构造器候选。没有候选元数据时兼容旧的单构造器注册。
+    /// 对应 Java: 无（Rust 原生适配）。
     pub fn load_constructor_for_args(
         &self,
         clz: &ClassRef,
@@ -698,6 +701,37 @@ impl NativeRegistry {
         );
         self.register_type(collectors);
 
+        // Java 流的实际实现类通常不是公开的 Stream 接口本身；
+        // Java MemberResolver 会沿接口查找 filter/map/collect。Rust 用
+        // Stream 锚点类型登记同名候选，让真实调用现场经过
+        // MemberResolver 的 Lambda/精确类型匹配后再进入宿主对象。
+        let mut stream = NativeType::named("java.util.stream.Stream");
+        stream.add_method_candidate(
+            "filter",
+            NativeMethodCandidate::new(
+                vec![ClassRef::Named("java.util.function.Predicate".to_string())],
+                false,
+                native_object_method("filter"),
+            ),
+        );
+        stream.add_method_candidate(
+            "map",
+            NativeMethodCandidate::new(
+                vec![ClassRef::Named("java.util.function.Function".to_string())],
+                false,
+                native_object_method("map"),
+            ),
+        );
+        stream.add_method_candidate(
+            "collect",
+            NativeMethodCandidate::new(
+                vec![ClassRef::Named("java.util.stream.Collector".to_string())],
+                false,
+                native_object_method("collect"),
+            ),
+        );
+        self.register_type(stream);
+
         let mut hash_set = NativeType::named("java.util.HashSet");
         hash_set.constructor = Some(Rc::new(|args| {
             if args.is_empty() {
@@ -767,6 +801,17 @@ impl NativeRegistry {
             self.register_type(NativeType::named(name));
         }
     }
+}
+
+/// 将显式登记的 Java 接口候选转发到对应宿主对象。
+///
+/// 候选选择已由 [`MemberResolver`] 完成；此处只承担 Java
+/// `Method.invoke` 的调用阶段。
+fn native_object_method(method_name: &'static str) -> NativeMethod {
+    Rc::new(move |bean, args| match bean {
+        DataValue::Object(object) => object.borrow_mut().call_method(method_name, args),
+        _ => Err(wrong_args(method_name)),
+    })
 }
 
 /// 返回值的 Java 运行时类型名；宿主对象使用其显式注册的原生类名。

@@ -5,6 +5,7 @@ use super::range::Range;
 /// Diagnostic information attached to a [`crate::exception::QLException`],
 /// mirroring Java `lsp.Diagnostic`.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
+/// 对应 Java: com.alibaba.qlexpress4.exception.lsp.Diagnostic。
 pub struct Diagnostic {
     /// Start position (absolute char offset) in the script.
     pos: i32,

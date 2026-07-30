@@ -7,6 +7,8 @@ use qlexpress::ql_options::QLOptions;
 use qlexpress::runtime::value::DataValue;
 use qlexpress::Express4Runner;
 
+/// 对应 Java: 无（Rust 原生适配）。
+
 pub fn run(threads: usize, iterations: usize) -> Result<(), String> {
     if threads == 0 || iterations == 0 {
         return Err("threads and iterations must be greater than zero".to_string());

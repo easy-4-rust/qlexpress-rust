@@ -28,6 +28,7 @@ impl<K: Eq + Hash, V: Clone> CacheUtil<K, V> {
     /// 参数：`key`、`compute`；返回：`V) -> V`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/utils/CacheUtil.java`，方法 `computeIfAbsent`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `Map.computeIfAbsent` semantics.
+    /// 对应 Java: com.alibaba.qlexpress4.utils.CacheUtil#computeIfAbsent。
     pub fn compute_if_absent(&self, key: K, compute: impl FnOnce(&K) -> V) -> V {
         if let Some(value) = self.cache.borrow().get(&key) {
             return value.clone();
