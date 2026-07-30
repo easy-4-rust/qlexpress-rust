@@ -90,6 +90,16 @@ impl QLInstruction for MultiNewArrayInstruction {
             }
             dim_array.push(dim_len);
         }
+        if let Some(budget) = q_context.q_runtime().execution_budget() {
+            let mut total_items = 0usize;
+            let mut level_items = 1usize;
+            for dim in &dim_array {
+                let dim = usize::try_from(*dim).unwrap_or(usize::MAX);
+                level_items = level_items.saturating_mul(dim);
+                total_items = total_items.saturating_add(level_items);
+            }
+            budget.charge_collection_items(total_items)?;
+        }
         q_context.push(QValue::Data(Self::build_array(&dim_array)));
         Ok(QResult::NEXT_INSTRUCTION)
     }

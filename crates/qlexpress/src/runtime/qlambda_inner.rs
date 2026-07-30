@@ -59,8 +59,20 @@ impl QLambdaInner {
     /// 调用 Lambda。对应 Java 方法 `call(Object... params)`。
     /// Java `call(Object... params)`.
     pub fn call(&self, params: &[DataValue]) -> Result<QResult, QLException> {
+        let budget_runtime = Rc::clone(self.q_context.q_runtime());
+        if let Some(budget) = budget_runtime.execution_budget() {
+            budget.enter_call()?;
+        }
         let mut runtime = if self.new_env {
-            self.inherit_scope(params)?
+            match self.inherit_scope(params) {
+                Ok(runtime) => runtime,
+                Err(error) => {
+                    if let Some(budget) = budget_runtime.execution_budget() {
+                        budget.exit_call();
+                    }
+                    return Err(error);
+                }
+            }
         } else {
             // DelegateQContext is a pair of Rc handles; cloning shares the
             // same runtime and scope chain (Java mutates its own wrapper).
@@ -71,7 +83,11 @@ impl QLambdaInner {
                 self.q_context.current_scope(),
             )
         };
-        self.call_inner(&mut runtime)
+        let result = self.call_inner(&mut runtime);
+        if let Some(budget) = budget_runtime.execution_budget() {
+            budget.exit_call();
+        }
+        result
     }
 
     /// 调用并收集 Lambda 内定义的函数表。对应 Java 方法

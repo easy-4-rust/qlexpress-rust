@@ -126,7 +126,15 @@ impl QLInstruction for CallFunctionInstruction {
             return Ok(QResult::NEXT_INSTRUCTION);
         };
         let parameters = q_context.pop_n(self.arg_num);
-        match function.call(q_context, &parameters) {
+        let runtime = Rc::clone(q_context.q_runtime());
+        if let Some(budget) = runtime.execution_budget() {
+            budget.enter_call()?;
+        }
+        let function_result = function.call(q_context, &parameters);
+        if let Some(budget) = runtime.execution_budget() {
+            budget.exit_call();
+        }
+        match function_result {
             Ok(function_result_obj) => {
                 q_context.push(QValue::Data(function_result_obj.clone()));
 

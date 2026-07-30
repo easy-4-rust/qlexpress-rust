@@ -7,11 +7,13 @@
 //! `QLambdaInner.callInner` (the instruction loop).
 
 use std::rc::Rc;
+use std::time::Instant;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::exception::QLException;
 use crate::ql_options::{Attachments, QLOptions};
 use crate::runtime::delegate_qcontext::DelegateQContext;
+use crate::runtime::execution_budget::ExecutionBudget;
 use crate::runtime::instruction::Instruction;
 use crate::runtime::member::NativeRegistry;
 use crate::runtime::q_result::QResult;
@@ -21,6 +23,7 @@ use crate::runtime::qlambda_definition::QLambdaDefinition;
 use crate::runtime::qvm_global_scope::QvmGlobalScope;
 use crate::runtime::scope::QScope;
 use crate::runtime::trace::QTraces;
+use crate::security::{CancellationToken, ResourceLimits};
 
 /// 处理 current time millis 对应的领域职责。
 /// 无显式参数；返回：`i64`。
@@ -47,6 +50,7 @@ pub struct QvmRuntime {
     attachments: Attachments,
     registry: Rc<NativeRegistry>,
     start_time: i64,
+    execution_budget: Option<ExecutionBudget>,
 }
 
 impl QvmRuntime {
@@ -66,7 +70,45 @@ impl QvmRuntime {
             attachments,
             registry,
             start_time,
+            execution_budget: None,
         }
+    }
+
+    /// 创建带有限资源预算和取消令牌的安全运行时。
+    pub fn new_sandboxed(
+        traces: QTraces,
+        attachments: Attachments,
+        registry: Rc<NativeRegistry>,
+        start_time: i64,
+        limits: ResourceLimits,
+        cancellation_token: CancellationToken,
+    ) -> Self {
+        QvmRuntime {
+            traces,
+            attachments,
+            registry,
+            start_time,
+            execution_budget: Some(ExecutionBudget::new(limits, cancellation_token)),
+        }
+    }
+
+    /// 返回安全运行时预算；普通 Java 兼容执行为 `None`。
+    pub fn execution_budget(&self) -> Option<&ExecutionBudget> {
+        self.execution_budget.as_ref()
+    }
+
+    /// 返回宿主调用应遵守的截止时间。
+    pub fn deadline(&self) -> Option<Instant> {
+        self.execution_budget
+            .as_ref()
+            .map(ExecutionBudget::deadline)
+    }
+
+    /// 返回宿主调用可检查的取消令牌。
+    pub fn cancellation_token(&self) -> Option<&CancellationToken> {
+        self.execution_budget
+            .as_ref()
+            .map(ExecutionBudget::cancellation_token)
     }
 
     /// 处理 for test 对应的领域职责。
@@ -161,7 +203,15 @@ pub fn run_instructions(
 ) -> Result<QResult, QLException> {
     let mut i: i64 = 0;
     while i >= 0 && (i as usize) < instructions.len() {
+        if let Some(budget) = q_context.q_runtime().execution_budget() {
+            budget.consume_fuel(1)?;
+        }
         let q_result = instructions[i as usize].execute(q_context, ql_options)?;
+        if instructions[i as usize].stack_output() > 0 {
+            if let Some(budget) = q_context.q_runtime().execution_budget() {
+                budget.validate_value(&q_context.peek().get())?;
+            }
+        }
         match q_result {
             QResult::Jump(offset) => {
                 // Java `callInner`: `case JUMP: i += position; continue;` —

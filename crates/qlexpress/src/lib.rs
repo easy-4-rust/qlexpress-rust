@@ -59,7 +59,10 @@ pub use runtime::function::CustomFunction;
 pub use runtime::operator::custom_binary_operator::CustomBinaryOperator;
 
 /// 安全策略。对应 Java `security.QLSecurityStrategy`。
-pub use security::{NativeMember, QLSecurityStrategy};
+pub use security::{
+    CacheStats, CancellationToken, Capability, CapabilityPolicy, CompileCachePolicy, NativeMember,
+    QLSecurityStrategy, ResourceLimits, SandboxProfile,
+};
 
 /// 语法树/编译入口支撑(SPEC §3.6 `parse_to_syntax_tree` 的返回模型)。
 pub use aparser::{

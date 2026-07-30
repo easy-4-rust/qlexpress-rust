@@ -87,13 +87,21 @@ impl QLInstruction for MethodInvokeInstruction {
                 error_codes::error_msg(error_codes::NULL_METHOD_ACCESS),
             ));
         }
-        let invoke_res = find_method_and_invoke(
+        let runtime = Rc::clone(q_context.q_runtime());
+        if let Some(budget) = runtime.execution_budget() {
+            budget.enter_call()?;
+        }
+        let invoke_result = find_method_and_invoke(
             &bean,
             &self.method_name,
             &params,
             q_context.registry(),
             &*self.error_reporter,
-        )?;
+        );
+        if let Some(budget) = runtime.execution_budget() {
+            budget.exit_call();
+        }
+        let invoke_res = invoke_result?;
         q_context.push(invoke_res);
         Ok(QResult::NEXT_INSTRUCTION)
     }

@@ -66,3 +66,4 @@ pub use qlambda_trace::QLambdaTrace;
 pub use qvm_global_scope::QvmGlobalScope;
 pub use qvm_runtime::QvmRuntime;
 pub use value::{DataValue, NativeObject, QValue, Value};
+pub mod execution_budget;

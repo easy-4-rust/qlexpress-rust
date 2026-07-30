@@ -50,7 +50,11 @@ impl QLInstruction for StringJoinInstruction {
         let mut sb = String::new();
         for i in 0..self.n {
             // Java StringBuilder.append(Object) → String.valueOf
-            sb.push_str(&arguments.get_value(i).string_value_of());
+            let part = arguments.get_value(i).string_value_of();
+            if let Some(budget) = q_context.q_runtime().execution_budget() {
+                budget.check_string_bytes(sb.len().saturating_add(part.len()))?;
+            }
+            sb.push_str(&part);
         }
         q_context.push(QValue::Data(DataValue::Str(sb)));
         Ok(QResult::NEXT_INSTRUCTION)

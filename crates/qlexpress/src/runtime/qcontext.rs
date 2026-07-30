@@ -4,6 +4,7 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
+use std::time::Instant;
 
 use crate::exception::QLException;
 use crate::ql_options::Attachments;
@@ -16,6 +17,7 @@ use crate::runtime::qvm_runtime::QvmRuntime;
 use crate::runtime::scope::ScopeRef;
 use crate::runtime::trace::QTraces;
 use crate::runtime::value::{DataValue, QValue};
+use crate::security::CancellationToken;
 
 /// `QContext` 接口的 Rust 实现，保留对应对象的领域职责与公开契约。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/QContext.java`；具体对象路径见 `docs/对象级对照表.md`。
@@ -58,6 +60,18 @@ pub trait QContext {
     /// The shared root runtime (used to build lambda-captured contexts,
     /// Java `new DelegateQContext(qContext, ...)`).
     fn q_runtime(&self) -> &Rc<QvmRuntime>;
+
+    /// 返回安全执行的绝对截止时间；普通兼容执行返回 `None`。
+    ///
+    /// 宿主函数必须把该期限传给网络、数据库等下游调用。
+    fn deadline(&self) -> Option<Instant> {
+        self.q_runtime().deadline()
+    }
+
+    /// 返回外部协作式取消令牌；普通兼容执行返回 `None`。
+    fn cancellation_token(&self) -> Option<&CancellationToken> {
+        self.q_runtime().cancellation_token()
+    }
 
     // ---- Java QScope ----
 

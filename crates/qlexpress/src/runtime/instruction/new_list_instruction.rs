@@ -49,6 +49,9 @@ impl QLInstruction for NewListInstruction {
         q_context: &mut dyn QContext,
         _ql_options: &QLOptions,
     ) -> Result<QResult, QLException> {
+        if let Some(budget) = q_context.q_runtime().execution_budget() {
+            budget.charge_collection_items(self.init_length)?;
+        }
         let init_items = q_context.pop_n(self.init_length);
         let list = init_items.values();
         q_context.push(QValue::Data(DataValue::list(list)));

@@ -50,6 +50,9 @@ impl QLInstruction for NewMapInstruction {
         q_context: &mut dyn QContext,
         _ql_options: &QLOptions,
     ) -> Result<QResult, QLException> {
+        if let Some(budget) = q_context.q_runtime().execution_budget() {
+            budget.charge_collection_items(self.keys.len())?;
+        }
         let init_items = q_context.pop_n(self.keys.len());
         let mut map = IndexMap::new();
         for (i, key) in self.keys.iter().enumerate() {

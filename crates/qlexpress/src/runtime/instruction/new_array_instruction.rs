@@ -59,6 +59,9 @@ impl QLInstruction for NewArrayInstruction {
         q_context: &mut dyn QContext,
         ql_options: &QLOptions,
     ) -> Result<QResult, QLException> {
+        if let Some(budget) = q_context.q_runtime().execution_budget() {
+            budget.charge_collection_items(self.length)?;
+        }
         if !ql_options.check_arr_len(self.length as i32) {
             return Err(self.error_reporter.report_format(
                 error_codes::EXCEED_MAX_ARR_LENGTH,

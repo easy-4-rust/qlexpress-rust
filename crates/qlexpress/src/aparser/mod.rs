@@ -11,6 +11,7 @@
 pub mod built_in_types_set;
 pub mod check_visitor;
 pub mod compile_cache;
+pub mod compile_cache_store;
 pub mod compile_time_function;
 pub mod exist_stack;
 pub mod generator_scope;
@@ -40,6 +41,7 @@ pub use built_in_types_set::{
 };
 pub use check_visitor::CheckVisitor;
 pub use compile_cache::{CompileCache, QCompileCache, ScriptCompileCache};
+pub use compile_cache_store::CompileCacheStore;
 pub use compile_time_function::{CodeGenerator, CompileTimeFunction};
 pub use exist_stack::{ExistStack, ExistVarStack};
 pub use generator_scope::GeneratorScope;

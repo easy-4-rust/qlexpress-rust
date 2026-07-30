@@ -23,9 +23,11 @@ use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::time::Instant;
 
 use crate::aparser::check_visitor::CheckVisitor;
 use crate::aparser::compile_cache::QCompileCache;
+use crate::aparser::compile_cache_store::CompileCacheStore;
 use crate::aparser::compile_time_function::CompileTimeFunction;
 use crate::aparser::generator_scope::GeneratorScope;
 use crate::aparser::import_manager::ImportManager;
@@ -81,6 +83,7 @@ use crate::runtime::scope::QScope;
 use crate::runtime::trace::{ExpressionTrace, QTraces, TracePointTree};
 use crate::runtime::value::{DataValue, QValue};
 use crate::security::ql_security_strategy::QLSecurityStrategy;
+use crate::security::{Capability, SandboxProfile};
 
 /// runner 身份令牌分配器(Java 以 `this` 引用相等判断 `LoadedParseCache`
 /// 绑定关系;Rust 为每个 runner 分配唯一序号,见 [`LoadedParseCache`])。
@@ -93,7 +96,7 @@ pub struct Express4Runner {
     operator_manager: OperatorManager,
     /// 编译缓存(script → 编译产物)。对应 Java 字段 `compileCache`
     /// (Java 值为 `Future<QCompileCache>`,Rust 直接缓存产物,见文件头)。
-    compile_cache: RefCell<HashMap<String, Rc<LoadedCompileCache>>>,
+    compile_cache: RefCell<CompileCacheStore>,
     /// 用户注册函数表。对应 Java 字段 `userDefineFunction`。
     user_define_functions: RefCell<UserDefineFunctions>,
     /// 编译期函数表。对应 Java 字段 `compileTimeFunctions`。
@@ -105,6 +108,8 @@ pub struct Express4Runner {
     reflect_loader: ReflectLoader,
     /// 初始化选项。对应 Java 字段 `initOptions`。
     init_options: InitOptions,
+    /// 宿主显式注册的扩展能力集合，供 `execute_checked` 统一白名单审计。
+    registered_capabilities: RefCell<HashSet<Capability>>,
     /// runner 身份令牌(Java `this` 引用,用于 parse cache 绑定校验)。
     identity: usize,
 }
@@ -134,12 +139,13 @@ impl Express4Runner {
         );
         Express4Runner {
             operator_manager: OperatorManager::new(),
-            compile_cache: RefCell::new(HashMap::new()),
+            compile_cache: RefCell::new(CompileCacheStore::new()),
             user_define_functions: RefCell::new(HashMap::new()),
             compile_time_functions: RefCell::new(HashMap::new()),
             global_scope: Rc::new(GeneratorScope::new("global", None)),
             reflect_loader,
             init_options,
+            registered_capabilities: RefCell::new(HashSet::new()),
             identity: RUNNER_IDENTITY.fetch_add(1, Ordering::Relaxed),
         }
     }
@@ -210,6 +216,132 @@ impl Express4Runner {
         }
         .map_err(QLSyntaxException::into_exception)?;
         self.execute_definition(&compile_cache, true, context, ql_options)
+    }
+
+    /// 使用有限预算、静态检查、统一 capability 白名单和租户缓存执行脚本。
+    ///
+    /// 该入口是 Rust 安全增强；原 `execute` 系列继续保持 Java 兼容默认值。
+    /// 对不可信脚本，宿主应只暴露本方法或进程级 Worker API。
+    pub fn execute_checked(
+        &self,
+        script: &str,
+        context: HashMap<String, DataValue>,
+        ql_options: &QLOptions,
+        sandbox_profile: &SandboxProfile,
+    ) -> Result<QLResult, QLException> {
+        let validation_budget = crate::runtime::execution_budget::ExecutionBudget::new(
+            sandbox_profile.limits.clone(),
+            sandbox_profile.cancellation_token.clone(),
+        );
+        for value in context.values() {
+            validation_budget.validate_value(value)?;
+        }
+        self.execute_checked_with_context(
+            script,
+            Rc::new(MapExpressContext::new(map_to_index_map(context))),
+            ql_options,
+            sandbox_profile,
+        )
+    }
+
+    /// `execute_checked` 的 [`ExpressContext`] 版本。
+    ///
+    /// 动态上下文返回的值会在进入 QVM 栈后受字符串与集合预算校验。
+    pub fn execute_checked_with_context(
+        &self,
+        script: &str,
+        context: Rc<dyn ExpressContext>,
+        ql_options: &QLOptions,
+        sandbox_profile: &SandboxProfile,
+    ) -> Result<QLResult, QLException> {
+        sandbox_profile.validate().map_err(|reason| {
+            crate::runtime::execution_budget::budget_error(
+                crate::exception::QLExceptionKind::Runtime,
+                "SANDBOX_INVALID_PROFILE",
+                reason,
+            )
+        })?;
+        let started = Instant::now();
+        self.validate_capabilities(sandbox_profile)?;
+        self.validate_source_budget(script, sandbox_profile)?;
+
+        let tokens = crate::aparser::qlexer::tokenize(
+            script,
+            Some(&self.operator_manager),
+            self.init_options.interpolation_mode(),
+            self.init_options.selector_start(),
+            self.init_options.selector_end(),
+            self.init_options.is_strict_new_lines(),
+        )
+        .map_err(QLSyntaxException::into_exception)?;
+        if tokens.len() > sandbox_profile.limits.max_tokens {
+            return Err(sandbox_limit_error(
+                "SANDBOX_TOKENS_EXCEEDED",
+                tokens.len(),
+                sandbox_profile.limits.max_tokens,
+            ));
+        }
+        validate_token_nesting(&tokens, sandbox_profile.limits.max_ast_depth)?;
+        self.check_sandbox_deadline(started, sandbox_profile)?;
+
+        let tree = self
+            .parse_to_syntax_tree(script)
+            .map_err(QLSyntaxException::into_exception)?;
+        validate_ast_budget(&tree, sandbox_profile)?;
+        let mut check_visitor = CheckVisitor::new(&sandbox_profile.check_options, script);
+        check_visitor
+            .check(&tree)
+            .map_err(QLSyntaxException::into_exception)?;
+        self.check_sandbox_deadline(started, sandbox_profile)?;
+
+        let compile_cache = if sandbox_profile.compile_cache.enabled {
+            let cached = {
+                self.compile_cache
+                    .borrow_mut()
+                    .get(&sandbox_profile.tenant_id, script)
+            };
+            if let Some(cached) = cached {
+                cached
+            } else {
+                let compiled = Rc::new(
+                    self.compile_tree(script, &tree)
+                        .map_err(QLSyntaxException::into_exception)?,
+                );
+                self.validate_instruction_budget(&compiled, sandbox_profile)?;
+                self.compile_cache.borrow_mut().insert(
+                    &sandbox_profile.tenant_id,
+                    script.to_string(),
+                    Rc::clone(&compiled),
+                    sandbox_profile.compile_cache.max_entries,
+                    sandbox_profile.compile_cache.max_entries_per_tenant,
+                );
+                compiled
+            }
+        } else {
+            let compiled = Rc::new(
+                self.compile_tree(script, &tree)
+                    .map_err(QLSyntaxException::into_exception)?,
+            );
+            self.validate_instruction_budget(&compiled, sandbox_profile)?;
+            compiled
+        };
+        self.validate_instruction_budget(&compile_cache, sandbox_profile)?;
+        self.check_sandbox_deadline(started, sandbox_profile)?;
+
+        let elapsed_millis = u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX);
+        let mut runtime_limits = sandbox_profile.limits.clone();
+        runtime_limits.timeout_millis = runtime_limits
+            .timeout_millis
+            .saturating_sub(elapsed_millis)
+            .max(1);
+        self.execute_definition_sandboxed(
+            &compile_cache,
+            true,
+            context,
+            ql_options,
+            runtime_limits,
+            sandbox_profile.cancellation_token.clone(),
+        )
     }
 
     /// 以宿主对象的公开字段/getter 作为外部变量执行脚本。对应 Java
@@ -352,6 +484,46 @@ impl Express4Runner {
         Ok(QLResult::new(result.value(), runtime.traces().snapshot()))
     }
 
+    fn execute_definition_sandboxed(
+        &self,
+        compile_cache: &LoadedCompileCache,
+        trace_points_available: bool,
+        context: Rc<dyn ExpressContext>,
+        ql_options: &QLOptions,
+        limits: crate::security::ResourceLimits,
+        cancellation_token: crate::security::CancellationToken,
+    ) -> Result<QLResult, QLException> {
+        let global_scope = QvmGlobalScope::with_context(
+            context,
+            self.user_define_functions.borrow().clone(),
+            ql_options.attachments().clone(),
+            ql_options.is_pollute_user_context(),
+        );
+        let traces = if self.init_options.is_trace_expression()
+            && ql_options.is_trace_expression()
+            && trace_points_available
+        {
+            QTraces::from_trace_points(compile_cache.expression_trace_points())
+        } else {
+            QTraces::empty()
+        };
+        let runtime = Rc::new(QvmRuntime::new_sandboxed(
+            traces,
+            ql_options.attachments().clone(),
+            Rc::clone(self.reflect_loader.registry()),
+            current_time_millis(),
+            limits,
+            cancellation_token,
+        ));
+        let definition = Rc::clone(compile_cache.q_lambda_definition());
+        let result = runtime.execute(global_scope, definition, ql_options)?;
+        let value = result.value();
+        if let Some(budget) = runtime.execution_budget() {
+            budget.validate_output(&value)?;
+        }
+        Ok(QLResult::new(value, runtime.traces().snapshot()))
+    }
+
     // ------------------------------------------------------------------
     // 编译(Java parseTo* 系列)
     // ------------------------------------------------------------------
@@ -401,12 +573,27 @@ impl Express4Runner {
         let debug = self.init_options.is_debug();
         let start = current_time_millis();
         let tree = self.parse_to_syntax_tree(script)?;
+        let compiled = self.compile_tree(script, &tree)?;
+        if debug {
+            (self.init_options.debug_info_consumer())(format!(
+                "Compile consume time: {} ms",
+                current_time_millis() - start
+            ));
+        }
+        Ok(compiled)
+    }
+
+    fn compile_tree(
+        &self,
+        script: &str,
+        tree: &Node,
+    ) -> Result<LoadedCompileCache, QLSyntaxException> {
         let import_manager = RefCell::new(self.inherit_default_import());
         let user_define_functions = self.user_define_functions.borrow();
         let compile_time_functions = self.compile_time_functions.borrow();
         let (instructions, max_stack) = compile_script(
             script,
-            &tree,
+            tree,
             &import_manager,
             Some(Rc::clone(&self.global_scope)),
             &self.operator_manager,
@@ -414,12 +601,6 @@ impl Express4Runner {
             &user_define_functions,
             &self.init_options,
         )?;
-        if debug {
-            (self.init_options.debug_info_consumer())(format!(
-                "Compile consume time: {} ms",
-                current_time_millis() - start
-            ));
-        }
         let definition: Rc<dyn QLambdaDefinition> = Rc::new(QLambdaDefinitionInner::new(
             "main",
             instructions,
@@ -428,7 +609,7 @@ impl Express4Runner {
         ));
         let trace_points = if self.init_options.is_trace_expression() {
             let mut visitor = TraceExpressionVisitor::new();
-            visitor.visit(&tree)
+            visitor.visit(tree)
         } else {
             Vec::new()
         };
@@ -441,19 +622,32 @@ impl Express4Runner {
         &self,
         script: &str,
     ) -> Result<Rc<LoadedCompileCache>, QLSyntaxException> {
-        if let Some(cached) = self.compile_cache.borrow().get(script) {
-            return Ok(Rc::clone(cached));
+        const LEGACY_TENANT: &str = "__java_compatible__";
+        const LEGACY_CACHE_CAPACITY: usize = 1024;
+        if let Some(cached) = self.compile_cache.borrow_mut().get(LEGACY_TENANT, script) {
+            return Ok(cached);
         }
         let compiled = Rc::new(self.parse_definition(script)?);
         self.compile_cache
             .borrow_mut()
-            .insert(script.to_string(), Rc::clone(&compiled));
+            .insert(
+                LEGACY_TENANT,
+                script.to_string(),
+                Rc::clone(&compiled),
+                LEGACY_CACHE_CAPACITY,
+                LEGACY_CACHE_CAPACITY,
+            );
         Ok(compiled)
     }
 
     /// 清空编译缓存。对应 Java 方法 `clearCompileCache()`。
     pub fn clear_compile_cache(&self) {
         self.compile_cache.borrow_mut().clear();
+    }
+
+    /// 返回 Runner 编译缓存统计。该统计覆盖兼容入口和安全租户入口。
+    pub fn compile_cache_stats(&self) -> crate::security::CacheStats {
+        self.compile_cache.borrow().stats()
     }
 
     /// 默认 import 管理器。对应 Java 私有方法 `inheritDefaultImport()`。
@@ -524,7 +718,13 @@ impl Express4Runner {
         let script = loaded.get_script().unwrap_or_default().to_string();
         self.compile_cache
             .borrow_mut()
-            .insert(script, Rc::new(loaded.get_compile_cache().clone()));
+            .insert(
+                "__java_compatible__",
+                script,
+                Rc::new(loaded.get_compile_cache().clone()),
+                1024,
+                1024,
+            );
         Ok(())
     }
 
@@ -550,11 +750,15 @@ impl Express4Runner {
         name: impl Into<String>,
         function: Rc<dyn CustomFunction>,
     ) -> bool {
+        let name = name.into();
         let mut functions = self.user_define_functions.borrow_mut();
-        match functions.entry(name.into()) {
+        match functions.entry(name.clone()) {
             std::collections::hash_map::Entry::Occupied(_) => false,
             std::collections::hash_map::Entry::Vacant(slot) => {
                 slot.insert(function);
+                self.registered_capabilities
+                    .borrow_mut()
+                    .insert(Capability::Function(name));
                 true
             }
         }
@@ -780,11 +984,15 @@ impl Express4Runner {
         name: impl Into<String>,
         compile_time_function: Rc<dyn CompileTimeFunction>,
     ) -> bool {
+        let name = name.into();
         let mut functions = self.compile_time_functions.borrow_mut();
-        match functions.entry(name.into()) {
+        match functions.entry(name.clone()) {
             std::collections::hash_map::Entry::Occupied(_) => false,
             std::collections::hash_map::Entry::Vacant(slot) => {
                 slot.insert(compile_time_function);
+                self.registered_capabilities
+                    .borrow_mut()
+                    .insert(Capability::CompileTimeFunction(name));
                 true
             }
         }
@@ -812,10 +1020,16 @@ impl Express4Runner {
         let method_name = extension_function.name().to_string();
         let type_name = extension_function.declaring_class().java_name().to_string();
         self.registry_mut().register_method(
-            type_name,
-            method_name,
+            type_name.clone(),
+            method_name.clone(),
             as_native_method(extension_function),
         );
+        self.registered_capabilities
+            .borrow_mut()
+            .insert(Capability::ExtensionMethod {
+                type_name,
+                method_name,
+            });
     }
 
     /// 注册原生类型(SPEC §4 宿主 API;Java 无同名方法,对应
@@ -849,7 +1063,13 @@ impl Express4Runner {
     /// `addMacro(String, String)`(`defineMacroIfAbsent` 语义)。
     pub fn add_macro(&self, name: &str, macro_script: &str) -> Result<bool, QLSyntaxException> {
         let define = self.parse_macro_define(name, macro_script)?;
-        Ok(self.global_scope.define_macro_if_absent(name, define))
+        let inserted = self.global_scope.define_macro_if_absent(name, define);
+        if inserted {
+            self.registered_capabilities
+                .borrow_mut()
+                .insert(Capability::Macro(name.to_string()));
+        }
+        Ok(inserted)
     }
 
     /// 注册或替换全局宏。对应 Java 方法
@@ -861,6 +1081,9 @@ impl Express4Runner {
     ) -> Result<(), QLSyntaxException> {
         let define = self.parse_macro_define(name, macro_script)?;
         self.global_scope.define_macro(name, define);
+        self.registered_capabilities
+            .borrow_mut()
+            .insert(Capability::Macro(name.to_string()));
         Ok(())
     }
 
@@ -928,11 +1151,18 @@ impl Express4Runner {
         operator: impl Into<String>,
         custom_binary_operator: Rc<dyn CustomBinaryOperator>,
     ) -> bool {
-        self.operator_manager.add_binary_operator(
-            operator,
+        let operator = operator.into();
+        let inserted = self.operator_manager.add_binary_operator(
+            operator.clone(),
             custom_binary_operator,
             ql_precedences::MULTI,
-        )
+        );
+        if inserted {
+            self.registered_capabilities
+                .borrow_mut()
+                .insert(Capability::Operator(operator));
+        }
+        inserted
     }
 
     /// 注册自定义二元操作符(指定优先级)。对应 Java 方法
@@ -943,8 +1173,18 @@ impl Express4Runner {
         custom_binary_operator: Rc<dyn CustomBinaryOperator>,
         precedence: i32,
     ) -> bool {
-        self.operator_manager
-            .add_binary_operator(operator, custom_binary_operator, precedence)
+        let operator = operator.into();
+        let inserted = self.operator_manager.add_binary_operator(
+            operator.clone(),
+            custom_binary_operator,
+            precedence,
+        );
+        if inserted {
+            self.registered_capabilities
+                .borrow_mut()
+                .insert(Capability::Operator(operator));
+        }
+        inserted
     }
 
     /// 以二元闭包注册操作符。对应 Java 方法
@@ -985,15 +1225,30 @@ impl Express4Runner {
         operator: &str,
         custom_binary_operator: Rc<dyn CustomBinaryOperator>,
     ) -> bool {
-        self.operator_manager
-            .replace_default_operator(operator, custom_binary_operator)
+        let replaced = self
+            .operator_manager
+            .replace_default_operator(operator, custom_binary_operator);
+        if replaced {
+            self.registered_capabilities
+                .borrow_mut()
+                .insert(Capability::Operator(operator.to_string()));
+        }
+        replaced
     }
 
     /// 为既有操作符添加别名。对应 Java `OperatorManager.addOperatorAlias`
     /// (`Express4Runner.addAlias` 中的操作符分支)。
     pub fn add_operator_alias(&mut self, alias: impl Into<String>, origin_token: &str) -> bool {
-        self.operator_manager
-            .add_operator_alias(alias, origin_token)
+        let alias = alias.into();
+        let inserted = self
+            .operator_manager
+            .add_operator_alias(alias.clone(), origin_token);
+        if inserted {
+            self.registered_capabilities
+                .borrow_mut()
+                .insert(Capability::Operator(alias));
+        }
+        inserted
     }
 
     /// 为关键字/操作符/函数添加别名(任一分支成功即 true)。对应 Java
@@ -1006,6 +1261,11 @@ impl Express4Runner {
         let operator_result = self
             .operator_manager
             .add_operator_alias(alias.clone(), origin_token);
+        if operator_result {
+            self.registered_capabilities
+                .borrow_mut()
+                .insert(Capability::Operator(alias.clone()));
+        }
         // Java addFunctionAlias 分支:函数别名指向同一 CustomFunction。
         let function_result = {
             let function = self
@@ -1037,6 +1297,105 @@ impl Express4Runner {
     /// 当前安全策略。对应 Java `InitOptions.getSecurityStrategy()`。
     pub fn security_strategy(&self) -> QLSecurityStrategy {
         self.reflect_loader.security_strategy()
+    }
+
+    fn validate_capabilities(
+        &self,
+        sandbox_profile: &SandboxProfile,
+    ) -> Result<(), QLException> {
+        for capability in self.registered_capabilities.borrow().iter() {
+            if !sandbox_profile.capability_policy.is_allowed(capability) {
+                return Err(crate::runtime::execution_budget::budget_error(
+                    crate::exception::QLExceptionKind::Runtime,
+                    "SANDBOX_CAPABILITY_DENIED",
+                    format!("sandbox capability is not allowed: {capability:?}"),
+                ));
+            }
+        }
+        match self.security_strategy() {
+            QLSecurityStrategy::Isolation => Ok(()),
+            QLSecurityStrategy::WhiteList(members) => {
+                for member in members {
+                    let capability = Capability::NativeMember {
+                        type_name: member.type_name,
+                        member_name: member.member_name,
+                    };
+                    if !sandbox_profile.capability_policy.is_allowed(&capability) {
+                        return Err(crate::runtime::execution_budget::budget_error(
+                            crate::exception::QLExceptionKind::Runtime,
+                            "SANDBOX_CAPABILITY_DENIED",
+                            format!("native member is not allowed: {capability:?}"),
+                        ));
+                    }
+                }
+                Ok(())
+            }
+            QLSecurityStrategy::Open | QLSecurityStrategy::BlackList(_) => {
+                Err(crate::runtime::execution_budget::budget_error(
+                    crate::exception::QLExceptionKind::Runtime,
+                    "SANDBOX_NATIVE_POLICY_UNSAFE",
+                    "execute_checked requires Isolation or an explicit native WhiteList",
+                ))
+            }
+        }
+    }
+
+    fn validate_source_budget(
+        &self,
+        script: &str,
+        sandbox_profile: &SandboxProfile,
+    ) -> Result<(), QLException> {
+        if script.len() > sandbox_profile.limits.max_source_bytes {
+            return Err(sandbox_limit_error(
+                "SANDBOX_SOURCE_BYTES_EXCEEDED",
+                script.len(),
+                sandbox_profile.limits.max_source_bytes,
+            ));
+        }
+        Ok(())
+    }
+
+    fn validate_instruction_budget(
+        &self,
+        compile_cache: &LoadedCompileCache,
+        sandbox_profile: &SandboxProfile,
+    ) -> Result<(), QLException> {
+        let instruction_count = compile_cache
+            .q_lambda_definition()
+            .as_any()
+            .and_then(|definition| definition.downcast_ref::<QLambdaDefinitionInner>())
+            .map(|definition| definition.instructions().len())
+            .unwrap_or(0);
+        if instruction_count > sandbox_profile.limits.max_instructions {
+            return Err(sandbox_limit_error(
+                "SANDBOX_INSTRUCTIONS_EXCEEDED",
+                instruction_count,
+                sandbox_profile.limits.max_instructions,
+            ));
+        }
+        Ok(())
+    }
+
+    fn check_sandbox_deadline(
+        &self,
+        started: Instant,
+        sandbox_profile: &SandboxProfile,
+    ) -> Result<(), QLException> {
+        if sandbox_profile.cancellation_token.is_cancelled() {
+            return Err(crate::runtime::execution_budget::budget_error(
+                crate::exception::QLExceptionKind::Timeout,
+                "SANDBOX_CANCELLED",
+                "sandbox execution was cancelled",
+            ));
+        }
+        if started.elapsed().as_millis() >= u128::from(sandbox_profile.limits.timeout_millis) {
+            return Err(crate::runtime::execution_budget::budget_error(
+                crate::exception::QLExceptionKind::Timeout,
+                "SANDBOX_DEADLINE_EXCEEDED",
+                "sandbox deadline exceeded during validation or compilation",
+            ));
+        }
+        Ok(())
     }
 
     // ------------------------------------------------------------------
@@ -1113,6 +1472,83 @@ fn map_to_index_map(context: HashMap<String, DataValue>) -> Rc<RefCell<IndexMap>
         .map(|(key, value)| (DataValue::Str(key), value))
         .collect();
     Rc::new(RefCell::new(IndexMap::from_entries(entries)))
+}
+
+fn sandbox_limit_error(code: &'static str, actual: usize, limit: usize) -> QLException {
+    crate::runtime::execution_budget::budget_error(
+        crate::exception::QLExceptionKind::Runtime,
+        code,
+        format!("sandbox limit exceeded: actual {actual}, limit {limit}"),
+    )
+}
+
+fn validate_token_nesting(
+    tokens: &[crate::aparser::token::Token],
+    max_depth: usize,
+) -> Result<(), QLException> {
+    use crate::aparser::token;
+
+    let mut depth = 0usize;
+    for item in tokens {
+        match item.token_type() {
+            value
+                if value == token::LPAREN as i32
+                    || value == token::LBRACE as i32
+                    || value == token::LBRACK as i32 =>
+            {
+                depth = depth.saturating_add(1);
+                if depth > max_depth {
+                    return Err(sandbox_limit_error(
+                        "SANDBOX_AST_DEPTH_EXCEEDED",
+                        depth,
+                        max_depth,
+                    ));
+                }
+            }
+            value
+                if value == token::RPAREN as i32
+                    || value == token::RBRACE as i32
+                    || value == token::RBRACK as i32 =>
+            {
+                depth = depth.saturating_sub(1);
+            }
+            _ => {}
+        }
+    }
+    Ok(())
+}
+
+fn validate_ast_budget(
+    tree: &Node,
+    sandbox_profile: &SandboxProfile,
+) -> Result<(), QLException> {
+    use crate::aparser::rule_context::ChildRef;
+
+    let mut node_count = 0usize;
+    let mut stack = vec![(tree, 1usize)];
+    while let Some((node, depth)) = stack.pop() {
+        node_count = node_count.saturating_add(1);
+        if node_count > sandbox_profile.limits.max_ast_nodes {
+            return Err(sandbox_limit_error(
+                "SANDBOX_AST_NODES_EXCEEDED",
+                node_count,
+                sandbox_profile.limits.max_ast_nodes,
+            ));
+        }
+        if depth > sandbox_profile.limits.max_ast_depth {
+            return Err(sandbox_limit_error(
+                "SANDBOX_AST_DEPTH_EXCEEDED",
+                depth,
+                sandbox_profile.limits.max_ast_depth,
+            ));
+        }
+        for child in node.children() {
+            if let ChildRef::Node(child) = child {
+                stack.push((child, depth.saturating_add(1)));
+            }
+        }
+    }
+    Ok(())
 }
 
 /// 模板包成动态字符串字面量。对应 Java 私有方法
