@@ -19,6 +19,9 @@ use crate::runtime::data::convert::parameters_type_convertor::ParametersTypeConv
 use crate::runtime::data::index_map::IndexMap;
 use crate::runtime::data::{FieldValue, MapItemValue};
 use crate::runtime::function::ExtensionFunction;
+use crate::runtime::java_collector::JavaCollector;
+use crate::runtime::java_map_entry::JavaMapEntry;
+use crate::runtime::java_stream::JavaStream;
 use crate::runtime::member_resolver::MemberResolver;
 use crate::runtime::meta_class::{as_meta_class, MetaClass};
 use crate::runtime::native_type::{
@@ -501,16 +504,13 @@ impl NativeRegistry {
             return Some(Rc::clone(method));
         }
         let argument_type = runtime_class_ref(bean);
-        self.extension_methods.iter().find_map(
-            |((declaring_type, registered_name), method)| {
+        self.extension_methods
+            .iter()
+            .find_map(|((declaring_type, registered_name), method)| {
                 (registered_name == method_name
-                    && self.is_assignable(
-                        &ClassRef::Named(declaring_type.clone()),
-                        &argument_type,
-                    ))
+                    && self.is_assignable(&ClassRef::Named(declaring_type.clone()), &argument_type))
                 .then(|| Rc::clone(method))
-            },
-        )
+            })
     }
 
     fn resolve_registered_candidate(
@@ -676,10 +676,7 @@ impl NativeRegistry {
             }
         });
         let mut hash_map = NativeType::named("java.util.HashMap");
-        hash_map.supertypes = vec![
-            "java.util.Map".to_string(),
-            "java.lang.Object".to_string(),
-        ];
+        hash_map.supertypes = vec!["java.util.Map".to_string(), "java.lang.Object".to_string()];
         hash_map.constructor = Some(map_constructor.clone());
         self.register_type(hash_map);
 
@@ -687,6 +684,19 @@ impl NativeRegistry {
         linked_hash_map.supertypes = vec!["java.util.HashMap".to_string()];
         linked_hash_map.constructor = Some(map_constructor);
         self.register_type(linked_hash_map);
+
+        let mut collectors = NativeType::named("java.util.stream.Collectors");
+        collectors.static_methods.insert(
+            "toList".to_string(),
+            Rc::new(|_bean, args| {
+                if args.is_empty() {
+                    Ok(JavaCollector.into_data_value())
+                } else {
+                    Err(wrong_args("Collectors.toList"))
+                }
+            }),
+        );
+        self.register_type(collectors);
 
         let mut hash_set = NativeType::named("java.util.HashSet");
         hash_set.constructor = Some(Rc::new(|args| {
@@ -753,11 +763,7 @@ impl NativeRegistry {
             self.register_type(exception_type);
         }
 
-        for name in [
-            "java.lang.String",
-            "java.lang.Double",
-            "java.lang.Boolean",
-        ] {
+        for name in ["java.lang.String", "java.lang.Double", "java.lang.Boolean"] {
             self.register_type(NativeType::named(name));
         }
     }
@@ -1002,13 +1008,23 @@ fn list_method(name: &str) -> Option<NativeMethod> {
             DataValue::List(l) => Ok(DataValue::Bool(l.borrow().is_empty())),
             _ => Err(wrong_args("isEmpty")),
         }),
+        "parallelStream" | "stream" => Rc::new(|bean, args| match bean {
+            DataValue::List(items) if args.is_empty() => {
+                Ok(JavaStream::new(items.borrow().clone()).into_data_value())
+            }
+            _ => Err(wrong_args("parallelStream")),
+        }),
         "get" => Rc::new(|bean, args| match (bean, int_arg(args, 0)) {
             (DataValue::List(l), Some(i)) => {
                 let list = l.borrow();
                 let idx = if i < 0 { i + list.len() as i64 } else { i };
-                list.get(idx as usize)
-                    .cloned()
-                    .ok_or_else(|| wrong_args("get"))
+                list.get(idx as usize).cloned().ok_or_else(|| {
+                    QLException::host_error(
+                        QLExceptionKind::Runtime,
+                        format!("Index {i} out of bounds for length {}", list.len()),
+                        error_codes::INDEX_OUT_BOUND,
+                    )
+                })
             }
             _ => Err(wrong_args("get")),
         }),
@@ -1106,6 +1122,18 @@ fn list_method(name: &str) -> Option<NativeMethod> {
 /// `java.util.Map` 的脚本可用方法子集。
 fn map_method(name: &str) -> Option<NativeMethod> {
     let f: NativeMethod = match name {
+        "entrySet" => Rc::new(|bean, args| match bean {
+            DataValue::Map(map) if args.is_empty() => Ok(DataValue::list(
+                map.borrow()
+                    .entries()
+                    .iter()
+                    .map(|(key, value)| {
+                        JavaMapEntry::new(key.clone(), value.clone()).into_data_value()
+                    })
+                    .collect(),
+            )),
+            _ => Err(wrong_args("entrySet")),
+        }),
         "size" => Rc::new(|bean, _| match bean {
             DataValue::Map(m) => Ok(DataValue::Int(m.borrow().len() as i32)),
             _ => Err(wrong_args("size")),

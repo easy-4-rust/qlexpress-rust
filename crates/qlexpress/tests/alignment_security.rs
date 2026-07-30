@@ -28,9 +28,7 @@ struct HostDesk;
 impl NativeObject for HostDesk {
     fn get_field(&self, name: &str) -> Option<DataValue> {
         match name {
-            "book" | "book1" | "getBook1" => {
-                Some(DataValue::Str("Thinking in Rust".to_string()))
-            }
+            "book" | "book1" | "getBook1" => Some(DataValue::Str("Thinking in Rust".to_string())),
             "book2" | "getBook2" => Some(DataValue::Str("Effective Rust".to_string())),
             _ => None,
         }
@@ -233,9 +231,10 @@ fn desk_runner(strategy: QLSecurityStrategy) -> Express4Runner {
             method.to_string(),
             Rc::new(move |_bean| Some(DataValue::Str(field_value.clone()))),
         );
-        desk_type
-            .field_aliases
-            .insert(method.to_string(), vec![method.trim_start_matches("get").to_lowercase()]);
+        desk_type.field_aliases.insert(
+            method.to_string(),
+            vec![method.trim_start_matches("get").to_lowercase()],
+        );
         let method_value = value.to_string();
         desk_type.methods.insert(
             method.to_string(),
@@ -273,7 +272,7 @@ fn java_express4_runner_security_strategy_test() {
 
     let get_book2 = NativeMember::new("com.example.HostDesk", "getBook2");
     let black = desk_runner(QLSecurityStrategy::black_list(HashSet::from([
-        get_book2.clone(),
+        get_book2.clone()
     ])));
     assert_eq!(
         black
@@ -290,9 +289,7 @@ fn java_express4_runner_security_strategy_test() {
         &DataValue::Str("Thinking in Rust".to_string())
     );
 
-    let white = desk_runner(QLSecurityStrategy::white_list(HashSet::from([
-        get_book2,
-    ])));
+    let white = desk_runner(QLSecurityStrategy::white_list(HashSet::from([get_book2])));
     assert_eq!(
         white
             .execute("desk.getBook2()", host_context(), &QLOptions::default())

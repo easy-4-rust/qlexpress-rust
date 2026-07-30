@@ -6,6 +6,7 @@
 //! 结构(serde JSON)→ [`SerializableParseCacheImporter`] 还原。
 //! 序列化按 SPEC §5.5.5 使用 serde/serde_json(Jackson 的对应物),默认启用。
 
+pub mod concurrent_parse_cache;
 pub mod loaded_parse_cache;
 pub mod serializable_catch_entry;
 pub mod serializable_constant;
@@ -19,6 +20,7 @@ pub mod serializable_parse_cache_importer;
 pub mod serializable_source;
 pub mod serializable_trace_point;
 
+pub use concurrent_parse_cache::ConcurrentParseCache;
 pub use loaded_parse_cache::{LoadedCompileCache, LoadedParseCache};
 pub use serializable_catch_entry::SerializableCatchEntry;
 pub use serializable_constant::SerializableConstant;

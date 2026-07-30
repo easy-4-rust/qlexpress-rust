@@ -35,6 +35,32 @@ fn run_int(runner: &Express4Runner, script: &str) -> i64 {
 
 // ---------- addFunction variants ----------
 
+// Java source: CustomItemsDocTest#addFunctionWithJavaFunctionalTest
+#[test]
+fn add_function_with_java_functional_test() {
+    let runner = Express4Runner::new();
+    runner.add_function_unary("inc", |value: DataValue| {
+        DataValue::Long(qlexpress::runtime::data::convert::to_i64(&value) + 1)
+    });
+    runner.add_function_unary("isPos", |value: DataValue| {
+        DataValue::Bool(qlexpress::runtime::data::convert::to_i64(&value) > 0)
+    });
+    runner.add_function(
+        "notify",
+        |_ctx: &mut dyn QContext, _params: &Parameters| Ok(DataValue::Null),
+    );
+    runner.add_function_unary("print", |_value: DataValue| DataValue::Null);
+
+    assert_eq!(run_int(&runner, "inc(1)"), 2);
+    assert_eq!(
+        runner
+            .execute("isPos(1)", HashMap::new(), &opts())
+            .expect("predicate")
+            .into_result(),
+        DataValue::Bool(true)
+    );
+}
+
 #[test]
 fn add_function_with_function_signature() {
     // Java addFunction(String, Function<T, R>)
@@ -98,6 +124,7 @@ fn add_function_with_consumer() {
     assert_eq!(r, DataValue::Str("abab".to_string()));
 }
 
+// Java source: CustomItemsDocTest#addFunctionByVarargsTest
 #[test]
 fn add_varargs_function() {
     // Java QLFunctionalVarargs
@@ -123,6 +150,7 @@ fn add_varargs_function() {
 
 // ---------- addOperator variants ----------
 
+// Java source: CustomItemsDocTest#addOperatorBiFunctionTest
 #[test]
 fn add_operator_bifunction() {
     // Java addOperatorBiFunction
@@ -141,6 +169,7 @@ fn add_operator_bifunction() {
     assert_eq!(r, DataValue::Str("1,2,3".to_string()));
 }
 
+// Java source: CustomItemsDocTest#replaceDefaultOperatorTest
 #[test]
 fn replace_default_operator() {
     let mut runner = Express4Runner::new();
@@ -160,6 +189,7 @@ fn replace_default_operator() {
     assert_eq!(r, DataValue::Double(3.5));
 }
 
+// Java source: CustomItemsDocTest#addOperatorWithPrecedenceTest
 #[test]
 fn add_operator_with_add_precedence() {
     let mut runner = Express4Runner::new();
@@ -181,6 +211,7 @@ fn add_operator_with_add_precedence() {
     assert_eq!(result, DataValue::Str("16".to_string()));
 }
 
+// Java source: CustomItemsDocTest#addOperatorByVarargsTest
 #[test]
 fn add_operator_by_varargs() {
     let mut runner = Express4Runner::new();
@@ -237,6 +268,7 @@ impl ExtensionFunction for PlusAll {
     }
 }
 
+// Java source: CustomItemsDocTest#qlfunctionalvarargsAllInOneTest
 #[test]
 fn qlfunctional_varargs_all_in_one() {
     let mut runner = Express4Runner::new();

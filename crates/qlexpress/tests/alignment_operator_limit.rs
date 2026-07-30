@@ -34,6 +34,7 @@ fn err(
 
 // ---------- Whitelist ----------
 
+// Java source: OperatorLimitTest#testCheckWithAllowedOperators
 #[test]
 fn whitelist_allows_listed_operators() {
     let opts = CheckOptions::builder()
@@ -44,6 +45,7 @@ fn whitelist_allows_listed_operators() {
     ok(&runner(), "a + b * c", opts);
 }
 
+// Java source: OperatorLimitTest#testCheckWithDisallowedOperators
 #[test]
 fn whitelist_blocks_unlisted_assignment() {
     let opts = CheckOptions::builder()
@@ -67,6 +69,7 @@ fn whitelist_blocks_unlisted_assignment() {
 
 // ---------- Blacklist ----------
 
+// Java source: OperatorLimitTest#testCheckWithForbiddenOperators
 #[test]
 fn blacklist_allows_unblocked() {
     let opts = CheckOptions::builder()
@@ -77,6 +80,7 @@ fn blacklist_allows_unblocked() {
     ok(&runner(), "a + b * c - d / e", opts);
 }
 
+// Java source: OperatorLimitTest#testCheckWithForbiddenOperatorUsed
 #[test]
 fn blacklist_blocks_listed() {
     let opts = CheckOptions::builder()
@@ -100,6 +104,7 @@ fn blacklist_blocks_listed() {
 
 // ---------- Prefix / suffix ----------
 
+// Java source: OperatorLimitTest#testWhitelistWithPrefixOperator
 #[test]
 fn whitelist_with_prefix_operator() {
     let opts = CheckOptions::builder()
@@ -115,6 +120,7 @@ fn whitelist_with_prefix_operator() {
     assert_eq!(e.col_no(), 1);
 }
 
+// Java source: OperatorLimitTest#testWhitelistWithSuffixOperator
 #[test]
 fn whitelist_with_suffix_operator() {
     let opts = CheckOptions::builder()
@@ -132,6 +138,7 @@ fn whitelist_with_suffix_operator() {
 
 // ---------- Multiple ----------
 
+// Java source: OperatorLimitTest#testBlacklistWithMultipleOperators
 #[test]
 fn blacklist_with_multiple_operators() {
     let opts = CheckOptions::builder()
@@ -150,6 +157,7 @@ fn blacklist_with_multiple_operators() {
 
 // ---------- Empty / null whitelist ----------
 
+// Java source: OperatorLimitTest#testEmptyWhitelistValidation
 #[test]
 fn empty_whitelist_blocks_everything() {
     let opts = CheckOptions::builder()
@@ -160,6 +168,7 @@ fn empty_whitelist_blocks_everything() {
     assert_eq!(e.err_lexeme(), "+");
 }
 
+// Java source: OperatorLimitTest#testEmptyBlacklistValidation
 #[test]
 fn empty_blacklist_allows_everything() {
     let opts = CheckOptions::builder()
@@ -169,8 +178,34 @@ fn empty_blacklist_allows_everything() {
     ok(&runner(), "++a--", opts);
 }
 
+// Java source: OperatorLimitTest#testNullWhitelistValidation
+// ADAPTED: Rust 的集合参数不允许 null；Java null 在入口规范化为空集合，
+// 因而这里直接使用其规范化后的唯一合法表示，并保留相同拒绝契约。
+#[test]
+fn null_whitelist_normalizes_to_empty_set() {
+    let opts = CheckOptions::builder()
+        .operator_check_strategy(OperatorCheckStrategy::Whitelist(Default::default()))
+        .build();
+    let e = err(&runner(), "a + b", opts);
+    assert_eq!(e.error_code(), error_codes::OPERATOR_NOT_ALLOWED);
+    assert_eq!(e.err_lexeme(), "+");
+}
+
+// Java source: OperatorLimitTest#testNullBlacklistValidation
+// ADAPTED: Rust 的集合参数不允许 null；Java null 在入口规范化为空集合，
+// 因而这里直接使用其规范化后的唯一合法表示，并保留相同放行契约。
+#[test]
+fn null_blacklist_normalizes_to_empty_set() {
+    let opts = CheckOptions::builder()
+        .operator_check_strategy(OperatorCheckStrategy::Blacklist(Default::default()))
+        .build();
+    ok(&runner(), "a = b + c * d / e % f", opts.clone());
+    ok(&runner(), "++a--", opts);
+}
+
 // ---------- Multi-line error position ----------
 
+// Java source: OperatorLimitTest#testPreciseErrorPositionInMultiLineScript
 #[test]
 fn multi_line_error_points_at_correct_line() {
     let opts = CheckOptions::builder()
@@ -187,6 +222,7 @@ fn multi_line_error_points_at_correct_line() {
 
 // ---------- Complex expression with inner op ----------
 
+// Java source: OperatorLimitTest#testComplexExpressionWithWhitelist
 #[test]
 fn complex_expression_blocks_inner_assignment() {
     let opts = CheckOptions::builder()
@@ -208,6 +244,7 @@ fn complex_expression_blocks_inner_assignment() {
 
 // ---------- Error message contains operator set ----------
 
+// Java source: OperatorLimitTest#testErrorMessageContainsOperatorSet
 #[test]
 fn error_message_includes_operator() {
     let opts = CheckOptions::builder()

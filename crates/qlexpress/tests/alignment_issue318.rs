@@ -34,6 +34,7 @@ fn open_runner() -> Express4Runner {
 }
 
 #[test]
+/// Java `Issue318Test#test`。
 fn direct_field_access_no_getter_needed() {
     let mut runner = open_runner();
     runner.register_qlexpress_type::<Student>();

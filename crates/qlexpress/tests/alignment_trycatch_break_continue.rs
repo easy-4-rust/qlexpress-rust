@@ -90,6 +90,7 @@ fn run_int(script: &str) -> i64 {
 }
 
 #[test]
+/// Java `TryCatchBreakContinueTest#breakInsideTryShouldExitLoop`。
 fn break_inside_try_should_exit_loop() {
     let script = "\
 result = 0;\n\
@@ -106,6 +107,7 @@ result";
 }
 
 #[test]
+/// Java `TryCatchBreakContinueTest#continueInsideTryShouldSkipIteration`。
 fn continue_inside_try_should_skip_iteration() {
     let script = "\
 result = 0;\n\
@@ -122,6 +124,7 @@ result";
 }
 
 #[test]
+/// Java `TryCatchBreakContinueTest#breakInsideTryWithFinallyShouldExitLoop`。
 fn break_inside_try_with_finally_should_exit_loop() {
     let script = "\
 result = 0;\n\
@@ -140,6 +143,7 @@ result";
 }
 
 #[test]
+/// Java `TryCatchBreakContinueTest#continueInsideTryWithFinallyShouldSkipIteration`。
 fn continue_inside_try_with_finally_should_skip_iteration() {
     let script = "\
 result = 0;\n\
@@ -158,6 +162,7 @@ result";
 }
 
 #[test]
+/// Java `TryCatchBreakContinueTest#breakInsideCatchShouldExitLoop`。
 fn break_inside_catch_should_exit_loop() {
     // throw 1 + catch(e) — catch clause 无类型默认匹配 Object,
     // 触发 catch body 中的 break。
@@ -178,6 +183,7 @@ result";
 }
 
 #[test]
+/// Java `TryCatchBreakContinueTest#continueInsideCatchShouldSkipIteration`。
 fn continue_inside_catch_should_skip_iteration() {
     let script = "\
 result = 0;\n\
@@ -196,6 +202,7 @@ result";
 }
 
 #[test]
+/// Java `TryCatchBreakContinueTest#normalTryExpressionInsideWhileShouldNotSkipFollowingStatement`。
 fn normal_try_expression_inside_while_should_not_skip_following_statement() {
     let script = "\
 i = 0;\n\
@@ -211,6 +218,7 @@ result";
 }
 
 #[test]
+/// Java `TryCatchBreakContinueTest#breakInsideWhileTryShouldExitLoop`。
 fn break_inside_while_try_should_exit_loop() {
     let script = "\
 i = 0;\n\
@@ -229,6 +237,7 @@ result";
 }
 
 #[test]
+/// Java `TryCatchBreakContinueTest#continueInsideWhileTryShouldSkipRestOfBody`。
 fn continue_inside_while_try_should_skip_rest_of_body() {
     let script = "\
 i = 0;\n\
@@ -249,6 +258,7 @@ result * 100 + tail";
 }
 
 #[test]
+/// Java `TryCatchBreakContinueTest#breakInsideNestedTryShouldExitLoop`。
 fn break_inside_nested_try_should_exit_loop() {
     let script = "\
 result = 0;\n\

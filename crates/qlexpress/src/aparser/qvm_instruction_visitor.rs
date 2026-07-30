@@ -2252,7 +2252,8 @@ impl<'a> Visitor for QvmInstructionVisitor<'a> {
             return;
         }
         let Some(index_value_expr) = &ctx.index_value_expr else {
-            let stop = ctx.lbrack.symbol().clone();
+            // Java `ctx.getStop()` 指向 `]`，不能用起始 `[`，否则列号少 1。
+            let stop = ctx.rbrack.symbol().clone();
             self.report_parse_err(
                 &stop,
                 error_codes::MISSING_INDEX,

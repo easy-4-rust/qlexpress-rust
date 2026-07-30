@@ -26,11 +26,13 @@ fn run_int(script: &str) -> i64 {
 }
 
 #[test]
+/// Java `Issue427Test#emptyForLoop_shouldNotAffectSubsequentExpression`。
 fn empty_for_loop_should_not_affect_subsequent_expression() {
     assert_eq!(run_int("for (int i = 0; i < 5; i = i + 1) {} 1;"), 1);
 }
 
 #[test]
+/// Java `Issue427Test#emptyForLoop_conditionNeverMet_shouldNotAffectSubsequentExpression`。
 fn empty_for_loop_condition_never_met_should_not_affect_subsequent_expression() {
     assert_eq!(
         run_int("for (int i = 0; i < 0; i = i + 1) {i = i + 1;} 1;"),
@@ -39,11 +41,13 @@ fn empty_for_loop_condition_never_met_should_not_affect_subsequent_expression() 
 }
 
 #[test]
+/// Java `Issue427Test#emptyWhileLoop_shouldNotAffectSubsequentExpression`。
 fn empty_while_loop_should_not_affect_subsequent_expression() {
     assert_eq!(run_int("while (false) {} 1;"), 1);
 }
 
 #[test]
+/// Java `Issue427Test#forLoopWithExplicitReturn_shouldReturnCorrectly`。
 fn for_loop_with_explicit_return_should_return_correctly() {
     let script = "for (int i = 0; i < 5; i = i + 1) { return 42; } 1;";
     let runner = Express4Runner::new();
@@ -56,6 +60,7 @@ fn for_loop_with_explicit_return_should_return_correctly() {
 }
 
 #[test]
+/// Java `Issue427Test#emptyForEachLoop_shouldNotAffectSubsequentExpression`。
 fn empty_for_each_loop_should_not_affect_subsequent_expression() {
     // Java: a = []; for(item : a){} 1; → 1
     let script = "a = [];\nfor (item : a) {}\n1;";
@@ -63,6 +68,7 @@ fn empty_for_each_loop_should_not_affect_subsequent_expression() {
 }
 
 #[test]
+/// Java `Issue427Test#emptyForLoop_withSemicolonBody_shouldWork`。
 fn empty_for_loop_with_semicolon_body_should_work() {
     // for(...) {;} 1;
     let script = "for (int i = 0; i < 5; i = i + 1) {;} 1;";
@@ -70,6 +76,7 @@ fn empty_for_loop_with_semicolon_body_should_work() {
 }
 
 #[test]
+/// Java `Issue427Test#nonEmptyForLoop_shouldStillWork`。
 fn non_empty_for_loop_should_still_work() {
     let script = "a = 0;\nfor (int i = 0; i < 5; i = i + 1) { a = a + i; }\na;";
     // 0+1+2+3+4 = 10
@@ -77,6 +84,7 @@ fn non_empty_for_loop_should_still_work() {
 }
 
 #[test]
+/// Java `Issue427Test#emptyForLoop_multipleStatementsAfter`。
 fn empty_for_loop_multiple_statements_after() {
     // for(...) {} a = 10; b = 20; a + b; → 30
     let script = "for (int i = 0; i < 5; i = i + 1) {}\na = 10;\nb = 20;\na + b;";

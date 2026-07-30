@@ -72,6 +72,7 @@ fn assert_operator(script: &str, index: usize, expected: &str) {
 }
 
 #[test]
+/// Java `SyntaxTreeFactoryTest#visitPathExprTestWhenMix`。
 fn java_visit_path_expr_test_when_mix() {
     let instructions = compile(
         "java.util.function.Function.a.b.cc()",
@@ -96,6 +97,7 @@ fn java_visit_path_expr_test_when_mix() {
 }
 
 #[test]
+/// Java `SyntaxTreeFactoryTest#visitPathExprTestWhenInnerCls`。
 fn java_visit_path_expr_test_when_inner_cls() {
     let instructions = compile(
         "com.alibaba.qlexpress4.aparser.ImportManagerTest.TestImportInner.TestImportInner2.pp[m]",
@@ -117,6 +119,7 @@ fn java_visit_path_expr_test_when_inner_cls() {
 }
 
 #[test]
+/// Java `SyntaxTreeFactoryTest#visitCallTest`。
 fn java_visit_call_test() {
     let instructions = compile("call(mm)", InterpolationMode::Variable);
     assert_eq!(instructions.len(), 4);
@@ -127,6 +130,7 @@ fn java_visit_call_test() {
 }
 
 #[test]
+/// Java `SyntaxTreeFactoryTest#numberTest`。
 fn java_number_test() {
     let instructions = compile("10_0_0l", InterpolationMode::Variable);
     assert_eq!(instructions.len(), 2);
@@ -137,6 +141,7 @@ fn java_number_test() {
 }
 
 #[test]
+/// Java `SyntaxTreeFactoryTest#macroDefineTest`。
 fn java_macro_define_test() {
     assert_eq!(
         compile(
@@ -149,6 +154,7 @@ fn java_macro_define_test() {
 }
 
 #[test]
+/// Java `SyntaxTreeFactoryTest#stringEscapeTest`。
 fn java_string_escape_test() {
     let instructions = compile("\"\\r\\n\\p\"", InterpolationMode::Variable);
     assert_eq!(
@@ -158,18 +164,21 @@ fn java_string_escape_test() {
 }
 
 #[test]
+/// Java `SyntaxTreeFactoryTest#castTest`。
 fn java_cast_test() {
     let instructions = compile("1+(int)3L", InterpolationMode::Variable);
     let _: &CastInstruction = instruction(&instructions, 3);
 }
 
 #[test]
+/// Java `SyntaxTreeFactoryTest#cusOpTest`。
 fn java_custom_operator_test() {
     compile("c.*d", InterpolationMode::Variable);
     compile("c>>>d", InterpolationMode::Variable);
 }
 
 #[test]
+/// Java `SyntaxTreeFactoryTest#pathPartTest`。
 fn java_path_part_test() {
     let instructions = compile(
         "assert((java.lang.Object) a == 1)",
@@ -183,12 +192,14 @@ fn java_path_part_test() {
 }
 
 #[test]
+/// Java `SyntaxTreeFactoryTest#fieldExpressionTest`。
 fn java_field_expression_test() {
     let instructions = compile("\"null\".equals(b)", InterpolationMode::Variable);
     let _: &ConstInstruction = instruction(&instructions, 0);
 }
 
 #[test]
+/// Java `SyntaxTreeFactoryTest#lambdaExprBodyTest`。
 fn java_lambda_expr_body_test() {
     let instructions = compile(
         "f = e -> try {\n  throw e;\n} catch (java.lang.NullPointerException n) {\n  100\n} catch (java.lang.Exception e) {\n  10\n};",
@@ -203,6 +214,7 @@ fn java_lambda_expr_body_test() {
 }
 
 #[test]
+/// Java `SyntaxTreeFactoryTest#lambdaBlockBodyTest`。
 fn java_lambda_block_body_test() {
     let instructions = compile("f = e -> {10};", InterpolationMode::Variable);
     let definition = instruction::<LoadLambdaInstruction>(&instructions, 1).lambda_definition();
@@ -215,6 +227,7 @@ fn java_lambda_block_body_test() {
 }
 
 #[test]
+/// Java `SyntaxTreeFactoryTest#lambdaMapBodyTest`。
 fn java_lambda_map_body_test() {
     let instructions = compile("f = e -> {'test': 1234};", InterpolationMode::Variable);
     let definition = instruction::<LoadLambdaInstruction>(&instructions, 1).lambda_definition();
@@ -226,6 +239,7 @@ fn java_lambda_map_body_test() {
 }
 
 #[test]
+/// Java `SyntaxTreeFactoryTest#newArrayTest`。
 fn java_new_array_test() {
     let instructions = compile(
         "new int[][] {new int[] {1,2}, new int[] {3,4}}",
@@ -251,11 +265,13 @@ fn assert_instanceof_meta(script: &str, expected: &str) {
 }
 
 #[test]
+/// Java `SyntaxTreeFactoryTest#instanceOfTest`。
 fn java_instance_of_test() {
     assert_instanceof_meta("1 instanceof int", "java.lang.Integer");
 }
 
 #[test]
+/// Java `SyntaxTreeFactoryTest#instanceOfStrArrTest`。
 fn java_instance_of_string_array_test() {
     assert_instanceof_meta(
         "1 instanceof java.lang.String[][][]",
@@ -264,11 +280,13 @@ fn java_instance_of_string_array_test() {
 }
 
 #[test]
+/// Java `SyntaxTreeFactoryTest#instanceOfIntArrTest`。
 fn java_instance_of_int_array_test() {
     assert_instanceof_meta("1 instanceof int[][][]", "java.lang.Integer[][][]");
 }
 
 #[test]
+/// Java `SyntaxTreeFactoryTest#bitOperatorTest`。
 fn java_bit_operator_test() {
     assert_operator("true & true", 2, "&");
     assert_operator("true | true", 2, "|");
@@ -276,6 +294,7 @@ fn java_bit_operator_test() {
 }
 
 #[test]
+/// Java `SyntaxTreeFactoryTest#opPrecedencesTest`。
 fn java_operator_precedences_test() {
     let instructions = compile("a = 1+2*3+10", InterpolationMode::Variable);
     assert_eq!(
@@ -293,6 +312,7 @@ fn java_operator_precedences_test() {
 }
 
 #[test]
+/// Java `SyntaxTreeFactoryTest#ternaryTest`。
 fn java_ternary_test() {
     let instructions = compile("l = (x) -> x > 10 ? 11 : 100", InterpolationMode::Variable);
     assert_eq!(instruction::<LoadInstruction>(&instructions, 0).name(), "l");
@@ -306,6 +326,7 @@ fn java_ternary_test() {
 }
 
 #[test]
+/// Java `SyntaxTreeFactoryTest#functionInterfaceTest`。
 fn java_function_interface_test() {
     compile(
         "java.lang.Runnable r = () -> a = 8;",
@@ -314,11 +335,13 @@ fn java_function_interface_test() {
 }
 
 #[test]
+/// Java `SyntaxTreeFactoryTest#groupPriorityTest`。
 fn java_group_priority_test() {
     compile("a.*b.*c[2]+d.*e[1:2]", InterpolationMode::Variable);
 }
 
 #[test]
+/// Java `SyntaxTreeFactoryTest#numberAmbiguousValueTest`。
 fn java_number_ambiguous_value_test() {
     let instructions = compile("1.doubleValue()", InterpolationMode::Variable);
     assert_eq!(
@@ -328,6 +351,7 @@ fn java_number_ambiguous_value_test() {
 }
 
 #[test]
+/// Java `SyntaxTreeFactoryTest#classifiedJsonTest`。
 fn java_classified_json_test() {
     let instructions = compile(
         "{'@class':'java.lang.Object', 'a': 'cccc'}",
@@ -337,6 +361,7 @@ fn java_classified_json_test() {
 }
 
 #[test]
+/// Java `SyntaxTreeFactoryTest#selectorTest`。
 fn java_selector_test() {
     let instructions = compile("${ TextField-AXXE } + ${v231}", InterpolationMode::Script);
     assert_eq!(
@@ -359,6 +384,7 @@ fn java_selector_test() {
 }
 
 #[test]
+/// Java `SyntaxTreeFactoryTest#doubleQuoteStringScriptTest`。
 fn java_double_quote_string_script_test() {
     let instructions = compile("\"a ${v-1}\"", InterpolationMode::Script);
     assert_eq!(
@@ -383,11 +409,13 @@ fn java_double_quote_string_script_test() {
 }
 
 #[test]
+/// Java `SyntaxTreeFactoryTest#doubleQuoteStringScriptTest2`。
 fn java_double_quote_string_script_test2() {
     compile("\"Hello ${a} ccc\"", InterpolationMode::Script);
 }
 
 #[test]
+/// Java `SyntaxTreeFactoryTest#doubleQuoteStringVariableTest`。
 fn java_double_quote_string_variable_test() {
     let instructions = compile("\"a ${ v-1 } b\"", InterpolationMode::Variable);
     assert_eq!(
@@ -409,6 +437,7 @@ fn java_double_quote_string_variable_test() {
 }
 
 #[test]
+/// Java `SyntaxTreeFactoryTest#ifTest`。
 fn java_if_test() {
     let instructions = compile(
         "if (a > 0 && a < 5) {\n  true\n} else if (a > 5 && a < 10) {\n  false\n} else if (a > 10 && a < 15) {\n  true\n} == true",

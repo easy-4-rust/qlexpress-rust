@@ -82,7 +82,19 @@ pub fn find_method_and_invoke(
     error_reporter: &dyn ErrorReporter,
 ) -> Result<QValue, QLException> {
     if let Some(method) = registry.resolve_method_for_args(bean, method_name, params) {
-        return invoke_native_method(bean, &method, params);
+        return invoke_native_method(bean, &method, params).map_err(|error| {
+            if error.is_host_origin() {
+                error_reporter
+                    .report_format(
+                        error_codes::INVOKE_METHOD_INNER_ERROR,
+                        error_codes::error_msg(error_codes::INVOKE_METHOD_INNER_ERROR),
+                        &[method_name.to_string()],
+                    )
+                    .with_cause(error)
+            } else {
+                error
+            }
+        });
     }
     // 宿主对象动态分派(NativeObject::call_method,对应 Java 反射调用)。
     if let DataValue::Object(obj) = bean {
@@ -95,7 +107,22 @@ pub fn find_method_and_invoke(
                     &[method_name.to_string(), format!("{params:?}")],
                 ));
             }
-            let result = obj.borrow_mut().call_method(method_name, params)?;
+            let result = obj
+                .borrow_mut()
+                .call_method(method_name, params)
+                .map_err(|error| {
+                    if error.is_host_origin() {
+                        error_reporter
+                            .report_format(
+                                error_codes::INVOKE_METHOD_INNER_ERROR,
+                                error_codes::error_msg(error_codes::INVOKE_METHOD_INNER_ERROR),
+                                &[method_name.to_string()],
+                            )
+                            .with_cause(error)
+                    } else {
+                        error
+                    }
+                })?;
             return Ok(QValue::Data(result));
         }
     }

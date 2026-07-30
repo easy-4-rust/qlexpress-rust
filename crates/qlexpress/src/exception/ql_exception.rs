@@ -43,6 +43,12 @@ pub struct QLException {
     /// Object that can be caught by a QLExpress `catch` clause
     /// (Java `QLRuntimeException.catchObj`).
     catch_obj: Option<DataValue>,
+    /// 被当前异常包装的底层异常。对应 Java `Throwable#getCause()`。
+    cause: Option<Box<QLException>>,
+    /// 是否代表宿主函数/原生方法抛出的底层异常。Java 通过
+    /// `Throwable` 与 `QLRuntimeException` 的实际类型区分；Rust 的统一
+    /// 错误类型用此标记保留同一分派语义。
+    host_origin: bool,
 }
 
 impl QLException {
@@ -57,7 +63,41 @@ impl QLException {
             message: message.into(),
             diagnostic,
             catch_obj,
+            cause: None,
+            host_origin: false,
         }
+    }
+
+    /// 创建宿主函数或原生方法抛出的底层异常。
+    ///
+    /// 对应 Java 中尚未被 QLExpress 包装的任意 `Throwable`；调用指令会
+    /// 使用当前位置的 `ErrorReporter` 生成外层异常，并把本值设为 cause。
+    pub fn host_error(kind: QLExceptionKind, reason: impl Into<String>, error_code: &str) -> Self {
+        let reason = reason.into();
+        let mut error = QLException::new(
+            kind,
+            reason.clone(),
+            Diagnostic::new(0, Range::default(), "", error_code, reason, ""),
+            None,
+        );
+        error.host_origin = true;
+        error
+    }
+
+    /// 附加底层 cause 并返回新值。对应 Java `Throwable(Throwable cause)`。
+    pub fn with_cause(mut self, cause: QLException) -> Self {
+        self.cause = Some(Box::new(cause));
+        self
+    }
+
+    /// 返回底层 cause。对应 Java `Throwable#getCause()`。
+    pub fn cause(&self) -> Option<&QLException> {
+        self.cause.as_deref()
+    }
+
+    /// 判断该错误是否是尚未被引擎包装的宿主异常。
+    pub(crate) fn is_host_origin(&self) -> bool {
+        self.host_origin
     }
 
     /// 附加 catch obj 配置并返回新值。

@@ -43,6 +43,9 @@ impl DefaultClassSupplier {
             "java.util.Map",
             "java.util.HashMap",
             "java.util.LinkedHashMap",
+            "java.util.stream.Collector",
+            "java.util.stream.Collectors",
+            "java.util.stream.Stream",
             "java.math.BigInteger",
         ] {
             supplier.register(qualified_name);

@@ -103,6 +103,8 @@ fn execute(
 }
 
 #[test]
+/// Java `Express4RunnerTest#testLazyArgCustomFunction`：基础分支、算术、
+/// 变量、null 和静态分析契约。
 fn lazy_if_evaluates_only_selected_branch() {
     let runner = runner();
     let context = HashMap::from([
@@ -123,9 +125,40 @@ fn lazy_if_evaluates_only_selected_branch() {
         execute(&runner, "IF(false, 0, IF(true, 1, 0))", context),
         DataValue::Long(1)
     );
+
+    let context = HashMap::from([
+        ("a".to_string(), DataValue::Null),
+        ("b".to_string(), DataValue::Long(0)),
+        ("base".to_string(), DataValue::Long(100)),
+    ]);
+    assert_eq!(
+        execute(&runner, "IF(true, base + 1, base - 1)", context.clone()),
+        DataValue::Long(101)
+    );
+    assert_eq!(
+        execute(&runner, "IF(true, a, b)", context.clone()),
+        DataValue::Null
+    );
+    runner
+        .check_default("IF(b == 0, 0, a / b)")
+        .expect("lazy function script must pass check");
+    assert_eq!(
+        runner
+            .get_out_function_names("IF(b == 0, 0, a / b)")
+            .expect("out functions"),
+        ["IF".to_string()].into_iter().collect()
+    );
+    assert_eq!(
+        runner
+            .get_out_var_names("IF(b == 0, 0, a / b)")
+            .expect("out vars"),
+        ["a".to_string(), "b".to_string()].into_iter().collect()
+    );
 }
 
 #[test]
+/// Java `Express4RunnerTest#testLazyArgCustomFunction`：重复调用、嵌套作用域、
+/// 语句/函数/Lambda/块表达式契约。
 fn repeated_and_nested_lazy_calls_have_independent_scopes() {
     let runner = runner();
     let context = HashMap::from([
@@ -153,13 +186,38 @@ fn repeated_and_nested_lazy_calls_have_independent_scopes() {
         execute(
             &runner,
             "function func(x){ x++; return x+b; } IF(true, func(0), 0)",
-            context,
+            context.clone(),
         ),
+        DataValue::Long(1)
+    );
+    assert_eq!(
+        execute(
+            &runner,
+            "tmp=0; tmp++; if(tmp>0) then IF(true, 1, 0) else 0",
+            context.clone(),
+        ),
+        DataValue::Long(1)
+    );
+    assert_eq!(
+        execute(
+            &runner,
+            "func = (x) -> { x++; return x; } \nIF(true, func(0), 0)",
+            context.clone(),
+        ),
+        DataValue::Long(1)
+    );
+    assert_eq!(
+        execute(&runner, "true ? IF(false, {a}, {b}) : 0", context.clone(),),
+        DataValue::Long(0)
+    );
+    assert_eq!(
+        execute(&runner, "true ? IF(true, {1}, {2}) : 0", context),
         DataValue::Long(1)
     );
 }
 
 #[test]
+/// Java `Express4RunnerTest#testLazyArgCustomFunctionNoArgs`。
 fn lazy_function_with_no_arguments_executes_normally() {
     let runner = Express4Runner::new();
     assert!(runner.add_function("CURRENT_TIME", CurrentTime));

@@ -315,6 +315,7 @@ fn method_registry() -> Rc<NativeRegistry> {
 }
 
 #[test]
+/// Java `MethodInvokeInstructionTest#equalTypeTest`。
 fn java_method_equal_type_test() {
     assert_eq!(
         invoke(
@@ -329,6 +330,7 @@ fn java_method_equal_type_test() {
 }
 
 #[test]
+/// Java `MethodInvokeInstructionTest#runnableTest`。
 fn java_method_runnable_test() {
     assert_eq!(
         invoke(
@@ -343,6 +345,7 @@ fn java_method_runnable_test() {
 }
 
 #[test]
+/// Java `MethodInvokeInstructionTest#defaultMethodTest`。
 fn java_method_default_method_test() {
     assert_eq!(
         invoke(
@@ -357,6 +360,7 @@ fn java_method_default_method_test() {
 }
 
 #[test]
+/// Java `MethodInvokeInstructionTest#childMethodMatchTest`。
 fn java_method_child_method_match_test() {
     assert_eq!(
         invoke(
@@ -371,6 +375,7 @@ fn java_method_child_method_match_test() {
 }
 
 #[test]
+/// Java `MethodInvokeInstructionTest#parentMethodMatch`。
 fn java_method_parent_method_match_test() {
     assert_eq!(
         invoke(
@@ -385,6 +390,7 @@ fn java_method_parent_method_match_test() {
 }
 
 #[test]
+/// Java `MethodInvokeInstructionTest#convertTypeAssignedMatch`。
 fn java_method_convert_type_assigned_match_test() {
     assert_eq!(
         invoke(
@@ -399,6 +405,7 @@ fn java_method_convert_type_assigned_match_test() {
 }
 
 #[test]
+/// Java `MethodInvokeInstructionTest#arrayParamTest`。
 fn java_method_array_param_test() {
     assert_eq!(
         invoke(
@@ -413,6 +420,7 @@ fn java_method_array_param_test() {
 }
 
 #[test]
+/// Java `MethodInvokeInstructionTest#primitiveParamTest`。
 fn java_method_primitive_param_test() {
     assert_eq!(
         invoke(
@@ -427,6 +435,7 @@ fn java_method_primitive_param_test() {
 }
 
 #[test]
+/// Java `MethodInvokeInstructionTest#primitiveImplicitTest`。
 fn java_method_primitive_implicit_test() {
     assert_eq!(
         invoke(
@@ -441,6 +450,7 @@ fn java_method_primitive_implicit_test() {
 }
 
 #[test]
+/// Java `MethodInvokeInstructionTest#bigIntegerImplicitTest`。
 fn java_method_big_integer_implicit_test() {
     assert_eq!(
         invoke(
@@ -455,6 +465,7 @@ fn java_method_big_integer_implicit_test() {
 }
 
 #[test]
+/// Java `MethodInvokeInstructionTest#doubleMatchTest`。
 fn java_method_double_match_test() {
     assert_eq!(
         invoke(
@@ -486,21 +497,25 @@ fn assert_child9(method_name: &str) {
 }
 
 #[test]
+/// Java `MethodInvokeInstructionTest#varArgTest`。
 fn java_method_var_arg_test() {
     assert_child9("addField");
 }
 
 #[test]
+/// Java `MethodInvokeInstructionTest#varArgTest2`。
 fn java_method_var_arg_test2() {
     assert_child9("addField1");
 }
 
 #[test]
+/// Java `MethodInvokeInstructionTest#varArgTest3`。
 fn java_method_var_arg_test3() {
     assert_child9("addField2");
 }
 
 #[test]
+/// Java `MethodInvokeInstructionTest#varArgNotMatchTest`。
 fn java_method_var_arg_not_match_test() {
     let error = invoke(
         method_registry(),
@@ -517,6 +532,7 @@ fn java_method_var_arg_not_match_test() {
 }
 
 #[test]
+/// Java `MethodInvokeInstructionTest#varArgNotMatchTest2`。
 fn java_method_var_arg_not_match_test2() {
     let error = invoke(
         method_registry(),
@@ -655,6 +671,7 @@ fn marker(value: &DataValue) -> DataValue {
 }
 
 #[test]
+/// Java `NewInstanceInstructionTest#newInstructionTest`。
 fn java_constructor_new_instruction_test() {
     let registry = constructor_registry();
     let zero = instantiate(Rc::clone(&registry), "test.Parent", vec![]).unwrap();
@@ -665,6 +682,7 @@ fn java_constructor_new_instruction_test() {
 }
 
 #[test]
+/// Java `NewInstanceInstructionTest#constructorNotFoundTest`。
 fn java_constructor_not_found_test() {
     let error = instantiate(
         constructor_registry(),
@@ -676,6 +694,7 @@ fn java_constructor_not_found_test() {
 }
 
 #[test]
+/// Java `NewInstanceInstructionTest#constructorConvertMatchTest`。
 fn java_constructor_convert_match_test() {
     let value = instantiate(
         constructor_registry(),
@@ -687,6 +706,7 @@ fn java_constructor_convert_match_test() {
 }
 
 #[test]
+/// Java `NewInstanceInstructionTest#constructorConvertAssignedMatch`。
 fn java_constructor_convert_assigned_match_test() {
     let value = instantiate(
         constructor_registry(),
@@ -699,6 +719,7 @@ fn java_constructor_convert_assigned_match_test() {
 }
 
 #[test]
+/// Java `NewInstanceInstructionTest#arrayParamTest`。
 fn java_constructor_array_param_test() {
     let value = instantiate(
         constructor_registry(),
@@ -711,6 +732,7 @@ fn java_constructor_array_param_test() {
 }
 
 #[test]
+/// Java `NewInstanceInstructionTest#primitiveParamTest`。
 fn java_constructor_primitive_param_test() {
     let value = instantiate(
         constructor_registry(),
@@ -722,6 +744,7 @@ fn java_constructor_primitive_param_test() {
 }
 
 #[test]
+/// Java `NewInstanceInstructionTest#primitiveImplicitTest`。
 fn java_constructor_primitive_implicit_test() {
     let value = instantiate(
         constructor_registry(),
@@ -733,6 +756,7 @@ fn java_constructor_primitive_implicit_test() {
 }
 
 #[test]
+/// Java `NewInstanceInstructionTest#bigIntegerImplicitTest`。
 fn java_constructor_big_integer_implicit_test() {
     let value = instantiate(
         constructor_registry(),
@@ -745,6 +769,7 @@ fn java_constructor_big_integer_implicit_test() {
 }
 
 #[test]
+/// Java `NewInstanceInstructionTest#numberConstructorMatchTest`。
 fn java_constructor_number_match_test() {
     let value = instantiate(
         constructor_registry(),
@@ -756,6 +781,7 @@ fn java_constructor_number_match_test() {
 }
 
 #[test]
+/// Java `NewInstanceInstructionTest#varArgTest`。
 fn java_constructor_var_arg_test() {
     let value = instantiate(
         constructor_registry(),

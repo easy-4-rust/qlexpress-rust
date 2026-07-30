@@ -381,9 +381,7 @@ fn error_report_line_and_col() {
         .execute("a[]", HashMap::new(), &opts())
         .unwrap_err();
     assert_eq!(err3.line_no(), 1);
-    // 偏差(错误位置口径):Java 报告 `]` 的位置(col 3),
-    // Rust 版报告 `[` 的位置(col 2);错误码与行号一致。
-    assert_eq!(err3.col_no(), 2);
+    assert_eq!(err3.col_no(), 3);
 }
 
 /// 对应 Java `Express4RunnerTest#avoidNullPointerTest`。

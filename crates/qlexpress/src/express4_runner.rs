@@ -9,6 +9,8 @@
 //! - Java 的编译缓存为 `ConcurrentHashMap<String, Future<QCompileCache>>`
 //!   (并发去重编译);Rust 单线程 `Rc` 体系下退化为
 //!   `RefCell<HashMap<String, Rc<_>>>`,命中语义一致(同一 script 只编译一次)。
+//!   多线程宿主使用 `ConcurrentParseCache` 共享纯数据编译产物，每个工作
+//!   线程持有本地 Runner，避免把 `Rc/RefCell` 错误标记为 `Send`。
 //! - Java `Map<String, Object>` 上下文 → Rust `HashMap<String, DataValue>`
 //!   (值已是脚本值,无需再装箱)。
 //! - Java 反射式 API(`addFunctionOfServiceMethod` 的方法查找、

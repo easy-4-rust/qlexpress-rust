@@ -192,6 +192,10 @@ fn rethrow_call_error(
 ) -> QLException {
     if is_user_defined(&err) {
         report_user_defined_exception(&**error_reporter, &err)
+    } else if err.is_host_origin() {
+        error_reporter
+            .report_format(wrap_code, wrap_msg, wrap_args)
+            .with_cause(err)
     } else {
         wrap_throwable(err, &**error_reporter, wrap_code, wrap_msg, wrap_args)
     }

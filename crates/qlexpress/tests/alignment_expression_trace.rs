@@ -30,6 +30,7 @@ fn trace_options() -> QLOptions {
 }
 
 #[test]
+/// Java `Express4RunnerTest#getExpressionTracePointsTest`。
 fn static_trace_tree_matches_java_examples() {
     let runner = Express4Runner::new();
     let arithmetic = runner
@@ -267,11 +268,7 @@ fn java_expression_trace_test_complete_contract() {
     assert!(!short.expression_traces()[0].children()[1].is_evaluated());
 
     let in_result = runner
-        .execute(
-            "'ab' in ['cc', 'dd', 'ff']",
-            HashMap::new(),
-            &options,
-        )
+        .execute("'ab' in ['cc', 'dd', 'ff']", HashMap::new(), &options)
         .expect("in trace");
     assert_eq!(in_result.result(), &DataValue::Bool(false));
     assert_eq!(
@@ -399,14 +396,8 @@ fn java_expression_trace_test_complete_contract() {
     let statement_cases = [
         ("int a = 1;", "STATEMENT int null\n"),
         ("while(false) {m=10}", "STATEMENT while null\n"),
-        (
-            "for(int i=0; i<3; i++) {i}",
-            "STATEMENT for null\n",
-        ),
-        (
-            "for(int item : [1,2,3]) {item}",
-            "STATEMENT for null\n",
-        ),
+        ("for(int i=0; i<3; i++) {i}", "STATEMENT for null\n"),
+        ("for(int item : [1,2,3]) {item}", "STATEMENT for null\n"),
         (
             "function testFunc() {return 10}",
             "DEFINE_FUNCTION testFunc null\n",

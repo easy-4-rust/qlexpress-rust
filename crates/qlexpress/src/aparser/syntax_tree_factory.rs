@@ -709,6 +709,8 @@ pub struct MethodAccessContext {
 pub struct IndexExprContext {
     pub lbrack: TerminalNode,
     pub index_value_expr: Option<Box<Node>>,
+    /// 右方括号；Java `ParserRuleContext#getStop()` 在 `a[]` 上返回此 token。
+    pub rbrack: TerminalNode,
 }
 
 /// 语法树节点 CustomPathContext。对应 Java: com.alibaba.qlexpress4.aparser.QLParser 内部类 CustomPathContext

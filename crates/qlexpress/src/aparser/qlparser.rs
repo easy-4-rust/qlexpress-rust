@@ -1790,10 +1790,11 @@ impl<'a> QLParser<'a> {
                 None
             };
             self.skip_newlines();
-            self.expect(RBRACK, "']'")?;
+            let rbrack = self.expect(RBRACK, "']'")?;
             return Ok(Some(Node::IndexExpr(IndexExprContext {
                 lbrack,
                 index_value_expr,
+                rbrack,
             })));
         }
         if self.is_group_operator(self.lt()) {

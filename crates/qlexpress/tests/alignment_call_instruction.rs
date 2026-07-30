@@ -47,6 +47,7 @@ fn substring_lambda(registry: Rc<NativeRegistry>) -> Rc<QLambda> {
 }
 
 #[test]
+/// Java `CallInstructionTest#case1`。
 fn java_case1_get_method_then_call_with_two_arguments() {
     let mut registry = NativeRegistry::with_builtins();
     let mut child = NativeType::named("java.lang.Integer");

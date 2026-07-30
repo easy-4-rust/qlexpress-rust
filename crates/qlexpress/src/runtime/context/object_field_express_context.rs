@@ -38,6 +38,10 @@ impl ExpressContext for ObjectFieldExpressContext {
         _attachments: &Attachments,
         variable_name: &str,
     ) -> Result<Option<QValue>, QLException> {
-        Ok(self.registry.load_field(&self.object, variable_name))
+        // Java `Express4Runner#loadField` 显式传入 `skipSecurity=true`：
+        // 对象上下文是宿主主动暴露的数据面，不应被脚本反射沙箱再次拦截。
+        Ok(self
+            .registry
+            .load_field_with_security(&self.object, variable_name, true))
     }
 }
