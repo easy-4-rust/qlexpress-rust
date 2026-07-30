@@ -23,7 +23,7 @@ use crate::runtime::qlambda_definition::QLambdaDefinition;
 use crate::runtime::qvm_global_scope::QvmGlobalScope;
 use crate::runtime::scope::QScope;
 use crate::runtime::trace::QTraces;
-use crate::security::{CancellationToken, ResourceLimits};
+use crate::security::{CancellationToken, CapabilityPolicy, ResourceLimits};
 
 /// 处理 current time millis 对应的领域职责。
 /// 无显式参数；返回：`i64`。
@@ -51,6 +51,7 @@ pub struct QvmRuntime {
     registry: Rc<NativeRegistry>,
     start_time: i64,
     execution_budget: Option<ExecutionBudget>,
+    capability_policy: Option<CapabilityPolicy>,
 }
 
 impl QvmRuntime {
@@ -71,6 +72,7 @@ impl QvmRuntime {
             registry,
             start_time,
             execution_budget: None,
+            capability_policy: None,
         }
     }
 
@@ -82,6 +84,7 @@ impl QvmRuntime {
         start_time: i64,
         limits: ResourceLimits,
         cancellation_token: CancellationToken,
+        capability_policy: CapabilityPolicy,
     ) -> Self {
         QvmRuntime {
             traces,
@@ -89,7 +92,15 @@ impl QvmRuntime {
             registry,
             start_time,
             execution_budget: Some(ExecutionBudget::new(limits, cancellation_token)),
+            capability_policy: Some(capability_policy),
         }
+    }
+
+    /// 判断安全执行是否允许调用指定运行时方法；兼容路径不附加限制。
+    pub fn is_method_capability_allowed(&self, type_name: &str, method_name: &str) -> bool {
+        self.capability_policy
+            .as_ref()
+            .is_none_or(|policy| policy.is_method_allowed(type_name, method_name))
     }
 
     /// 返回安全运行时预算；普通 Java 兼容执行为 `None`。

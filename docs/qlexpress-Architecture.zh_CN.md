@@ -241,6 +241,10 @@ flowchart LR
 
 ## 11. 安全架构
 
+P0 安全执行与进程隔离设计详见[安全沙箱](Security-Sandbox.zh_CN.md)。它在 Java 兼容成员
+策略之外增加前端/QVM 有限预算、统一 capability 白名单、租户 LRU、取消和受监督的一次性
+Worker。
+
 ```mermaid
 flowchart LR
     Input["不可信脚本/上下文"] --> Check["语法 + CheckOptions"]

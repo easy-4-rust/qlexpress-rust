@@ -87,6 +87,20 @@ impl QLInstruction for MethodInvokeInstruction {
                 error_codes::error_msg(error_codes::NULL_METHOD_ACCESS),
             ));
         }
+        if !q_context
+            .q_runtime()
+            .is_method_capability_allowed(bean.data_type_name(), &self.method_name)
+        {
+            return Err(crate::runtime::execution_budget::budget_error(
+                crate::exception::QLExceptionKind::Runtime,
+                "SANDBOX_CAPABILITY_DENIED",
+                format!(
+                    "method capability is not allowed: {}.{}",
+                    bean.data_type_name(),
+                    self.method_name
+                ),
+            ));
+        }
         let runtime = Rc::clone(q_context.q_runtime());
         if let Some(budget) = runtime.execution_budget() {
             budget.enter_call()?;
@@ -102,6 +116,9 @@ impl QLInstruction for MethodInvokeInstruction {
             budget.exit_call();
         }
         let invoke_res = invoke_result?;
+        if let Some(budget) = runtime.execution_budget() {
+            budget.charge_external_value(&invoke_res.get())?;
+        }
         q_context.push(invoke_res);
         Ok(QResult::NEXT_INSTRUCTION)
     }

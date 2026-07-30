@@ -132,6 +132,12 @@ impl QLInstruction for WhileInstruction {
         0
     }
 
+    fn compiled_instruction_count(&self) -> usize {
+        1usize
+            .saturating_add(self.condition.compiled_instruction_count())
+            .saturating_add(self.body.compiled_instruction_count())
+    }
+
     fn println(&self, index: usize, depth: usize, debug: &mut dyn FnMut(String)) {
         PrintlnUtils::println_by_cur_depth(depth as i32, &format!("{index}: While"), debug);
         PrintlnUtils::println_by_cur_depth(depth as i32 + 1, "Condition", debug);

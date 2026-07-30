@@ -202,7 +202,7 @@ pub fn build_tree(
     script: &str,
     operator_manager: Option<&dyn ParserOperatorManager>,
     print_tree: bool,
-    mut printer: impl FnMut(String),
+    printer: impl FnMut(String),
     interpolation_mode: InterpolationMode,
     selector_start: &str,
     selector_end: &str,
@@ -216,7 +216,26 @@ pub fn build_tree(
         selector_end,
         strict_new_lines,
     )?;
-    let mut parser = QLParser::new(script, &tokens, operator_manager, strict_new_lines);
+    build_tree_from_tokens(
+        script,
+        &tokens,
+        operator_manager,
+        print_tree,
+        printer,
+        strict_new_lines,
+    )
+}
+
+/// 使用已经过预算限制的 Token 流构建 AST，避免安全入口再次无界词法分配。
+pub fn build_tree_from_tokens(
+    script: &str,
+    tokens: &[Token],
+    operator_manager: Option<&dyn ParserOperatorManager>,
+    print_tree: bool,
+    mut printer: impl FnMut(String),
+    strict_new_lines: bool,
+) -> Result<Node, QLSyntaxException> {
+    let mut parser = QLParser::new(script, tokens, operator_manager, strict_new_lines);
     let program = parser.program()?;
     if print_tree {
         let token_texts: Vec<&str> = tokens.iter().map(Token::text).collect();

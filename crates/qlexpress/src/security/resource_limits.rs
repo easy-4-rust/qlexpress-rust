@@ -4,7 +4,7 @@
 ///
 /// 该对象是 Rust 安全增强，不改变 Java `QLOptions` 的默认兼容语义。
 /// `SandboxProfile::default()` 使用这里的保守默认值；所有字段必须大于零。
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ResourceLimits {
     /// UTF-8 源码最大字节数。
     pub max_source_bytes: usize,

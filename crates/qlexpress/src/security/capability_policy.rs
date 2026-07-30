@@ -41,4 +41,27 @@ impl CapabilityPolicy {
     pub fn allowed(&self) -> &HashSet<Capability> {
         &self.allowed
     }
+
+    /// 判断安全运行时能否调用接收者上的方法。
+    ///
+    /// Native 成员按运行时类型精确匹配；扩展函数允许其声明类型精确匹配。
+    /// Java `List` 扩展在 Rust 中的运行时值类型为 `ArrayList`，因此显式
+    /// 接受 `java.util.List` 作为该内建接口的声明类型。
+    pub fn is_method_allowed(&self, runtime_type: &str, method_name: &str) -> bool {
+        self.allowed.iter().any(|capability| match capability {
+            Capability::NativeMember {
+                type_name,
+                member_name,
+            } => type_name == runtime_type && member_name == method_name,
+            Capability::ExtensionMethod {
+                type_name,
+                method_name: allowed_method,
+            } => {
+                allowed_method == method_name
+                    && (type_name == runtime_type
+                        || (type_name == "java.util.List" && runtime_type == "java.util.ArrayList"))
+            }
+            _ => false,
+        })
+    }
 }

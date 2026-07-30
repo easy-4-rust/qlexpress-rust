@@ -246,6 +246,13 @@ constructor discovery. Register those through `NativeRegistry` or the runner's e
 
 ## 8. Security and validation
 
+For untrusted input, use `Express4Runner::execute_checked` with
+`SandboxProfile::secure()`. Plain `execute` intentionally retains Java-compatible unlimited
+defaults. The checked entry combines static validation, finite parse/compile/runtime budgets,
+capability allowlisting, cancellation, and a tenant-bounded LRU. Adversarial input should
+additionally run through `qlexpress-sandbox-worker`; see
+[Security Sandbox](Security-Sandbox.md).
+
 The default native-member policy is isolation:
 
 ```rust

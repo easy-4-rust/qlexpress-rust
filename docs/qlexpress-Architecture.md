@@ -245,6 +245,11 @@ Rust `impl` blocks.
 
 ## 11. Security architecture
 
+The P0 checked-execution and process-isolation design is specified in
+[Security Sandbox](Security-Sandbox.md). It supplements the Java-compatible member policy with
+finite front-end/QVM budgets, a unified capability allowlist, tenant LRU caching, cancellation,
+and a supervised one-shot worker.
+
 ```mermaid
 flowchart LR
     Input["Untrusted script/context"] --> Check["Syntax + CheckOptions"]

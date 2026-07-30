@@ -126,4 +126,10 @@ impl QLambdaDefinition for QLambdaDefinitionInner {
     fn name(&self) -> &str {
         &self.name
     }
+
+    fn compiled_instruction_count(&self) -> usize {
+        self.instructions.iter().fold(0usize, |total, instruction| {
+            total.saturating_add(instruction.compiled_instruction_count())
+        })
+    }
 }

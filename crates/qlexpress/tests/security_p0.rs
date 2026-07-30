@@ -1,12 +1,13 @@
 //! P0 沙箱验收：预算、capability、缓存、取消与宿主调用期限。
+#![allow(clippy::result_large_err)]
 
 use std::collections::{HashMap, HashSet};
 use std::time::{Duration, Instant};
 
 use qlexpress::operator::operator_check_strategy::OperatorCheckStrategy;
 use qlexpress::{
-    Capability, CheckOptions, DataValue, Express4Runner, QLOptions, QLSecurityStrategy,
-    ResourceLimits, SandboxProfile,
+    Capability, CheckOptions, DataValue, Express4Runner, InitOptions, QLOptions,
+    QLSecurityStrategy, ResourceLimits, SandboxProfile,
 };
 
 fn profile_with(mut change: impl FnMut(&mut SandboxProfile)) -> SandboxProfile {
@@ -71,6 +72,15 @@ fn rejects_source_token_ast_and_instruction_budgets() {
             .error_code(),
         "SANDBOX_INSTRUCTIONS_EXCEEDED"
     );
+
+    // 编译预算必须递归统计 Lambda 体，不能只看根指令数组。
+    let nested_instruction_profile = profile_with(|profile| profile.limits.max_instructions = 3);
+    assert_eq!(
+        execute(&runner, "x -> x + 1", &nested_instruction_profile)
+            .unwrap_err()
+            .error_code(),
+        "SANDBOX_INSTRUCTIONS_EXCEEDED"
+    );
 }
 
 #[test]
@@ -99,8 +109,7 @@ fn rejects_fuel_call_depth_collection_string_and_output_budgets() {
         "SANDBOX_CALL_DEPTH_EXCEEDED"
     );
 
-    let collection_profile =
-        profile_with(|profile| profile.limits.max_collection_items = 2);
+    let collection_profile = profile_with(|profile| profile.limits.max_collection_items = 2);
     assert_eq!(
         execute(&runner, "[1, 2, 3]", &collection_profile)
             .unwrap_err()
@@ -163,6 +172,29 @@ fn static_check_and_capability_policy_are_mandatory() {
 }
 
 #[test]
+fn builtin_extension_methods_also_require_capability() {
+    let runner = Express4Runner::new();
+    let script = "[1, 2].map(x -> x + 1)";
+    assert_eq!(
+        execute(&runner, script, &SandboxProfile::secure())
+            .unwrap_err()
+            .error_code(),
+        "SANDBOX_CAPABILITY_DENIED"
+    );
+    let allowed = profile_with(|profile| {
+        profile.capability_policy =
+            qlexpress::CapabilityPolicy::allow_only([Capability::ExtensionMethod {
+                type_name: "java.util.List".into(),
+                method_name: "map".into(),
+            }]);
+    });
+    assert_eq!(
+        execute(&runner, script, &allowed).unwrap(),
+        DataValue::list(vec![DataValue::Int(2), DataValue::Int(3)])
+    );
+}
+
+#[test]
 fn cancellation_and_host_deadline_are_visible_and_enforced() {
     let runner = Express4Runner::new();
     let cancelled = SandboxProfile::secure();
@@ -173,12 +205,16 @@ fn cancellation_and_host_deadline_are_visible_and_enforced() {
     );
 
     let host_runner = Express4Runner::new();
-    assert!(host_runner.add_function("blocking", |context: &mut dyn qlexpress::runtime::qcontext::QContext, _parameters: &qlexpress::runtime::parameters::Parameters| {
-        assert!(context.deadline().is_some());
-        assert!(context.cancellation_token().is_some());
-        std::thread::sleep(Duration::from_millis(30));
-        Ok(DataValue::Int(1))
-    }));
+    assert!(host_runner.add_function(
+        "blocking",
+        |context: &mut dyn qlexpress::runtime::qcontext::QContext,
+         _parameters: &qlexpress::runtime::parameters::Parameters| {
+            assert!(context.deadline().is_some());
+            assert!(context.cancellation_token().is_some());
+            std::thread::sleep(Duration::from_millis(30));
+            Ok(DataValue::Int(1))
+        }
+    ));
     let blocking_profile = profile_with(|profile| {
         profile.limits.timeout_millis = 10;
         profile.capability_policy =
@@ -229,5 +265,43 @@ fn profile_rejects_unbounded_or_invalid_limits() {
     assert_eq!(
         execute(&runner, "1", &invalid).unwrap_err().error_code(),
         "SANDBOX_INVALID_PROFILE"
+    );
+}
+
+#[test]
+fn input_collections_are_charged_cumulatively_and_trace_is_disabled() {
+    let runner = Express4Runner::new();
+    let mut context = HashMap::new();
+    context.insert(
+        "left".to_string(),
+        DataValue::list(vec![DataValue::Int(1), DataValue::Int(2)]),
+    );
+    context.insert(
+        "right".to_string(),
+        DataValue::list(vec![DataValue::Int(3), DataValue::Int(4)]),
+    );
+    let collection_profile = profile_with(|profile| profile.limits.max_collection_items = 3);
+    assert_eq!(
+        runner
+            .execute_checked("1", context, &QLOptions::default(), &collection_profile)
+            .unwrap_err()
+            .error_code(),
+        "SANDBOX_COLLECTION_ITEMS_EXCEEDED"
+    );
+
+    let trace_runner =
+        Express4Runner::with_init_options(InitOptions::builder().trace_expression(true).build());
+    let trace_options = QLOptions::builder().trace_expression(true).build();
+    assert_eq!(
+        trace_runner
+            .execute_checked(
+                "1 + 2",
+                HashMap::new(),
+                &trace_options,
+                &SandboxProfile::secure()
+            )
+            .unwrap_err()
+            .error_code(),
+        "SANDBOX_TRACE_DISABLED"
     );
 }

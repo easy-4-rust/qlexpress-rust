@@ -211,6 +211,20 @@ impl QLInstruction for ForInstruction {
         0
     }
 
+    fn compiled_instruction_count(&self) -> usize {
+        [
+            self.for_init.as_ref(),
+            self.condition.as_ref(),
+            self.for_update.as_ref(),
+            Some(&self.for_body),
+        ]
+        .into_iter()
+        .flatten()
+        .fold(1usize, |total, definition| {
+            total.saturating_add(definition.compiled_instruction_count())
+        })
+    }
+
     fn println(&self, index: usize, depth: usize, debug: &mut dyn FnMut(String)) {
         PrintlnUtils::println_by_cur_depth(depth as i32, &format!("{index}: For"), debug);
         PrintlnUtils::println_by_cur_depth(depth as i32 + 1, "Init", debug);

@@ -136,6 +136,9 @@ impl QLInstruction for CallFunctionInstruction {
         }
         match function_result {
             Ok(function_result_obj) => {
+                if let Some(budget) = runtime.execution_budget() {
+                    budget.charge_external_value(&function_result_obj)?;
+                }
                 q_context.push(QValue::Data(function_result_obj.clone()));
 
                 // trace

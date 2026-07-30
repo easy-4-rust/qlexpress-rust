@@ -76,6 +76,10 @@ impl QLInstruction for DefineFunctionInstruction {
         0
     }
 
+    fn compiled_instruction_count(&self) -> usize {
+        1usize.saturating_add(self.lambda_definition.compiled_instruction_count())
+    }
+
     fn println(&self, index: usize, depth: usize, debug: &mut dyn FnMut(String)) {
         PrintlnUtils::println_by_cur_depth(
             depth as i32,

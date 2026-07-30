@@ -51,6 +51,28 @@ pub fn tokenize(
     selector_end: &str,
     strict_new_lines: bool,
 ) -> Result<Vec<Token>, QLSyntaxException> {
+    tokenize_with_limit(
+        script,
+        operator_manager,
+        interpolation_mode,
+        selector_start,
+        selector_end,
+        strict_new_lines,
+        None,
+    )
+}
+
+/// 带 Token 数量硬上限的词法入口；达到上限后不再向 Token 向量分配。
+#[allow(clippy::too_many_arguments)]
+pub fn tokenize_with_limit(
+    script: &str,
+    operator_manager: Option<&dyn ParserOperatorManager>,
+    interpolation_mode: InterpolationMode,
+    selector_start: &str,
+    selector_end: &str,
+    strict_new_lines: bool,
+    max_tokens: Option<usize>,
+) -> Result<Vec<Token>, QLSyntaxException> {
     let mut lexer = QLexer::new(
         script,
         operator_manager,
@@ -58,8 +80,20 @@ pub fn tokenize(
         selector_start,
         selector_end,
         strict_new_lines,
+        max_tokens,
     );
     lexer.lex_default(false)?;
+    if lexer.token_limit_exceeded {
+        return Err(QLException::report_scanner_err(
+            script,
+            lexer.p as i32,
+            lexer.line,
+            lexer.col + 1,
+            "",
+            "SANDBOX_TOKENS_EXCEEDED",
+            "sandbox token budget exceeded",
+        ));
+    }
     let p = lexer.p as i32;
     let line = lexer.line;
     let col = lexer.col;
@@ -79,6 +113,8 @@ struct QLexer<'a> {
     selector_end: Vec<char>,
     strict_new_lines: bool,
     tokens: Vec<Token>,
+    max_tokens: Option<usize>,
+    token_limit_exceeded: bool,
     p: usize,
     line: i32,
     col: i32,
@@ -92,6 +128,7 @@ impl<'a> QLexer<'a> {
         selector_start: &str,
         selector_end: &str,
         strict_new_lines: bool,
+        max_tokens: Option<usize>,
     ) -> Self {
         QLexer {
             script,
@@ -102,6 +139,8 @@ impl<'a> QLexer<'a> {
             selector_end: selector_end.chars().collect(),
             strict_new_lines,
             tokens: Vec::new(),
+            max_tokens,
+            token_limit_exceeded: false,
             p: 0,
             line: 1,
             col: 0,
@@ -849,6 +888,13 @@ impl<'a> QLexer<'a> {
         line: i32,
         col: i32,
     ) {
+        if self
+            .max_tokens
+            .is_some_and(|max_tokens| self.tokens.len() >= max_tokens)
+        {
+            self.token_limit_exceeded = true;
+            return;
+        }
         self.tokens.push(Token::new(
             ty,
             text,

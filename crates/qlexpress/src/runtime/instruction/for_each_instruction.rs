@@ -125,6 +125,10 @@ impl QLInstruction for ForEachInstruction {
         0
     }
 
+    fn compiled_instruction_count(&self) -> usize {
+        1usize.saturating_add(self.body.compiled_instruction_count())
+    }
+
     fn println(&self, index: usize, depth: usize, debug: &mut dyn FnMut(String)) {
         PrintlnUtils::println_by_cur_depth(depth as i32, &format!("{index}: ForEach"), debug);
         self.body.println(depth + 1, debug);

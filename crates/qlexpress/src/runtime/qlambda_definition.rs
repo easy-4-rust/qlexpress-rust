@@ -29,6 +29,14 @@ pub trait QLambdaDefinition {
     /// Java `getName()`.
     fn name(&self) -> &str;
 
+    /// 返回该定义及其所有嵌套 Lambda 所包含的编译指令总数。
+    ///
+    /// 这是 Rust 安全执行入口使用的静态资源计数；无法展开的宿主定义不包含
+    /// QVM 指令，因此默认返回 0。
+    fn compiled_instruction_count(&self) -> usize {
+        0
+    }
+
     /// 向下转型支持(Java `instanceof QLambdaDefinitionInner` 的 Rust 等价物),
     /// 供 `api/parsecache` Exporter 分派导出。默认 `None`。
     fn as_any(&self) -> Option<&dyn std::any::Any> {

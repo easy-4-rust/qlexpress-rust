@@ -56,6 +56,13 @@ pub trait QLInstruction {
         false
     }
 
+    /// 返回本指令以及其持有的所有嵌套 Lambda 定义中的编译指令数。
+    ///
+    /// 普通指令仅计自身；复合指令覆盖此方法并递归累计子定义。
+    fn compiled_instruction_count(&self) -> usize {
+        1
+    }
+
     /// 向下转型支持(Java `instanceof` 链的 Rust 等价物),供
     /// `api/parsecache` 的 Exporter 按具体指令类型分派导出。
     /// 各具体指令实现返回 `Some(self)`;默认 `None`(表示不支持导出分派)。
@@ -105,6 +112,10 @@ impl<T: QLInstruction + ?Sized> QLInstruction for Rc<T> {
 
     fn is_terminal(&self) -> bool {
         (**self).is_terminal()
+    }
+
+    fn compiled_instruction_count(&self) -> usize {
+        (**self).compiled_instruction_count()
     }
 
     fn as_any(&self) -> Option<&dyn std::any::Any> {

@@ -53,8 +53,8 @@ pub use out_function_visitor::OutFunctionVisitor;
 pub use out_var_attrs_visitor::OutVarAttrsVisitor;
 pub use out_var_names_visitor::OutVarNamesVisitor;
 pub use parser_operator_manager::{OpType, ParserOperatorManager};
-pub use qlexer::tokenize;
-pub use qlparser::{build_tree, QLParser};
+pub use qlexer::{tokenize, tokenize_with_limit};
+pub use qlparser::{build_tree, build_tree_from_tokens, QLParser};
 pub use qlparser_base_visitor::Visitor;
 pub use qvm_instruction_visitor::{
     compile_script, CompileTimeFunctions, Context, InstructionMacroDefine, InstructionScope,

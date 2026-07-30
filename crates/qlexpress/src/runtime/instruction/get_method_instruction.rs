@@ -63,6 +63,20 @@ impl QLInstruction for GetMethodInstruction {
                 error_codes::error_msg(error_codes::NULL_METHOD_ACCESS),
             ));
         }
+        if !q_context
+            .q_runtime()
+            .is_method_capability_allowed(bean.data_type_name(), &self.method_name)
+        {
+            return Err(crate::runtime::execution_budget::budget_error(
+                crate::exception::QLExceptionKind::Runtime,
+                "SANDBOX_CAPABILITY_DENIED",
+                format!(
+                    "method capability is not allowed: {}.{}",
+                    bean.data_type_name(),
+                    self.method_name
+                ),
+            ));
+        }
         let registry = Rc::clone(q_context.registry());
         q_context.push(QValue::Data(DataValue::Lambda(Rc::new(QLambda::Method(
             QLambdaMethod::new(self.method_name.clone(), registry, bean),

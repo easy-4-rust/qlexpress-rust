@@ -110,6 +110,8 @@ security, failure handling, and architecture decisions.
 | Host-type derive | Implemented | Fields, aliases, skip, name override; no generic structs |
 | Native methods and constructors | Explicit registration | Not discovered from Rust `impl` blocks |
 | Security policy | Implemented | Isolation default; open, allowlist, and denylist modes |
+| Checked sandbox execution | Implemented | Finite budgets, unified capabilities, tenant LRU, cancellation |
+| Hard process isolation | Available | Supervised one-shot worker; Linux OS memory limit |
 | Multi-thread execution | Runner per worker | Sharing one runner across threads is unsupported |
 | Cross-platform support | Not yet claimed | CI currently executes on Ubuntu only |
 
@@ -234,14 +236,11 @@ Detailed mappings:
 reuse it inside that worker to benefit from compile caching. Do not wrap one runner in a mutex and
 assume Java-equivalent concurrency.
 
-The default native-member policy is `QLSecurityStrategy::Isolation`. Before accepting untrusted
-scripts:
-
-- keep native members on an allowlist;
-- set `timeout_millis` and `max_arr_length`;
-- validate scripts with `CheckOptions`;
-- bound input size outside the engine;
-- run fuzz, replay, and load tests with the host's real registrations and scripts.
+The default native-member policy is `QLSecurityStrategy::Isolation`. Plain `execute` preserves
+Java-compatible unlimited defaults and is not an untrusted-input sandbox. Untrusted scripts must
+use `execute_checked` or the supervised process worker. See the
+[Security Sandbox](docs/Security-Sandbox.md) for budgets, capabilities, cancellation, OS limits,
+and residual boundaries.
 
 ## Verification
 
@@ -276,6 +275,7 @@ Read the commands, measurements, and remaining deployment boundary in
 | Architecture | [Architecture](docs/qlexpress-Architecture.md) | [架构文档](docs/qlexpress-Architecture.zh_CN.md) |
 | API reference | [docs.rs](https://docs.rs/qlexpress) | Source rustdoc includes bilingual notes |
 | Production acceptance | — | [生产验收](docs/生产验收.md) |
+| Security sandbox | [Security Sandbox](docs/Security-Sandbox.md) | [安全沙箱](docs/Security-Sandbox.zh_CN.md) |
 
 ## Development and release
 

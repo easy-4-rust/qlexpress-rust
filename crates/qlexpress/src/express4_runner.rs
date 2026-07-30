@@ -234,7 +234,7 @@ impl Express4Runner {
             sandbox_profile.cancellation_token.clone(),
         );
         for value in context.values() {
-            validation_budget.validate_value(value)?;
+            validation_budget.charge_external_value(value)?;
         }
         self.execute_checked_with_context(
             script,
@@ -261,17 +261,25 @@ impl Express4Runner {
                 reason,
             )
         })?;
+        if self.init_options.is_trace_expression() && ql_options.is_trace_expression() {
+            return Err(crate::runtime::execution_budget::budget_error(
+                crate::exception::QLExceptionKind::Runtime,
+                "SANDBOX_TRACE_DISABLED",
+                "execute_checked disables expression tracing because trace retention is not bounded",
+            ));
+        }
         let started = Instant::now();
         self.validate_capabilities(sandbox_profile)?;
         self.validate_source_budget(script, sandbox_profile)?;
 
-        let tokens = crate::aparser::qlexer::tokenize(
+        let tokens = crate::aparser::qlexer::tokenize_with_limit(
             script,
             Some(&self.operator_manager),
             self.init_options.interpolation_mode(),
             self.init_options.selector_start(),
             self.init_options.selector_end(),
             self.init_options.is_strict_new_lines(),
+            Some(sandbox_profile.limits.max_tokens),
         )
         .map_err(QLSyntaxException::into_exception)?;
         if tokens.len() > sandbox_profile.limits.max_tokens {
@@ -284,9 +292,16 @@ impl Express4Runner {
         validate_token_nesting(&tokens, sandbox_profile.limits.max_ast_depth)?;
         self.check_sandbox_deadline(started, sandbox_profile)?;
 
-        let tree = self
-            .parse_to_syntax_tree(script)
-            .map_err(QLSyntaxException::into_exception)?;
+        let consumer = Rc::clone(self.init_options.debug_info_consumer());
+        let tree = crate::aparser::qlparser::build_tree_from_tokens(
+            script,
+            &tokens,
+            Some(&self.operator_manager),
+            self.init_options.is_debug(),
+            move |info| consumer(info),
+            self.init_options.is_strict_new_lines(),
+        )
+        .map_err(QLSyntaxException::into_exception)?;
         validate_ast_budget(&tree, sandbox_profile)?;
         let mut check_visitor = CheckVisitor::new(&sandbox_profile.check_options, script);
         check_visitor
@@ -334,13 +349,14 @@ impl Express4Runner {
             .timeout_millis
             .saturating_sub(elapsed_millis)
             .max(1);
+        let mut runtime_profile = sandbox_profile.clone();
+        runtime_profile.limits = runtime_limits;
         self.execute_definition_sandboxed(
             &compile_cache,
             true,
             context,
             ql_options,
-            runtime_limits,
-            sandbox_profile.cancellation_token.clone(),
+            &runtime_profile,
         )
     }
 
@@ -490,8 +506,7 @@ impl Express4Runner {
         trace_points_available: bool,
         context: Rc<dyn ExpressContext>,
         ql_options: &QLOptions,
-        limits: crate::security::ResourceLimits,
-        cancellation_token: crate::security::CancellationToken,
+        sandbox_profile: &SandboxProfile,
     ) -> Result<QLResult, QLException> {
         let global_scope = QvmGlobalScope::with_context(
             context,
@@ -512,8 +527,9 @@ impl Express4Runner {
             ql_options.attachments().clone(),
             Rc::clone(self.reflect_loader.registry()),
             current_time_millis(),
-            limits,
-            cancellation_token,
+            sandbox_profile.limits.clone(),
+            sandbox_profile.cancellation_token.clone(),
+            sandbox_profile.capability_policy.clone(),
         ));
         let definition = Rc::clone(compile_cache.q_lambda_definition());
         let result = runtime.execute(global_scope, definition, ql_options)?;
@@ -628,15 +644,13 @@ impl Express4Runner {
             return Ok(cached);
         }
         let compiled = Rc::new(self.parse_definition(script)?);
-        self.compile_cache
-            .borrow_mut()
-            .insert(
-                LEGACY_TENANT,
-                script.to_string(),
-                Rc::clone(&compiled),
-                LEGACY_CACHE_CAPACITY,
-                LEGACY_CACHE_CAPACITY,
-            );
+        self.compile_cache.borrow_mut().insert(
+            LEGACY_TENANT,
+            script.to_string(),
+            Rc::clone(&compiled),
+            LEGACY_CACHE_CAPACITY,
+            LEGACY_CACHE_CAPACITY,
+        );
         Ok(compiled)
     }
 
@@ -716,15 +730,13 @@ impl Express4Runner {
     pub fn set_parse_cache(&self, cache: &SerializableParseCache) -> ImportResult<()> {
         let loaded = self.import_parse_cache(cache)?;
         let script = loaded.get_script().unwrap_or_default().to_string();
-        self.compile_cache
-            .borrow_mut()
-            .insert(
-                "__java_compatible__",
-                script,
-                Rc::new(loaded.get_compile_cache().clone()),
-                1024,
-                1024,
-            );
+        self.compile_cache.borrow_mut().insert(
+            "__java_compatible__",
+            script,
+            Rc::new(loaded.get_compile_cache().clone()),
+            1024,
+            1024,
+        );
         Ok(())
     }
 
@@ -1299,10 +1311,7 @@ impl Express4Runner {
         self.reflect_loader.security_strategy()
     }
 
-    fn validate_capabilities(
-        &self,
-        sandbox_profile: &SandboxProfile,
-    ) -> Result<(), QLException> {
+    fn validate_capabilities(&self, sandbox_profile: &SandboxProfile) -> Result<(), QLException> {
         for capability in self.registered_capabilities.borrow().iter() {
             if !sandbox_profile.capability_policy.is_allowed(capability) {
                 return Err(crate::runtime::execution_budget::budget_error(
@@ -1362,10 +1371,7 @@ impl Express4Runner {
     ) -> Result<(), QLException> {
         let instruction_count = compile_cache
             .q_lambda_definition()
-            .as_any()
-            .and_then(|definition| definition.downcast_ref::<QLambdaDefinitionInner>())
-            .map(|definition| definition.instructions().len())
-            .unwrap_or(0);
+            .compiled_instruction_count();
         if instruction_count > sandbox_profile.limits.max_instructions {
             return Err(sandbox_limit_error(
                 "SANDBOX_INSTRUCTIONS_EXCEEDED",
@@ -1489,6 +1495,7 @@ fn validate_token_nesting(
     use crate::aparser::token;
 
     let mut depth = 0usize;
+    let mut recursive_expression_ops = 0usize;
     for item in tokens {
         match item.token_type() {
             value
@@ -1512,16 +1519,41 @@ fn validate_token_nesting(
             {
                 depth = depth.saturating_sub(1);
             }
+            value
+                if value == token::EQ as i32
+                    || value == token::QUESTION as i32
+                    || value == token::ARROW as i32
+                    || value == token::RIGHSHIFT_ASSGIN as i32
+                    || value == token::URSHIFT_ASSGIN as i32
+                    || value == token::LSHIFT_ASSGIN as i32
+                    || value == token::ADD_ASSIGN as i32
+                    || value == token::SUB_ASSIGN as i32
+                    || value == token::AND_ASSIGN as i32
+                    || value == token::OR_ASSIGN as i32
+                    || value == token::MUL_ASSIGN as i32
+                    || value == token::MOD_ASSIGN as i32
+                    || value == token::DIV_ASSIGN as i32
+                    || value == token::XOR_ASSIGN as i32 =>
+            {
+                recursive_expression_ops = recursive_expression_ops.saturating_add(1);
+                if recursive_expression_ops > max_depth {
+                    return Err(sandbox_limit_error(
+                        "SANDBOX_AST_DEPTH_EXCEEDED",
+                        recursive_expression_ops,
+                        max_depth,
+                    ));
+                }
+            }
+            value if value == token::SEMI as i32 || value == token::NEWLINE as i32 => {
+                recursive_expression_ops = 0;
+            }
             _ => {}
         }
     }
     Ok(())
 }
 
-fn validate_ast_budget(
-    tree: &Node,
-    sandbox_profile: &SandboxProfile,
-) -> Result<(), QLException> {
+fn validate_ast_budget(tree: &Node, sandbox_profile: &SandboxProfile) -> Result<(), QLException> {
     use crate::aparser::rule_context::ChildRef;
 
     let mut node_count = 0usize;

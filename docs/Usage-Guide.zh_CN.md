@@ -244,6 +244,12 @@ assert_eq!(result.into_result(), DataValue::Bool(true));
 
 ## 8. 安全与静态校验
 
+不可信输入必须使用 `Express4Runner::execute_checked` 和
+`SandboxProfile::secure()`。普通 `execute` 有意保留 Java 兼容的无限默认值。安全入口把
+静态校验、解析/编译/运行有限预算、capability 白名单、取消和租户有界 LRU 组合成一条
+不可绕过路径。敌对输入还应通过 `qlexpress-sandbox-worker` 独立进程执行，详见
+[安全沙箱](Security-Sandbox.zh_CN.md)。
+
 默认原生成员策略是隔离：
 
 ```rust

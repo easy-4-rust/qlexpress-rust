@@ -97,6 +97,20 @@ impl SpreadMethodInvokeInstruction {
 
         if !Self::is_traversable(item) {
             // Leaf node - invoke method directly
+            if !q_context
+                .q_runtime()
+                .is_method_capability_allowed(item.data_type_name(), &self.method_name)
+            {
+                return Err(crate::runtime::execution_budget::budget_error(
+                    crate::exception::QLExceptionKind::Runtime,
+                    "SANDBOX_CAPABILITY_DENIED",
+                    format!(
+                        "method capability is not allowed: {}.{}",
+                        item.data_type_name(),
+                        self.method_name
+                    ),
+                ));
+            }
             let invoke_res = find_method_and_invoke(
                 item,
                 &self.method_name,
@@ -108,6 +122,20 @@ impl SpreadMethodInvokeInstruction {
             return Ok(());
         }
         // If item itself is traversable, try to invoke method on it first
+        if !q_context
+            .q_runtime()
+            .is_method_capability_allowed(item.data_type_name(), &self.method_name)
+        {
+            return Err(crate::runtime::execution_budget::budget_error(
+                crate::exception::QLExceptionKind::Runtime,
+                "SANDBOX_CAPABILITY_DENIED",
+                format!(
+                    "method capability is not allowed: {}.{}",
+                    item.data_type_name(),
+                    self.method_name
+                ),
+            ));
+        }
         if let Some(method) =
             q_context
                 .registry()

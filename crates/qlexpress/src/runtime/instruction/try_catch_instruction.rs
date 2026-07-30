@@ -221,6 +221,23 @@ impl QLInstruction for TryCatchInstruction {
         1
     }
 
+    fn compiled_instruction_count(&self) -> usize {
+        let handlers = self
+            .exception_table
+            .iter()
+            .fold(0usize, |total, (_, definition)| {
+                total.saturating_add(definition.compiled_instruction_count())
+            });
+        1usize
+            .saturating_add(self.body.compiled_instruction_count())
+            .saturating_add(handlers)
+            .saturating_add(
+                self.final_body
+                    .as_ref()
+                    .map_or(0, |definition| definition.compiled_instruction_count()),
+            )
+    }
+
     fn println(&self, index: usize, depth: usize, debug: &mut dyn FnMut(String)) {
         PrintlnUtils::println_by_cur_depth(depth as i32, &format!("{index}: TryCatch"), debug);
         PrintlnUtils::println_by_cur_depth(depth as i32 + 1, "Body", debug);

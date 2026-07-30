@@ -107,6 +107,8 @@ Express4Runner::execute
 | 宿主类型派生宏 | 已实现 | 字段、别名、跳过、类型名；不支持泛型结构体 |
 | 原生方法与构造器 | 显式注册 | 不会从 Rust `impl` 块自动发现 |
 | 安全策略 | 已实现 | 默认隔离，支持开放、白名单和黑名单 |
+| 安全执行入口 | 已实现 | 有限预算、统一能力、租户 LRU、取消 |
+| 进程硬隔离 | 可用 | 一次性受监督 Worker；Linux 操作系统内存限制 |
 | 多线程执行 | 每 worker 一个 runner | 不支持跨线程共享同一个 runner |
 | 跨平台支持 | 尚未声明 | 当前 CI 只在 Ubuntu 执行 |
 
@@ -229,13 +231,10 @@ runner.register_qlexpress_type::<Order>();
 runner，再在线程内长期复用以获得编译缓存收益。不要给单个 runner 套锁后假定它
 获得了与 Java 相同的并发语义。
 
-原生成员的默认策略是 `QLSecurityStrategy::Isolation`。接收不可信脚本前：
-
-- 仅通过白名单开放必要原生成员；
-- 设置 `timeout_millis` 与 `max_arr_length`；
-- 使用 `CheckOptions` 做静态校验；
-- 在引擎外限制脚本和输入体积；
-- 使用真实注册表与业务脚本执行 fuzz、回放和负载测试。
+原生成员的默认策略是 `QLSecurityStrategy::Isolation`。普通 `execute` 保留 Java 兼容的
+无限默认值，不是不可信输入沙箱。不可信脚本必须使用 `execute_checked` 或受监督独立进程
+Worker。预算、能力白名单、取消、操作系统限制和剩余边界见
+[安全沙箱](docs/Security-Sandbox.zh_CN.md)。
 
 ## 验证
 
@@ -269,6 +268,7 @@ Production Readiness CI 还会执行固定 Java 基线测试、Java/Rust 自动�
 | 架构 | [Architecture](docs/qlexpress-Architecture.md) | [架构文档](docs/qlexpress-Architecture.zh_CN.md) |
 | API 参考 | [docs.rs](https://docs.rs/qlexpress) | 源码 rustdoc 含中英文说明 |
 | 生产验收 | — | [生产验收](docs/生产验收.md) |
+| 安全沙箱 | [Security Sandbox](docs/Security-Sandbox.md) | [安全沙箱](docs/Security-Sandbox.zh_CN.md) |
 
 ## 开发与发布
 

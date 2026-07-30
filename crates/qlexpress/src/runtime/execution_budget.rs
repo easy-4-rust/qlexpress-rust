@@ -142,6 +142,7 @@ impl ExecutionBudget {
 
     /// 校验新产生的值中字符串、单集合大小和嵌套值规模。
     pub fn validate_value(&self, value: &DataValue) -> Result<(), QLException> {
+        self.checkpoint()?;
         let mut visited = HashSet::new();
         self.validate_value_inner(value, &mut visited)
     }
@@ -221,6 +222,45 @@ impl ExecutionBudget {
             ));
         }
         Ok(())
+    }
+
+    /// 对宿主函数、扩展函数或 Native 方法返回的新值计入集合预算。
+    pub fn charge_external_value(&self, value: &DataValue) -> Result<(), QLException> {
+        self.validate_value(value)?;
+        let mut visited = HashSet::new();
+        let items = collection_item_count(value, &mut visited);
+        self.charge_collection_items(items)
+    }
+}
+
+fn collection_item_count(value: &DataValue, visited: &mut HashSet<usize>) -> usize {
+    match value {
+        DataValue::List(values) | DataValue::Array(values) => {
+            let identity = Rc::as_ptr(values) as usize;
+            if !visited.insert(identity) {
+                return 0;
+            }
+            let values = values.borrow();
+            values.iter().fold(values.len(), |total, value| {
+                total.saturating_add(collection_item_count(value, visited))
+            })
+        }
+        DataValue::Map(values) => {
+            let identity = Rc::as_ptr(values) as usize;
+            if !visited.insert(identity) {
+                return 0;
+            }
+            let values = values.borrow();
+            values
+                .entries()
+                .iter()
+                .fold(values.len(), |total, (key, value)| {
+                    total
+                        .saturating_add(collection_item_count(key, visited))
+                        .saturating_add(collection_item_count(value, visited))
+                })
+        }
+        _ => 0,
     }
 }
 
