@@ -11,7 +11,7 @@ use std::rc::Rc;
 
 use super::macro_define::MacroDefine;
 
-/// `GeneratorScope` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 指令生成期间维护局部定义、宏和父作用域链的编译期作用域。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/GeneratorScope.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Java `GeneratorScope`. Macro lookup walks the parent chain.
 #[derive(Debug)]
@@ -104,7 +104,7 @@ impl<I> GeneratorScope<I> {
             .and_then(|parent| parent.get_macro_instructions(macro_name))
     }
 
-    /// 处理 name 对应的领域职责。
+    /// 返回当前编译期作用域的名称。
     /// 无显式参数；返回：`&str`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/GeneratorScope.java`，方法 `name`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `getName`.

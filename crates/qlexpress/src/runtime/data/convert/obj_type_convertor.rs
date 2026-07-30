@@ -40,7 +40,7 @@ pub enum TargetType {
 }
 
 impl TargetType {
-    /// 处理 java name 对应的领域职责。
+    /// 返回与 Java 语义一致的规范名称。
     /// 无显式参数；返回：`&'static str`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/data/convert/ObjTypeConvertor.java`，方法 `javaName`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `Class.getName()`-style display, used in error messages.
@@ -62,7 +62,7 @@ impl TargetType {
     }
 }
 
-/// `QConverted` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 描述一次 Java 风格类型转换是否可行及转换后的值。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/data/convert/ObjTypeConvertor.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Result of a conversion attempt, mirroring Java
 /// `ObjTypeConvertor.QConverted`.
@@ -114,7 +114,7 @@ impl QConverted {
 pub struct ObjTypeConvertor;
 
 impl ObjTypeConvertor {
-    /// 处理 cast 对应的领域职责。
+    /// 按 Java 类型转换规则转换输入值。
     /// 参数：`value`、`target`；返回：`QConverted`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/data/convert/ObjTypeConvertor.java`，方法 `cast`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `ObjTypeConvertor.cast(Object, Class<?>)`.
@@ -170,7 +170,7 @@ impl ObjTypeConvertor {
         }
     }
 
-    /// 处理 cast opt 对应的领域职责。
+    /// 向可选目标类型执行 Java 兼容转换。
     /// 参数：`value`、`target`；返回：`QConverted`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/data/convert/ObjTypeConvertor.java`，方法 `castOpt`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `ObjTypeConvertor.cast` overload taking a nullable `Class<?>`;

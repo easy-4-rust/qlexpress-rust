@@ -1,9 +1,10 @@
 //! 不可信脚本的资源预算。
 
-/// 安全执行各阶段的有限资源预算。
+/// `execute_checked` 在解析、编译和执行阶段共享的有限资源预算。
 ///
 /// 该对象是 Rust 安全增强，不改变 Java `QLOptions` 的默认兼容语义。
 /// `SandboxProfile::default()` 使用这里的保守默认值；所有字段必须大于零。
+/// 对应 Java: 无（Rust 安全增强，用于约束不可信规则的资源消耗）。
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ResourceLimits {
     /// UTF-8 源码最大字节数。
@@ -50,6 +51,14 @@ impl Default for ResourceLimits {
 
 impl ResourceLimits {
     /// 校验所有预算均为有限正数。
+    ///
+    /// # Returns
+    ///
+    /// 所有字段均大于零时返回 `Ok(())`，否则返回稳定的配置错误原因。
+    ///
+    /// # Errors
+    ///
+    /// 任一限制为零时返回错误；安全入口不会把零解释为“不限制”。
     pub fn validate(&self) -> Result<(), &'static str> {
         if self.max_source_bytes == 0
             || self.max_tokens == 0

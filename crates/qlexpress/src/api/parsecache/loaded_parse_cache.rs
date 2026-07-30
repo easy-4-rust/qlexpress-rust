@@ -11,6 +11,7 @@ use super::serializable_parse_cache::SerializableParseCache;
 
 /// Importer 还原后的编译缓存类型(Java `QCompileCache` 的具体化:
 /// 主 Lambda 定义 + 表达式 trace 点)。
+/// 对应 Java: `QCompileCache<QLambdaDefinition, TracePointTree>` 的 Rust 类型别名。
 pub type LoadedCompileCache = QCompileCache<Rc<dyn QLambdaDefinition>, TracePointTree>;
 
 /// 已加载的编译缓存。对应 Java: com.alibaba.qlexpress4.api.parsecache.LoadedParseCache

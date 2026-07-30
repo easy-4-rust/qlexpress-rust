@@ -8,7 +8,7 @@ const REPORT_TEMPLATE: &str = "[Error {0}: {1}]\n[Near: {2}]\n{3}\n[Line: {4}, C
 
 const SNIPPET_EXTENSION_LEN: usize = 20;
 
-/// `ExMessage` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 将错误原因、源码片段和行列位置格式化为 Java 兼容异常消息。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/ExMessageUtil.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// A formatted error message plus the snippet extracted around the error,
 /// mirroring Java `ExMessageUtil.ExMessage`.
@@ -43,7 +43,7 @@ impl ExMessage {
 pub struct ExMessageUtil;
 
 impl ExMessageUtil {
-    /// 处理 format 对应的领域职责。
+    /// 组合错误原因、源码片段和位置生成异常文本。
     /// 参数：`script`、`token_start_pos`、`token_line`、`token_col`、`lexeme`、`error_code`、`reason`；返回：`ExMessage`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/ExMessageUtil.java`，方法 `format`；Rust 侧按所有权与 `Result` 语义适配。
     /// Build the [`ExMessage`] for an error at `token_start_pos` of `script`

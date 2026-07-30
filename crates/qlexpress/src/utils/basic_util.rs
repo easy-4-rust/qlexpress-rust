@@ -35,7 +35,7 @@ pub enum NumKind {
 }
 
 impl NumKind {
-    /// 处理 promote level 对应的领域职责。
+    /// 返回数值类型参与 Java 运算时的提升等级。
     /// 无显式参数；返回：`u8`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/utils/BasicUtil.java`，方法 `promoteLevel`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `BasicUtil.numberPromoteLevel`:
@@ -81,7 +81,7 @@ pub enum PrimitiveType {
     Short,
 }
 
-/// 处理 trans to primitive 对应的领域职责。
+/// 把包装类型名转换为对应 Java 原语类型名。
 /// 参数：`primitive`；返回：`PrimitiveType`。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/utils/BasicUtil.java`，方法 `transToPrimitive`；Rust 侧按所有权与 `Result` 语义适配。
 /// Java `BasicUtil.transToPrimitive`: in Rust boxed and primitive forms are

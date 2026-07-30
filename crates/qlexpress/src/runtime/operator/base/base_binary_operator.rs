@@ -345,7 +345,7 @@ impl BaseBinaryOperator {
         ))
     }
 
-    /// 处理 bitwise or 对应的领域职责。
+    /// 按 Java 数值提升规则执行按位或。
     /// 参数：`operator`、`left`、`right`、`error_reporter`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/base/BaseBinaryOperator.java`，方法 `bitwiseOr`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `bitwiseOr(...)`。
@@ -372,7 +372,7 @@ impl BaseBinaryOperator {
         ))
     }
 
-    /// 处理 bitwise xor 对应的领域职责。
+    /// 按 Java 数值提升规则执行按位异或。
     /// 参数：`operator`、`left`、`right`、`error_reporter`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/base/BaseBinaryOperator.java`，方法 `bitwiseXor`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `bitwiseXor(...)`。
@@ -399,7 +399,7 @@ impl BaseBinaryOperator {
         ))
     }
 
-    /// 处理 left shift 对应的领域职责。
+    /// 执行遵循 Java 位宽掩码规则的左移运算。
     /// 参数：`operator`、`left`、`right`、`error_reporter`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/base/BaseBinaryOperator.java`，方法 `leftShift`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `leftShift(...)`。
@@ -421,7 +421,7 @@ impl BaseBinaryOperator {
         ))
     }
 
-    /// 处理 right shift 对应的领域职责。
+    /// 执行保留符号位的 Java 右移运算。
     /// 参数：`operator`、`left`、`right`、`error_reporter`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/base/BaseBinaryOperator.java`，方法 `rightShift`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `rightShift(...)`。
@@ -443,7 +443,7 @@ impl BaseBinaryOperator {
         ))
     }
 
-    /// 处理 right shift unsigned 对应的领域职责。
+    /// 执行零填充的 Java 无符号右移运算。
     /// 参数：`operator`、`left`、`right`、`error_reporter`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/base/BaseBinaryOperator.java`，方法 `rightShiftUnsigned`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `rightShiftUnsigned(...)`。

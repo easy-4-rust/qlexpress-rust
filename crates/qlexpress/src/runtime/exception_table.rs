@@ -11,7 +11,7 @@
 
 use crate::runtime::value::DataValue;
 
-/// `ExceptionTableEntry` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 将一个 catch 类型映射到对应异常处理 Lambda。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/QLException.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// One exception handler entry, mirroring
 /// `com.alibaba.qlexpress4.runtime.ExceptionTable.ExceptionTableEntry`.
@@ -43,7 +43,7 @@ impl ExceptionTableEntry {
     }
 }
 
-/// `ExceptionTable` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 按声明顺序保存并查找 try/catch 异常处理分支。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/ExceptionTable.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// The full exception table attached to a `try/catch` instruction.
 #[derive(Clone, Debug, Default)]
@@ -77,7 +77,7 @@ impl ExceptionTable {
         &self.entries
     }
 
-    /// 处理 lookup 对应的领域职责。
+    /// 按异常类型查找首个可匹配的 catch 处理器。
     /// 参数：`pc`、`exception`；返回：`Option<usize>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/ExceptionTable.java`，方法 `lookup`；Rust 侧按所有权与 `Result` 语义适配。
     /// Locate the first handler matching `pc` whose `catch_type` matches

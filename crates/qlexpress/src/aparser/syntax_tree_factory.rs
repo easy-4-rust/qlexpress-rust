@@ -302,7 +302,7 @@ pub struct DimsContext {
 }
 
 impl DimsContext {
-    /// 处理 dim count 对应的领域职责。
+    /// 返回数组类型声明包含的维度数量。
     /// 无显式参数；返回：`usize`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/SyntaxTreeFactory.java`，方法 `dimCount`；Rust 侧按所有权与 `Result` 语义适配。
     /// Number of `[]` dimensions (Java `LBRACK().size()`).

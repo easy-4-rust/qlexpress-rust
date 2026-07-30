@@ -1,4 +1,5 @@
 //! Procedural macros for qlexpress.
+#![warn(missing_docs)]
 //!
 //! Currently exposes:
 //! - `#[derive(QLExpressType)]` — auto-implement

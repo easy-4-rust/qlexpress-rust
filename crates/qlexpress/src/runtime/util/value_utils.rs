@@ -33,7 +33,7 @@ pub fn assert_number(
     Err(error_reporter.report(err_code, err_msg))
 }
 
-/// 处理 java index 对应的领域职责。
+/// 按 Java 负索引和越界规则规范化集合下标。
 /// 参数：`length`、`ql_index`；返回：`i64`。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/util/ValueUtils.java`，方法 `javaIndex`；Rust 侧按所有权与 `Result` 语义适配。
 /// Java `ValueUtils.javaIndex`: negative QL indices count from the end.

@@ -23,7 +23,7 @@ use std::collections::HashSet;
 pub struct DefaultOperatorCheckStrategy;
 
 impl DefaultOperatorCheckStrategy {
-    /// 处理 instance 对应的领域职责。
+    /// 返回默认操作符检查策略单例。
     /// 无显式参数；返回：`Self`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/operator/DefaultOperatorCheckStrategy.java`，方法 `instance`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `DefaultOperatorCheckStrategy.getInstance()`。

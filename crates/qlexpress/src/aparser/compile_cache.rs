@@ -7,7 +7,7 @@
 
 use std::collections::HashMap;
 
-/// `QCompileCache` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 同时保存编译后 Lambda 定义与表达式追踪点的泛型编译缓存。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/QCompileCache.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Java `QCompileCache`: the cached result of compiling one script.
 #[derive(Clone, Debug)]
@@ -30,7 +30,7 @@ impl<L, T> QCompileCache<L, T> {
         }
     }
 
-    /// 处理 q lambda definition 对应的领域职责。
+    /// 返回缓存中的编译期 Lambda 定义。
     /// 无显式参数；返回：`&L`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/QLambdaDefinition.java`，方法 `qLambdaDefinition`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `getQLambdaDefinition`.
@@ -39,7 +39,7 @@ impl<L, T> QCompileCache<L, T> {
         &self.q_lambda_definition
     }
 
-    /// 处理 expression trace points 对应的领域职责。
+    /// 返回缓存中的表达式追踪点树。
     /// 无显式参数；返回：`&[T]`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/trace/ExpressionTrace.java`，方法 `expressionTracePoints`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `getExpressionTracePoints`.
@@ -60,7 +60,7 @@ pub type ScriptCompileCache = CompileCache<
     crate::runtime::trace::TracePointTree,
 >;
 
-/// `CompileCache` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 按脚本文本索引 [`LoadedCompileCache`](crate::api::parsecache::LoadedCompileCache) 的 Java 兼容内存缓存。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/Express4Runner.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Script -> compiled-artifact cache with plain get/put semantics, as used
 /// by the runner's parse cache (Java keeps it in `Express4Runner`).
@@ -80,7 +80,7 @@ impl<L, T> CompileCache<L, T> {
         }
     }
 
-    /// 处理 get 对应的领域职责。
+    /// 按索引或键读取对应值。
     /// 参数：`script`；返回：`Option<&QCompileCache<L, T>>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/QCompileCache.java`，方法 `get`；Rust 侧按所有权与 `Result` 语义适配。
     /// `None` when the script was never compiled (cache miss).
@@ -89,7 +89,7 @@ impl<L, T> CompileCache<L, T> {
         self.map.get(script)
     }
 
-    /// 处理 put 对应的领域职责。
+    /// 将脚本对应的编译产物写入缓存。
     /// 参数：`script`、`cache`；返回：无。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/QCompileCache.java`，方法 `put`；Rust 侧按所有权与 `Result` 语义适配。
     /// Insert/replace the compiled artifact for `script`.

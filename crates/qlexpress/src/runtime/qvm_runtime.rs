@@ -25,7 +25,7 @@ use crate::runtime::scope::QScope;
 use crate::runtime::trace::QTraces;
 use crate::security::{CancellationToken, CapabilityPolicy, ResourceLimits};
 
-/// 处理 current time millis 对应的领域职责。
+/// 返回 Unix 纪元起经过的当前毫秒数。
 /// 无显式参数；返回：`i64`。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/QvmRuntime.java`，方法 `currentTimeMillis`；Rust 侧按所有权与 `Result` 语义适配。
 /// Current time in milliseconds since the Unix epoch (Java
@@ -38,7 +38,7 @@ pub fn current_time_millis() -> i64 {
         .unwrap_or(0)
 }
 
-/// `QvmRuntime` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 保存一次 QVM 执行共享的注册表、追踪状态、安全预算和能力策略。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/QvmRuntime.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Root runtime with external variable and function, mirroring Java
 /// `QvmRuntime`. Immutable after construction (trace points mutate through
@@ -122,7 +122,7 @@ impl QvmRuntime {
             .map(ExecutionBudget::cancellation_token)
     }
 
-    /// 处理 for test 对应的领域职责。
+    /// 构造测试场景使用的实例。
     /// 参数：`registry`；返回：`Self`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/QvmRuntime.java`，方法 `forTest`；Rust 侧按所有权与 `Result` 语义适配。
     /// Convenience: a runtime with empty traces/attachments and the default
@@ -137,7 +137,7 @@ impl QvmRuntime {
         )
     }
 
-    /// 处理 execute 对应的领域职责。
+    /// 执行编译后的 Lambda 并返回 QL 结果。
     /// 参数：`global_scope`、`root_definition`、`ql_options`；返回：`Result<QResult, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/Express4Runner.java`，方法 `execute`；Rust 侧按所有权与 `Result` 语义适配。
     /// Top-level script execution, mirroring Java `Express4Runner`:

@@ -62,6 +62,10 @@ pub struct NativeRegistry {
 
 impl NativeRegistry {
     /// 空注册表。对应 Java `new ReflectLoader()`(无任何已知类型)。
+    ///
+    /// # Returns
+    ///
+    /// 返回默认开放成员策略且不包含任何类型或扩展方法的注册表。
     pub fn new() -> Self {
         NativeRegistry {
             types: HashMap::new(),
@@ -74,12 +78,20 @@ impl NativeRegistry {
 
     /// 设置成员访问安全策略。对应 Java `ReflectLoader` 持有的
     /// `securityStrategy`(由 `InitOptions` 注入)。
+    ///
+    /// # Arguments
+    ///
+    /// * `security_strategy` - 后续构造器、字段和方法解析共同使用的策略。
     pub fn set_security_strategy(&self, security_strategy: QLSecurityStrategy) {
         *self.security_strategy.borrow_mut() = security_strategy;
     }
 
     /// 当前安全策略。对应 Java `InitOptions.getSecurityStrategy()` 经
     /// `ReflectLoader` 读取的值。
+    ///
+    /// # Returns
+    ///
+    /// 返回当前策略快照。
     pub fn security_strategy(&self) -> QLSecurityStrategy {
         self.security_strategy.borrow().clone()
     }
@@ -95,6 +107,15 @@ impl NativeRegistry {
     ///
     /// 对应 Java 私有方法 `ReflectLoader#securityFilter(Member)`；供
     /// `NativeObject` 动态分派在调用前执行与反射成员一致的检查。
+    ///
+    /// # Arguments
+    ///
+    /// * `type_name` - 成员声明类型的 Java 规范名。
+    /// * `member_name` - 构造器、字段或方法名。
+    ///
+    /// # Returns
+    ///
+    /// 当前安全策略允许访问该成员时返回 `true`。
     pub fn is_member_allowed(&self, type_name: &str, member_name: &str) -> bool {
         self.check_member(type_name, member_name)
     }
@@ -110,6 +131,10 @@ impl Default for NativeRegistry {
 impl NativeRegistry {
     /// 预置内建类型的注册表(SPEC §4:String/List/Map/数值 常用方法子集)。
     /// 对应 Java: 无（Rust 原生适配）。
+    ///
+    /// # Returns
+    ///
+    /// 返回已注册 QLExpress 内建 Java 类型锚点的注册表。
     pub fn with_builtins() -> Self {
         let mut registry = NativeRegistry::new();
         registry.register_builtin_types();
@@ -117,11 +142,23 @@ impl NativeRegistry {
     }
 
     /// 注册类型。对应 Java `ClassSupplier.addClass` 一类的类型供给。
+    ///
+    /// # Arguments
+    ///
+    /// * `native_type` - 包含规范类型名及显式构造器、字段和方法的描述。
     pub fn register_type(&mut self, native_type: NativeType) {
         self.types.insert(native_type.name.clone(), native_type);
     }
 
     /// 按名取注册类型。对应 Java `Class.forName` 命中已供给类型。
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - Java 规范类型名。
+    ///
+    /// # Returns
+    ///
+    /// 类型已经显式注册时返回只读描述，否则返回 `None`。
     pub fn get_type(&self, name: &str) -> Option<&NativeType> {
         self.types.get(name)
     }
@@ -130,6 +167,12 @@ impl NativeRegistry {
     ///
     /// 对应 Java 方法 `ReflectLoader#addExtendFunction`；扩展函数在
     /// `StrategyIsolation` 判断之前解析，不属于受反射沙箱约束的成员。
+    ///
+    /// # Arguments
+    ///
+    /// * `type_name` - 被扩展类型的 Java 规范名。
+    /// * `method_name` - 脚本调用的方法名。
+    /// * `method` - 接收目标值和实参数组的宿主实现。
     pub fn register_method(
         &mut self,
         type_name: impl Into<String>,
@@ -178,6 +221,14 @@ impl NativeRegistry {
     /// 对应 Java 方法 `loadConstructor(Class, Class[])`:取注册构造器;
     /// 参数匹配委托给构造器闭包自身(Java 由 `MemberResolver` 选重载,
     /// Rust 一个类型只注册一个构造入口)。
+    ///
+    /// # Arguments
+    ///
+    /// * `clz` - 待实例化的类型引用。
+    ///
+    /// # Returns
+    ///
+    /// 安全策略允许且类型注册了兼容构造器时返回调用闭包。
     pub fn load_constructor(&self, clz: &ClassRef) -> Option<NativeConstructor> {
         if !self.check_member(clz.java_name(), "<init>") {
             return None;
@@ -189,6 +240,15 @@ impl NativeRegistry {
 
     /// 按实参类型选择构造器候选。没有候选元数据时兼容旧的单构造器注册。
     /// 对应 Java: 无（Rust 原生适配）。
+    ///
+    /// # Arguments
+    ///
+    /// * `clz` - 待实例化类型。
+    /// * `args` - 用于 Java 重载匹配的运行时实参。
+    ///
+    /// # Returns
+    ///
+    /// 返回完成必要参数转换的最佳构造器，未授权或无匹配项时返回 `None`。
     pub fn load_constructor_for_args(
         &self,
         clz: &ClassRef,
@@ -219,6 +279,15 @@ impl NativeRegistry {
 
     /// 对应 Java 方法 `loadField(Object bean, String fieldName, boolean
     /// skipSecurity, ErrorReporter)`:字段不存在时返回 `None`(Java 返回 `null`)。
+    ///
+    /// # Arguments
+    ///
+    /// * `bean` - 字段接收者。
+    /// * `field_name` - 字段名、Map 键或内建 `length`/`class` 名称。
+    ///
+    /// # Returns
+    ///
+    /// 安全策略允许且字段存在时返回可读或可写 QVM 值。
     pub fn load_field(&self, bean: &DataValue, field_name: &str) -> Option<QValue> {
         self.load_field_with_security(bean, field_name, false)
     }
@@ -228,6 +297,16 @@ impl NativeRegistry {
     /// 对应 Java 方法 `ReflectLoader#loadField(Object, String, boolean,
     /// ErrorReporter)`；脚本指令传 `false`，`Express4Runner#loadField`
     /// 宿主 API 传 `true`。
+    ///
+    /// # Arguments
+    ///
+    /// * `bean` - 字段接收者。
+    /// * `field_name` - 待解析字段名。
+    /// * `skip_security` - 仅宿主 API 可用；为真时跳过成员安全策略。
+    ///
+    /// # Returns
+    ///
+    /// 字段可解析时返回对应 QVM 值，否则返回 `None`。
     pub fn load_field_with_security(
         &self,
         bean: &DataValue,
@@ -384,6 +463,16 @@ impl NativeRegistry {
 
     /// 按名解析 `bean` 上的可调用方法。对应 Java `loadMethod` 返回 `null`
     /// 的语义:不存在时返回 `None`。
+    ///
+    /// # Arguments
+    ///
+    /// * `bean` - 实例接收者或表示静态类型的 MetaClass。
+    /// * `method_name` - 待解析的方法名或 QL 别名。
+    ///
+    /// # Returns
+    ///
+    /// 扩展方法优先，其次为安全策略允许的内建或注册方法；均未命中时返回
+    /// `None`。需要精确重载选择时应使用 [`NativeRegistry::resolve_method_for_args`]。
     pub fn resolve_method(&self, bean: &DataValue, method_name: &str) -> Option<NativeMethod> {
         // MetaClass 接收者 → 静态方法(Java `isStaticMethod` 分支)。
         if let Some(meta) = as_meta_class(bean) {
@@ -442,6 +531,16 @@ impl NativeRegistry {
 
     /// 按调用现场实参选择同名方法候选。对应 Java
     /// `ReflectLoader#loadMethod(bean, name, argTypes, ...)`。
+    ///
+    /// # Arguments
+    ///
+    /// * `bean` - 实例接收者或静态类型对象。
+    /// * `method_name` - 脚本调用的方法名或别名。
+    /// * `args` - 用于重载选择和类型转换的运行时实参。
+    ///
+    /// # Returns
+    ///
+    /// 返回安全策略允许的最佳方法闭包；无匹配项时返回 `None`。
     pub fn resolve_method_for_args(
         &self,
         bean: &DataValue,

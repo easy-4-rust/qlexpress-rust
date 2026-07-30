@@ -126,7 +126,7 @@ pub type CompileTimeFunctions = HashMap<String, Rc<dyn CompileTimeFunction>>;
 /// User-defined function registry (Java `Map<String, CustomFunction>`).
 pub type UserDefineFunctions = HashMap<String, Rc<dyn CustomFunction>>;
 
-/// `QvmInstructionVisitor` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 将语法树编译为 QVM 指令序列并计算最大操作数栈深的访问器。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/QvmInstructionVisitor.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Java `QvmInstructionVisitor`.
 /// 对应 Java: com.alibaba.qlexpress4.aparser.QvmInstructionVisitor。
@@ -270,7 +270,7 @@ impl<'a> QvmInstructionVisitor<'a> {
         }
     }
 
-    /// 处理 instructions 对应的领域职责。
+    /// 返回已经生成的 QVM 指令只读切片。
     /// 无显式参数；返回：`&[Instruction]`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/instruction/QLInstruction.java`，方法 `instructions`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `getInstructions`.
@@ -279,7 +279,7 @@ impl<'a> QvmInstructionVisitor<'a> {
         &self.instruction_list
     }
 
-    /// 处理 take instructions 对应的领域职责。
+    /// 移出并返回已经生成的全部 QVM 指令。
     /// 无显式参数；返回：`Vec<Instruction>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/QvmInstructionVisitor.java`，方法 `takeInstructions`；Rust 侧按所有权与 `Result` 语义适配。
     /// Take the compiled instruction list (sub-visitor handover).
@@ -288,7 +288,7 @@ impl<'a> QvmInstructionVisitor<'a> {
         self.instruction_list
     }
 
-    /// 处理 max stack size 对应的领域职责。
+    /// 返回编译结果所需的最大操作数栈深。
     /// 无显式参数；返回：`usize`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/QvmInstructionVisitor.java`，方法 `maxStackSize`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `getMaxStackSize`.
@@ -297,7 +297,7 @@ impl<'a> QvmInstructionVisitor<'a> {
         self.max_stack_size as usize
     }
 
-    /// 处理 syntax error 对应的领域职责。
+    /// 按当前源码位置构造编译期语法错误。
     /// 无显式参数；返回：`Option<&QLSyntaxException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/QvmInstructionVisitor.java`，方法 `syntaxError`；Rust 侧按所有权与 `Result` 语义适配。
     /// The first recorded syntax error, if any (Java: thrown).
@@ -306,7 +306,7 @@ impl<'a> QvmInstructionVisitor<'a> {
         self.syntax_error.as_ref()
     }
 
-    /// 处理 compile 对应的领域职责。
+    /// 把语法树编译为可执行 QVM 指令。
     /// 参数：`tree`；返回：`Result<(Vec<Instruction>, usize), QLSyntaxException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/QvmInstructionVisitor.java`，方法 `compile`；Rust 侧按所有权与 `Result` 语义适配。
     /// Compile `tree` and return the instructions plus max stack size, or

@@ -4,7 +4,7 @@ use proc_macro2::TokenStream;
 use quote::quote;
 
 use crate::attrs::{ContainerAttrs, FieldSpec, ItemSpec};
-/// 处理 generate 对应的领域职责。
+/// 根据派生规格生成对应的 Rust TokenStream。
 /// 参数：`_ast`、`item`、`container`、`qlexpress_path`；返回：`TokenStream`。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/annotation/QLFunction.java`，方法 `generate`；Rust 侧按所有权与 `Result` 语义适配。
 /// 对应 Java: 无（Rust 原生适配）。

@@ -18,6 +18,7 @@ use crate::runtime::value::{DataValue, QValue};
 /// Rust 侧 `Express4Runner` 门面在后续阶段落地,这里抽象为闭包:
 /// 入参为 `(动态脚本, 当前上下文)`,返回脚本执行结果。
 /// 实现该闭包时应当用「本上下文」作为外部变量环境执行脚本,与 Java 传 `this` 一致。
+/// 对应 Java: `DynamicVariableContext` 持有 runner 的 Rust 闭包适配。
 pub type DynamicScriptRunner =
     Rc<dyn Fn(&str, &dyn ExpressContext) -> Result<DataValue, QLException>>;
 

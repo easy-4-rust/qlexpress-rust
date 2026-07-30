@@ -5,7 +5,7 @@
 pub struct PrintlnUtils;
 
 impl PrintlnUtils {
-    /// 处理 println by cur depth 对应的领域职责。
+    /// 按指定缩进深度输出一行调试文本。
     /// 参数：`depth`、`s`、`debug`；返回：无。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/utils/PrintlnUtils.java`，方法 `printlnByCurDepth`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `printlnByCurDepth`: send the indented string to `debug`.

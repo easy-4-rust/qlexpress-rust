@@ -89,8 +89,12 @@ use crate::security::{Capability, SandboxProfile};
 /// 绑定关系;Rust 为每个 runner 分配唯一序号,见 [`LoadedParseCache`])。
 static RUNNER_IDENTITY: AtomicUsize = AtomicUsize::new(1);
 
-/// 脚本引擎门面。对应 Java: com.alibaba.qlexpress4.Express4Runner
-/// (字段与 Java 一一对应,见各字段注释)。
+/// QlExpress Rust 的解析、编译、执行与宿主扩展统一门面。
+///
+/// 普通 `execute` 系列保持 Java QLExpress4 的兼容默认值；
+/// [`Express4Runner::execute_checked`] 为 Rust 增加静态检查、有限预算、
+/// capability 白名单和租户缓存隔离。字段与 Java 一一对应，见各字段注释。
+/// 对应 Java: com.alibaba.qlexpress4.Express4Runner。
 pub struct Express4Runner {
     /// 操作符管理器。对应 Java 字段 `operatorManager`。
     operator_manager: OperatorManager,
@@ -125,6 +129,10 @@ impl Default for Express4Runner {
 impl Express4Runner {
     /// 无参构造(默认 `InitOptions`)。对应 Java 以默认 `InitOptions`
     /// 构造 `Express4Runner` 的用法。
+    ///
+    /// # Returns
+    ///
+    /// 返回采用 Java 兼容初始化选项和默认隔离成员策略的新 runner。
     pub fn new() -> Self {
         Self::with_init_options(InitOptions::default())
     }
@@ -132,6 +140,14 @@ impl Express4Runner {
     /// 对应 Java 构造器 `Express4Runner(InitOptions)`:
     /// 按 `InitOptions.securityStrategy` 接线注册表安全检查
     /// (Java: `new ReflectLoader(securityStrategy, allowPrivateAccess)`)。
+    ///
+    /// # Arguments
+    ///
+    /// * `init_options` - runner 生命周期内固定的解析、调试和原生成员策略。
+    ///
+    /// # Returns
+    ///
+    /// 返回拥有独立函数表、宏作用域和编译缓存的 runner。
     pub fn with_init_options(init_options: InitOptions) -> Self {
         let reflect_loader = ReflectLoader::new(
             init_options.security_strategy().clone(),
@@ -175,6 +191,20 @@ impl Express4Runner {
     /// 以 Map 上下文执行脚本。对应 Java 方法
     /// `execute(String script, Map<String, Object> context, QLOptions)`:
     /// map 的 key 即脚本引用的变量名(内部包装为 `MapExpressContext`)。
+    ///
+    /// # Arguments
+    ///
+    /// * `script` - 待解析和执行的 QLExpress 脚本。
+    /// * `context` - 以变量名为键的外部数据；是否写回由 `ql_options` 决定。
+    /// * `ql_options` - 本次执行的 Java 兼容选项。
+    ///
+    /// # Returns
+    ///
+    /// 返回脚本结果以及可选表达式追踪。
+    ///
+    /// # Errors
+    ///
+    /// 词法、语法、编译或 QVM 执行失败时返回 [`QLException`]。
     pub fn execute(
         &self,
         script: &str,
@@ -190,6 +220,20 @@ impl Express4Runner {
 
     /// 执行模板字符串(包成动态字符串字面量)。对应 Java 方法
     /// `executeTemplate(String, Map, QLOptions)`;模板内不支持换行。
+    ///
+    /// # Arguments
+    ///
+    /// * `template` - 包含 QLExpress 插值选择器的单行模板。
+    /// * `context` - 模板插值可读取的外部变量。
+    /// * `ql_options` - 本次执行选项。
+    ///
+    /// # Returns
+    ///
+    /// 返回完成插值后的字符串结果。
+    ///
+    /// # Errors
+    ///
+    /// 模板包装、解析或执行失败时返回 [`QLException`]。
     pub fn execute_template(
         &self,
         template: &str,
@@ -202,6 +246,20 @@ impl Express4Runner {
 
     /// 以 [`ExpressContext`] 上下文执行脚本。对应 Java 方法
     /// `execute(String script, ExpressContext context, QLOptions)`。
+    ///
+    /// # Arguments
+    ///
+    /// * `script` - 待执行脚本。
+    /// * `context` - 可自定义变量读取和写回行为的上下文。
+    /// * `ql_options` - 本次执行选项。
+    ///
+    /// # Returns
+    ///
+    /// 返回脚本结果以及可选表达式追踪。
+    ///
+    /// # Errors
+    ///
+    /// 解析、编译、上下文访问或 QVM 执行失败时返回 [`QLException`]。
     pub fn execute_with_context(
         &self,
         script: &str,
@@ -222,6 +280,22 @@ impl Express4Runner {
     ///
     /// 该入口是 Rust 安全增强；原 `execute` 系列继续保持 Java 兼容默认值。
     /// 对不可信脚本，宿主应只暴露本方法或进程级 Worker API。
+    ///
+    /// # Arguments
+    ///
+    /// * `script` - 来源不可信或由业务用户配置的规则脚本。
+    /// * `context` - 执行前会进行字符串、集合和输出规模校验的外部数据。
+    /// * `ql_options` - Java 兼容执行行为；安全上限由 `sandbox_profile` 决定。
+    /// * `sandbox_profile` - 静态检查、资源预算、能力白名单和租户缓存策略。
+    ///
+    /// # Returns
+    ///
+    /// 全部检查通过并执行完成时返回有界的 QL 结果。
+    ///
+    /// # Errors
+    ///
+    /// 配置无界、静态检查失败、能力未授权、任一资源预算耗尽、取消、超时、
+    /// 编译或 QVM 执行失败时返回带稳定错误码的 [`QLException`]。
     pub fn execute_checked(
         &self,
         script: &str,
@@ -247,6 +321,22 @@ impl Express4Runner {
     /// `execute_checked` 的 [`ExpressContext`] 版本。
     ///
     /// 动态上下文返回的值会在进入 QVM 栈后受字符串与集合预算校验。
+    ///
+    /// # Arguments
+    ///
+    /// * `script` - 来源不可信的规则脚本。
+    /// * `context` - 动态变量上下文；返回值在进入 QVM 后继续接受预算校验。
+    /// * `ql_options` - Java 兼容执行行为。
+    /// * `sandbox_profile` - 不可绕过的安全检查与资源限制。
+    ///
+    /// # Returns
+    ///
+    /// 返回通过静态与运行时安全检查的有界结果。
+    ///
+    /// # Errors
+    ///
+    /// 与 [`Express4Runner::execute_checked`] 相同；此外，无界表达式追踪配置会
+    /// 以 `SANDBOX_TRACE_DISABLED` 被拒绝。
     pub fn execute_checked_with_context(
         &self,
         script: &str,

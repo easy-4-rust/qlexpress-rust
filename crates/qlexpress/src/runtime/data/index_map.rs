@@ -27,7 +27,7 @@ impl IndexMap {
         map
     }
 
-    /// 处理 get 对应的领域职责。
+    /// 按索引或键读取对应值。
     /// 参数：`key`；返回：`Option<&DataValue>`。
     /// Rust 原生适配；承接当前文件既有 rustdoc 标注的 Java 职责；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `Map.get`.
@@ -45,7 +45,7 @@ impl IndexMap {
         self.get(key).is_some()
     }
 
-    /// 处理 insert 对应的领域职责。
+    /// 插入或覆盖键值并返回原有值。
     /// 参数：`key`、`value`；返回：`Option<DataValue>`。
     /// Rust 原生适配；承接当前文件既有 rustdoc 标注的 Java 职责；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `Map.put`: replaces the value in place when the key exists,
@@ -61,7 +61,7 @@ impl IndexMap {
         None
     }
 
-    /// 处理 remove 对应的领域职责。
+    /// 删除指定键并返回原有值。
     /// 参数：`key`；返回：`Option<DataValue>`。
     /// Rust 原生适配；承接当前文件既有 rustdoc 标注的 Java 职责；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `Map.remove`, keeping the order of remaining entries.
@@ -71,7 +71,7 @@ impl IndexMap {
         Some(self.entries.remove(index).1)
     }
 
-    /// 处理 clear 对应的领域职责。
+    /// 移除容器中的全部键值。
     /// 无显式参数；返回：无。
     /// Rust 原生适配；承接当前文件既有 rustdoc 标注的 Java 职责；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `Map.clear`.
@@ -90,7 +90,7 @@ impl IndexMap {
         self.entries.is_empty()
     }
 
-    /// 处理 entries 对应的领域职责。
+    /// 按插入顺序返回全部键值条目。
     /// 无显式参数；返回：`&[(DataValue, DataValue)]`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/QRuntime.java`，方法 `entries`；Rust 侧按所有权与 `Result` 语义适配。
     /// Entries in insertion order.

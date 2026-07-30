@@ -38,7 +38,7 @@ pub(crate) const ARITHMETIC_EXCEPTION: &str = "ARITHMETIC_EXCEPTION";
 pub struct NumberMath;
 
 impl NumberMath {
-    /// 处理 abs 对应的领域职责。
+    /// 按当前数值域计算绝对值。
     /// 参数：`number`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/NumberMath.java`，方法 `abs`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `NumberMath.abs(Number)`。
@@ -53,7 +53,7 @@ impl NumberMath {
         }
     }
 
-    /// 处理 add 对应的领域职责。
+    /// 按 Java 数值提升规则执行加法。
     /// 参数：`left`、`right`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/NumberMath.java`，方法 `add`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `NumberMath.add(left, right)`。
@@ -69,7 +69,7 @@ impl NumberMath {
         }
     }
 
-    /// 处理 subtract 对应的领域职责。
+    /// 按 Java 数值提升规则执行减法。
     /// 参数：`left`、`right`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/NumberMath.java`，方法 `subtract`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `NumberMath.subtract(left, right)`。
@@ -85,7 +85,7 @@ impl NumberMath {
         }
     }
 
-    /// 处理 multiply 对应的领域职责。
+    /// 按 Java 数值提升规则执行乘法。
     /// 参数：`left`、`right`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/NumberMath.java`，方法 `multiply`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `NumberMath.multiply(left, right)`。
@@ -165,7 +165,7 @@ impl NumberMath {
         }
     }
 
-    /// 处理 int div 对应的领域职责。
+    /// 按 Java 整数截断规则执行整除。
     /// 参数：`left`、`right`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/NumberMath.java`，方法 `intDiv`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `NumberMath.intDiv(left, right)`。
@@ -193,7 +193,7 @@ impl NumberMath {
         }
     }
 
-    /// 处理 remainder 对应的领域职责。
+    /// 按 Java 数值提升规则执行余数运算。
     /// 参数：`left`、`right`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/NumberMath.java`，方法 `remainder`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `NumberMath.remainder(left, right)`。
@@ -253,7 +253,7 @@ impl NumberMath {
         }
     }
 
-    /// 处理 bitwise negate 对应的领域职责。
+    /// 按 Java 数值提升规则执行按位取反。
     /// 参数：`left`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/NumberMath.java`，方法 `bitwiseNegate`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `NumberMath.bitwiseNegate(left)`。
@@ -267,7 +267,7 @@ impl NumberMath {
         }
     }
 
-    /// 处理 unary minus 对应的领域职责。
+    /// 对操作数执行 Java 数值取负运算。
     /// 参数：`left`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/NumberMath.java`，方法 `unaryMinus`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `NumberMath.unaryMinus(left)`。
@@ -283,7 +283,7 @@ impl NumberMath {
         }
     }
 
-    /// 处理 unary plus 对应的领域职责。
+    /// 对操作数执行 Java 数值一元正号运算。
     /// 参数：`left`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/NumberMath.java`，方法 `unaryPlus`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `NumberMath.unaryPlus(left)`。

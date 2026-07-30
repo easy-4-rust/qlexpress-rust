@@ -1,4 +1,4 @@
-//! 父进程 Worker 监督器。
+//! QlExpress Rust 隔离进程的父进程监督器。
 
 use std::io::{Read, Write};
 use std::path::PathBuf;
@@ -8,14 +8,28 @@ use std::time::Instant;
 
 use crate::{WorkerLimits, WorkerRequest, WorkerResponse};
 
-/// 启动一次性隔离进程并在超时后强制回收。
+/// 为每个规则请求启动一次性子进程并负责有界 I/O 与强制回收。
+///
+/// 该类型提供进程边界和 Unix 资源限制，但不宣称具备 namespace、
+/// seccomp、网络或文件系统沙箱能力。生产中的敌对输入仍应运行在容器
+/// 或等价的操作系统隔离环境中。
+/// 对应 Java: 无（Rust 可选部署组件）。
 pub struct ProcessWorker {
     program: PathBuf,
     limits: WorkerLimits,
 }
 
 impl ProcessWorker {
-    /// 使用指定 Worker 二进制和限制创建监督器。
+    /// 使用指定执行器二进制和操作系统限制创建监督器。
+    ///
+    /// # Arguments
+    ///
+    /// * `program` - `qlexpress-process` 二进制路径。
+    /// * `limits` - 墙钟时间、内存、CPU、文件大小和文件描述符限制。
+    ///
+    /// # Returns
+    ///
+    /// 返回可重复提交请求的父进程监督器；每次提交仍会创建新子进程。
     pub fn new(program: impl Into<PathBuf>, limits: WorkerLimits) -> Self {
         Self {
             program: program.into(),
@@ -23,7 +37,21 @@ impl ProcessWorker {
         }
     }
 
-    /// 执行单个请求；每次调用创建全新进程。
+    /// 在全新子进程中执行一个规则请求。
+    ///
+    /// # Arguments
+    ///
+    /// * `request` - 包含脚本、JSON 上下文、租户标识和可选引擎预算的请求。
+    ///
+    /// # Returns
+    ///
+    /// 子进程正常完成或被墙钟超时终止时返回结构化响应；父进程无法启动、
+    /// I/O 失败或响应协议无效时返回监督器错误。
+    ///
+    /// # Errors
+    ///
+    /// 二进制无法启动、请求无法编码、标准流不可用、输出超过上限、读取线程
+    /// 异常或响应不是合法 JSON 时返回 `Err(String)`。
     pub fn execute(&self, request: &WorkerRequest) -> Result<WorkerResponse, String> {
         let mut child = Command::new(&self.program)
             .env(

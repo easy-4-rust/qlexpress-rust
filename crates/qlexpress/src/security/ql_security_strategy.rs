@@ -6,7 +6,7 @@
 
 use std::collections::HashSet;
 
-/// `NativeMember` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 供原生成员安全策略匹配的“声明类型 + 成员名”标识。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/security/QLSecurityStrategy.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Identifies a native member (method/field) for security checks.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -48,7 +48,7 @@ pub enum QLSecurityStrategy {
 }
 
 impl QLSecurityStrategy {
-    /// 处理 open 对应的领域职责。
+    /// 创建允许访问全部已注册原生成员的开放策略。
     /// 无显式参数；返回：`Self`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/security/QLSecurityStrategy.java`，方法 `open`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `QLSecurityStrategy.open()`.
@@ -57,7 +57,7 @@ impl QLSecurityStrategy {
         QLSecurityStrategy::Open
     }
 
-    /// 处理 isolation 对应的领域职责。
+    /// 创建拒绝全部原生成员访问的隔离策略。
     /// 无显式参数；返回：`Self`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/security/QLSecurityStrategy.java`，方法 `isolation`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `QLSecurityStrategy.isolation()`.
@@ -66,7 +66,7 @@ impl QLSecurityStrategy {
         QLSecurityStrategy::Isolation
     }
 
-    /// 处理 black list 对应的领域职责。
+    /// 创建拒绝指定原生成员的黑名单策略。
     /// 参数：`black_list`；返回：`Self`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/security/QLSecurityStrategy.java`，方法 `blackList`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `QLSecurityStrategy.blackList(...)`.
@@ -75,7 +75,7 @@ impl QLSecurityStrategy {
         QLSecurityStrategy::BlackList(black_list)
     }
 
-    /// 处理 white list 对应的领域职责。
+    /// 创建仅允许指定原生成员的白名单策略。
     /// 参数：`white_list`；返回：`Self`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/security/QLSecurityStrategy.java`，方法 `whiteList`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `QLSecurityStrategy.whiteList(...)`.
@@ -84,7 +84,7 @@ impl QLSecurityStrategy {
         QLSecurityStrategy::WhiteList(white_list)
     }
 
-    /// 处理 check 对应的领域职责。
+    /// 依据当前配置执行校验。
     /// 参数：`member`；返回：`bool`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/security/QLSecurityStrategy.java`，方法 `check`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `check(Member)`: true when the member is secure to access.

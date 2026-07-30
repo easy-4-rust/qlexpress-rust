@@ -31,7 +31,7 @@ pub enum QLExceptionKind {
     Timeout,
 }
 
-/// `QLException` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// QlExpress 对外统一异常，保存类别、稳定错误码、原因、位置和可选抛出值。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/QLException.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// The engine's single error type, mirroring Java `QLException`
 /// (and subclasses, via [`QLExceptionKind`]).
@@ -112,7 +112,7 @@ impl QLException {
         self
     }
 
-    /// 处理 for test 对应的领域职责。
+    /// 构造测试场景使用的实例。
     /// 参数：`kind`、`reason`、`error_code`；返回：`Self`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/QLException.java`，方法 `forTest`；Rust 侧按所有权与 `Result` 语义适配。
     /// Constructor mirroring the Java "Visible for test"
@@ -157,7 +157,7 @@ impl QLException {
         self.diagnostic.pos()
     }
 
-    /// 处理 reason 对应的领域职责。
+    /// 返回不含位置前缀的原始错误原因。
     /// 无显式参数；返回：`&str`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/QLException.java`，方法 `reason`；Rust 侧按所有权与 `Result` 语义适配。
     /// The unformatted reason of this error.
@@ -165,7 +165,7 @@ impl QLException {
         self.diagnostic.message()
     }
 
-    /// 处理 line no 对应的领域职责。
+    /// 返回异常对应的一基源码行号。
     /// 无显式参数；返回：`i32`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/QLException.java`，方法 `lineNo`；Rust 侧按所有权与 `Result` 语义适配。
     /// Line no, 1-based.
@@ -174,7 +174,7 @@ impl QLException {
         self.diagnostic.range().start().line() + 1
     }
 
-    /// 处理 col no 对应的领域职责。
+    /// 返回异常对应的一基源码列号。
     /// 无显式参数；返回：`i32`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/QLException.java`，方法 `colNo`；Rust 侧按所有权与 `Result` 语义适配。
     /// Column no, 1-based.
@@ -195,7 +195,7 @@ impl QLException {
         self.diagnostic.code()
     }
 
-    /// 处理 catch obj 对应的领域职责。
+    /// 返回脚本 throw 携带的可选捕获值。
     /// 无显式参数；返回：`Option<&DataValue>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/QLException.java`，方法 `catchObj`；Rust 侧按所有权与 `Result` 语义适配。
     /// Object catchable in a QLExpress catch clause (Java `getCatchObj`).
@@ -203,7 +203,7 @@ impl QLException {
         self.catch_obj.as_ref()
     }
 
-    /// 处理 report scanner err 对应的领域职责。
+    /// 报告带词法位置的扫描错误。
     /// 参数：`script`、`token_start_pos`、`line`、`col`、`lexeme`、`error_code`、`reason`；返回：`QLSyntaxException`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/QLException.java`，方法 `reportScannerErr`；Rust 侧按所有权与 `Result` 语义适配。
     /// Report a scanner/syntax error, mirroring Java
@@ -245,7 +245,7 @@ impl QLException {
         ))
     }
 
-    /// 处理 report runtime err with attach 对应的领域职责。
+    /// 报告携带脚本抛出值的运行时错误。
     /// 参数：`script`、`token_start_pos`、`line`、`col`、`lexeme`、`error_code`、`reason`、`catch_obj`；返回：`QLException`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/QLException.java`，方法 `reportRuntimeErrWithAttach`；Rust 侧按所有权与 `Result` 语义适配。
     /// Report a runtime error carrying a catchable attachment, mirroring Java

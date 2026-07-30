@@ -2,7 +2,11 @@
 
 use std::time::Duration;
 
-/// 父进程和 Worker 共同执行的硬资源限制。
+/// 父进程监督器与一次性执行子进程共同使用的操作系统资源限制。
+///
+/// Linux 可应用地址空间、CPU、文件大小与文件描述符限制；macOS 需要
+/// 由容器或服务管理器额外提供内存上限。
+/// 对应 Java: 无（Rust 可选部署组件）。
 #[derive(Clone, Debug)]
 pub struct WorkerLimits {
     /// 父进程墙钟超时；到期后强制杀死 Worker。

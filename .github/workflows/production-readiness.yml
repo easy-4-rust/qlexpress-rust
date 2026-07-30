@@ -44,6 +44,9 @@ jobs:
       - name: Formatting
         run: cargo fmt --all -- --check
 
+      - name: Rust documentation quality
+        run: python3 scripts/check_rust_doc_quality.py
+
       - name: Clippy
         run: cargo clippy --workspace --all-targets --all-features -- -D warnings
 

@@ -46,7 +46,7 @@ pub enum OperatorCheckStrategy {
 }
 
 impl OperatorCheckStrategy {
-    /// 处理 allow all 对应的领域职责。
+    /// 创建允许全部操作符的默认检查策略。
     /// 无显式参数；返回：`Self`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/operator/OperatorCheckStrategy.java`，方法 `allowAll`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `OperatorCheckStrategy.allowAll()`。
@@ -55,7 +55,7 @@ impl OperatorCheckStrategy {
         OperatorCheckStrategy::AllowAll
     }
 
-    /// 处理 whitelist 对应的领域职责。
+    /// 创建仅允许指定操作符的白名单策略。
     /// 参数：`allowed_operators`；返回：`Self`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/operator/OperatorCheckStrategy.java`，方法 `whitelist`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `OperatorCheckStrategy.whitelist(Set<String>)`。
@@ -64,7 +64,7 @@ impl OperatorCheckStrategy {
         OperatorCheckStrategy::Whitelist(allowed_operators)
     }
 
-    /// 处理 blacklist 对应的领域职责。
+    /// 创建拒绝指定操作符的黑名单策略。
     /// 参数：`forbidden_operators`；返回：`Self`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/operator/OperatorCheckStrategy.java`，方法 `blacklist`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `OperatorCheckStrategy.blacklist(Set<String>)`。

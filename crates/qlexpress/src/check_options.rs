@@ -2,7 +2,7 @@
 
 use crate::operator::operator_check_strategy::OperatorCheckStrategy;
 
-/// `CheckOptions` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 脚本静态检查选项，控制可用操作符及是否允许函数调用。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/CheckOptions.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Validation options, mirroring Java `CheckOptions`.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -41,7 +41,7 @@ impl Default for CheckOptions {
     }
 }
 
-/// `CheckOptionsBuilder` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 逐项构造 [`CheckOptions`] 的构建器。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/CheckOptions.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Java `CheckOptions.Builder`.
 #[derive(Clone, Debug)]

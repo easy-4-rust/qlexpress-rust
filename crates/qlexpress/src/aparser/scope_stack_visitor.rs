@@ -30,7 +30,7 @@ impl<S: ExistStack> ScopeStack<S> {
         ScopeStack { stack }
     }
 
-    /// 处理 push 对应的领域职责。
+    /// 将一个元素压入当前栈。
     /// 无显式参数；返回：无。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/ScopeStackVisitor.java`，方法 `push`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `push()`.
@@ -38,7 +38,7 @@ impl<S: ExistStack> ScopeStack<S> {
         self.stack = self.stack.push();
     }
 
-    /// 处理 pop 对应的领域职责。
+    /// 弹出并返回当前栈顶元素。
     /// 无显式参数；返回：无。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/ScopeStackVisitor.java`，方法 `pop`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `pop()`.
@@ -47,7 +47,7 @@ impl<S: ExistStack> ScopeStack<S> {
         self.stack = self.stack.pop();
     }
 
-    /// 处理 stack 对应的领域职责。
+    /// 返回当前内部栈的只读视图。
     /// 无显式参数；返回：`&S`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/ScopeStackVisitor.java`，方法 `stack`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `getStack()`.
@@ -56,7 +56,7 @@ impl<S: ExistStack> ScopeStack<S> {
         &self.stack
     }
 
-    /// 处理 stack mut 对应的领域职责。
+    /// 返回当前内部栈的可变视图。
     /// 无显式参数；返回：`&mut S`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/ScopeStackVisitor.java`，方法 `stackMut`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `getStack()` mutable (for `add`).

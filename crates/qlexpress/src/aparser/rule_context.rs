@@ -20,7 +20,7 @@ pub enum ChildRef<'a> {
 }
 
 impl<'a> ChildRef<'a> {
-    /// 处理 text 对应的领域职责。
+    /// 返回当前节点或 Token 对应的源码文本。
     /// 无显式参数；返回：`String`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/ParseTree.java`，方法 `text`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `ParseTree.getText`.
@@ -32,7 +32,7 @@ impl<'a> ChildRef<'a> {
         }
     }
 
-    /// 处理 start token 对应的领域职责。
+    /// 返回当前语法节点的起始 Token。
     /// 无显式参数；返回：`Option<&'a Token>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/RuleContext.java`，方法 `startToken`；Rust 侧按所有权与 `Result` 语义适配。
     /// First token covered by this child (Java bounds computation).
@@ -44,7 +44,7 @@ impl<'a> ChildRef<'a> {
         }
     }
 
-    /// 处理 stop token 对应的领域职责。
+    /// 返回当前语法节点的结束 Token。
     /// 无显式参数；返回：`Option<&'a Token>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/RuleContext.java`，方法 `stopToken`；Rust 侧按所有权与 `Result` 语义适配。
     /// Last token covered by this child.

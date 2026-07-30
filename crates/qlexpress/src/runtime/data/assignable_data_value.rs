@@ -4,7 +4,7 @@ use crate::runtime::data::convert::obj_type_convertor::TargetType;
 use crate::runtime::left_value::LeftValue;
 use crate::runtime::value::{DataValue, Value};
 
-/// `AssignableDataValue` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 保存局部变量当前值，并在赋值时执行可选声明类型转换的左值。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/data/AssignableDataValue.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Mirrors Java `AssignableDataValue`: a symbol table entry with an optional
 /// declared type.

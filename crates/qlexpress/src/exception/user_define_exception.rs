@@ -13,7 +13,7 @@ pub enum ExceptionType {
     BizException,
 }
 
-/// `UserDefineException` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 用户脚本或宿主扩展显式报告的业务异常包装。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/UserDefineException.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// User-defined error message for custom functions/operators, mirroring Java
 /// `UserDefineException`.

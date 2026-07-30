@@ -1,4 +1,5 @@
 //! 一次性 QlExpress Rust 隔离进程执行器。
+#![warn(missing_docs)]
 
 use std::collections::HashMap;
 use std::io::Read;

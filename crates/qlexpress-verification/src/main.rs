@@ -1,4 +1,5 @@
 //! qlexpress-rust 生产验收命令行工具。
+#![warn(missing_docs)]
 
 mod business_host;
 mod canary;

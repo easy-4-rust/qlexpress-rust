@@ -72,6 +72,7 @@ pub trait QLInstruction {
 }
 
 /// 拥有所有权的指令对象(Java `QLInstruction[]` 元素)。
+/// 对应 Java: `QLInstruction` 数组元素的 Rust 所有权适配。
 pub type Instruction = Box<dyn QLInstruction>;
 
 /// Java 侧会共享指令对象(如编译后的宏体在每个宏调用点内联)。

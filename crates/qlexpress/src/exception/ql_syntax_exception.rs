@@ -1,6 +1,6 @@
 use super::ql_exception::{QLException, QLExceptionKind};
 
-/// `QLSyntaxException` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 解析或静态检查失败时携带源码位置的语法异常。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/QLSyntaxException.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Syntax-phase error, mirroring Java `QLSyntaxException`.
 ///

@@ -28,6 +28,7 @@ pub type NativeStaticField = Rc<RefCell<DataValue>>;
 
 /// 带 Java 形参签名的方法候选。多个同名候选按声明顺序保存，由
 /// `MemberResolver` 在调用现场根据实参类型选择。
+/// 对应 Java: `Method` 及其参数签名的 Rust 显式注册适配。
 #[derive(Clone)]
 pub struct NativeMethodCandidate {
     /// Java `Method#getParameterTypes()`；可变参数末项保存组件类型。

@@ -6,7 +6,7 @@
 use syn::parse::{Parse, ParseStream};
 use syn::{Attribute, Meta, Result, Token};
 
-/// `ContainerAttrs` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 从结构体级 `#[qlexpress(...)]` 属性解析出的派生配置。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/annotation/QLFunction.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Attributes applied to the type as a whole.
 #[derive(Debug, Default)]
@@ -57,7 +57,7 @@ fn apply_container_arg(out: &mut ContainerAttrs, arg: QlexAttr) -> Result<()> {
     }
 }
 
-/// `FieldAttrs` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 从字段级 `#[qlexpress(...)]` 属性解析出的暴露策略。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/annotation/QLFunction.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Per-field attributes.
 #[derive(Debug, Default)]
@@ -182,7 +182,7 @@ fn parse_qlexpress_args(attr: &Attribute) -> Result<Vec<QlexAttr>> {
     }
 }
 
-/// `ItemSpec` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 宏展开阶段使用的结构体名称、可见性和容器配置。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/annotation/QLFunction.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Aggregated information we need to generate code for one type.
 /// 对应 Java: 无（Rust 原生适配）。
@@ -190,7 +190,7 @@ pub struct ItemSpec {
     pub ident: syn::Ident,
     pub fields: Vec<FieldSpec>,
 }
-/// `FieldSpec` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 宏展开阶段使用的字段标识、类型和暴露配置。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/annotation/QLFunction.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// 对应 Java: 无（Rust 原生适配）。
 pub struct FieldSpec {

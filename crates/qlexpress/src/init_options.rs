@@ -12,7 +12,7 @@ use crate::security::ql_security_strategy::QLSecurityStrategy;
 /// Debug info sink; Java `Consumer<String>`.
 pub type DebugInfoConsumer = Rc<dyn Fn(String)>;
 
-/// `InitOptions` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 创建 [`Express4Runner`](crate::Express4Runner) 时固定的解析、调试与安全选项。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/InitOptions.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Initialization options, mirroring Java `InitOptions`.
 #[derive(Clone)]
@@ -131,7 +131,7 @@ impl std::fmt::Debug for InitOptions {
     }
 }
 
-/// `InitOptionsBuilder` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 以链式 API 构造 [`InitOptions`] 的构建器。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/InitOptions.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Java `InitOptions.Builder`.
 /// 对应 Java: com.alibaba.qlexpress4.InitOptions。
@@ -225,8 +225,21 @@ impl InitOptionsBuilder {
         self
     }
 
-    /// 处理 selector start 对应的领域职责。
-    /// 参数：`selector_start`；返回：`Self`。
+    /// 设置字符串插值选择器的起始标记。
+    ///
+    /// # Arguments
+    ///
+    /// * `selector_start` - 起始标记，只允许 `${`、`$[`、`#{` 或 `#[`。
+    ///
+    /// # Returns
+    ///
+    /// 返回已更新的构建器。
+    ///
+    /// # Panics
+    ///
+    /// 当 `selector_start` 不属于允许集合时触发 panic，与 Java
+    /// `IllegalArgumentException` 的失败语义保持一致。
+    ///
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/InitOptions.java`，方法 `selectorStart`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java validates `selectorStart ∈ { "${", "$[", "#{", "#[" }` and
     /// throws `IllegalArgumentException` otherwise; Rust panics with the
@@ -242,8 +255,21 @@ impl InitOptionsBuilder {
         self
     }
 
-    /// 处理 selector end 对应的领域职责。
-    /// 参数：`selector_end`；返回：`Self`。
+    /// 设置字符串插值选择器的结束标记。
+    ///
+    /// # Arguments
+    ///
+    /// * `selector_end` - 非空的字符串插值结束标记。
+    ///
+    /// # Returns
+    ///
+    /// 返回已更新的构建器。
+    ///
+    /// # Panics
+    ///
+    /// 当 `selector_end` 为空时触发 panic，与 Java `IllegalArgumentException`
+    /// 的失败语义保持一致。
+    ///
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/InitOptions.java`，方法 `selectorEnd`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java validates `selectorEnd` is non-empty and throws
     /// `IllegalArgumentException` otherwise; Rust panics with the same

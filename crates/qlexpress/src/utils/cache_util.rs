@@ -24,7 +24,7 @@ impl<K: Eq + Hash, V: Clone> CacheUtil<K, V> {
         }
     }
 
-    /// 处理 compute if absent 对应的领域职责。
+    /// 缺少键时计算、缓存并返回新值。
     /// 参数：`key`、`compute`；返回：`V) -> V`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/utils/CacheUtil.java`，方法 `computeIfAbsent`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `Map.computeIfAbsent` semantics.

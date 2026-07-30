@@ -33,7 +33,7 @@ use crate::exception::error_codes;
 use crate::exception::ql_exception::QLException;
 use crate::exception::ql_syntax_exception::QLSyntaxException;
 
-/// 处理 tokenize 对应的领域职责。
+/// 将脚本源码扫描为带位置的 Token 序列。
 /// 参数：`script`、`operator_manager`、`interpolation_mode`、`selector_start`、`selector_end`、`strict_new_lines`；返回：`Result<Vec<Token>, QLSyntaxException>`。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/QLexer.java`，方法 `tokenize`；Rust 侧按所有权与 `Result` 语义适配。
 /// Java `QLexer.tokenize`: scan the whole script and append a final

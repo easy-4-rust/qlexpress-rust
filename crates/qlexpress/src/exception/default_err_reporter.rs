@@ -7,7 +7,7 @@ use super::error_reporter::ErrorReporter;
 use super::ql_exception::QLException;
 use crate::runtime::value::DataValue;
 
-/// `DefaultErrReporter` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 使用当前语法节点位置构造 QL 异常的默认错误报告器。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/DefaultErrReporter.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Reporter bound to a script position, mirroring Java `DefaultErrReporter`.
 #[derive(Clone, Debug)]

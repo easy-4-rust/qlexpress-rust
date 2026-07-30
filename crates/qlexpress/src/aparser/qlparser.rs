@@ -245,7 +245,7 @@ pub fn build_tree_from_tokens(
     Ok(program)
 }
 
-/// `QLParser` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 消费 Token 流并按 QLExpress4 语法生成 AST 的递归下降解析器。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/QLParser.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Java `QLParser`.
 /// 对应 Java: com.alibaba.qlexpress4.aparser.QLParser。
@@ -278,7 +278,7 @@ impl<'a> QLParser<'a> {
         }
     }
 
-    /// 处理 program 对应的领域职责。
+    /// 解析完整脚本并返回程序根节点。
     /// 无显式参数；返回：`Result<Node, QLSyntaxException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/QLParser.java`，方法 `program`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `program()`.

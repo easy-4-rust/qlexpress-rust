@@ -41,7 +41,7 @@ pub enum TraceType {
     Statement,
 }
 
-/// 处理 java name 对应的领域职责。
+/// 返回与 Java 语义一致的规范名称。
 /// 参数：`trace_type`；返回：`&'static str`。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/trace/TraceType.java`，方法 `javaName`；Rust 侧按所有权与 `Result` 语义适配。
 /// Uppercase Java enum name, used by `ExpressionTrace::to_pretty_string`.

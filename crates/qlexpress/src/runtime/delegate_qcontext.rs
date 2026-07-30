@@ -20,7 +20,7 @@ use crate::runtime::scope::{QScope, ScopeRef};
 use crate::runtime::trace::QTraces;
 use crate::runtime::value::{DataValue, QValue};
 
-/// `DelegateQContext` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 在共享 QVM 运行时上绑定当前词法作用域的可委托执行上下文。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/DelegateQContext.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Mirroring Java `DelegateQContext`: pairs the shared [`QvmRuntime`] with
 /// a mutable "current scope" pointer.

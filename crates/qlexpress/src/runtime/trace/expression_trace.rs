@@ -8,7 +8,7 @@ use super::trace_type::{java_name, TraceType};
 use crate::runtime::value::DataValue;
 use crate::utils::println_utils::PrintlnUtils;
 
-/// `ExpressionTrace` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 记录一个表达式节点的源码范围、求值结果与嵌套子追踪。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/trace/ExpressionTrace.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// One node of the expression-execution trace tree, mirroring Java
 /// `ExpressionTrace`.
@@ -83,7 +83,7 @@ impl ExpressionTrace {
         &self.children
     }
 
-    /// 处理 children mut 对应的领域职责。
+    /// 返回嵌套表达式追踪列表的可变引用。
     /// 无显式参数；返回：`&mut [ExpressionTrace]`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/trace/ExpressionTrace.java`，方法 `childrenMut`；Rust 侧按所有权与 `Result` 语义适配。
     /// Mutable children access, used by instructions that mark child trace
@@ -110,7 +110,7 @@ impl ExpressionTrace {
         self.position
     }
 
-    /// 处理 value evaluated 对应的领域职责。
+    /// 记录当前表达式已经完成求值。
     /// 参数：`value`；返回：无。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/Value.java`，方法 `valueEvaluated`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `valueEvaluated`: record the evaluated value.

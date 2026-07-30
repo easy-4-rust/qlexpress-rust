@@ -8,7 +8,7 @@ use crate::runtime::data::index_map::IndexMap;
 use crate::runtime::left_value::LeftValue;
 use crate::runtime::value::{DataValue, Value};
 
-/// `MapItemValue` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 指向共享 Map 指定键并支持读取、插入和覆盖的左值。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/data/MapItemValue.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Mirrors Java `MapItemValue`: an l-value view of `map[key]`.
 /// 对应 Java: com.alibaba.qlexpress4.runtime.data.MapItemValue。

@@ -1,7 +1,7 @@
 use super::ql_exception::{QLException, QLExceptionKind};
 use crate::runtime::value::DataValue;
 
-/// `QLTimeoutException` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 脚本超过 `QLOptions.timeout_millis` 后报告的超时异常。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/QLTimeoutException.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Script-timeout error, mirroring Java `QLTimeoutException`.
 #[derive(Clone, Debug)]
@@ -11,7 +11,7 @@ pub struct QLTimeoutException {
 }
 
 impl QLTimeoutException {
-    /// 处理 for test 对应的领域职责。
+    /// 构造测试场景使用的实例。
     /// 参数：`catch_obj`、`reason`、`error_code`；返回：`Self`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/QLTimeoutException.java`，方法 `forTest`；Rust 侧按所有权与 `Result` 语义适配。
     /// Mirrors the Java "Visible for test"

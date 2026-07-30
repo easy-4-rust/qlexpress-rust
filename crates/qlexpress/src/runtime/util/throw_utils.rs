@@ -4,7 +4,7 @@ use crate::exception::error_codes;
 use crate::exception::error_reporter::ErrorReporter;
 use crate::exception::QLException;
 
-/// 处理 wrap throwable 对应的领域职责。
+/// 将底层异常包装为带源码位置的 QL 异常。
 /// 参数：`err`、`error_reporter`、`err_code`、`err_msg`、`args`；返回：`QLException`。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/InstanceOfOperator.java`，方法 `wrapThrowable`；Rust 侧按所有权与 `Result` 语义适配。
 /// Java `ThrowUtils.wrapThrowable(Throwable, ErrorReporter, errCode,
@@ -35,7 +35,7 @@ pub fn wrap_throwable(
     }
 }
 
-/// 处理 report user defined exception 对应的领域职责。
+/// 把用户定义异常转换为统一 QL 异常。
 /// 参数：`error_reporter`、`err`；返回：`QLException`。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/util/ThrowUtils.java`，方法 `reportUserDefinedException`；Rust 侧按所有权与 `Result` 语义适配。
 /// Java `ThrowUtils.reportUserDefinedException`: `INVALID_ARGUMENT` keeps

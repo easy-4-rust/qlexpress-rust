@@ -11,7 +11,7 @@ use crate::runtime::data::convert::obj_type_convertor::TargetType;
 use crate::runtime::left_value::LeftValue;
 use crate::runtime::value::{DataValue, Value};
 
-/// `FieldValue` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 通过注册的 getter/setter 访问宿主对象字段的可选写左值。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/data/FieldValue.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Mirrors Java `FieldValue`: an l-value defined by a pair of accessor
 /// operations plus the declared field type.

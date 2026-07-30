@@ -7,6 +7,8 @@ use serde_json::{Map, Value};
 /// 单次 Worker 执行请求。
 ///
 /// Worker 每个进程只处理一个请求，避免租户间状态、缓存和 capability 泄漏。
+/// 只接受 JSON 可表达的数据，不携带 Native 对象或宿主函数。
+/// 对应 Java: 无（Rust 进程执行协议）。
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct WorkerRequest {
     /// 不可信脚本源码。

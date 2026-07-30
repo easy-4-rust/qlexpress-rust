@@ -1,4 +1,5 @@
 #![doc = include_str!("../README.md")]
+#![warn(missing_docs)]
 //!
 //! qlexpress — full semantic migration of Alibaba QLExpress4 to Rust.
 //!

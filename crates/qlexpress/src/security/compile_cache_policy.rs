@@ -1,6 +1,7 @@
 //! 安全编译缓存策略。
 
 /// 按租户隔离的有界编译缓存配置。
+/// 对应 Java: 无（Rust 安全增强）。
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CompileCachePolicy {
     /// 是否允许安全执行入口使用编译缓存。

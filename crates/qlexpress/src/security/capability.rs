@@ -4,6 +4,7 @@
 ///
 /// 函数、编译期函数、扩展函数、操作符、宏和原生成员统一进入同一策略，
 /// 避免只审计 `QLSecurityStrategy` 而遗漏其它扩展入口。
+/// 对应 Java: 无（Rust 安全增强）。
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Capability {
     /// 运行期宿主函数名。

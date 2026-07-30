@@ -2,7 +2,7 @@
 
 use crate::runtime::value::{DataValue, QValue};
 
-/// `Parameters` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 保持操作数栈弹出顺序的函数或操作符实参视图。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/Parameters.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// The result of popping `n` elements from the operand stack, mirroring
 /// Java `Parameters`. Elements keep their original stack order: index 0 is
@@ -29,7 +29,7 @@ impl Parameters {
         self.get(i).map(QValue::get).unwrap_or(DataValue::Null)
     }
 
-    /// 处理 get 对应的领域职责。
+    /// 按索引或键读取对应值。
     /// 参数：`i`；返回：`Option<&QValue>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/Parameters.java`，方法 `get`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `get(int)`: stack element at position `i`, `None` when `i`
@@ -54,7 +54,7 @@ impl Parameters {
         self.values.is_empty()
     }
 
-    /// 处理 values 对应的领域职责。
+    /// 按原始顺序提取所有参数值。
     /// 无显式参数；返回：`Vec<DataValue>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/Parameters.java`，方法 `values`；Rust 侧按所有权与 `Result` 语义适配。
     /// Inner data of every parameter, in order.

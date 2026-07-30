@@ -8,6 +8,7 @@ use std::sync::Arc;
 /// QlExpress Rust 原 Java 模型没有同名对象；该类型是 Rust 安全执行入口
 /// 的扩展。宿主函数可从 [`crate::runtime::qcontext::QContext`] 取得令牌，
 /// 长耗时操作应在阻塞点之间主动检查。
+/// 对应 Java: 无（Rust 安全增强）。
 #[derive(Clone, Debug, Default)]
 pub struct CancellationToken {
     cancelled: Arc<AtomicBool>,

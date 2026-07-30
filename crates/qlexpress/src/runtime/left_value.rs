@@ -68,7 +68,7 @@ pub trait LeftValue: Value {
 /// Convenience for `LeftValue` trait objects (Java uses `LeftValue` as a
 /// normal interface).
 impl dyn LeftValue {
-    /// 处理 debug value 对应的领域职责。
+    /// 返回用于调试显示的当前左值内容。
     /// 无显式参数；返回：`String`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/LeftValue.java`，方法 `debugValue`；Rust 侧按所有权与 `Result` 语义适配。
     /// Helper to format this value for error messages.

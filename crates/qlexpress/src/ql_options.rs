@@ -10,7 +10,7 @@ use crate::runtime::value::DataValue;
 /// `Map<String, Object>`, Rust uses script values.
 pub type Attachments = HashMap<String, DataValue>;
 
-/// `QLOptions` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 单次脚本执行的 Java 兼容选项集合。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/QLOptions.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Per-execution options, mirroring Java `QLOptions`.
 #[derive(Clone, Debug)]
@@ -108,7 +108,7 @@ impl Default for QLOptions {
     }
 }
 
-/// `QLOptionsBuilder` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 以链式 API 构造 [`QLOptions`] 的构建器。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/QLOptions.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Java `QLOptions.Builder`.
 #[derive(Clone, Debug)]

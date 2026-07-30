@@ -13,6 +13,7 @@ use crate::security::{CancellationToken, ResourceLimits};
 /// 单次执行共享的 fuel、调用深度、集合和截止时间状态。
 ///
 /// 该对象是 Rust 沙箱扩展；普通 Java 兼容执行路径不创建它。
+/// 对应 Java: 无（Rust 安全增强）。
 pub struct ExecutionBudget {
     limits: ResourceLimits,
     cancellation_token: CancellationToken,

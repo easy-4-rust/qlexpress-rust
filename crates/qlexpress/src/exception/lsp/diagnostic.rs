@@ -1,6 +1,6 @@
 use super::range::Range;
 
-/// `Diagnostic` 结构体的 Rust 实现，保留对应对象的领域职责与公开契约。
+/// 提供给编辑器或 LSP 客户端的语法诊断。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/lsp/Diagnostic.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Diagnostic information attached to a [`crate::exception::QLException`],
 /// mirroring Java `lsp.Diagnostic`.

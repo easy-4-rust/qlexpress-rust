@@ -19,6 +19,7 @@ use crate::runtime::scope::qvm_block_scope::QvmBlockScope;
 use crate::runtime::value::{DataValue, QValue};
 
 /// 作用域节点的共享引用(Java 侧直接持有 `QScope` 引用;Rust 用 `Rc<RefCell>` 实现共享可变)。
+/// 对应 Java: `QScope` 对象引用的 Rust 共享所有权适配。
 pub type ScopeRef = Rc<RefCell<QScope>>;
 
 /// 作用域符号表。对应 Java: `QScope` 的 `Map<String, Value> symbolTable`。
@@ -57,7 +58,7 @@ impl QScope {
         }))
     }
 
-    /// 处理 block fresh stack 对应的领域职责。
+    /// 创建拥有独立操作数栈的子块作用域。
     /// 参数：`parent`、`symbol_table`、`max_stack_size`；返回：`ScopeRef`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/scope/QScope.java`，方法 `blockFreshStack`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `new QvmBlockScope(parent, symbolTable, maxStackSize, ...)`:
@@ -96,7 +97,7 @@ impl QScope {
         }))
     }
 
-    /// 处理 parent 对应的领域职责。
+    /// 返回当前作用域的可选父作用域。
     /// 参数：`this`；返回：`Option<ScopeRef>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/scope/QScope.java`，方法 `parent`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `getParent()`.
@@ -208,7 +209,7 @@ impl QScope {
         }
     }
 
-    /// 处理 function table 对应的领域职责。
+    /// 汇总当前作用域链可见的函数定义。
     /// 参数：`this`；返回：`HashMap<String, Rc<dyn CustomFunction>>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/annotation/QLFunction.java`，方法 `functionTable`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `getFunctionTable`: the current scope's own table (not merged
@@ -222,7 +223,7 @@ impl QScope {
         }
     }
 
-    /// 处理 stack 对应的领域职责。
+    /// 返回当前内部栈的只读视图。
     /// 参数：`this`；返回：`Rc<RefCell<FixedSizeStack>>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/scope/QScope.java`，方法 `stack`；Rust 侧按所有权与 `Result` 语义适配。
     /// The shared operand stack handle.
@@ -235,7 +236,7 @@ impl QScope {
             .expect("QvmGlobalScope operand stack operation is unsupported")
     }
 
-    /// 处理 push 对应的领域职责。
+    /// 将一个元素压入当前栈。
     /// 参数：`this`、`value`；返回：无。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/scope/QScope.java`，方法 `push`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `push(Value)`.
@@ -244,7 +245,7 @@ impl QScope {
         Self::stack(this).borrow_mut().push(value);
     }
 
-    /// 处理 pop 对应的领域职责。
+    /// 弹出并返回当前栈顶元素。
     /// 参数：`this`；返回：`QValue`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/scope/QScope.java`，方法 `pop`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `pop()`: top element. Panics on empty stack, like Java's
@@ -264,7 +265,7 @@ impl QScope {
         Self::stack(this).borrow_mut().pop_n(number)
     }
 
-    /// 处理 peek 对应的领域职责。
+    /// 读取但不移除当前栈顶元素。
     /// 参数：`this`；返回：`QValue`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/scope/QScope.java`，方法 `peek`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `peek()`: top element without popping.
@@ -273,7 +274,7 @@ impl QScope {
         Self::stack(this).borrow().peak()
     }
 
-    /// 处理 stack is empty 对应的领域职责。
+    /// 判断当前操作数栈是否为空。
     /// 参数：`this`；返回：`bool`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/scope/QScope.java`，方法 `stackIsEmpty`；Rust 侧按所有权与 `Result` 语义适配。
     /// Whether the operand stack is empty.

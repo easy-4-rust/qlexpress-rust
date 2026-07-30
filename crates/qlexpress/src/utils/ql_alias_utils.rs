@@ -8,7 +8,7 @@
 pub struct QLAliasUtils;
 
 impl QLAliasUtils {
-    /// 处理 match ql alias 对应的领域职责。
+    /// 判断名称是否命中任一 QL 别名。
     /// 参数：`match_name`、`ql_aliases`；返回：`bool`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/annotation/QLAlias.java`，方法 `matchQlAlias`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `matchQLAlias`: true when `match_name` equals any alias value in

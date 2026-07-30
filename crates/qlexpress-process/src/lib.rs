@@ -1,4 +1,5 @@
 //! QlExpress Rust 不可信脚本进程隔离层。
+#![warn(missing_docs)]
 
 pub mod os_limits;
 pub mod process_worker;

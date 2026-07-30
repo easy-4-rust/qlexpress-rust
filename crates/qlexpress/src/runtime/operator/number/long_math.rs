@@ -19,7 +19,7 @@ fn long_value(v: &DataValue) -> i64 {
 }
 
 impl LongMath {
-    /// 处理 abs impl 对应的领域职责。
+    /// 返回当前数值域的绝对值。
     /// 参数：`number`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/LongMath.java`，方法 `absImpl`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `absImpl`。
@@ -36,7 +36,7 @@ impl LongMath {
         ))
     }
 
-    /// 处理 subtract impl 对应的领域职责。
+    /// 在当前数值域执行减法。
     /// 参数：`left`、`right`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/LongMath.java`，方法 `subtractImpl`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `subtractImpl`。
@@ -47,7 +47,7 @@ impl LongMath {
         ))
     }
 
-    /// 处理 multiply impl 对应的领域职责。
+    /// 在当前数值域执行乘法。
     /// 参数：`left`、`right`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/LongMath.java`，方法 `multiplyImpl`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `multiplyImpl`。
@@ -64,7 +64,7 @@ impl LongMath {
         BigDecimalMath::divide_impl(left, right)
     }
 
-    /// 处理 compare to impl 对应的领域职责。
+    /// 在当前数值域比较两个操作数。
     /// 参数：`left`、`right`；返回：`i32`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/LongMath.java`，方法 `compareToImpl`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `compareToImpl`。
@@ -90,7 +90,7 @@ impl LongMath {
         }
     }
 
-    /// 处理 remainder impl 对应的领域职责。
+    /// 在当前整数域执行余数运算。
     /// 参数：`left`、`right`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/LongMath.java`，方法 `remainderImpl`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `remainderImpl`。
@@ -120,7 +120,7 @@ impl LongMath {
         ))
     }
 
-    /// 处理 unary minus impl 对应的领域职责。
+    /// 返回当前数值取相反数后的结果。
     /// 参数：`left`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/LongMath.java`，方法 `unaryMinusImpl`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `unaryMinusImpl`。
@@ -129,7 +129,7 @@ impl LongMath {
         Ok(DataValue::Long(long_value(left).wrapping_neg()))
     }
 
-    /// 处理 unary plus impl 对应的领域职责。
+    /// 返回当前数值的一元正号结果。
     /// 参数：`left`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/LongMath.java`，方法 `unaryPlusImpl`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `unaryPlusImpl`。
@@ -138,7 +138,7 @@ impl LongMath {
         Ok(DataValue::Long(long_value(left)))
     }
 
-    /// 处理 bitwise negate impl 对应的领域职责。
+    /// 在当前整数域执行按位取反。
     /// 参数：`left`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/LongMath.java`，方法 `bitwiseNegateImpl`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `bitwiseNegateImpl`。
@@ -147,7 +147,7 @@ impl LongMath {
         Ok(DataValue::Long(!long_value(left)))
     }
 
-    /// 处理 or impl 对应的领域职责。
+    /// 在当前整数域执行按位或。
     /// 参数：`left`、`right`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/LongMath.java`，方法 `orImpl`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `orImpl`。
@@ -156,7 +156,7 @@ impl LongMath {
         Ok(DataValue::Long(long_value(left) | long_value(right)))
     }
 
-    /// 处理 and impl 对应的领域职责。
+    /// 在当前整数域执行按位与。
     /// 参数：`left`、`right`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/LongMath.java`，方法 `andImpl`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `andImpl`。
@@ -165,7 +165,7 @@ impl LongMath {
         Ok(DataValue::Long(long_value(left) & long_value(right)))
     }
 
-    /// 处理 xor impl 对应的领域职责。
+    /// 在当前整数域执行按位异或。
     /// 参数：`left`、`right`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/LongMath.java`，方法 `xorImpl`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `xorImpl`。
