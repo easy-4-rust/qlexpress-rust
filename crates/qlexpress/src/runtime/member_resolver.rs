@@ -81,10 +81,34 @@ impl MemberResolver {
         arg_types: &[ClassRef],
         is_assignable: impl Fn(&ClassRef, &ClassRef) -> bool,
     ) -> Option<usize> {
+        Self::resolve_best_match_with_function_interface(
+            candidates,
+            arg_types,
+            is_assignable,
+            is_function_interface,
+        )
+    }
+
+    /// 使用显式继承关系和函数式接口判定选择最佳候选。
+    ///
+    /// Java 通过 `Class.isAssignableFrom` 与
+    /// `CacheUtil.isFunctionInterface` 读取 JVM 元数据；Rust 注册表把两项
+    /// 元数据以回调传入，从而支持宿主自定义 SAM 接口，而非仅识别固定名称。
+    pub fn resolve_best_match_with_function_interface(
+        candidates: &[Vec<ClassRef>],
+        arg_types: &[ClassRef],
+        is_assignable: impl Fn(&ClassRef, &ClassRef) -> bool,
+        is_function_interface: impl Fn(&ClassRef) -> bool,
+    ) -> Option<usize> {
         let mut best_match_index = None;
         let mut best_priority = MatchPriority::Mismatch.priority();
         for (i, candidate) in candidates.iter().enumerate() {
-            let priority = Self::resolve_priority_with(candidate, arg_types, &is_assignable);
+            let priority = Self::resolve_priority_with_function_interface(
+                candidate,
+                arg_types,
+                &is_assignable,
+                &is_function_interface,
+            );
             if priority > best_priority {
                 best_priority = priority;
                 best_match_index = Some(i);
@@ -106,13 +130,32 @@ impl MemberResolver {
         arg_types: &[ClassRef],
         is_assignable: &dyn Fn(&ClassRef, &ClassRef) -> bool,
     ) -> i32 {
+        Self::resolve_priority_with_function_interface(
+            param_types,
+            arg_types,
+            is_assignable,
+            &is_function_interface,
+        )
+    }
+
+    /// 使用显式继承关系和函数式接口元数据计算方法优先级。
+    pub fn resolve_priority_with_function_interface(
+        param_types: &[ClassRef],
+        arg_types: &[ClassRef],
+        is_assignable: &dyn Fn(&ClassRef, &ClassRef) -> bool,
+        is_function_interface: &dyn Fn(&ClassRef) -> bool,
+    ) -> i32 {
         if param_types.len() != arg_types.len() {
             return MatchPriority::Mismatch.priority();
         }
         let mut method_priority = MatchPriority::Equal.priority();
         for (param_type, arg_type) in param_types.iter().zip(arg_types.iter()) {
-            let param_priority =
-                Self::resolve_arg_priority_with(param_type, arg_type, is_assignable);
+            let param_priority = Self::resolve_arg_priority_with(
+                param_type,
+                arg_type,
+                is_assignable,
+                is_function_interface,
+            );
             if param_priority == MatchPriority::Mismatch.priority() {
                 return param_priority;
             }
@@ -128,6 +171,7 @@ impl MemberResolver {
         param_type: &ClassRef,
         arg_type: &ClassRef,
         is_assignable: &dyn Fn(&ClassRef, &ClassRef) -> bool,
+        is_function_interface: &dyn Fn(&ClassRef) -> bool,
     ) -> i32 {
         if param_type == arg_type {
             return MatchPriority::Equal.priority();
@@ -182,6 +226,22 @@ impl MemberResolver {
         arg_types: &[ClassRef],
         is_assignable: impl Fn(&ClassRef, &ClassRef) -> bool,
     ) -> Option<usize> {
+        Self::resolve_candidate_index_with_function_interface(
+            candidates,
+            arg_types,
+            is_assignable,
+            is_function_interface,
+        )
+    }
+
+    /// 在带 `varargs` 标记的签名列表中，使用宿主函数式接口元数据选择
+    /// 最佳候选。
+    pub fn resolve_candidate_index_with_function_interface(
+        candidates: &[(Vec<ClassRef>, bool)],
+        arg_types: &[ClassRef],
+        is_assignable: impl Fn(&ClassRef, &ClassRef) -> bool,
+        is_function_interface: impl Fn(&ClassRef) -> bool,
+    ) -> Option<usize> {
         let fixed_indices: Vec<usize> = candidates
             .iter()
             .enumerate()
@@ -191,9 +251,12 @@ impl MemberResolver {
             .iter()
             .map(|index| candidates[*index].0.clone())
             .collect();
-        if let Some(index) =
-            Self::resolve_best_match_with(&fixed_signatures, arg_types, &is_assignable)
-        {
+        if let Some(index) = Self::resolve_best_match_with_function_interface(
+            &fixed_signatures,
+            arg_types,
+            &is_assignable,
+            &is_function_interface,
+        ) {
             return Some(fixed_indices[index]);
         }
 
@@ -206,8 +269,40 @@ impl MemberResolver {
             .iter()
             .map(|index| Self::adapt_2_var_arg_types(&candidates[*index].0, arg_types.len()))
             .collect();
-        Self::resolve_best_match_with(&var_signatures, arg_types, is_assignable)
-            .map(|index| var_indices[index])
+        Self::resolve_best_match_with_function_interface(
+            &var_signatures,
+            arg_types,
+            is_assignable,
+            is_function_interface,
+        )
+        .map(|index| var_indices[index])
+    }
+
+    /// 按实参类型选择构造器候选。
+    ///
+    /// 对应 Java：`MemberResolver#resolveConstructor(Class<?>, Class<?>[])`。
+    /// Rust 无运行时构造器枚举，调用方传入 [`NativeType`] 已显式登记的
+    /// `(参数类型, varargs)` 候选；返回值是 Java `Constructor` 在该列表中
+    /// 的等价索引。
+    ///
+    /// # 参数
+    ///
+    /// - `constructors`：公开构造器的签名与可变参数标记。
+    /// - `arg_types`：运行时实参类型。
+    /// - `is_assignable`：宿主继承/接口可赋值判断。
+    /// - `is_function_interface`：宿主单抽象方法接口判断。
+    pub fn resolve_constructor(
+        constructors: &[(Vec<ClassRef>, bool)],
+        arg_types: &[ClassRef],
+        is_assignable: impl Fn(&ClassRef, &ClassRef) -> bool,
+        is_function_interface: impl Fn(&ClassRef) -> bool,
+    ) -> Option<usize> {
+        Self::resolve_candidate_index_with_function_interface(
+            constructors,
+            arg_types,
+            is_assignable,
+            is_function_interface,
+        )
     }
 
     /// 对应 Java 私有方法 `adapt2VarArgTypes`:把可变参数签名按实参个数
@@ -382,5 +477,47 @@ mod tests {
             ),
             Some(0)
         );
+    }
+
+    /// SOURCE_PARITY: MemberResolver#resolveConstructor，先固定参数再
+    /// varargs，并保留首个最高优先级候选。
+    #[test]
+    fn resolve_constructor_uses_java_fixed_then_varargs_order() {
+        let constructors = vec![
+            (vec![named("java.lang.String")], false),
+            (vec![named("java.lang.Object")], false),
+            (vec![named("java.lang.String")], true),
+        ];
+        assert_eq!(
+            MemberResolver::resolve_constructor(
+                &constructors,
+                &[named("java.lang.String")],
+                default_assignable,
+                is_function_interface,
+            ),
+            Some(0)
+        );
+        assert_eq!(
+            MemberResolver::resolve_constructor(
+                &constructors,
+                &[named("java.lang.String"), named("java.lang.String")],
+                default_assignable,
+                is_function_interface,
+            ),
+            Some(2)
+        );
+    }
+
+    /// RUST_OBLIGATION: 自定义宿主 SAM 接口不能依赖
+    /// `java.util.function.*` 名称前缀。
+    #[test]
+    fn custom_registered_sam_receives_lambda_priority() {
+        let priority = MemberResolver::resolve_priority_with_function_interface(
+            &[named("example.RulePredicate")],
+            &[named("com.alibaba.qlexpress4.runtime.QLambda")],
+            &default_assignable,
+            &|class_ref| class_ref.java_name() == "example.RulePredicate",
+        );
+        assert_eq!(priority, MatchPriority::Lambda.priority());
     }
 }

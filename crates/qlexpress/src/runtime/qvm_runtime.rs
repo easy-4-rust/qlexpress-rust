@@ -122,6 +122,19 @@ impl QvmRuntime {
             .map(ExecutionBudget::cancellation_token)
     }
 
+    /// 返回原生成员加载注册表。
+    ///
+    /// 对应 Java：`QvmRuntime#getReflectLoader()`。Rust 的
+    /// [`crate::runtime::reflect_loader::ReflectLoader`] 门面在 runner
+    /// 构造阶段完成配置，QVM 只共享其底层 [`NativeRegistry`]。
+    ///
+    /// # 返回值
+    ///
+    /// 返回本运行时使用的共享注册表。
+    pub fn get_reflect_loader(&self) -> &Rc<NativeRegistry> {
+        &self.registry
+    }
+
     /// 构造测试场景使用的实例。
     /// 参数：`registry`；返回：`Self`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/QvmRuntime.java`，方法 `forTest`；Rust 侧按所有权与 `Result` 语义适配。

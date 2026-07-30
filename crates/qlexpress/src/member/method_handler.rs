@@ -2,8 +2,8 @@
 //!
 //! 适配说明(SPEC §4):Java 版基于反射枚举 `clazz.getMethods()` 查找
 //! getter/setter;Rust 在 [`NativeType`] 注册的方法表内按同名规则匹配。
-//! `hasOnlyOneAbstractMethod` 依赖 JVM 修饰符,无 Rust 对应物,未迁移
-//! (函数式接口判定改由 `MemberResolver` 按接口名识别,见偏差说明)。
+//! Java `Method` 的抽象修饰符由 [`NativeType::abstract_methods`] 显式承载，
+//! 因而自定义单抽象方法接口也能参与 Lambda 重载选择。
 
 use std::rc::Rc;
 
@@ -22,6 +22,67 @@ use crate::utils::basic_util::BasicUtil;
 /// `com.alibaba.qlexpress4.member.MethodHandler.GetterCandidateMethod`。
 pub struct MethodHandler;
 
+/// getter 候选方法及其选择优先级。
+///
+/// 对应 Java：
+/// `com.alibaba.qlexpress4.member.MethodHandler.GetterCandidateMethod`。
+/// Java 以 `Method` 保存反射方法；Rust 保存显式注册的 [`NativeMethod`]。
+#[derive(Clone)]
+pub struct GetterCandidateMethod {
+    method: NativeMethod,
+    priority: i32,
+}
+
+impl GetterCandidateMethod {
+    /// 创建 getter 候选。
+    ///
+    /// 对应 Java：`GetterCandidateMethod(Method, int)`。
+    ///
+    /// # 参数
+    ///
+    /// - `method`：显式注册的方法实现。
+    /// - `priority`：候选优先级。
+    pub fn new(method: NativeMethod, priority: i32) -> Self {
+        Self { method, priority }
+    }
+
+    /// 返回候选方法。
+    ///
+    /// 对应 Java：`GetterCandidateMethod#getMethod()`。
+    pub fn get_method(&self) -> NativeMethod {
+        Rc::clone(&self.method)
+    }
+
+    /// 替换候选方法。
+    ///
+    /// 对应 Java：`GetterCandidateMethod#setMethod(Method)`。
+    ///
+    /// # 参数
+    ///
+    /// - `method`：新的显式注册方法。
+    pub fn set_method(&mut self, method: NativeMethod) {
+        self.method = method;
+    }
+
+    /// 返回候选优先级。
+    ///
+    /// 对应 Java：`GetterCandidateMethod#getPriority()`。
+    pub fn get_priority(&self) -> i32 {
+        self.priority
+    }
+
+    /// 设置候选优先级。
+    ///
+    /// 对应 Java：`GetterCandidateMethod#setPriority(int)`。
+    ///
+    /// # 参数
+    ///
+    /// - `priority`：新的选择优先级。
+    pub fn set_priority(&mut self, priority: i32) {
+        self.priority = priority;
+    }
+}
+
 impl MethodHandler {
     /// 对应 Java 方法 `getGetter(Class<?>, String)`:
     /// 按 `isX()`(返回 boolean,优先级 2)/ `getX()`(优先级 1)规则
@@ -34,13 +95,18 @@ impl MethodHandler {
         let getter = BasicUtil::get_getter(property);
         let is_get = BasicUtil::get_is_getter(property);
         // 优先级 1:getX()。
-        let mut candidate = native_type.methods.get(&getter).map(Rc::clone);
+        let mut candidate = native_type
+            .methods
+            .get(&getter)
+            .map(|method| GetterCandidateMethod::new(Rc::clone(method), 1));
         // 优先级 2:isX()(boolean 返回由注册闭包保证,同 Java 的返回类型检查)。
         if let Some(is_method) = native_type.methods.get(&is_get) {
-            // Java isPreferredGetter: after.priority >= before.priority 时替换。
-            candidate = Some(Rc::clone(is_method));
+            let after = GetterCandidateMethod::new(Rc::clone(is_method), 2);
+            if Self::is_preferred_getter(candidate.as_ref(), &after) {
+                candidate = Some(after);
+            }
         }
-        candidate
+        candidate.map(|candidate| candidate.get_method())
     }
 
     /// 对应 Java 方法 `getSetter(Class<?>, String)`:
@@ -49,6 +115,45 @@ impl MethodHandler {
     pub fn get_setter(native_type: &NativeType, property: &str) -> Option<NativeMethod> {
         let setter = BasicUtil::get_setter(property);
         native_type.methods.get(&setter).map(Rc::clone)
+    }
+
+    /// 判断新 getter 候选是否应覆盖已有候选。
+    ///
+    /// 对应 Java：`MethodHandler#isPreferredGetter(GetterCandidateMethod,
+    /// GetterCandidateMethod)`。已有候选为空时总是接受；否则新候选优先级
+    /// 大于或等于已有候选时接受，因此同优先级下后出现者胜出。
+    ///
+    /// # 参数
+    ///
+    /// - `before`：当前候选；`None` 对应 Java `null`。
+    /// - `after`：新扫描到的候选。
+    pub fn is_preferred_getter(
+        before: Option<&GetterCandidateMethod>,
+        after: &GetterCandidateMethod,
+    ) -> bool {
+        before.is_none_or(|before| after.get_priority() >= before.get_priority())
+    }
+
+    /// 判断方法集合是否恰好包含一个抽象方法。
+    ///
+    /// 对应 Java：`MethodHandler#hasOnlyOneAbstractMethod(Method[])`。Rust
+    /// 显式注册层只需传入各方法的 `is_abstract` 标记；发现第二个抽象方法
+    /// 时立即返回 `false`。
+    ///
+    /// # 参数
+    ///
+    /// - `abstract_flags`：与 Java `Method[]` 顺序一致的抽象修饰符标记。
+    pub fn has_only_one_abstract_method(abstract_flags: &[bool]) -> bool {
+        let mut count = 0usize;
+        for is_abstract in abstract_flags {
+            if *is_abstract {
+                count += 1;
+                if count > 1 {
+                    return false;
+                }
+            }
+        }
+        count == 1
     }
 }
 
@@ -66,5 +171,56 @@ impl Access {
             method.set_accessible(true);
         }
         method.invoke(bean, args)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn method(value: i32) -> NativeMethod {
+        Rc::new(move |_bean, _args| Ok(DataValue::Int(value)))
+    }
+
+    /// SOURCE_PARITY: MethodHandler#isPreferredGetter。
+    #[test]
+    fn preferred_getter_matches_priority_and_last_wins_rules() {
+        let low = GetterCandidateMethod::new(method(1), 1);
+        let same = GetterCandidateMethod::new(method(2), 1);
+        let high = GetterCandidateMethod::new(method(3), 2);
+        assert!(MethodHandler::is_preferred_getter(None, &low));
+        assert!(MethodHandler::is_preferred_getter(Some(&low), &same));
+        assert!(MethodHandler::is_preferred_getter(Some(&low), &high));
+        assert!(!MethodHandler::is_preferred_getter(Some(&high), &low));
+    }
+
+    /// SOURCE_PARITY: MethodHandler#hasOnlyOneAbstractMethod。
+    #[test]
+    fn detects_exactly_one_abstract_method() {
+        assert!(!MethodHandler::has_only_one_abstract_method(&[]));
+        assert!(!MethodHandler::has_only_one_abstract_method(&[
+            false, false
+        ]));
+        assert!(MethodHandler::has_only_one_abstract_method(&[
+            false, true, false
+        ]));
+        assert!(!MethodHandler::has_only_one_abstract_method(&[
+            true, false, true
+        ]));
+    }
+
+    /// SOURCE_PARITY: GetterCandidateMethod getter/setter。
+    #[test]
+    fn getter_candidate_accessors_mutate_both_fields() {
+        let mut candidate = GetterCandidateMethod::new(method(1), 1);
+        candidate.set_method(method(2));
+        candidate.set_priority(9);
+        assert_eq!(candidate.get_priority(), 9);
+        assert_eq!(
+            candidate
+                .get_method()(&DataValue::Null, &[])
+                .expect("invoke candidate"),
+            DataValue::Int(2)
+        );
     }
 }

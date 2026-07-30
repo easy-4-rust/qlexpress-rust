@@ -165,6 +165,22 @@ impl LongMath {
         Ok(DataValue::Long(long_value(left) & long_value(right)))
     }
 
+    /// 执行按位与。
+    ///
+    /// 对应 Java：`LongMath#bitAndImpl(Number, Number)`。Java 同时保留
+    /// `andImpl` 与这个历史公共别名，两者实现完全相同。
+    ///
+    /// # 参数
+    ///
+    /// - `left`：左操作数，按 `Number.longValue()` 转换。
+    /// - `right`：右操作数，按 `Number.longValue()` 转换。
+    pub fn bit_and_impl(
+        left: &DataValue,
+        right: &DataValue,
+    ) -> Result<DataValue, QLException> {
+        Self::and_impl(left, right)
+    }
+
     /// 在当前整数域执行按位异或。
     /// 参数：`left`、`right`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/LongMath.java`，方法 `xorImpl`；Rust 侧按所有权与 `Result` 语义适配。
@@ -262,6 +278,10 @@ mod tests {
         assert_eq!(
             LongMath::int_div_impl(&DataValue::Long(-7), &DataValue::Long(3)).unwrap(),
             DataValue::Long(-2)
+        );
+        assert_eq!(
+            LongMath::bit_and_impl(&DataValue::Long(0b1100), &DataValue::Int(0b1010)).unwrap(),
+            DataValue::Long(0b1000)
         );
         assert_eq!(
             LongMath::remainder_impl(&DataValue::Long(-7), &DataValue::Long(3)).unwrap(),

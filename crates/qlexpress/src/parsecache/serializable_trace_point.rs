@@ -32,3 +32,43 @@ pub struct SerializableTracePoint {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub children: Option<Vec<SerializableTracePoint>>,
 }
+
+impl SerializableTracePoint {
+    /// 返回 trace 类型名。
+    ///
+    /// 对应 Java：`SerializableTracePoint#getType()`。
+    ///
+    /// # 返回值
+    ///
+    /// 返回 `TraceType.name()` 字符串；Java `null` 以 `None` 表示。
+    pub fn get_type(&self) -> Option<&str> {
+        self.trace_type.as_deref()
+    }
+
+    /// 设置 trace 类型名。
+    ///
+    /// 对应 Java：`SerializableTracePoint#setType(String)`。
+    ///
+    /// # 参数
+    ///
+    /// - `trace_type`：新的 trace 类型名；`None` 对应 Java `null`。
+    pub fn set_type(&mut self, trace_type: Option<String>) {
+        self.trace_type = trace_type;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// SOURCE_PARITY: SerializableTracePoint#getType/setType。
+    #[test]
+    fn type_accessors_preserve_java_nullability() {
+        let mut point = SerializableTracePoint::default();
+        assert_eq!(point.get_type(), None);
+        point.set_type(Some("OPERATOR".to_string()));
+        assert_eq!(point.get_type(), Some("OPERATOR"));
+        point.set_type(None);
+        assert_eq!(point.get_type(), None);
+    }
+}

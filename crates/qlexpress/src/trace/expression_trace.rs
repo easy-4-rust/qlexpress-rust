@@ -59,6 +59,18 @@ impl ExpressionTrace {
         self.trace_type
     }
 
+    /// 返回追踪节点类型。
+    ///
+    /// 对应 Java：`ExpressionTrace#getType()`。保留 [`Self::trace_type`] 作为
+    /// Rust 描述性别名，本方法提供与 Java 公共 API 一一对应的名称。
+    ///
+    /// # 返回值
+    ///
+    /// 返回当前节点的 [`TraceType`]。
+    pub fn get_type(&self) -> TraceType {
+        self.trace_type
+    }
+
     /// 返回该追踪节点对应的词法单元。
     /// 对应 Java: `ExpressionTrace#getToken`。
     pub fn token(&self) -> &str {
@@ -162,5 +174,6 @@ mod tests {
         let pretty = root.to_pretty_string(0);
         assert!(pretty.starts_with("OPERATOR + \n"));
         assert!(pretty.contains("| VALUE 1 1"));
+        assert_eq!(root.get_type(), TraceType::Operator);
     }
 }

@@ -32,6 +32,7 @@ use crate::runtime::qvm_runtime::current_time_millis;
 use crate::runtime::value::{DataValue, QValue};
 use crate::security::ql_security_strategy::{NativeMember, QLSecurityStrategy};
 use crate::utils::basic_util;
+use crate::utils::cache_util::CacheUtil;
 
 /// 显式类型注册表。对应 Java: `ReflectLoader`(按类型加载构造器/字段/方法)
 /// + `DefaultClassSupplier`(类型白名单式供给)。
@@ -58,6 +59,9 @@ pub struct NativeRegistry {
     /// 成员访问安全策略(Java `ReflectLoader.securityStrategy`)。
     /// `RefCell`:注册表经 `Rc` 共享给 QVM,策略需在 runner 层可改。
     security_strategy: RefCell<QLSecurityStrategy>,
+    /// 函数式接口判定缓存。对应 Java `CacheUtil` 的 Class 级缓存；
+    /// 每个注册表独立，避免租户/宿主模型之间的同名类型污染。
+    function_interface_cache: CacheUtil,
 }
 
 impl NativeRegistry {
@@ -73,6 +77,7 @@ impl NativeRegistry {
             // 注册表裸用时默认放行;Express4Runner 构造时按
             // `InitOptions.securityStrategy` 覆盖(Java 默认 `isolation`)。
             security_strategy: RefCell::new(QLSecurityStrategy::open()),
+            function_interface_cache: CacheUtil::new(),
         }
     }
 
@@ -671,11 +676,13 @@ impl NativeRegistry {
             .iter()
             .map(|candidate| (candidate.parameter_types.clone(), candidate.var_args))
             .collect();
-        let arg_types: Vec<ClassRef> = args.iter().map(runtime_class_ref).collect();
-        let index =
-            MemberResolver::resolve_candidate_index(&signatures, &arg_types, |param, arg| {
-                self.is_assignable(param, arg)
-            })?;
+        let arg_types = crate::utils::basic_util::BasicUtil::get_type_of_object(args);
+        let index = MemberResolver::resolve_candidate_index_with_function_interface(
+            &signatures,
+            &arg_types,
+            |param, arg| self.is_assignable(param, arg),
+            |param| self.is_function_interface(param),
+        )?;
         candidates.get(index)
     }
 
@@ -688,12 +695,32 @@ impl NativeRegistry {
             .iter()
             .map(|candidate| (candidate.parameter_types.clone(), candidate.var_args))
             .collect();
-        let arg_types: Vec<ClassRef> = args.iter().map(runtime_class_ref).collect();
-        let index =
-            MemberResolver::resolve_candidate_index(&signatures, &arg_types, |param, arg| {
-                self.is_assignable(param, arg)
-            })?;
+        let arg_types = crate::utils::basic_util::BasicUtil::get_type_of_object(args);
+        let index = MemberResolver::resolve_constructor(
+            &signatures,
+            &arg_types,
+            |param, arg| self.is_assignable(param, arg),
+            |param| self.is_function_interface(param),
+        )?;
         candidates.get(index)
+    }
+
+    /// 判断形参类型是否为函数式接口。
+    ///
+    /// JDK 内建函数接口按规范名识别；宿主自定义接口由 [`NativeType`] 的
+    /// `is_interface + abstract_methods` 元数据判定并通过 [`CacheUtil`]
+    /// 缓存。对应 Java `CacheUtil.isFunctionInterface(Class<?>)`。
+    fn is_function_interface(&self, class_ref: &ClassRef) -> bool {
+        let name = class_ref.java_name();
+        if name.starts_with("java.util.function.") || name == "java.lang.Runnable" {
+            return true;
+        }
+        self.types
+            .get(name)
+            .is_some_and(|native_type| {
+                self.function_interface_cache
+                    .is_function_interface(native_type)
+            })
     }
 
     fn is_assignable(&self, param: &ClassRef, arg: &ClassRef) -> bool {
@@ -924,31 +951,7 @@ fn native_type_name(bean: &DataValue) -> String {
 }
 
 fn runtime_class_ref(value: &DataValue) -> ClassRef {
-    match value {
-        DataValue::Null => ClassRef::Named("com.alibaba.qlexpress4.runtime.Nothing".to_string()),
-        DataValue::Array(values) => {
-            let values = values.borrow();
-            let component = values
-                .first()
-                .map(runtime_class_ref)
-                .filter(|first| {
-                    values
-                        .iter()
-                        .skip(1)
-                        .all(|value| runtime_class_ref(value) == *first)
-                })
-                .map(|class_ref| class_ref.java_name().to_string())
-                .unwrap_or_else(|| "java.lang.Object".to_string());
-            ClassRef::Named(format!("{component}[]"))
-        }
-        DataValue::Object(object) => {
-            ClassRef::Named(object.borrow().native_type_name().to_string())
-        }
-        DataValue::Lambda(_) => {
-            ClassRef::Named("com.alibaba.qlexpress4.runtime.QLambda".to_string())
-        }
-        _ => ClassRef::Named(value.data_type_name().to_string()),
-    }
+    crate::utils::basic_util::BasicUtil::type_of_value(value)
 }
 
 fn is_numeric_java_name(name: &str) -> bool {

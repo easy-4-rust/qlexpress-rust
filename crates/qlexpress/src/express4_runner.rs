@@ -61,8 +61,9 @@ use crate::runtime::context::{
     ExpressContext, MapExpressContext, ObjectFieldExpressContext, QLAliasContext,
 };
 use crate::runtime::data::index_map::IndexMap;
+use crate::runtime::delegate_qcontext::DelegateQContext;
 use crate::runtime::function::{
-    as_native_method, CustomFunction, ExtensionFunction, QMethodFunction,
+    CustomFunction, ExtensionFunction, QMethodFunction,
 };
 use crate::runtime::i_method::IMethod;
 use crate::runtime::instruction::Instruction;
@@ -74,6 +75,7 @@ use crate::runtime::operator::operator_manager::OperatorManager;
 use crate::runtime::parameters::Parameters;
 use crate::runtime::q_runtime::QRuntime;
 use crate::runtime::qcontext::QContext;
+use crate::runtime::qlambda_trace::QLambdaTrace;
 use crate::runtime::qlambda_definition::QLambdaDefinition;
 use crate::runtime::qlambda_definition_inner::QLambdaDefinitionInner;
 use crate::runtime::qvm_global_scope::QvmGlobalScope;
@@ -744,6 +746,173 @@ impl Express4Runner {
         Ok(compiled)
     }
 
+    /// 将脚本编译并物化为尚未执行的主 Lambda。
+    ///
+    /// 对应 Java：`Express4Runner#parseToLambda(String, ExpressContext,
+    /// QLOptions)`。当 `ql_options.cache` 为 `true` 时复用编译缓存，否则每次
+    /// 重新编译；这里只创建运行时、全局作用域和 Lambda，不执行任何指令。
+    ///
+    /// # 参数
+    ///
+    /// - `script`：待编译脚本。
+    /// - `context`：Lambda 捕获的外部变量上下文。
+    /// - `ql_options`：缓存、附件、上下文污染和 trace 等执行选项。
+    ///
+    /// # 返回值
+    ///
+    /// 返回 Lambda 与其本次独立 trace 注册表。
+    ///
+    /// # 错误
+    ///
+    /// 脚本词法、语法或编译失败时返回原始 [`QLSyntaxException`]。
+    pub fn parse_to_lambda(
+        &self,
+        script: &str,
+        context: Rc<dyn ExpressContext>,
+        ql_options: &QLOptions,
+    ) -> Result<QLambdaTrace, QLSyntaxException> {
+        if ql_options.is_cache() {
+            let compile_cache = self.parse_to_definition_with_cache(script)?;
+            Ok(self.compile_cache_to_lambda(
+                compile_cache.as_ref(),
+                context,
+                ql_options,
+                true,
+            ))
+        } else {
+            let compile_cache = self.parse_definition(script)?;
+            Ok(self.compile_cache_to_lambda(&compile_cache, context, ql_options, true))
+        }
+    }
+
+    /// 将已加载且绑定到当前 runner 的 parse cache 物化为主 Lambda。
+    ///
+    /// 对应 Java：`Express4Runner#parseToLambda(LoadedParseCache,
+    /// ExpressContext, QLOptions)`。与 Java 一样，来自其它 runner 的缓存
+    /// 必须拒绝，不能绕过缓存中 operator、类型供应器和宿主模型的绑定关系。
+    ///
+    /// # 参数
+    ///
+    /// - `cache`：由当前 runner 的 [`Self::import_parse_cache`] 生成的缓存。
+    /// - `context`：Lambda 捕获的外部变量上下文。
+    /// - `ql_options`：本次 Lambda 的执行选项。
+    ///
+    /// # 返回值
+    ///
+    /// 返回尚未执行的 Lambda 与 trace 注册表。
+    ///
+    /// # 错误
+    ///
+    /// 缓存绑定到其它 runner 时返回
+    /// `SERIALIZABLE_PARSE_CACHE_INVALID_MODEL`。
+    pub fn parse_loaded_cache_to_lambda(
+        &self,
+        cache: &LoadedParseCache,
+        context: Rc<dyn ExpressContext>,
+        ql_options: &QLOptions,
+    ) -> ImportResult<QLambdaTrace> {
+        if !cache.is_bound_to(self.identity) {
+            return Err(
+                crate::api::parsecache::SerializableParseCacheException::new(
+                    cache.get_script(),
+                    None,
+                    crate::exception::error_codes::SERIALIZABLE_PARSE_CACHE_INVALID_MODEL,
+                    &crate::exception::error_codes::format_msg(
+                        crate::exception::error_codes::error_msg(
+                            crate::exception::error_codes::SERIALIZABLE_PARSE_CACHE_INVALID_MODEL,
+                        ),
+                        &["LoadedParseCache is bound to another Express4Runner".to_string()],
+                    ),
+                ),
+            );
+        }
+        Ok(self.compile_cache_to_lambda(
+            cache.get_compile_cache(),
+            context,
+            ql_options,
+            cache.has_trace_points(),
+        ))
+    }
+
+    /// 加载可序列化 parse cache 后物化为主 Lambda。
+    ///
+    /// 对应 Java：`Express4Runner#parseToLambda(SerializableParseCache,
+    /// ExpressContext, QLOptions)`；先执行与 `loadSerializableCache` 完全相同的
+    /// 模型校验及 runner 绑定，再复用 loaded-cache 重载。
+    ///
+    /// # 参数
+    ///
+    /// - `cache`：待校验和导入的可序列化缓存。
+    /// - `context`：Lambda 捕获的外部变量上下文。
+    /// - `ql_options`：本次 Lambda 的执行选项。
+    ///
+    /// # 返回值
+    ///
+    /// 返回尚未执行的 Lambda 与 trace 注册表。
+    ///
+    /// # 错误
+    ///
+    /// 返回导入、模型校验或 runner 绑定错误。
+    pub fn parse_serializable_cache_to_lambda(
+        &self,
+        cache: &SerializableParseCache,
+        context: Rc<dyn ExpressContext>,
+        ql_options: &QLOptions,
+    ) -> ImportResult<QLambdaTrace> {
+        let loaded = self.import_parse_cache(cache)?;
+        self.parse_loaded_cache_to_lambda(&loaded, context, ql_options)
+    }
+
+    /// 由编译产物创建 Java `QLambdaTrace` 对应对象。
+    ///
+    /// 对应 Java 私有方法
+    /// `Express4Runner#parseToLambda(QCompileCache, ExpressContext,
+    /// QLOptions, boolean)`。
+    fn compile_cache_to_lambda(
+        &self,
+        compile_cache: &LoadedCompileCache,
+        context: Rc<dyn ExpressContext>,
+        ql_options: &QLOptions,
+        trace_points_available: bool,
+    ) -> QLambdaTrace {
+        if self.init_options.is_debug() {
+            (self.init_options.debug_info_consumer())("\nInstructions:".to_string());
+            compile_cache.q_lambda_definition().println(
+                0,
+                &mut |line| (self.init_options.debug_info_consumer())(line),
+            );
+        }
+
+        let traces = if self.init_options.is_trace_expression()
+            && ql_options.is_trace_expression()
+            && trace_points_available
+        {
+            QTraces::from_trace_points(compile_cache.expression_trace_points())
+        } else {
+            QTraces::empty()
+        };
+        let runtime = Rc::new(QvmRuntime::new(
+            traces.clone(),
+            ql_options.attachments().clone(),
+            Rc::clone(self.reflect_loader.registry()),
+            current_time_millis(),
+        ));
+        let global_scope = QvmGlobalScope::with_context(
+            context,
+            self.user_define_functions.borrow().clone(),
+            ql_options.attachments().clone(),
+            ql_options.is_pollute_user_context(),
+        );
+        let mut root_context =
+            DelegateQContext::new(runtime, QScope::global(global_scope));
+        let q_lambda = Rc::clone(compile_cache.q_lambda_definition()).to_lambda(
+            &mut root_context,
+            ql_options,
+            true,
+        );
+        QLambdaTrace::new(q_lambda, traces)
+    }
+
     /// 清空编译缓存。对应 Java 方法 `clearCompileCache()`。
     pub fn clear_compile_cache(&self) {
         self.compile_cache.borrow_mut().clear();
@@ -1121,11 +1290,7 @@ impl Express4Runner {
     {
         let method_name = extension_function.name().to_string();
         let type_name = extension_function.declaring_class().java_name().to_string();
-        self.registry_mut().register_method(
-            type_name.clone(),
-            method_name.clone(),
-            as_native_method(extension_function),
-        );
+        self.reflect_loader.add_extend_function(extension_function);
         self.registered_capabilities
             .borrow_mut()
             .insert(Capability::ExtensionMethod {

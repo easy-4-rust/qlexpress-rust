@@ -10,7 +10,7 @@ pub mod ql_function_util;
 pub mod ql_string_utils;
 
 pub use basic_util::BasicUtil;
-pub use cache_util::CacheUtil;
+pub use cache_util::{CacheUtil, MemoCache};
 pub use num_kind::NumKind;
 pub use primitive_type::PrimitiveType;
 pub use println_utils::PrintlnUtils;

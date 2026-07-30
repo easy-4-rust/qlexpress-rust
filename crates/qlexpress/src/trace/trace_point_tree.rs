@@ -58,6 +58,18 @@ impl TracePointTree {
         self.trace_type
     }
 
+    /// 获取追踪类型。
+    ///
+    /// 对应 Java：`TracePointTree#getType()`。保留 [`Self::trace_type`] 作为
+    /// Rust 描述性别名。
+    ///
+    /// # 返回值
+    ///
+    /// 返回当前静态追踪点的 [`TraceType`]。
+    pub fn get_type(&self) -> TraceType {
+        self.trace_type
+    }
+
     /// 获取源码 token 文本。对应 Java 方法 `getToken`。
     pub fn token(&self) -> &str {
         &self.token
@@ -100,5 +112,6 @@ mod tests {
         );
 
         assert_eq!("OPERATOR +\n  | VALUE 1\n", point.to_pretty_string(0));
+        assert_eq!(point.get_type(), TraceType::Operator);
     }
 }

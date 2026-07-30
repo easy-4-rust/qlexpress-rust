@@ -39,6 +39,19 @@ impl DelegateQContext {
     pub fn new(q_runtime: Rc<QvmRuntime>, q_scope: ScopeRef) -> Self {
         DelegateQContext { q_runtime, q_scope }
     }
+
+    /// 返回当前上下文使用的原生成员加载注册表。
+    ///
+    /// 对应 Java：`DelegateQContext#getReflectLoader()`。Rust 将
+    /// `ReflectLoader` 的可执行索引拆为共享 [`NativeRegistry`]，因此返回
+    /// 同一运行时持有的注册表句柄，而不是复制加载器。
+    ///
+    /// # 返回值
+    ///
+    /// 返回与根 [`QvmRuntime`] 共享的注册表。
+    pub fn get_reflect_loader(&self) -> &Rc<NativeRegistry> {
+        self.q_runtime.registry()
+    }
 }
 
 impl QContext for DelegateQContext {

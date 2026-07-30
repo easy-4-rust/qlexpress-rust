@@ -9,5 +9,5 @@ pub mod preferred;
 
 pub use access::Access;
 pub use field_handler::FieldHandler;
-pub use method_handler::MethodHandler;
+pub use method_handler::{GetterCandidateMethod, MethodHandler};
 pub use preferred::Preferred;

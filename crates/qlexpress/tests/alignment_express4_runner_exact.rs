@@ -19,7 +19,7 @@ use qlexpress::exception::{error_codes, QLException};
 use qlexpress::init_options::InitOptions;
 use qlexpress::ql_options::{Attachments, QLOptions};
 use qlexpress::runtime::class_ref::ClassRef;
-use qlexpress::runtime::context::{DynamicVariableContext, ExpressContext};
+use qlexpress::runtime::context::{DynamicVariableContext, EmptyContext, ExpressContext};
 use qlexpress::runtime::data::index_map::IndexMap;
 use qlexpress::runtime::function::{CustomFunction, ExtensionFunction};
 use qlexpress::runtime::jvm_i_method::NativeIMethod;
@@ -51,6 +51,100 @@ fn java_parse_to_cache_test() {
         .parse_to_definition_with_cache("a+b")
         .expect("second cached parse");
     assert!(Rc::ptr_eq(&first, &second));
+}
+
+/// SOURCE_PARITY: Java `Express4Runner#parseToLambda(String, ExpressContext,
+/// QLOptions)`，并覆盖 `QLOptions.cache` 的两条分支。
+#[test]
+fn java_parse_to_lambda_script_overload() {
+    let runner = Express4Runner::new();
+    let uncached = runner
+        .parse_to_lambda(
+            "1 + 2",
+            Rc::new(EmptyContext),
+            &QLOptions::builder().cache(false).build(),
+        )
+        .expect("compile uncached lambda");
+    assert_integer(
+        &uncached
+            .q_lambda()
+            .call(&[])
+            .expect("invoke uncached lambda")
+            .value(),
+        3,
+    );
+
+    let cached = runner
+        .parse_to_lambda(
+            "1 + 2",
+            Rc::new(EmptyContext),
+            &QLOptions::builder().cache(true).build(),
+        )
+        .expect("compile cached lambda");
+    assert_integer(
+        &cached
+            .q_lambda()
+            .call(&[])
+            .expect("invoke cached lambda")
+            .value(),
+        3,
+    );
+    assert_eq!(runner.compile_cache_stats().entries, 1);
+}
+
+/// SOURCE_PARITY: Java `parseToLambda(LoadedParseCache, ...)` 与
+/// `parseToLambda(SerializableParseCache, ...)`，包括 runner 身份绑定校验。
+#[test]
+fn java_parse_to_lambda_cache_overloads_and_runner_binding() {
+    let owner = Express4Runner::new();
+    let serialized = owner.export_parse_cache("40 + 2").expect("export cache");
+    let loaded = owner.import_parse_cache(&serialized).expect("load cache");
+
+    let loaded_lambda = owner
+        .parse_loaded_cache_to_lambda(
+            &loaded,
+            Rc::new(EmptyContext),
+            &QLOptions::default(),
+        )
+        .expect("materialize loaded cache");
+    assert_integer(
+        &loaded_lambda
+            .q_lambda()
+            .call(&[])
+            .expect("invoke loaded lambda")
+            .value(),
+        42,
+    );
+
+    let serialized_lambda = owner
+        .parse_serializable_cache_to_lambda(
+            &serialized,
+            Rc::new(EmptyContext),
+            &QLOptions::default(),
+        )
+        .expect("materialize serializable cache");
+    assert_integer(
+        &serialized_lambda
+            .q_lambda()
+            .call(&[])
+            .expect("invoke serialized lambda")
+            .value(),
+        42,
+    );
+
+    let other_runner = Express4Runner::new();
+    let error = match other_runner.parse_loaded_cache_to_lambda(
+            &loaded,
+            Rc::new(EmptyContext),
+            &QLOptions::default(),
+        ) {
+        Ok(_) => panic!("cache must stay bound to its importing runner"),
+        Err(error) => error,
+    };
+    assert_eq!(
+        error.error_code(),
+        error_codes::SERIALIZABLE_PARSE_CACHE_INVALID_MODEL
+    );
 }
 
 /// Java `Express4RunnerTest#addFunctionsDefinedInScriptTest`。

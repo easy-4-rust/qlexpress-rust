@@ -64,6 +64,11 @@ impl NativeConstructorCandidate {
 pub struct NativeType {
     /// 规范类型名(Java `Class.getName()`)。
     pub name: String,
+    /// 是否为 Java 接口。Rust 显式元数据，对应 `Class#isInterface()`。
+    pub is_interface: bool,
+    /// 接口的抽象方法名列表。对应
+    /// `Class#getMethods()` 中 `Modifier.isAbstract(...)` 的方法集合。
+    pub abstract_methods: Vec<String>,
     /// `NewInstanceInstruction` 使用的构造器(Java `Constructor`)。
     pub constructor: Option<NativeConstructor>,
     /// 多构造器候选；非空时在调用现场按 Java 匹配优先级选择。
@@ -100,6 +105,29 @@ impl NativeType {
     pub fn named(name: impl Into<String>) -> Self {
         NativeType {
             name: name.into(),
+            ..Default::default()
+        }
+    }
+
+    /// 创建显式接口类型并登记其抽象方法。
+    ///
+    /// 对应 Java `Class#isInterface()` 与 `Class#getMethods()` 的 Rust
+    /// 注册形态；恰有一个抽象方法时，该类型可作为 Lambda/SAM 形参参与
+    /// [`crate::runtime::member_resolver::MemberResolver`] 重载选择。
+    ///
+    /// # 参数
+    ///
+    /// - `name`：Java 规范接口名。
+    /// - `abstract_methods`：包含继承所得方法在内的抽象方法名。
+    pub fn interface<I, S>(name: impl Into<String>, abstract_methods: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        NativeType {
+            name: name.into(),
+            is_interface: true,
+            abstract_methods: abstract_methods.into_iter().map(Into::into).collect(),
             ..Default::default()
         }
     }

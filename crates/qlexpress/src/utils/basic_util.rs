@@ -3,6 +3,9 @@
 //! Java's `Class<?>`-keyed maps are replaced by small Rust enums since Rust
 //! has no runtime class objects (SPEC §4).
 
+use crate::runtime::class_ref::ClassRef;
+use crate::runtime::value::DataValue;
+
 /// Well-known member name: Java `BasicUtil.LENGTH`.
 pub const LENGTH: &str = "length";
 
@@ -49,6 +52,57 @@ pub fn trans_to_primitive(primitive: PrimitiveType) -> PrimitiveType {
 pub struct BasicUtil;
 
 impl BasicUtil {
+    /// 返回一组运行时对象的 Java 类型。
+    ///
+    /// 对应 Java：`BasicUtil#getTypeOfObject(Object[])`。Java `null` 映射为
+    /// `Nothing.class`；宿主对象读取显式注册的规范类型名；数组在元素类型
+    /// 一致时保留组件类型，否则退化为 `Object[]`。
+    ///
+    /// # 参数
+    ///
+    /// - `objects`：运行时脚本值。
+    ///
+    /// # 返回值
+    ///
+    /// 返回与输入等长的 [`ClassRef`] 列表。
+    pub fn get_type_of_object(objects: &[DataValue]) -> Vec<ClassRef> {
+        objects.iter().map(Self::type_of_value).collect()
+    }
+
+    /// 返回一个运行时脚本值的 Java 类型。
+    ///
+    /// 这是 `getTypeOfObject` 单元素分派的 Rust 形态，并由成员/构造器
+    /// 重载解析共用。
+    pub fn type_of_value(value: &DataValue) -> ClassRef {
+        match value {
+            DataValue::Null => {
+                ClassRef::Named("com.alibaba.qlexpress4.runtime.Nothing".to_string())
+            }
+            DataValue::Array(values) => {
+                let values = values.borrow();
+                let component = values
+                    .first()
+                    .map(Self::type_of_value)
+                    .filter(|first| {
+                        values
+                            .iter()
+                            .skip(1)
+                            .all(|value| Self::type_of_value(value) == *first)
+                    })
+                    .map(|class_ref| class_ref.java_name().to_string())
+                    .unwrap_or_else(|| "java.lang.Object".to_string());
+                ClassRef::Named(format!("{component}[]"))
+            }
+            DataValue::Object(object) => {
+                ClassRef::Named(object.borrow().native_type_name().to_string())
+            }
+            DataValue::Lambda(_) => {
+                ClassRef::Named("com.alibaba.qlexpress4.runtime.QLambda".to_string())
+            }
+            _ => ClassRef::Named(value.data_type_name().to_string()),
+        }
+    }
+
     /// 查询 getter。
     /// 参数：`s`；返回：`String`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/utils/BasicUtil.java`，方法 `getGetter`；Rust 侧按所有权与 `Result` 语义适配。
@@ -115,5 +169,25 @@ mod tests {
         assert_eq!(BasicUtil::get_getter("name"), "getName");
         assert_eq!(BasicUtil::get_setter("name"), "setName");
         assert_eq!(BasicUtil::get_is_getter("empty"), "isEmpty");
+    }
+
+    /// SOURCE_PARITY: BasicUtil#getTypeOfObject(Object[])。
+    #[test]
+    fn type_of_object_preserves_null_scalar_and_array_types() {
+        let types = BasicUtil::get_type_of_object(&[
+            DataValue::Null,
+            DataValue::Int(1),
+            DataValue::array(vec![DataValue::Str("a".into()), DataValue::Str("b".into())]),
+            DataValue::array(vec![DataValue::Int(1), DataValue::Str("b".into())]),
+        ]);
+        assert_eq!(
+            types,
+            vec![
+                ClassRef::Named("com.alibaba.qlexpress4.runtime.Nothing".into()),
+                ClassRef::Named("java.lang.Integer".into()),
+                ClassRef::Named("java.lang.String[]".into()),
+                ClassRef::Named("java.lang.Object[]".into()),
+            ]
+        );
     }
 }

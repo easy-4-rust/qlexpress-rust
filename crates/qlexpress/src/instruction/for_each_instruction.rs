@@ -13,7 +13,72 @@ use crate::runtime::qcontext::QContext;
 use crate::runtime::qlambda_definition::QLambdaDefinition;
 use crate::runtime::value::DataValue;
 use crate::utils::println_utils::PrintlnUtils;
+use std::cell::RefCell;
 use std::rc::Rc;
+
+/// 反射数组的可迭代适配器。
+///
+/// 对应 Java：
+/// `ForEachInstruction.ReflectArrayIterable`。Java 持有任意反射数组对象；
+/// Rust 数组统一为共享 `Vec<DataValue>`。
+#[derive(Clone)]
+pub(crate) struct ReflectArrayIterable {
+    arr_obj: Rc<RefCell<Vec<DataValue>>>,
+}
+
+impl ReflectArrayIterable {
+    /// 创建数组可迭代适配器。
+    ///
+    /// 对应 Java 私有构造器 `ReflectArrayIterable(Object)`。
+    pub(crate) fn new(arr_obj: Rc<RefCell<Vec<DataValue>>>) -> Self {
+        Self { arr_obj }
+    }
+
+    /// 创建一个游标从零开始的数组迭代器。
+    ///
+    /// 对应 Java：`ReflectArrayIterable#iterator()`。
+    pub fn iterator(&self) -> ReflectArrayIterator {
+        ReflectArrayIterator {
+            arr_obj: Rc::clone(&self.arr_obj),
+            cursor: 0,
+        }
+    }
+}
+
+/// 反射数组迭代器。
+///
+/// 对应 Java：
+/// `ForEachInstruction.ReflectArrayIterable.ReflectArrayIterator`。
+pub(crate) struct ReflectArrayIterator {
+    arr_obj: Rc<RefCell<Vec<DataValue>>>,
+    cursor: usize,
+}
+
+impl ReflectArrayIterator {
+    /// 判断游标是否仍小于数组长度。
+    ///
+    /// 对应 Java：`ReflectArrayIterator#hasNext()`。
+    pub fn has_next(&self) -> bool {
+        self.cursor < self.arr_obj.borrow().len()
+    }
+}
+
+impl Iterator for ReflectArrayIterator {
+    type Item = DataValue;
+
+    /// 返回当前元素并将游标加一。
+    ///
+    /// 对应 Java：`ReflectArrayIterator#next()`。通过 Rust `Iterator`
+    /// 契约在越界时返回 `None`，循环调用点与 Java 增强 for 的行为一致。
+    fn next(&mut self) -> Option<Self::Item> {
+        if !self.has_next() {
+            return None;
+        }
+        let item = self.arr_obj.borrow().get(self.cursor).cloned();
+        self.cursor += 1;
+        item
+    }
+}
 
 /// for-each 循环指令。对应 Java: com.alibaba.qlexpress4.runtime.instruction.ForEachInstruction(职责:遍历集合/数组的循环执行体)
 /// Operation: process each element in iterable object on top of stack,
@@ -22,8 +87,8 @@ use std::rc::Rc;
 ///
 /// Mirrors Java `ForEachInstruction`.
 ///
-/// Java 为反射数组额外创建两层适配器；Rust 的 `DataValue::Array` 已是有类型
-/// 的元素序列，因此在 `execute` 中直接取得同顺序快照：
+/// Java 为反射数组额外创建两层适配器；Rust 对 `DataValue::Array` 保留同样
+/// 的 iterable/iterator 两层结构，并按游标逐项读取共享数组：
 ///
 /// - 对应 Java:
 ///   `com.alibaba.qlexpress4.runtime.instruction.ForEachInstruction.ReflectArrayIterable`
@@ -81,9 +146,11 @@ impl QLInstruction for ForEachInstruction {
     ) -> Result<QResult, QLException> {
         let may_be_iterable = q_context.pop().get();
         // Java: array → ReflectArrayIterable; Iterable → as-is; else error.
-        let items: Vec<DataValue> = match &may_be_iterable {
-            DataValue::Array(arr) => arr.borrow().clone(),
-            DataValue::List(list) => list.borrow().clone(),
+        let items: Box<dyn Iterator<Item = DataValue>> = match &may_be_iterable {
+            DataValue::Array(arr) => {
+                Box::new(ReflectArrayIterable::new(Rc::clone(arr)).iterator())
+            }
+            DataValue::List(list) => Box::new(list.borrow().clone().into_iter()),
             _ => {
                 return Err(self.target_error_reporter.report(
                     error_codes::FOR_EACH_ITERABLE_REQUIRED,
@@ -144,5 +211,28 @@ impl QLInstruction for ForEachInstruction {
 
     fn error_reporter(&self) -> &Rc<dyn ErrorReporter> {
         &self.error_reporter
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// SOURCE_PARITY: ReflectArrayIterable#iterator 与
+    /// ReflectArrayIterator#hasNext/next。
+    #[test]
+    fn reflect_array_iterator_advances_in_array_order() {
+        let array = Rc::new(RefCell::new(vec![
+            DataValue::Int(1),
+            DataValue::Int(2),
+        ]));
+        let iterable = ReflectArrayIterable::new(array);
+        let mut iterator = iterable.iterator();
+        assert!(iterator.has_next());
+        assert_eq!(iterator.next(), Some(DataValue::Int(1)));
+        assert!(iterator.has_next());
+        assert_eq!(iterator.next(), Some(DataValue::Int(2)));
+        assert!(!iterator.has_next());
+        assert_eq!(iterator.next(), None);
     }
 }

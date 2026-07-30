@@ -20,3 +20,43 @@ pub struct SerializableConstant {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub value: Option<serde_json::Value>,
 }
+
+impl SerializableConstant {
+    /// 返回常量的序列化类型标签。
+    ///
+    /// 对应 Java：`SerializableConstant#getType()`。
+    ///
+    /// # 返回值
+    ///
+    /// 返回类型标签；Java 的 `null` 以 `None` 表示。
+    pub fn get_type(&self) -> Option<&str> {
+        self.const_type.as_deref()
+    }
+
+    /// 设置常量的序列化类型标签。
+    ///
+    /// 对应 Java：`SerializableConstant#setType(String)`。
+    ///
+    /// # 参数
+    ///
+    /// - `const_type`：新类型标签；`None` 对应 Java `null`。
+    pub fn set_type(&mut self, const_type: Option<String>) {
+        self.const_type = const_type;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// SOURCE_PARITY: SerializableConstant#getType/setType。
+    #[test]
+    fn type_accessors_preserve_java_nullability() {
+        let mut constant = SerializableConstant::default();
+        assert_eq!(constant.get_type(), None);
+        constant.set_type(Some("LONG".to_string()));
+        assert_eq!(constant.get_type(), Some("LONG"));
+        constant.set_type(None);
+        assert_eq!(constant.get_type(), None);
+    }
+}
