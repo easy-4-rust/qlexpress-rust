@@ -24,7 +24,8 @@ pub use crate::runtime::class_ref::ClassRef;
 pub use crate::runtime::meta_class::{as_meta_class, MetaClass};
 pub use crate::runtime::native_registry::NativeRegistry;
 pub use crate::runtime::native_type::{
-    NativeConstructor, NativeFieldGetter, NativeMethod, NativeType,
+    NativeConstructor, NativeConstructorCandidate, NativeFieldGetter, NativeFieldSetter,
+    NativeMethod, NativeMethodCandidate, NativeStaticField, NativeType,
 };
 pub use crate::runtime::util::method_invoke_utils::{find_method_and_invoke, invoke_native_method};
 

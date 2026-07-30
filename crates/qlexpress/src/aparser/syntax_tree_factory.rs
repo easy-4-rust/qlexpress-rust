@@ -424,10 +424,10 @@ pub struct VarIdExprContext {
 }
 
 /// 语法树节点 TypeExprContext。对应 Java: com.alibaba.qlexpress4.aparser.QLParser 内部类 TypeExprContext
-/// Java `TypeExprContext` (a primitive type used as a value, e.g. `int.class`).
+/// Java `TypeExprContext`（作为值使用的类型，含原语、具名类和数组类型）。
 #[derive(Clone, Debug)]
 pub struct TypeExprContext {
-    pub primitive_type: Box<Node>,
+    pub decl_type: Box<Node>,
 }
 
 /// 语法树节点 ListItemsContext。对应 Java: com.alibaba.qlexpress4.aparser.QLParser 内部类 ListItemsContext
@@ -1327,7 +1327,7 @@ impl HasChildren for VarIdExprContext {
 
 impl HasChildren for TypeExprContext {
     fn children(&self) -> Vec<ChildRef<'_>> {
-        vec![n(&self.primitive_type)]
+        vec![n(&self.decl_type)]
     }
 }
 

@@ -5,11 +5,16 @@
 #![allow(clippy::result_large_err)]
 
 use std::collections::HashMap;
+use std::rc::Rc;
 
+use qlexpress::exception::QLException;
 use qlexpress::ql_options::QLOptions;
+use qlexpress::ql_precedences;
+use qlexpress::runtime::class_ref::ClassRef;
+use qlexpress::runtime::function::extension_function::ExtensionFunction;
 use qlexpress::runtime::parameters::Parameters;
 use qlexpress::runtime::qcontext::QContext;
-use qlexpress::runtime::value::DataValue;
+use qlexpress::runtime::value::{DataValue, QValue};
 use qlexpress::Express4Runner;
 
 fn opts() -> QLOptions {
@@ -43,7 +48,7 @@ fn add_function_with_function_signature() {
             Ok(DataValue::Long(n + 1))
         },
     );
-    assert_eq!(run_int(&runner, "inc(5)"), 6);
+    assert_eq!(run_int(&runner, "inc(1)"), 2);
 }
 
 #[test]
@@ -98,21 +103,22 @@ fn add_varargs_function() {
     // Java QLFunctionalVarargs
     let runner = Express4Runner::new();
     runner.add_varargs_function(
-        "join_with",
+        "join",
         |params: &[DataValue]| -> Result<DataValue, qlexpress::exception::QLException> {
-            let sep = params
-                .first()
-                .map(|p| p.string_value_of())
-                .unwrap_or_default();
-            let rest: Vec<String> = params[1..].iter().map(|p| p.string_value_of()).collect();
-            Ok(DataValue::Str(rest.join(&sep)))
+            Ok(DataValue::Str(
+                params
+                    .iter()
+                    .map(DataValue::string_value_of)
+                    .collect::<Vec<_>>()
+                    .join(","),
+            ))
         },
     );
     let r = runner
-        .execute("join_with('-', 'a', 'b', 'c')", HashMap::new(), &opts())
+        .execute("join(1,2,3)", HashMap::new(), &opts())
         .expect("ok")
         .into_result();
-    assert_eq!(r, DataValue::Str("a-b-c".to_string()));
+    assert_eq!(r, DataValue::Str("1,2,3".to_string()));
 }
 
 // ---------- addOperator variants ----------
@@ -121,38 +127,152 @@ fn add_varargs_function() {
 fn add_operator_bifunction() {
     // Java addOperatorBiFunction
     let mut runner = Express4Runner::new();
-    runner.add_operator_bi("join_str", |left: DataValue, right: DataValue| {
+    runner.add_operator_bi("join", |left: DataValue, right: DataValue| {
         DataValue::Str(format!(
-            "{}|{}",
+            "{},{}",
             left.string_value_of(),
             right.string_value_of()
         ))
     });
     let r = runner
-        .execute("'a' join_str 'b'", HashMap::new(), &opts())
+        .execute("1 join 2 join 3", HashMap::new(), &opts())
         .expect("ok")
         .into_result();
-    assert_eq!(r, DataValue::Str("a|b".to_string()));
+    assert_eq!(r, DataValue::Str("1,2,3".to_string()));
 }
 
 #[test]
 fn replace_default_operator() {
-    // Java replaceDefaultOperator("+", ...)
-    let runner = Express4Runner::new();
-    runner.add_function(
-        "add_one",
-        |_ctx: &mut dyn QContext,
-         params: &Parameters|
-         -> Result<DataValue, qlexpress::exception::QLException> {
-            let a = qlexpress::runtime::data::convert::to_i64(&params.get_value(0));
-            let b = qlexpress::runtime::data::convert::to_i64(&params.get_value(1));
-            Ok(DataValue::Long(a + b + 1)) // adds an extra 1
-        },
+    let mut runner = Express4Runner::new();
+    let replaced = runner.replace_operator(
+        "+",
+        Rc::new(|left: &QValue, right: &QValue| {
+            let left = left.get().string_value_of().parse::<f64>().unwrap();
+            let right = right.get().string_value_of().parse::<f64>().unwrap();
+            Ok(DataValue::Double(left + right))
+        }),
     );
-    // 简单的 add_one 验证,默认 operator 替换复杂,留给 v2
+    assert!(replaced);
     let r = runner
-        .execute("add_one(2, 3)", HashMap::new(), &opts())
+        .execute("'1.2' + '2.3'", HashMap::new(), &opts())
         .expect("ok")
         .into_result();
-    assert_eq!(r, DataValue::Long(6));
+    assert_eq!(r, DataValue::Double(3.5));
+}
+
+#[test]
+fn add_operator_with_add_precedence() {
+    let mut runner = Express4Runner::new();
+    assert!(runner.add_operator_with_precedence(
+        "?><",
+        Rc::new(|left: &QValue, right: &QValue| {
+            Ok(DataValue::Str(format!(
+                "{}{}",
+                left.get().string_value_of(),
+                right.get().string_value_of()
+            )))
+        }),
+        ql_precedences::ADD,
+    ));
+    let result = runner
+        .execute("1 ?>< 2 * 3", HashMap::new(), &opts())
+        .expect("ok")
+        .into_result();
+    assert_eq!(result, DataValue::Str("16".to_string()));
+}
+
+#[test]
+fn add_operator_by_varargs() {
+    let mut runner = Express4Runner::new();
+    assert!(runner.add_operator_varargs(
+        "join",
+        |params: &[DataValue]| -> Result<DataValue, QLException> {
+            Ok(DataValue::Str(format!(
+                "{},{}",
+                params[0].string_value_of(),
+                params[1].string_value_of()
+            )))
+        },
+    ));
+    let result = runner
+        .execute("1 join 2", HashMap::new(), &opts())
+        .expect("ok")
+        .into_result();
+    assert_eq!(result, DataValue::Str("1,2".to_string()));
+}
+
+fn sum_values(values: impl IntoIterator<Item = DataValue>) -> f64 {
+    values.into_iter().fold(0.0, |sum, value| {
+        sum + match value {
+            DataValue::Byte(value) => f64::from(value),
+            DataValue::Short(value) => f64::from(value),
+            DataValue::Int(value) => f64::from(value),
+            DataValue::Long(value) => value as f64,
+            DataValue::Float(value) => f64::from(value),
+            DataValue::Double(value) => value,
+            _ => 0.0,
+        }
+    })
+}
+
+struct PlusAll;
+
+impl ExtensionFunction for PlusAll {
+    fn parameter_types(&self) -> Vec<ClassRef> {
+        vec![ClassRef::Named("java.lang.Object".to_string())]
+    }
+
+    fn name(&self) -> &str {
+        "plusAll"
+    }
+
+    fn declaring_class(&self) -> ClassRef {
+        ClassRef::Named("java.lang.Integer".to_string())
+    }
+
+    fn invoke(&self, obj: &DataValue, args: &[DataValue]) -> Result<DataValue, QLException> {
+        Ok(DataValue::Double(sum_values(
+            std::iter::once(obj.clone()).chain(args.iter().cloned()),
+        )))
+    }
+}
+
+#[test]
+fn qlfunctional_varargs_all_in_one() {
+    let mut runner = Express4Runner::new();
+    runner.add_varargs_function(
+        "sumAll",
+        |params: &[DataValue]| -> Result<DataValue, QLException> {
+            Ok(DataValue::Double(sum_values(params.iter().cloned())))
+        },
+    );
+    assert!(runner.add_operator_varargs(
+        "+&",
+        |params: &[DataValue]| -> Result<DataValue, QLException> {
+            Ok(DataValue::Double(sum_values(params.iter().cloned())))
+        },
+    ));
+    runner.add_extend_function(PlusAll);
+
+    assert_eq!(
+        runner
+            .execute("sumAll(1,2,3)", HashMap::new(), &opts())
+            .expect("function")
+            .into_result(),
+        DataValue::Double(6.0)
+    );
+    assert_eq!(
+        runner
+            .execute("1 +& 4", HashMap::new(), &opts())
+            .expect("operator")
+            .into_result(),
+        DataValue::Double(5.0)
+    );
+    assert_eq!(
+        runner
+            .execute("1.plusAll(5)", HashMap::new(), &opts())
+            .expect("extension")
+            .into_result(),
+        DataValue::Double(6.0)
+    );
 }

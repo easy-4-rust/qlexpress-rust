@@ -12,13 +12,20 @@ use std::rc::Rc;
 use crate::exception::error_codes;
 use crate::exception::ql_exception::QLExceptionKind;
 use crate::exception::QLException;
+use crate::member::field_handler::Preferred as PreferredFieldHandler;
 use crate::runtime::class_ref::ClassRef;
 use crate::runtime::data::convert::number_compare;
-use crate::runtime::data::MapItemValue;
+use crate::runtime::data::convert::parameters_type_convertor::ParametersTypeConvertor;
+use crate::runtime::data::index_map::IndexMap;
+use crate::runtime::data::{FieldValue, MapItemValue};
 use crate::runtime::function::ExtensionFunction;
+use crate::runtime::member_resolver::MemberResolver;
 use crate::runtime::meta_class::{as_meta_class, MetaClass};
-use crate::runtime::native_type::{NativeConstructor, NativeMethod, NativeType};
+use crate::runtime::native_type::{
+    NativeConstructor, NativeConstructorCandidate, NativeMethod, NativeMethodCandidate, NativeType,
+};
 use crate::runtime::opaque_native_object::OpaqueNativeObject;
+use crate::runtime::qvm_runtime::current_time_millis;
 use crate::runtime::value::{DataValue, QValue};
 use crate::security::ql_security_strategy::{NativeMember, QLSecurityStrategy};
 use crate::utils::basic_util;
@@ -128,6 +135,39 @@ impl NativeRegistry {
             .insert((type_name.into(), method_name.into()), method);
     }
 
+    /// 按 Java `@QLAlias` 语义把脚本方法名解析为注册表中的真实方法名。
+    ///
+    /// Java `MethodHandler` 会先枚举真实方法，再匹配方法上的别名；Rust
+    /// 将注解元数据拍平到 `NativeType.method_aliases`，这里同时服务静态
+    /// 方法和实例方法分派。
+    fn resolve_registered_method_name<'a>(
+        native_type: &'a NativeType,
+        method_name: &'a str,
+        is_static: bool,
+    ) -> &'a str {
+        let contains_method = |name: &str| {
+            if is_static {
+                native_type.static_methods.contains_key(name)
+                    || native_type.static_method_candidates.contains_key(name)
+            } else {
+                native_type.methods.contains_key(name)
+                    || native_type.method_candidates.contains_key(name)
+            }
+        };
+        if contains_method(method_name) {
+            return method_name;
+        }
+        native_type
+            .method_aliases
+            .iter()
+            .find_map(|(registered_name, aliases)| {
+                (contains_method(registered_name)
+                    && aliases.iter().any(|alias| alias == method_name))
+                .then_some(registered_name.as_str())
+            })
+            .unwrap_or(method_name)
+    }
+
     // ---- 对应 Java ReflectLoader.loadConstructor ----
 
     /// 对应 Java 方法 `loadConstructor(Class, Class[])`:取注册构造器;
@@ -140,6 +180,33 @@ impl NativeRegistry {
         self.types
             .get(clz.java_name())
             .and_then(|native_type| native_type.constructor.as_ref().map(Rc::clone))
+    }
+
+    /// 按实参类型选择构造器候选。没有候选元数据时兼容旧的单构造器注册。
+    pub fn load_constructor_for_args(
+        &self,
+        clz: &ClassRef,
+        args: &[DataValue],
+    ) -> Option<NativeConstructor> {
+        if !self.check_member(clz.java_name(), "<init>") {
+            return None;
+        }
+        let native_type = self.types.get(clz.java_name())?;
+        if let Some(candidate) =
+            self.select_constructor_candidate(&native_type.constructor_candidates, args)
+        {
+            let constructor = Rc::clone(&candidate.constructor);
+            let parameter_types = candidate.parameter_types.clone();
+            let var_args = candidate.var_args;
+            return Some(Rc::new(move |values| {
+                let converted = convert_candidate_arguments(values, &parameter_types, var_args);
+                constructor(&converted)
+            }));
+        }
+        if native_type.constructor_candidates.is_empty() {
+            return native_type.constructor.as_ref().map(Rc::clone);
+        }
+        None
     }
 
     // ---- 对应 Java ReflectLoader.loadField ----
@@ -201,14 +268,26 @@ impl NativeRegistry {
                             return Some(QValue::Data(bean.clone()));
                         }
                         let name = clz.java_name();
+                        let native_type = self.types.get(name)?;
+                        let registered_name =
+                            PreferredFieldHandler::gather_field_recursive(native_type, field_name)?;
                         // 安全策略接线点(Java ReflectLoader.check):
                         // 静态字段访问前过 QLSecurityStrategy。
-                        if skip_security || self.check_member(name, field_name) {
-                            if let Some(value) = self
-                                .types
-                                .get(name)
-                                .and_then(|t| t.static_fields.get(field_name))
+                        if skip_security || self.check_member(name, &registered_name) {
+                            if let Some(cell) = native_type.static_field_cells.get(&registered_name)
                             {
+                                let getter_cell = Rc::clone(cell);
+                                let setter_cell = Rc::clone(cell);
+                                return Some(QValue::Left(Rc::new(RefCell::new(FieldValue::new(
+                                    Box::new(move || getter_cell.borrow().clone()),
+                                    Box::new(move |value| {
+                                        *setter_cell.borrow_mut() = value;
+                                        true
+                                    }),
+                                    None,
+                                )))));
+                            }
+                            if let Some(value) = native_type.static_fields.get(&registered_name) {
                                 return Some(QValue::Data(value.clone()));
                             }
                         }
@@ -216,12 +295,49 @@ impl NativeRegistry {
                     }
                     // Java:bean 字段/getter 反射读取 → NativeObject 显式读取。
                     None => {
-                        let borrowed = obj.borrow();
-                        let type_name = borrowed.native_type_name();
-                        if !skip_security && !self.check_member(type_name, field_name) {
+                        let type_name = obj.borrow().native_type_name().to_string();
+                        let registered_name = self
+                            .types
+                            .get(&type_name)
+                            .and_then(|native_type| {
+                                PreferredFieldHandler::gather_field_recursive(
+                                    native_type,
+                                    field_name,
+                                )
+                            })
+                            .unwrap_or_else(|| field_name.to_string());
+                        if !skip_security && !self.check_member(&type_name, &registered_name) {
                             return None;
                         }
-                        borrowed.get_field(field_name).map(QValue::Data)
+                        if let Some(native_type) = self.types.get(&type_name) {
+                            if let (Some(getter), Some(setter)) = (
+                                native_type.fields.get(&registered_name),
+                                native_type.field_setters.get(&registered_name),
+                            ) {
+                                let getter = Rc::clone(getter);
+                                let setter = Rc::clone(setter);
+                                let getter_bean = bean.clone();
+                                let setter_bean = bean.clone();
+                                return Some(QValue::Left(Rc::new(RefCell::new(FieldValue::new(
+                                    Box::new(move || {
+                                        getter(&getter_bean).unwrap_or(DataValue::Null)
+                                    }),
+                                    Box::new(move |value| setter(&setter_bean, &value)),
+                                    None,
+                                )))));
+                            }
+                            if let Some(value) = native_type
+                                .fields
+                                .get(&registered_name)
+                                .and_then(|getter| getter(bean))
+                            {
+                                return Some(QValue::Data(value));
+                            }
+                            // Rust 的显式注册表就是 Java 反射可见性边界：类型已
+                            // 注册但成员未注册时，不得绕过注册表直读对象字段。
+                            return None;
+                        }
+                        obj.borrow().get_field(&registered_name).map(QValue::Data)
                     }
                 }
             }
@@ -229,12 +345,29 @@ impl NativeRegistry {
                 // 注册的实例字段(按 Java 类型名)。
                 // 安全策略接线点:实例字段访问前过 QLSecurityStrategy。
                 let type_name = bean.data_type_name();
-                if !skip_security && !self.check_member(type_name, field_name) {
+                let native_type = self.types.get(type_name)?;
+                let registered_name =
+                    PreferredFieldHandler::gather_field_recursive(native_type, field_name)?;
+                if !skip_security && !self.check_member(type_name, &registered_name) {
                     return None;
                 }
-                self.types
-                    .get(type_name)
-                    .and_then(|t| t.fields.get(field_name))
+                if let (Some(getter), Some(setter)) = (
+                    native_type.fields.get(&registered_name),
+                    native_type.field_setters.get(&registered_name),
+                ) {
+                    let getter = Rc::clone(getter);
+                    let setter = Rc::clone(setter);
+                    let getter_bean = bean.clone();
+                    let setter_bean = bean.clone();
+                    return Some(QValue::Left(Rc::new(RefCell::new(FieldValue::new(
+                        Box::new(move || getter(&getter_bean).unwrap_or(DataValue::Null)),
+                        Box::new(move |value| setter(&setter_bean, &value)),
+                        None,
+                    )))));
+                }
+                native_type
+                    .fields
+                    .get(&registered_name)
                     .and_then(|getter| getter(bean))
                     .map(QValue::Data)
             }
@@ -248,46 +381,276 @@ impl NativeRegistry {
     pub fn resolve_method(&self, bean: &DataValue, method_name: &str) -> Option<NativeMethod> {
         // MetaClass 接收者 → 静态方法(Java `isStaticMethod` 分支)。
         if let Some(meta) = as_meta_class(bean) {
+            if method_name == "getName" {
+                let class_name = meta.java_name().to_string();
+                return Some(Rc::new(move |_bean, args| {
+                    if args.is_empty() {
+                        Ok(DataValue::Str(class_name.clone()))
+                    } else {
+                        Err(wrong_args("Class.getName"))
+                    }
+                }));
+            }
             let name = meta.java_name();
+            let native_type = self.types.get(name)?;
+            let registered_name =
+                Self::resolve_registered_method_name(native_type, method_name, true);
             // 安全策略接线点:静态方法访问前过 QLSecurityStrategy。
-            if !self.check_member(name, method_name) {
+            if !self.check_member(name, registered_name) {
                 return None;
             }
-            return self
-                .types
-                .get(name)
-                .and_then(|t| t.static_methods.get(method_name).map(Rc::clone));
+            return native_type
+                .static_methods
+                .get(registered_name)
+                .map(Rc::clone);
         }
         let type_name = native_type_name(bean);
         // Java 先解析扩展函数，再判断是否为隔离策略。
         if let Some(method) = self
-            .extension_methods
-            .get(&(type_name.clone(), method_name.to_string()))
-            .map(Rc::clone)
+            .resolve_extension_method(bean, method_name)
             .or_else(|| builtin_extension_method(bean, method_name))
         {
             return Some(method);
         }
-        // Java 反射方法（含 Rust 内建 JDK 方法子集）统一通过安全策略。
-        if !self.check_member(&type_name, method_name) {
+        let native_type = self.types.get(&type_name);
+        let registered_name = native_type
+            .map(|native_type| {
+                Self::resolve_registered_method_name(native_type, method_name, false)
+            })
+            .unwrap_or(method_name);
+        // Java 反射方法（含 Rust 内建 JDK 方法子集）统一通过安全策略；
+        // 别名先还原为真实成员名，再执行与 Java 反射 Member 相同的检查。
+        if !self.check_member(&type_name, registered_name) {
             return None;
         }
         if let Some(method) = builtin_method(bean, method_name) {
             return Some(method);
         }
-        if let Some(method) = self
-            .types
-            .get(&type_name)
-            .and_then(|t| t.methods.get(method_name).map(Rc::clone))
+        if let Some(method) = native_type
+            .and_then(|native_type| native_type.methods.get(registered_name).map(Rc::clone))
         {
             return Some(method);
         }
         None
     }
 
+    /// 按调用现场实参选择同名方法候选。对应 Java
+    /// `ReflectLoader#loadMethod(bean, name, argTypes, ...)`。
+    pub fn resolve_method_for_args(
+        &self,
+        bean: &DataValue,
+        method_name: &str,
+        args: &[DataValue],
+    ) -> Option<NativeMethod> {
+        if let Some(meta) = as_meta_class(bean) {
+            if method_name == "getName" && args.is_empty() {
+                let class_name = meta.java_name().to_string();
+                return Some(Rc::new(move |_bean, _args| {
+                    Ok(DataValue::Str(class_name.clone()))
+                }));
+            }
+            return self.resolve_registered_candidate(
+                meta.java_name(),
+                method_name,
+                args,
+                true,
+                bean,
+            );
+        }
+
+        let type_name = native_type_name(bean);
+        // Java 扩展函数优先于反射成员。
+        if let Some(method) = self
+            .resolve_extension_method(bean, method_name)
+            .or_else(|| builtin_extension_method(bean, method_name))
+        {
+            return Some(method);
+        }
+
+        if let Some(method) =
+            self.resolve_registered_candidate(&type_name, method_name, args, false, bean)
+        {
+            return Some(method);
+        }
+        // 未显式登记候选时继续兼容内建方法表。
+        if self.types.get(&type_name).is_none_or(|native_type| {
+            native_type
+                .method_candidates
+                .get(method_name)
+                .is_none_or(Vec::is_empty)
+        }) && self.check_member(&type_name, method_name)
+        {
+            return builtin_method(bean, method_name);
+        }
+        None
+    }
+
+    /// 按 Java `declaringClass.isAssignableFrom(bean.getClass())` 解析扩展
+    /// 函数；不能只用运行时类型名做精确 HashMap 命中，否则注册在
+    /// `Number` / `List` 上的扩展无法用于 `Integer` / `ArrayList`。
+    fn resolve_extension_method(
+        &self,
+        bean: &DataValue,
+        method_name: &str,
+    ) -> Option<NativeMethod> {
+        let type_name = native_type_name(bean);
+        if let Some(method) = self
+            .extension_methods
+            .get(&(type_name.clone(), method_name.to_string()))
+        {
+            return Some(Rc::clone(method));
+        }
+        let argument_type = runtime_class_ref(bean);
+        self.extension_methods.iter().find_map(
+            |((declaring_type, registered_name), method)| {
+                (registered_name == method_name
+                    && self.is_assignable(
+                        &ClassRef::Named(declaring_type.clone()),
+                        &argument_type,
+                    ))
+                .then(|| Rc::clone(method))
+            },
+        )
+    }
+
+    fn resolve_registered_candidate(
+        &self,
+        type_name: &str,
+        method_name: &str,
+        args: &[DataValue],
+        is_static: bool,
+        bean: &DataValue,
+    ) -> Option<NativeMethod> {
+        let native_type = self.types.get(type_name)?;
+        let registered_name =
+            Self::resolve_registered_method_name(native_type, method_name, is_static);
+        if !self.check_member(type_name, registered_name) {
+            return None;
+        }
+        let candidates = if is_static {
+            native_type.static_method_candidates.get(registered_name)
+        } else {
+            native_type.method_candidates.get(registered_name)
+        };
+        if let Some(candidates) = candidates {
+            if let Some(candidate) = self.select_method_candidate(candidates, args) {
+                return Some(wrap_method_candidate(candidate));
+            }
+        }
+
+        let legacy = if is_static {
+            native_type.static_methods.get(registered_name)
+        } else {
+            native_type.methods.get(registered_name)
+        };
+        if let Some(method) = legacy {
+            return Some(Rc::clone(method));
+        }
+
+        // Java 从实际声明类开始逐层查找；当前类有同名候选但不匹配时，
+        // 继续父类，保留 override/hiding 与 fallback 的组合语义。
+        for supertype in &native_type.supertypes {
+            if let Some(method) =
+                self.resolve_registered_candidate(supertype, method_name, args, is_static, bean)
+            {
+                return Some(method);
+            }
+        }
+        let _ = bean;
+        None
+    }
+
+    fn select_method_candidate<'a>(
+        &self,
+        candidates: &'a [NativeMethodCandidate],
+        args: &[DataValue],
+    ) -> Option<&'a NativeMethodCandidate> {
+        let signatures: Vec<(Vec<ClassRef>, bool)> = candidates
+            .iter()
+            .map(|candidate| (candidate.parameter_types.clone(), candidate.var_args))
+            .collect();
+        let arg_types: Vec<ClassRef> = args.iter().map(runtime_class_ref).collect();
+        let index =
+            MemberResolver::resolve_candidate_index(&signatures, &arg_types, |param, arg| {
+                self.is_assignable(param, arg)
+            })?;
+        candidates.get(index)
+    }
+
+    fn select_constructor_candidate<'a>(
+        &self,
+        candidates: &'a [NativeConstructorCandidate],
+        args: &[DataValue],
+    ) -> Option<&'a NativeConstructorCandidate> {
+        let signatures: Vec<(Vec<ClassRef>, bool)> = candidates
+            .iter()
+            .map(|candidate| (candidate.parameter_types.clone(), candidate.var_args))
+            .collect();
+        let arg_types: Vec<ClassRef> = args.iter().map(runtime_class_ref).collect();
+        let index =
+            MemberResolver::resolve_candidate_index(&signatures, &arg_types, |param, arg| {
+                self.is_assignable(param, arg)
+            })?;
+        candidates.get(index)
+    }
+
+    fn is_assignable(&self, param: &ClassRef, arg: &ClassRef) -> bool {
+        if param == arg || param.is_java_object() {
+            return true;
+        }
+        let param_name = param.java_name();
+        let arg_name = arg.java_name();
+        if param_name == "java.lang.Number" && is_numeric_java_name(arg_name) {
+            return true;
+        }
+        if let (Some(param_item), Some(arg_item)) =
+            (param_name.strip_suffix("[]"), arg_name.strip_suffix("[]"))
+        {
+            return self.is_assignable(
+                &ClassRef::Named(param_item.to_string()),
+                &ClassRef::Named(arg_item.to_string()),
+            );
+        }
+        self.type_extends(arg_name, param_name, &mut Vec::new())
+    }
+
+    fn type_extends(
+        &self,
+        type_name: &str,
+        expected_supertype: &str,
+        visited: &mut Vec<String>,
+    ) -> bool {
+        if type_name == expected_supertype {
+            return true;
+        }
+        if visited.iter().any(|visited_name| visited_name == type_name) {
+            return false;
+        }
+        visited.push(type_name.to_string());
+        self.types.get(type_name).is_some_and(|native_type| {
+            native_type.supertypes.iter().any(|supertype| {
+                supertype == expected_supertype
+                    || self.type_extends(supertype, expected_supertype, visited)
+            })
+        })
+    }
+
     /// 注册内建锚点类型,供 `ClassSupplier` 式查询与宿主覆盖挂接;
     /// 实际分派在 [`builtin_method`]。对应 Java 中这些 JDK 类天然可被反射。
     fn register_builtin_types(&mut self) {
+        let mut system = NativeType::named("java.lang.System");
+        system.static_methods.insert(
+            "currentTimeMillis".to_string(),
+            Rc::new(|_bean, args| {
+                if args.is_empty() {
+                    Ok(DataValue::Long(current_time_millis()))
+                } else {
+                    Err(wrong_args("System.currentTimeMillis"))
+                }
+            }),
+        );
+        self.register_type(system);
+
         let mut array_list = NativeType::named("java.util.ArrayList");
         array_list.constructor = Some(Rc::new(|args| match args {
             [] => Ok(DataValue::list(Vec::new())),
@@ -304,6 +667,26 @@ impl NativeRegistry {
             _ => Err(wrong_args("ArrayList")),
         }));
         self.register_type(array_list);
+
+        let map_constructor = Rc::new(|args: &[DataValue]| {
+            if args.is_empty() {
+                Ok(DataValue::Map(Rc::new(RefCell::new(IndexMap::new()))))
+            } else {
+                Err(wrong_args("HashMap"))
+            }
+        });
+        let mut hash_map = NativeType::named("java.util.HashMap");
+        hash_map.supertypes = vec![
+            "java.util.Map".to_string(),
+            "java.lang.Object".to_string(),
+        ];
+        hash_map.constructor = Some(map_constructor.clone());
+        self.register_type(hash_map);
+
+        let mut linked_hash_map = NativeType::named("java.util.LinkedHashMap");
+        linked_hash_map.supertypes = vec!["java.util.HashMap".to_string()];
+        linked_hash_map.constructor = Some(map_constructor);
+        self.register_type(linked_hash_map);
 
         let mut hash_set = NativeType::named("java.util.HashSet");
         hash_set.constructor = Some(Rc::new(|args| {
@@ -372,7 +755,6 @@ impl NativeRegistry {
 
         for name in [
             "java.lang.String",
-            "java.util.LinkedHashMap",
             "java.lang.Double",
             "java.lang.Boolean",
         ] {
@@ -389,6 +771,70 @@ fn native_type_name(bean: &DataValue) -> String {
         DataValue::Object(object) => object.borrow().native_type_name().to_string(),
         _ => bean.data_type_name().to_string(),
     }
+}
+
+fn runtime_class_ref(value: &DataValue) -> ClassRef {
+    match value {
+        DataValue::Null => ClassRef::Named("com.alibaba.qlexpress4.runtime.Nothing".to_string()),
+        DataValue::Array(values) => {
+            let values = values.borrow();
+            let component = values
+                .first()
+                .map(runtime_class_ref)
+                .filter(|first| {
+                    values
+                        .iter()
+                        .skip(1)
+                        .all(|value| runtime_class_ref(value) == *first)
+                })
+                .map(|class_ref| class_ref.java_name().to_string())
+                .unwrap_or_else(|| "java.lang.Object".to_string());
+            ClassRef::Named(format!("{component}[]"))
+        }
+        DataValue::Object(object) => {
+            ClassRef::Named(object.borrow().native_type_name().to_string())
+        }
+        DataValue::Lambda(_) => {
+            ClassRef::Named("com.alibaba.qlexpress4.runtime.QLambda".to_string())
+        }
+        _ => ClassRef::Named(value.data_type_name().to_string()),
+    }
+}
+
+fn is_numeric_java_name(name: &str) -> bool {
+    matches!(
+        name,
+        "java.lang.Byte"
+            | "java.lang.Short"
+            | "java.lang.Integer"
+            | "java.lang.Long"
+            | "java.lang.Float"
+            | "java.lang.Double"
+            | "java.math.BigInteger"
+            | "java.math.BigDecimal"
+    )
+}
+
+fn convert_candidate_arguments(
+    arguments: &[DataValue],
+    parameter_types: &[ClassRef],
+    var_args: bool,
+) -> Vec<DataValue> {
+    let target_types = parameter_types
+        .iter()
+        .map(ClassRef::to_target_type)
+        .collect::<Vec<_>>();
+    ParametersTypeConvertor::cast(arguments, &target_types, var_args)
+}
+
+fn wrap_method_candidate(candidate: &NativeMethodCandidate) -> NativeMethod {
+    let method = Rc::clone(&candidate.method);
+    let parameter_types = candidate.parameter_types.clone();
+    let var_args = candidate.var_args;
+    Rc::new(move |bean, arguments| {
+        let converted = convert_candidate_arguments(arguments, &parameter_types, var_args);
+        method(bean, &converted)
+    })
 }
 
 // ---------------------------------------------------------------------------

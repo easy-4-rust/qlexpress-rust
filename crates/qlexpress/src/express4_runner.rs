@@ -53,7 +53,9 @@ use crate::ql_options::QLOptions;
 use crate::ql_precedences;
 use crate::ql_result::QLResult;
 use crate::runtime::class_ref::ClassRef;
-use crate::runtime::context::{ExpressContext, MapExpressContext};
+use crate::runtime::context::{
+    ExpressContext, MapExpressContext, ObjectFieldExpressContext, QLAliasContext,
+};
 use crate::runtime::data::index_map::IndexMap;
 use crate::runtime::function::{
     as_native_method, CustomFunction, ExtensionFunction, QMethodFunction,
@@ -205,6 +207,40 @@ impl Express4Runner {
         }
         .map_err(QLSyntaxException::into_exception)?;
         self.execute_definition(&compile_cache, true, context, ql_options)
+    }
+
+    /// 以宿主对象的公开字段/getter 作为外部变量执行脚本。对应 Java
+    /// `execute(String, Object, QLOptions)` 与 `ObjectFieldExpressContext`。
+    pub fn execute_with_object(
+        &self,
+        script: &str,
+        object: DataValue,
+        ql_options: &QLOptions,
+    ) -> Result<QLResult, QLException> {
+        self.execute_with_context(
+            script,
+            Rc::new(ObjectFieldExpressContext::new(
+                object,
+                Rc::clone(self.reflect_loader.registry()),
+            )),
+            ql_options,
+        )
+    }
+
+    /// 以显式别名对象作为外部变量执行脚本。对应 Java
+    /// `executeWithAliasObjects`；Rust 无运行时注解扫描，调用方传入
+    /// `(别名列表, 对象值)`，其余上下文与执行语义完全一致。
+    pub fn execute_with_alias_values(
+        &self,
+        script: &str,
+        ql_options: &QLOptions,
+        aliased_values: &[(&[&str], DataValue)],
+    ) -> Result<QLResult, QLException> {
+        self.execute_with_context(
+            script,
+            Rc::new(QLAliasContext::new(aliased_values)),
+            ql_options,
+        )
     }
 
     /// 执行已加载的 parse cache。对应 Java 方法
@@ -601,6 +637,52 @@ impl Express4Runner {
         let compile_cache = self
             .parse_definition(script_with_function_define)
             .map_err(QLSyntaxException::into_exception)?;
+        self.add_functions_from_compile_cache(&compile_cache, context, ql_options)
+    }
+
+    /// 从可序列化编译缓存注册其中定义的函数。对应 Java 方法
+    /// `addFunctionsDefinedInScript(SerializableParseCache, ExpressContext, QLOptions)`。
+    pub fn add_functions_defined_in_cache(
+        &self,
+        cache: &SerializableParseCache,
+        context: Rc<dyn ExpressContext>,
+        ql_options: &QLOptions,
+    ) -> Result<BatchAddFunctionResult, QLException> {
+        let loaded = self
+            .import_parse_cache(cache)
+            .map_err(|error| error.into_ql_exception())?;
+        self.add_functions_defined_in_loaded_cache(&loaded, context, ql_options)
+    }
+
+    /// 从已加载编译缓存注册其中定义的函数。对应 Java 方法
+    /// `addFunctionsDefinedInScript(LoadedParseCache, ExpressContext, QLOptions)`。
+    pub fn add_functions_defined_in_loaded_cache(
+        &self,
+        cache: &LoadedParseCache,
+        context: Rc<dyn ExpressContext>,
+        ql_options: &QLOptions,
+    ) -> Result<BatchAddFunctionResult, QLException> {
+        if !cache.is_bound_to(self.identity) {
+            return Err(QLException::for_test(
+                crate::exception::ql_exception::QLExceptionKind::Runtime,
+                format!(
+                    "LoadedParseCache is bound to another Express4Runner: {}",
+                    cache.get_script().unwrap_or_default()
+                ),
+                crate::exception::error_codes::SERIALIZABLE_PARSE_CACHE_INVALID_MODEL,
+            ));
+        }
+        self.add_functions_from_compile_cache(cache.get_compile_cache(), context, ql_options)
+    }
+
+    /// 执行主 Lambda 的定义阶段并把函数表逐项注册。对应 Java 私有重载
+    /// `addFunctionsDefinedInScript(QCompileCache, ExpressContext, QLOptions)`。
+    fn add_functions_from_compile_cache(
+        &self,
+        compile_cache: &LoadedCompileCache,
+        context: Rc<dyn ExpressContext>,
+        ql_options: &QLOptions,
+    ) -> Result<BatchAddFunctionResult, QLException> {
         let global_scope = QvmGlobalScope::with_context(
             context,
             self.user_define_functions.borrow().clone(),

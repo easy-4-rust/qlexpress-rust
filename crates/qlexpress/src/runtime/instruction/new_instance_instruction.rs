@@ -63,7 +63,10 @@ impl QLInstruction for NewInstanceInstruction {
         } else {
             q_context.pop_n(self.arg_num).values()
         };
-        let Some(constructor) = q_context.registry().load_constructor(&self.new_clz) else {
+        let Some(constructor) = q_context
+            .registry()
+            .load_constructor_for_args(&self.new_clz, &objs)
+        else {
             let param_types = objs
                 .iter()
                 .map(|o| o.data_type_name().to_string())

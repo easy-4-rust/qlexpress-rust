@@ -302,6 +302,30 @@ mod tests {
         assert_eq!(err.diagnostic().range().end().character(), 5);
     }
 
+    /// 逐项对应 Java `QLExceptionTest#reportTest`。
+    #[test]
+    fn scanner_error_message_matches_java_report_test() {
+        let script = "if (3>1) {\n  break 9;\n} else {\n  return 11;\n}";
+        let error = QLException::report_scanner_err(
+            script,
+            13,
+            2,
+            3,
+            "break",
+            "BREAK_MUST_IN_FOR_OR_WHILE",
+            "break must in for/while",
+        );
+        assert_eq!(
+            error.to_string(),
+            concat!(
+                "[Error BREAK_MUST_IN_FOR_OR_WHILE: break must in for/while]\n",
+                "[Near: if (3>1) {   break 9; } else {   retur...]\n",
+                "                    ^^^^^\n",
+                "[Line: 2, Column: 3]"
+            )
+        );
+    }
+
     #[test]
     fn timeout_code_yields_timeout_kind() {
         let err = QLException::report_runtime_err_with_attach(

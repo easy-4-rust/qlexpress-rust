@@ -15,8 +15,11 @@ use qlexpress::exception::pure_err_reporter::PureErrReporter;
 use qlexpress::ql_options::QLOptions;
 use qlexpress::runtime::data::lambda::QLambdaMethod;
 use qlexpress::runtime::delegate_qcontext::DelegateQContext;
-use qlexpress::runtime::instruction::{CallConstInstruction, CallInstruction, QLInstruction};
+use qlexpress::runtime::instruction::{
+    CallConstInstruction, CallInstruction, GetMethodInstruction, QLInstruction,
+};
 use qlexpress::runtime::member::NativeRegistry;
+use qlexpress::runtime::native_type::NativeType;
 use qlexpress::runtime::qcontext::QContext;
 use qlexpress::runtime::qlambda::QLambda;
 use qlexpress::runtime::qvm_global_scope::QvmGlobalScope;
@@ -44,12 +47,29 @@ fn substring_lambda(registry: Rc<NativeRegistry>) -> Rc<QLambda> {
 }
 
 #[test]
-fn call_instruction_invokes_bound_method_lambda() {
-    let registry = Rc::new(NativeRegistry::with_builtins());
+fn java_case1_get_method_then_call_with_two_arguments() {
+    let mut registry = NativeRegistry::with_builtins();
+    let mut child = NativeType::named("java.lang.Integer");
+    child.methods.insert(
+        "getMethod1".to_string(),
+        Rc::new(|_, arguments| match arguments {
+            [DataValue::Int(left), DataValue::Int(right)] => Ok(DataValue::Int(left + right)),
+            _ => Ok(DataValue::Null),
+        }),
+    );
+    registry.register_type(child);
+    let registry = Rc::new(registry);
     let mut context = context(Rc::clone(&registry));
-    context.push(QValue::Data(DataValue::Lambda(substring_lambda(registry))));
+    context.push(QValue::Data(DataValue::Int(0)));
+
+    let get_method = GetMethodInstruction::new(reporter(), "getMethod1");
+    get_method
+        .execute(&mut context, &QLOptions::builder().build())
+        .expect("getMethod1 must produce a bound lambda");
+    assert!(matches!(context.peek().get(), DataValue::Lambda(_)));
+
+    context.push(QValue::Data(DataValue::Int(1)));
     context.push(QValue::Data(DataValue::Int(2)));
-    context.push(QValue::Data(DataValue::Int(7)));
 
     let instruction = CallInstruction::new(reporter(), 2);
     let result = instruction
@@ -57,7 +77,7 @@ fn call_instruction_invokes_bound_method_lambda() {
         .expect("bound method call");
 
     assert!(result.is_next_instruction());
-    assert_eq!(context.pop().get(), DataValue::Str("expre".to_string()));
+    assert_eq!(context.pop().get(), DataValue::Int(3));
     assert_eq!(instruction.arg_num(), 2);
     assert_eq!(instruction.stack_input(), 3);
     assert_eq!(instruction.stack_output(), 1);

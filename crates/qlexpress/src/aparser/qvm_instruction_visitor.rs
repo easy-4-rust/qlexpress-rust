@@ -2429,9 +2429,8 @@ impl<'a> Visitor for QvmInstructionVisitor<'a> {
         if self.failed() {
             return;
         }
-        let text = ctx.primitive_type.text();
-        let cls = Self::built_in_cls(&text).unwrap_or(ClassRef::Primitive(TargetType::Any));
-        let reporter = self.reporter_of(&ctx.primitive_type);
+        let cls = self.parse_decl_type(&ctx.decl_type);
+        let reporter = self.reporter_of(&ctx.decl_type);
         self.add_instruction(Box::new(ConstInstruction::new(
             reporter,
             MetaClass::new(cls).into_data_value(),
@@ -2899,6 +2898,7 @@ impl<'a> QvmInstructionVisitor<'a> {
         // Collect case bodies and metadata
         let mut case_bodies: Vec<Vec<Instruction>> = Vec::new();
         let mut case_breaks: Vec<Vec<usize>> = Vec::new();
+        let mut case_trace_keys: Vec<Option<i32>> = Vec::new();
         let mut case_conditions: Vec<Vec<&Node>> = Vec::new();
         let mut default_index: i32 = -1;
 
@@ -2918,6 +2918,13 @@ impl<'a> QvmInstructionVisitor<'a> {
                 }
             }
             case_conditions.push(conditions);
+            case_trace_keys.push(
+                group
+                    .block_statements
+                    .as_deref()
+                    .and_then(Node::start_token)
+                    .map(Token::start_index),
+            );
 
             // Generate case body instructions; record top-level `break`s
             // (Java finds them with `instanceof` afterwards).
@@ -3005,6 +3012,19 @@ impl<'a> QvmInstructionVisitor<'a> {
             if i as i32 == default_index {
                 jump_to_default_or_end
                     .set_position((case_start_pos - jump_to_default_start_pos) as i32);
+            }
+
+            // Java 的 switch trace 将被选中的 statement group 记录为
+            // `BLOCK ... null`，包括以 break 结束、没有产生表达式值的分支。
+            // case 体本身不是 BlockExpr，不会生成 TracePeek，因此在进入
+            // 分支时显式标记其 block trace 已执行。
+            if self.init_options.is_trace_expression() {
+                if let Some(trace_key) = case_trace_keys[i] {
+                    self.pure_add_instruction(Box::new(TraceEvaluatedInstruction::new(
+                        Rc::clone(&switch_error_reporter),
+                        Some(trace_key),
+                    )));
+                }
             }
 
             // Add case body, replacing top-level `break` with a jump to

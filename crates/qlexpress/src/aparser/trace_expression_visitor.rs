@@ -538,7 +538,7 @@ impl Visitor for TraceExpressionVisitor {
 
     /// 访问作为值的类型。对应 Java 方法 `visitTypeExpr`。
     fn visit_type_expr(&mut self, ctx: &TypeExprContext) -> Self::T {
-        Self::point_for_node(TraceType::Value, vec![], &ctx.primitive_type)
+        Self::point_for_node(TraceType::Value, vec![], &ctx.decl_type)
     }
 
     /// 访问列表字面量及其元素。对应 Java 方法 `visitListExpr`。

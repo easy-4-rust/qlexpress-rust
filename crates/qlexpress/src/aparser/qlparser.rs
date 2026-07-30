@@ -896,6 +896,7 @@ impl<'a> QLParser<'a> {
             && self.precedence(self.lt()) >= min_precedence
         {
             let binaryop = self.parse_binaryop()?;
+            let is_instanceof = binaryop.text() == "instanceof";
             let next_min = {
                 match &binaryop {
                     Node::Binaryop(op) => self.precedence(op.token.symbol()) + 1,
@@ -903,7 +904,20 @@ impl<'a> QLParser<'a> {
                 }
             };
             self.skip_newlines();
-            let right = self.parse_base_expr(next_min)?;
+            let right = if is_instanceof {
+                let decl_type = self.parse_decl_type()?;
+                Node::Primary(PrimaryContext {
+                    prefix: None,
+                    pathable: None,
+                    path_parts: Vec::new(),
+                    suffix: None,
+                    non_pathable: Some(Box::new(Node::TypeExpr(TypeExprContext {
+                        decl_type: Box::new(decl_type),
+                    }))),
+                })
+            } else {
+                self.parse_base_expr(next_min)?
+            };
             ctx.left_assos.push(Node::LeftAsso(LeftAssoContext {
                 binaryop: Box::new(binaryop),
                 right: Box::new(right),
@@ -1035,9 +1049,9 @@ impl<'a> QLParser<'a> {
             return self.parse_new_expr();
         }
         if is_primitive_type(self.lt().token_type()) {
-            let primitive_type = self.parse_primitive_type()?;
+            let decl_type = self.parse_decl_type()?;
             return Ok(Node::TypeExpr(TypeExprContext {
-                primitive_type: Box::new(primitive_type),
+                decl_type: Box::new(decl_type),
             }));
         }
         if self.la(LBRACK) {

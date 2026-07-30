@@ -53,7 +53,16 @@ fn whitelist_blocks_unlisted_assignment() {
         .build();
     let e = err(&runner(), "a = b + c", opts);
     assert_eq!(e.error_code(), error_codes::OPERATOR_NOT_ALLOWED);
+    assert_eq!(e.pos(), 2);
+    assert_eq!(e.line_no(), 1);
+    assert_eq!(e.col_no(), 3);
+    assert_eq!(e.err_lexeme(), "=");
+    assert!(e.reason().contains("Script uses disallowed operator"));
     assert!(e.reason().contains('='));
+    let message = e.to_string();
+    assert!(message.contains("OPERATOR_NOT_ALLOWED"));
+    assert!(message.contains("Line: 1"));
+    assert!(message.contains("Column: 3"));
 }
 
 // ---------- Blacklist ----------
@@ -77,7 +86,16 @@ fn blacklist_blocks_listed() {
         .build();
     let e = err(&runner(), "a = b + c", opts);
     assert_eq!(e.error_code(), error_codes::OPERATOR_NOT_ALLOWED);
+    assert_eq!(e.pos(), 2);
+    assert_eq!(e.line_no(), 1);
+    assert_eq!(e.col_no(), 3);
+    assert_eq!(e.err_lexeme(), "=");
+    assert!(e.reason().contains("Script uses disallowed operator"));
     assert!(e.reason().contains('='));
+    let message = e.to_string();
+    assert!(message.contains("OPERATOR_NOT_ALLOWED"));
+    assert!(message.contains("Line: 1"));
+    assert!(message.contains("Column: 3"));
 }
 
 // ---------- Prefix / suffix ----------
@@ -92,7 +110,9 @@ fn whitelist_with_prefix_operator() {
     ok(&runner(), "++a + b", opts.clone());
     let e = err(&runner(), "--a + b", opts);
     assert_eq!(e.error_code(), error_codes::OPERATOR_NOT_ALLOWED);
-    assert!(e.reason().contains("--"));
+    assert_eq!(e.err_lexeme(), "--");
+    assert_eq!(e.line_no(), 1);
+    assert_eq!(e.col_no(), 1);
 }
 
 #[test]
@@ -105,7 +125,9 @@ fn whitelist_with_suffix_operator() {
     ok(&runner(), "a++ + b", opts.clone());
     let e = err(&runner(), "a-- + b", opts);
     assert_eq!(e.error_code(), error_codes::OPERATOR_NOT_ALLOWED);
-    assert!(e.reason().contains("--"));
+    assert_eq!(e.err_lexeme(), "--");
+    assert_eq!(e.line_no(), 1);
+    assert_eq!(e.col_no(), 2);
 }
 
 // ---------- Multiple ----------
@@ -120,8 +142,10 @@ fn blacklist_with_multiple_operators() {
     ok(&runner(), "a + b - c", opts.clone());
     let e1 = err(&runner(), "a = b", opts.clone());
     assert_eq!(e1.error_code(), error_codes::OPERATOR_NOT_ALLOWED);
+    assert_eq!(e1.err_lexeme(), "=");
     let e2 = err(&runner(), "a * b", opts);
     assert_eq!(e2.error_code(), error_codes::OPERATOR_NOT_ALLOWED);
+    assert_eq!(e2.err_lexeme(), "*");
 }
 
 // ---------- Empty / null whitelist ----------
@@ -133,6 +157,7 @@ fn empty_whitelist_blocks_everything() {
         .build();
     let e = err(&runner(), "a + b", opts);
     assert_eq!(e.error_code(), error_codes::OPERATOR_NOT_ALLOWED);
+    assert_eq!(e.err_lexeme(), "+");
 }
 
 #[test]
@@ -140,7 +165,8 @@ fn empty_blacklist_allows_everything() {
     let opts = CheckOptions::builder()
         .operator_check_strategy(OperatorCheckStrategy::Blacklist(Default::default()))
         .build();
-    ok(&runner(), "a + b * c - d / e", opts);
+    ok(&runner(), "a = b + c * d / e % f", opts.clone());
+    ok(&runner(), "++a--", opts);
 }
 
 // ---------- Multi-line error position ----------
@@ -154,15 +180,9 @@ fn multi_line_error_points_at_correct_line() {
         .build();
     let e = err(&runner(), "a + b\nc = d\ne + f", opts);
     assert_eq!(e.error_code(), error_codes::OPERATOR_NOT_ALLOWED);
-    assert!(e.reason().contains('='));
-    let diag = e.diagnostic();
-    // Position 是 0-based;`=` 在 line 2 (1-based) → 1 (0-based)。
-    assert_eq!(
-        diag.range().start().line(),
-        1,
-        "error should point at line 2 (1-based) / 1 (0-based)"
-    );
-    assert!(diag.message().contains('='));
+    assert_eq!(e.err_lexeme(), "=");
+    assert_eq!(e.line_no(), 2);
+    assert_eq!(e.col_no(), 3);
 }
 
 // ---------- Complex expression with inner op ----------
@@ -174,9 +194,16 @@ fn complex_expression_blocks_inner_assignment() {
             ["+", "*"].into_iter().map(String::from).collect(),
         ))
         .build();
-    let e = err(&runner(), "(a + b) * (c = d)", opts);
-    assert_eq!(e.error_code(), error_codes::OPERATOR_NOT_ALLOWED);
-    assert!(e.reason().contains('='));
+    ok(&runner(), "(a + b) * (c + d)", opts.clone());
+
+    let division = err(&runner(), "(a + b) * (c + d) / e", opts.clone());
+    assert_eq!(division.error_code(), error_codes::OPERATOR_NOT_ALLOWED);
+    assert_eq!(division.err_lexeme(), "/");
+
+    let assignment = err(&runner(), "(a + b) * (c = d)", opts);
+    assert_eq!(assignment.error_code(), error_codes::OPERATOR_NOT_ALLOWED);
+    assert_eq!(assignment.err_lexeme(), "=");
+    assert!(assignment.pos() > 10);
 }
 
 // ---------- Error message contains operator set ----------
@@ -191,6 +218,7 @@ fn error_message_includes_operator() {
     let e = err(&runner(), "a * b", opts);
     assert_eq!(e.error_code(), error_codes::OPERATOR_NOT_ALLOWED);
     assert!(e.reason().contains('*'));
+    assert!(e.reason().contains('+') || e.reason().contains("allowed"));
 }
 
 // ---------- AllowAll default ----------

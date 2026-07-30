@@ -92,10 +92,19 @@ impl MemberResolver {
         candidates: &[Vec<ClassRef>],
         arg_types: &[ClassRef],
     ) -> Option<usize> {
+        Self::resolve_best_match_with(candidates, arg_types, default_assignable)
+    }
+
+    /// 使用宿主注册表提供的继承关系选择最佳候选。
+    pub fn resolve_best_match_with(
+        candidates: &[Vec<ClassRef>],
+        arg_types: &[ClassRef],
+        is_assignable: impl Fn(&ClassRef, &ClassRef) -> bool,
+    ) -> Option<usize> {
         let mut best_match_index = None;
         let mut best_priority = MatchPriority::Mismatch.priority();
         for (i, candidate) in candidates.iter().enumerate() {
-            let priority = Self::resolve_priority(candidate, arg_types);
+            let priority = Self::resolve_priority_with(candidate, arg_types, &is_assignable);
             if priority > best_priority {
                 best_priority = priority;
                 best_match_index = Some(i);
@@ -108,12 +117,22 @@ impl MemberResolver {
     /// 方法优先级 = 各参数优先级的最小值;长度不等或任一参数不匹配即
     /// `MISMATCH`。
     pub fn resolve_priority(param_types: &[ClassRef], arg_types: &[ClassRef]) -> i32 {
+        Self::resolve_priority_with(param_types, arg_types, &default_assignable)
+    }
+
+    /// 使用显式类型继承判断计算方法优先级。
+    pub fn resolve_priority_with(
+        param_types: &[ClassRef],
+        arg_types: &[ClassRef],
+        is_assignable: &dyn Fn(&ClassRef, &ClassRef) -> bool,
+    ) -> i32 {
         if param_types.len() != arg_types.len() {
             return MatchPriority::Mismatch.priority();
         }
         let mut method_priority = MatchPriority::Equal.priority();
         for (param_type, arg_type) in param_types.iter().zip(arg_types.iter()) {
-            let param_priority = Self::resolve_arg_priority(param_type, arg_type);
+            let param_priority =
+                Self::resolve_arg_priority_with(param_type, arg_type, is_assignable);
             if param_priority == MatchPriority::Mismatch.priority() {
                 return param_priority;
             }
@@ -125,7 +144,11 @@ impl MemberResolver {
     }
 
     /// 对应 Java 私有方法 `resolveArgPriority(Class<?>, Class<?>)`。
-    fn resolve_arg_priority(param_type: &ClassRef, arg_type: &ClassRef) -> i32 {
+    fn resolve_arg_priority_with(
+        param_type: &ClassRef,
+        arg_type: &ClassRef,
+        is_assignable: &dyn Fn(&ClassRef, &ClassRef) -> bool,
+    ) -> i32 {
         if param_type == arg_type {
             return MatchPriority::Equal.priority();
         }
@@ -136,8 +159,12 @@ impl MemberResolver {
         }
 
         // Java 的 UNBOX 分支:包装类与原语类互转。Rust 中
-        // `ClassRef::from_name` 已把 `java.lang.Integer` 等归一到
-        // `Primitive`,故该情形已被上面的 EQUAL 覆盖。
+        // 常规解析会把包装类归一到 `Primitive`；显式注册的方法签名仍可
+        // 以 `Named("java.lang.*")` 保留包装类型，此时必须维持 Java 的
+        // UNBOX 优先级，避免与完全相同签名混淆。
+        if is_boxing_pair(param_type, arg_type) {
+            return MatchPriority::Unbox.priority();
+        }
 
         // 数值提升/窄化(Java: BasicUtil.numberPromoteLevel 双侧可比)。
         if let (Some(param_level), Some(arg_level)) = (
@@ -159,10 +186,47 @@ impl MemberResolver {
         // Java: argType == Nothing.class(null 实参)或
         // paramType.isAssignableFrom(argType)。Rust 无继承信息,
         // 仅复现 Nothing 与 Object 两种可赋值情形。
-        if is_nothing(arg_type) || param_type.is_java_object() {
+        if is_nothing(arg_type)
+            || param_type.is_java_object()
+            || is_assignable(param_type, arg_type)
+        {
             return MatchPriority::Extend.priority();
         }
         MatchPriority::Mismatch.priority()
+    }
+
+    /// 在带 `varargs` 标记的签名列表中选择最佳候选下标。
+    pub fn resolve_candidate_index(
+        candidates: &[(Vec<ClassRef>, bool)],
+        arg_types: &[ClassRef],
+        is_assignable: impl Fn(&ClassRef, &ClassRef) -> bool,
+    ) -> Option<usize> {
+        let fixed_indices: Vec<usize> = candidates
+            .iter()
+            .enumerate()
+            .filter_map(|(index, (_, var_args))| (!*var_args).then_some(index))
+            .collect();
+        let fixed_signatures: Vec<Vec<ClassRef>> = fixed_indices
+            .iter()
+            .map(|index| candidates[*index].0.clone())
+            .collect();
+        if let Some(index) =
+            Self::resolve_best_match_with(&fixed_signatures, arg_types, &is_assignable)
+        {
+            return Some(fixed_indices[index]);
+        }
+
+        let var_indices: Vec<usize> = candidates
+            .iter()
+            .enumerate()
+            .filter_map(|(index, (_, var_args))| (*var_args).then_some(index))
+            .collect();
+        let var_signatures: Vec<Vec<ClassRef>> = var_indices
+            .iter()
+            .map(|index| Self::adapt_2_var_arg_types(&candidates[*index].0, arg_types.len()))
+            .collect();
+        Self::resolve_best_match_with(&var_signatures, arg_types, is_assignable)
+            .map(|index| var_indices[index])
     }
 
     /// 对应 Java 私有方法 `adapt2VarArgTypes`:把可变参数签名按实参个数
@@ -178,6 +242,29 @@ impl MemberResolver {
             var_param_types.push(var_item_type.clone());
         }
         var_param_types
+    }
+}
+
+fn default_assignable(param_type: &ClassRef, arg_type: &ClassRef) -> bool {
+    param_type == arg_type || param_type.is_java_object()
+}
+
+fn is_boxing_pair(left: &ClassRef, right: &ClassRef) -> bool {
+    fn primitive_wrapper(class_ref: &ClassRef) -> Option<&'static str> {
+        match class_ref {
+            ClassRef::Primitive(target) => Some(target.java_name()),
+            ClassRef::Named(_) => None,
+        }
+    }
+
+    match (left, right) {
+        (ClassRef::Primitive(_), ClassRef::Named(right_name)) => {
+            primitive_wrapper(left) == Some(right_name.as_str())
+        }
+        (ClassRef::Named(left_name), ClassRef::Primitive(_)) => {
+            primitive_wrapper(right) == Some(left_name.as_str())
+        }
+        _ => false,
     }
 }
 
@@ -270,5 +357,49 @@ mod tests {
             &[named("com.alibaba.qlexpress4.runtime.Nothing")],
         );
         assert_eq!(priority, MatchPriority::Extend.priority());
+    }
+
+    /// 逐项对应 Java `MemberResolverTest#resolvePriorityTest`。
+    #[test]
+    fn java_resolve_priority_contract() {
+        let boolean_primitive = ClassRef::from_name("boolean");
+        let boolean_wrapper = ClassRef::Named("java.lang.Boolean".to_string());
+        assert_eq!(
+            MemberResolver::resolve_priority(&[boolean_primitive], &[boolean_wrapper]),
+            MatchPriority::Unbox.priority()
+        );
+        assert_eq!(
+            MemberResolver::resolve_priority(&[], &[]),
+            MatchPriority::Equal.priority()
+        );
+    }
+
+    /// 逐项对应 Java `MemberResolverTest#resolveConstructorTest` 的候选
+    /// 签名选择；Rust 构造器和方法共用同一签名解析器。
+    #[test]
+    fn java_constructor_candidate_priority_contract() {
+        let candidates = [
+            vec![named("java.lang.Number")],
+            vec![ClassRef::from_name("long")],
+            vec![named("java.lang.Long"), named("java.lang.Runnable")],
+            vec![ClassRef::from_name("long"), named("java.lang.Runnable")],
+        ];
+        assert_eq!(
+            MemberResolver::resolve_best_match(
+                &candidates[..2],
+                &[ClassRef::from_name("java.lang.Integer")],
+            ),
+            Some(1)
+        );
+        assert_eq!(
+            MemberResolver::resolve_best_match(
+                &candidates[2..],
+                &[
+                    named("java.lang.Long"),
+                    named("com.alibaba.qlexpress4.runtime.QLambda"),
+                ],
+            ),
+            Some(0)
+        );
     }
 }

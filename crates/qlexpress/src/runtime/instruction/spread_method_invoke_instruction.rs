@@ -108,7 +108,11 @@ impl SpreadMethodInvokeInstruction {
             return Ok(());
         }
         // If item itself is traversable, try to invoke method on it first
-        if let Some(method) = q_context.registry().resolve_method(item, &self.method_name) {
+        if let Some(method) =
+            q_context
+                .registry()
+                .resolve_method_for_args(item, &self.method_name, params)
+        {
             match invoke_native_method(item, &method, params) {
                 Ok(invoke_res) => {
                     result.push(invoke_res.get());

@@ -124,4 +124,23 @@ mod tests {
         assert_eq!(parameters.get_value(1), DataValue::Int(30));
         assert_eq!(stack.peak().get(), DataValue::Int(10));
     }
+
+    /// 逐项对应 Java `FixedSizeStackTest#pushPopTest`。
+    #[test]
+    fn java_push_pop_test_contract() {
+        let mut stack = FixedSizeStack::new(4);
+        for value in 1..=4 {
+            stack.push(DataValue::Int(value).into());
+        }
+        assert_eq!(stack.pop().get(), DataValue::Int(4));
+        assert_eq!(stack.pop().get(), DataValue::Int(3));
+        stack.push(DataValue::Int(5).into());
+        stack.push(DataValue::Int(6).into());
+
+        let parameters = stack.pop_n(3);
+        assert_eq!(parameters.get_value(0), DataValue::Int(2));
+        assert_eq!(parameters.get_value(1), DataValue::Int(5));
+        assert_eq!(parameters.get_value(2), DataValue::Int(6));
+        assert!(parameters.get(3).is_none());
+    }
 }

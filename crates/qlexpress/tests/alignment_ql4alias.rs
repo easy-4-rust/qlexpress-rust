@@ -22,7 +22,7 @@ use qlexpress::{Express4Runner, QLExpressType};
 #[derive(QLExpressType)]
 #[qlexpress(name = "com.example.Child7")]
 pub struct Child7 {
-    #[qlexpress(alias("测试静态字段"))]
+    #[qlexpress(alias("测试字段"))]
     pub value: i64,
 }
 
@@ -48,7 +48,7 @@ fn alias_field_access_chinese() {
     let nt = Child7::build_native_type();
     let aliases = nt.field_aliases.get("value");
     assert!(aliases.is_some());
-    assert!(aliases.unwrap().contains(&"测试静态字段".to_string()));
+    assert!(aliases.unwrap().contains(&"测试字段".to_string()));
 }
 
 #[test]
@@ -58,9 +58,9 @@ fn alias_field_access_via_runner() {
     let child: DataValue = Child7 { value: 8 }.into_data_value();
     let mut ctx = HashMap::new();
     ctx.insert("c".to_string(), child);
-    // 通过 alias "测试静态字段" 访问
+    // 通过 derive 生成的实例字段 alias 访问。
     let r = runner
-        .execute("c.测试静态字段", ctx, &opts())
+        .execute("c.测试字段", ctx, &opts())
         .expect("ok")
         .into_result();
     assert_eq!(r, DataValue::Long(8));
@@ -81,8 +81,72 @@ fn default_field_name_works() {
     assert_eq!(r, DataValue::Long(42));
 }
 
-// Silence unused NativeType warning from in-test reference.
-#[allow(dead_code)]
-fn _type_ref() -> NativeType {
-    Child7::build_native_type()
+fn register_java_alias_contract(runner: &mut Express4Runner) {
+    let mut native_type: NativeType = Child7::build_native_type();
+    native_type
+        .static_fields
+        .insert("staticValue".to_string(), DataValue::Int(8));
+    native_type
+        .field_aliases
+        .insert("staticValue".to_string(), vec!["测试静态字段".to_string()]);
+    native_type.static_methods.insert(
+        "staticMethod".to_string(),
+        Rc::new(|_bean, _args| Ok(DataValue::Int(11))),
+    );
+    native_type.methods.insert(
+        "memberMethod".to_string(),
+        Rc::new(|_bean, _args| Ok(DataValue::Int(10))),
+    );
+    native_type
+        .method_aliases
+        .insert("staticMethod".to_string(), vec!["测试静态方法".to_string()]);
+    native_type
+        .method_aliases
+        .insert("memberMethod".to_string(), vec!["测试方法".to_string()]);
+    runner.register_native_type(native_type);
+}
+
+/// 逐项对应 Java `QL4AliasTest#classFieldTest`。
+#[test]
+fn java_alias_static_field() {
+    let mut runner = runner();
+    register_java_alias_contract(&mut runner);
+    assert_eq!(
+        runner
+            .execute("Child7.测试静态字段", HashMap::new(), &opts())
+            .expect("static alias field")
+            .into_result(),
+        DataValue::Int(8)
+    );
+}
+
+/// 逐项对应 Java `QL4AliasTest#staticMethodTest`。
+#[test]
+fn java_alias_static_method() {
+    let mut runner = runner();
+    register_java_alias_contract(&mut runner);
+    assert_eq!(
+        runner
+            .execute("Child7.测试静态方法()", HashMap::new(), &opts())
+            .expect("static alias method")
+            .into_result(),
+        DataValue::Int(11)
+    );
+}
+
+/// 逐项对应 Java `QL4AliasTest#memberMethodTest`。
+#[test]
+fn java_alias_member_method() {
+    let mut runner = runner();
+    register_java_alias_contract(&mut runner);
+    let child: DataValue = Child7 { value: 8 }.into_data_value();
+    let mut context = HashMap::new();
+    context.insert("child".to_string(), child);
+    assert_eq!(
+        runner
+            .execute("child.测试方法()", context, &opts())
+            .expect("member alias method")
+            .into_result(),
+        DataValue::Int(10)
+    );
 }

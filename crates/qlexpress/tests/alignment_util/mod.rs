@@ -113,20 +113,29 @@ pub fn biz_error(message: impl Into<String>) -> QLException {
     )
 }
 
+fn wrap_assert_message(q_context: &dyn QContext, message: &str) -> String {
+    let test_path = q_context
+        .attachment()
+        .get("TEST_PATH")
+        .map(DataValue::string_value_of)
+        .unwrap_or_else(|| "null".to_string());
+    format!("{test_path}: {message}")
+}
+
 /// 对应 Java `TestSuiteRunner.AssertFunction`:
 /// `assert(bool)` / `assert(bool, message)`,为 false 或 null 时抛
 /// `UserDefineException`(BIZ_EXCEPTION)。
-fn assert_function(_ctx: &mut dyn QContext, params: &Parameters) -> Result<DataValue, QLException> {
+fn assert_function(ctx: &mut dyn QContext, params: &Parameters) -> Result<DataValue, QLException> {
     match params.size() {
         1 => match params.get_value(0) {
             DataValue::Bool(true) => Ok(DataValue::Null),
-            _ => Err(biz_error("assert fail")),
+            _ => Err(biz_error(wrap_assert_message(ctx, "assert fail"))),
         },
         2 => match params.get_value(0) {
             DataValue::Bool(true) => Ok(DataValue::Null),
             _ => match params.get_value(1) {
-                DataValue::Str(msg) => Err(biz_error(msg)),
-                _ => Err(biz_error("assert fail")),
+                DataValue::Str(msg) => Err(biz_error(wrap_assert_message(ctx, &msg))),
+                _ => Err(biz_error(wrap_assert_message(ctx, "assert fail"))),
             },
         },
         n => Err(biz_error(format!("invalid parameter size: {n}"))),
@@ -135,19 +144,19 @@ fn assert_function(_ctx: &mut dyn QContext, params: &Parameters) -> Result<DataV
 
 /// 对应 Java `TestSuiteRunner.AssertFalseFunction`。
 fn assert_false_function(
-    _ctx: &mut dyn QContext,
+    ctx: &mut dyn QContext,
     params: &Parameters,
 ) -> Result<DataValue, QLException> {
     match params.size() {
         1 => match params.get_value(0) {
             DataValue::Bool(false) => Ok(DataValue::Null),
-            _ => Err(biz_error("assert fail")),
+            _ => Err(biz_error(wrap_assert_message(ctx, "assert fail"))),
         },
         2 => match params.get_value(0) {
             DataValue::Bool(false) => Ok(DataValue::Null),
             _ => match params.get_value(1) {
-                DataValue::Str(msg) => Err(biz_error(msg)),
-                _ => Err(biz_error("assert fail")),
+                DataValue::Str(msg) => Err(biz_error(wrap_assert_message(ctx, &msg))),
+                _ => Err(biz_error(wrap_assert_message(ctx, "assert fail"))),
             },
         },
         n => Err(biz_error(format!("invalid parameter size: {n}"))),

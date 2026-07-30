@@ -12,6 +12,8 @@ use qlexpress::api::parsecache::SerializableParseCache;
 use qlexpress::init_options::InitOptions;
 use qlexpress::ql_options::QLOptions;
 use qlexpress::runtime::context::EmptyContext;
+use qlexpress::runtime::parameters::Parameters;
+use qlexpress::runtime::qcontext::QContext;
 use qlexpress::runtime::trace::TraceType;
 use qlexpress::runtime::value::DataValue;
 use qlexpress::Express4Runner;
@@ -63,6 +65,21 @@ fn static_trace_tree_matches_java_examples() {
             "      | VALUE false\n",
         ),
         function[0].to_pretty_string(0)
+    );
+
+    let in_operator = runner
+        .get_expression_trace_points("'ab' in ['cc', 'dd', 'ff']")
+        .expect("in 操作符追踪解析成功");
+    assert_eq!(
+        concat!(
+            "OPERATOR in\n",
+            "  | VALUE 'ab'\n",
+            "  | LIST [\n",
+            "      | VALUE 'cc'\n",
+            "      | VALUE 'dd'\n",
+            "      | VALUE 'ff'\n",
+        ),
+        in_operator[0].to_pretty_string(0)
     );
 }
 
@@ -186,4 +203,318 @@ fn static_trace_covers_java_visitor_statement_and_expression_shapes() {
         assert!(points[0].line() >= 1, "line for {script:?}");
         assert!(points[0].position() >= 0, "position for {script:?}");
     }
+}
+
+/// 完整复刻 Java `Express4RunnerTest#expressionTraceTest` 的运行时断言。
+#[test]
+fn java_expression_trace_test_complete_contract() {
+    let runner = trace_runner();
+    assert!(runner.add_function(
+        "myTest",
+        |_context: &mut dyn QContext, parameters: &Parameters| {
+            Ok(DataValue::Bool(matches!(
+                parameters.get_value(0),
+                DataValue::Int(value) if value > 10
+            )))
+        }
+    ));
+    let options = QLOptions::builder().trace_expression(true).build();
+
+    let result = runner
+        .execute(
+            "a && (!myTest(11) || false)",
+            HashMap::from([("a".to_string(), DataValue::Bool(true))]),
+            &options,
+        )
+        .expect("primary trace");
+    assert_eq!(result.result(), &DataValue::Bool(false));
+    assert_eq!(result.expression_traces().len(), 1);
+    assert_eq!(
+        result.expression_traces()[0].to_pretty_string(0),
+        concat!(
+            "OPERATOR && false\n",
+            "  | VARIABLE a true\n",
+            "  | OPERATOR || false\n",
+            "      | OPERATOR ! false\n",
+            "          | FUNCTION myTest true\n",
+            "              | VALUE 11 11\n",
+            "      | VALUE false false\n",
+        )
+    );
+
+    let short = runner
+        .execute(
+            "(a && true) && (!myTest(11) || false)",
+            HashMap::from([("a".to_string(), DataValue::Bool(false))]),
+            &options,
+        )
+        .expect("short-circuit trace");
+    assert_eq!(
+        short.expression_traces()[0].to_pretty_string(0),
+        concat!(
+            "OPERATOR && false\n",
+            "  | OPERATOR && false\n",
+            "      | VARIABLE a false\n",
+            "      | VALUE true \n",
+            "  | OPERATOR || \n",
+            "      | OPERATOR ! \n",
+            "          | FUNCTION myTest \n",
+            "              | VALUE 11 \n",
+            "      | VALUE false \n",
+        )
+    );
+    assert!(short.expression_traces()[0].children()[0].is_evaluated());
+    assert!(!short.expression_traces()[0].children()[1].is_evaluated());
+
+    let in_result = runner
+        .execute(
+            "'ab' in ['cc', 'dd', 'ff']",
+            HashMap::new(),
+            &options,
+        )
+        .expect("in trace");
+    assert_eq!(in_result.result(), &DataValue::Bool(false));
+    assert_eq!(
+        in_result.expression_traces()[0].to_pretty_string(0),
+        concat!(
+            "OPERATOR in false\n",
+            "  | VALUE 'ab' ab\n",
+            "  | LIST [ [cc, dd, ff]\n",
+            "      | VALUE 'cc' cc\n",
+            "      | VALUE 'dd' dd\n",
+            "      | VALUE 'ff' ff\n",
+        )
+    );
+
+    let ternary = runner
+        .execute("true? 2: 1;false? 2: 1", HashMap::new(), &options)
+        .expect("ternary traces");
+    assert_eq!(
+        ternary.expression_traces()[0].to_pretty_string(0),
+        "OPERATOR ? 2\n  | VALUE true true\n  | VALUE 2 2\n  | VALUE 1 \n"
+    );
+    assert_eq!(
+        ternary.expression_traces()[1].to_pretty_string(0),
+        "OPERATOR ? 1\n  | VALUE false false\n  | VALUE 2 \n  | VALUE 1 1\n"
+    );
+
+    let if_result = runner
+        .execute("if(true) {11} else {13}", HashMap::new(), &options)
+        .expect("if trace");
+    assert_eq!(
+        if_result.expression_traces()[0].to_pretty_string(0),
+        concat!(
+            "IF if 11\n",
+            "  | VALUE true true\n",
+            "  | BLOCK { 11\n",
+            "      | VALUE 11 11\n",
+            "  | BLOCK { \n",
+            "      | VALUE 13 \n",
+        )
+    );
+
+    let assign = runner
+        .execute("aab = 11", HashMap::new(), &options)
+        .expect("new assignment trace");
+    assert_eq!(
+        assign.expression_traces()[0].to_pretty_string(0),
+        "OPERATOR = 11\n  | VARIABLE aab null\n  | VALUE 11 11\n"
+    );
+    let assign_change = runner
+        .execute(
+            "aab = 111",
+            HashMap::from([("aab".to_string(), DataValue::Int(100))]),
+            &options,
+        )
+        .expect("existing assignment trace");
+    assert_eq!(
+        assign_change.expression_traces()[0].to_pretty_string(0),
+        "OPERATOR = 111\n  | VARIABLE aab 100\n  | VALUE 111 111\n"
+    );
+
+    let function_field = runner
+        .execute(
+            "m = {bbb:6};aaa = () -> m;aaa().bbb=10;m.bbb",
+            HashMap::new(),
+            &options,
+        )
+        .expect("function field assignment trace");
+    assert_eq!(function_field.result(), &DataValue::Int(10));
+    assert_eq!(
+        function_field.expression_traces()[0].to_pretty_string(0),
+        "OPERATOR = {bbb=10}\n  | VARIABLE m null\n  | MAP { {bbb=10}\n"
+    );
+    assert_eq!(
+        function_field.expression_traces()[2].to_pretty_string(0),
+        concat!(
+            "OPERATOR = 10\n",
+            "  | FIELD bbb 6\n",
+            "      | FUNCTION aaa \n",
+            "  | VALUE 10 10\n",
+        )
+    );
+
+    let block = runner
+        .execute("a = {m=10;m+11}", HashMap::new(), &options)
+        .expect("block trace");
+    assert_eq!(
+        block.expression_traces()[0].to_pretty_string(0),
+        concat!(
+            "OPERATOR = 21\n",
+            "  | VARIABLE a null\n",
+            "  | BLOCK { 21\n",
+            "      | OPERATOR = 10\n",
+            "          | VARIABLE m null\n",
+            "          | VALUE 10 10\n",
+            "      | OPERATOR + 21\n",
+            "          | VARIABLE m 10\n",
+            "          | VALUE 11 11\n",
+        )
+    );
+
+    let nested_if = runner
+        .execute(
+            "if(false) {11} else if (1>10) {15} else {}",
+            HashMap::new(),
+            &options,
+        )
+        .expect("nested if trace");
+    assert_eq!(
+        nested_if.expression_traces()[0].to_pretty_string(0),
+        concat!(
+            "IF if null\n",
+            "  | VALUE false false\n",
+            "  | BLOCK { \n",
+            "      | VALUE 11 \n",
+            "  | IF if null\n",
+            "      | OPERATOR > false\n",
+            "          | VALUE 1 1\n",
+            "          | VALUE 10 10\n",
+            "      | BLOCK { \n",
+            "          | VALUE 15 \n",
+            "      | BLOCK { null\n",
+        )
+    );
+
+    let statement_cases = [
+        ("int a = 1;", "STATEMENT int null\n"),
+        ("while(false) {m=10}", "STATEMENT while null\n"),
+        (
+            "for(int i=0; i<3; i++) {i}",
+            "STATEMENT for null\n",
+        ),
+        (
+            "for(int item : [1,2,3]) {item}",
+            "STATEMENT for null\n",
+        ),
+        (
+            "function testFunc() {return 10}",
+            "DEFINE_FUNCTION testFunc null\n",
+        ),
+        (
+            "macro testMacro {return 20}",
+            "DEFINE_MACRO testMacro null\n",
+        ),
+        ("break", "STATEMENT break null\n"),
+        ("continue", "STATEMENT continue null\n"),
+    ];
+    for (script, expected) in statement_cases {
+        let traced = runner
+            .execute(script, HashMap::new(), &options)
+            .unwrap_or_else(|error| panic!("{script:?} failed: {error}"));
+        assert_eq!(traced.expression_traces()[0].to_pretty_string(0), expected);
+    }
+
+    let throw_branch = runner
+        .execute("if (true) 10 else throw 1", HashMap::new(), &options)
+        .expect("throw branch trace");
+    assert_eq!(
+        throw_branch.expression_traces()[0].to_pretty_string(0),
+        "IF if 10\n  | VALUE true true\n  | VALUE 10 10\n  | STATEMENT throw \n"
+    );
+
+    let function_condition = runner
+        .execute("if (myTest(11)) 10 else 1", HashMap::new(), &options)
+        .expect("function condition trace");
+    assert_eq!(
+        function_condition.expression_traces()[0].to_pretty_string(0),
+        concat!(
+            "IF if 10\n",
+            "  | FUNCTION myTest true\n",
+            "      | VALUE 11 11\n",
+            "  | VALUE 10 10\n",
+            "  | VALUE 1 \n",
+        )
+    );
+
+    let returned = runner
+        .execute("return 1+1", HashMap::new(), &options)
+        .expect("return trace");
+    assert_eq!(
+        returned.expression_traces()[0].to_pretty_string(0),
+        concat!(
+            "RETURN return 2\n",
+            "  | OPERATOR + 2\n",
+            "      | VALUE 1 1\n",
+            "      | VALUE 1 1\n",
+        )
+    );
+
+    let empty = runner
+        .execute(";;;;", HashMap::new(), &options)
+        .expect("empty statement trace");
+    assert_eq!(empty.expression_traces().len(), 1);
+    assert_eq!(
+        empty.expression_traces()[0].to_pretty_string(0),
+        "STATEMENT ; \n"
+    );
+    assert_eq!(
+        runner
+            .execute("a=1;;;;", HashMap::new(), &options)
+            .expect("filtered empty statements")
+            .expression_traces()
+            .len(),
+        1
+    );
+
+    let switched = runner
+        .execute(
+            concat!(
+                "switch (a + b) {\n",
+                "  case 30:\n",
+                "    result = a * 2;\n",
+                "    break;\n",
+                "  default:\n",
+                "    result = 0;\n",
+                "}\nreturn result;"
+            ),
+            HashMap::from([
+                ("a".to_string(), DataValue::Int(1)),
+                ("b".to_string(), DataValue::Int(29)),
+            ]),
+            &options,
+        )
+        .expect("switch trace");
+    assert_eq!(switched.result(), &DataValue::Int(2));
+    assert_eq!(
+        switched.expression_traces()[0].to_pretty_string(0),
+        concat!(
+            "SWITCH switch null\n",
+            "  | OPERATOR + 30\n",
+            "      | VARIABLE a 1\n",
+            "      | VARIABLE b 29\n",
+            "  | VALUE 30 30\n",
+            "  | BLOCK result null\n",
+            "      | OPERATOR = 2\n",
+            "          | VARIABLE result null\n",
+            "          | OPERATOR * 2\n",
+            "              | VARIABLE a 1\n",
+            "              | VALUE 2 2\n",
+            "      | STATEMENT break null\n",
+            "  | BLOCK result \n",
+            "      | OPERATOR = \n",
+            "          | VARIABLE result \n",
+            "          | VALUE 0 \n",
+        )
+    );
 }

@@ -79,11 +79,17 @@ impl QLImport {
     /// equivalent validates an empty class path.
     pub fn import_cls_alias(cls_path: impl Into<String>, alias: impl Into<String>) -> Self {
         let cls_path = cls_path.into();
+        let alias = alias.into();
         assert!(!cls_path.is_empty(), "Class cannot be null");
+        assert!(!alias.is_empty(), "Alias cannot be null or empty");
+        assert!(
+            alias.chars().next().is_some_and(char::is_uppercase),
+            "Alias must start with an uppercase letter: {alias}"
+        );
         QLImport {
             scope: ImportScope::Alias,
             target: cls_path,
-            alias: Some(alias.into()),
+            alias: Some(alias),
         }
     }
 
@@ -459,5 +465,113 @@ mod tests {
         ]);
         assert_eq!(result.cls(), Some("java.util.HashMap"));
         assert_eq!(result.rest_index(), 3);
+    }
+
+    fn java_test_supplier() -> DefaultClassSupplier {
+        let mut supplier = DefaultClassSupplier::instance();
+        supplier.register("java.util.function.Function");
+        supplier.register("com.alibaba.qlexpress4.aparser.ImportManagerTest");
+        supplier.register("com.alibaba.qlexpress4.aparser.ImportManagerTest$TestImportInner");
+        supplier.register(
+            "com.alibaba.qlexpress4.aparser.ImportManagerTest$TestImportInner$TestImportInner2",
+        );
+        supplier
+    }
+
+    /// 逐项对应 Java `ImportManagerTest#loadTest`。
+    #[test]
+    fn java_load_test_contract() {
+        let supplier = java_test_supplier();
+        let mut manager = ImportManager::new(&supplier, vec![]);
+        let function = vec!["Function".to_string()];
+        assert!(manager.load_part_qualified(&function).cls().is_none());
+
+        assert!(manager.add_import(QLImport::import_pack("java.util.function")));
+        let imported = manager.load_part_qualified(&function);
+        assert_eq!(imported.cls(), Some("java.util.function.Function"));
+        assert_eq!(imported.rest_index(), 1);
+
+        let qualified = ["java", "util", "function", "Function", "a", "b"]
+            .into_iter()
+            .map(String::from)
+            .collect::<Vec<_>>();
+        let qualified_result = manager.load_part_qualified(&qualified);
+        assert_eq!(qualified_result.cls(), Some("java.util.function.Function"));
+        assert_eq!(qualified_result.rest_index(), 4);
+
+        let nested = [
+            "com",
+            "alibaba",
+            "qlexpress4",
+            "aparser",
+            "ImportManagerTest",
+            "TestImportInner",
+            "TestImportInner2",
+        ]
+        .into_iter()
+        .map(String::from)
+        .collect::<Vec<_>>();
+        assert_eq!(
+            manager.load_part_qualified(&nested).cls(),
+            Some(
+                "com.alibaba.qlexpress4.aparser.ImportManagerTest$TestImportInner$TestImportInner2"
+            )
+        );
+
+        let function_value = ["Function", "value"]
+            .into_iter()
+            .map(String::from)
+            .collect::<Vec<_>>();
+        let function_value_result = manager.load_part_qualified(&function_value);
+        assert_eq!(
+            function_value_result.cls(),
+            Some("java.util.function.Function")
+        );
+        assert_eq!(function_value_result.rest_index(), 1);
+
+        let function_type_value = ["Function", "TT", "v"]
+            .into_iter()
+            .map(String::from)
+            .collect::<Vec<_>>();
+        assert_eq!(
+            manager
+                .load_part_qualified(&function_type_value)
+                .rest_index(),
+            1
+        );
+    }
+
+    /// 逐项对应 Java `ImportManagerTest#loadInnerTest`。
+    #[test]
+    fn java_load_inner_test_contract() {
+        let supplier = java_test_supplier();
+        let manager = ImportManager::new(
+            &supplier,
+            vec![QLImport::import_inner_cls(
+                "com.alibaba.qlexpress4.aparser.ImportManagerTest",
+            )],
+        );
+
+        let nested = ["TestImportInner", "TestImportInner2"]
+            .into_iter()
+            .map(String::from)
+            .collect::<Vec<_>>();
+        assert_eq!(
+            manager.load_part_qualified(&nested).cls(),
+            Some(
+                "com.alibaba.qlexpress4.aparser.ImportManagerTest$TestImportInner$TestImportInner2"
+            )
+        );
+
+        let field = ["TestImportInner", "testImportInner2"]
+            .into_iter()
+            .map(String::from)
+            .collect::<Vec<_>>();
+        let field_result = manager.load_part_qualified(&field);
+        assert_eq!(
+            field_result.cls(),
+            Some("com.alibaba.qlexpress4.aparser.ImportManagerTest$TestImportInner")
+        );
+        assert_eq!(field_result.rest_index(), 1);
     }
 }

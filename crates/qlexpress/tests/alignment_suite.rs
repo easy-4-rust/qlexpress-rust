@@ -15,6 +15,48 @@ use alignment_util::{
     expect_err_code, expect_err_code_with, expect_null, expect_ok, expect_ok_with,
 };
 use qlexpress::ql_options::QLOptions;
+use qlexpress::runtime::value::DataValue;
+
+/// 逐项对应 Java `TestSuiteRunner#assertTest`，验证测试路径附件、
+/// `BIZ_EXCEPTION` 错误码/原因，以及函数名和变量名可共存。
+#[test]
+fn suite_runner_assert_contract() {
+    let runner = alignment_util::suite_runner();
+    let mut attachments = std::collections::HashMap::new();
+    attachments.insert(
+        "TEST_PATH".to_string(),
+        DataValue::Str("a/b.ql".to_string()),
+    );
+    let options = QLOptions::builder().attachments(attachments).build();
+
+    runner
+        .execute("assert(true)", std::collections::HashMap::new(), &options)
+        .expect("true assertion");
+
+    let default_error = runner
+        .execute("assert(false)", std::collections::HashMap::new(), &options)
+        .expect_err("false assertion");
+    assert_eq!(default_error.error_code(), "BIZ_EXCEPTION");
+    assert_eq!(default_error.reason(), "a/b.ql: assert fail");
+
+    let custom_error = runner
+        .execute(
+            "assert(false, 'my test')",
+            std::collections::HashMap::new(),
+            &options,
+        )
+        .expect_err("false assertion with message");
+    assert_eq!(custom_error.error_code(), "BIZ_EXCEPTION");
+    assert_eq!(custom_error.reason(), "a/b.ql: my test");
+
+    runner
+        .execute(
+            "assert = 4;assert(assert == 4)",
+            std::collections::HashMap::new(),
+            &QLOptions::builder().build(),
+        )
+        .expect("variable may share function name");
+}
 
 /// 对应 Java testsuite 脚本 `testsuite/independent/array/array_index_out_of_bound.ql`。
 #[test]

@@ -27,18 +27,25 @@ struct HostDesk;
 
 impl NativeObject for HostDesk {
     fn get_field(&self, name: &str) -> Option<DataValue> {
-        (name == "book").then(|| DataValue::Str("Thinking in Rust".to_string()))
+        match name {
+            "book" | "book1" | "getBook1" => {
+                Some(DataValue::Str("Thinking in Rust".to_string()))
+            }
+            "book2" | "getBook2" => Some(DataValue::Str("Effective Rust".to_string())),
+            _ => None,
+        }
     }
 
     fn call_method(&mut self, name: &str, _args: &[DataValue]) -> Result<DataValue, QLException> {
-        if name == "bookCount" {
-            Ok(DataValue::Int(1))
-        } else {
-            Err(QLException::for_test(
+        match name {
+            "bookCount" => Ok(DataValue::Int(1)),
+            "getBook1" => Ok(DataValue::Str("Thinking in Rust".to_string())),
+            "getBook2" => Ok(DataValue::Str("Effective Rust".to_string())),
+            _ => Err(QLException::for_test(
                 QLExceptionKind::Runtime,
                 "method not found",
                 error_codes::METHOD_NOT_FOUND,
-            ))
+            )),
         }
     }
 
@@ -208,6 +215,112 @@ fn black_list_blocks_listed_members() {
         &QLOptions::builder().build(),
     );
     assert!(r.is_err());
+}
+
+fn desk_runner(strategy: QLSecurityStrategy) -> Express4Runner {
+    use qlexpress::runtime::native_type::NativeType;
+
+    let mut runner = Express4Runner::with_init_options(
+        InitOptions::builder().security_strategy(strategy).build(),
+    );
+    let mut desk_type = NativeType::named("com.example.HostDesk");
+    for (method, value) in [
+        ("getBook1", "Thinking in Rust"),
+        ("getBook2", "Effective Rust"),
+    ] {
+        let field_value = value.to_string();
+        desk_type.fields.insert(
+            method.to_string(),
+            Rc::new(move |_bean| Some(DataValue::Str(field_value.clone()))),
+        );
+        desk_type
+            .field_aliases
+            .insert(method.to_string(), vec![method.trim_start_matches("get").to_lowercase()]);
+        let method_value = value.to_string();
+        desk_type.methods.insert(
+            method.to_string(),
+            Rc::new(move |_bean, args| {
+                assert!(args.is_empty());
+                Ok(DataValue::Str(method_value.clone()))
+            }),
+        );
+    }
+    runner.register_native_type(desk_type);
+    runner
+}
+
+/// 完整对应 Java `Express4RunnerTest#securityStrategyTest` 的四种策略。
+#[test]
+fn java_express4_runner_security_strategy_test() {
+    use qlexpress::security::ql_security_strategy::NativeMember;
+    use std::collections::HashSet;
+
+    let isolation = desk_runner(QLSecurityStrategy::isolation());
+    assert_eq!(
+        isolation
+            .execute("desk.book1", host_context(), &QLOptions::default())
+            .expect_err("isolation field")
+            .error_code(),
+        error_codes::FIELD_NOT_FOUND
+    );
+    assert_eq!(
+        isolation
+            .execute("desk.getBook2()", host_context(), &QLOptions::default())
+            .expect_err("isolation method")
+            .error_code(),
+        error_codes::METHOD_NOT_FOUND
+    );
+
+    let get_book2 = NativeMember::new("com.example.HostDesk", "getBook2");
+    let black = desk_runner(QLSecurityStrategy::black_list(HashSet::from([
+        get_book2.clone(),
+    ])));
+    assert_eq!(
+        black
+            .execute("desk.book2", host_context(), &QLOptions::default())
+            .expect_err("blacklisted getter property")
+            .error_code(),
+        error_codes::FIELD_NOT_FOUND
+    );
+    assert_eq!(
+        black
+            .execute("desk.book1", host_context(), &QLOptions::default())
+            .expect("non-blacklisted field")
+            .result(),
+        &DataValue::Str("Thinking in Rust".to_string())
+    );
+
+    let white = desk_runner(QLSecurityStrategy::white_list(HashSet::from([
+        get_book2,
+    ])));
+    assert_eq!(
+        white
+            .execute("desk.getBook2()", host_context(), &QLOptions::default())
+            .expect("whitelisted method")
+            .result(),
+        &DataValue::Str("Effective Rust".to_string())
+    );
+    assert_eq!(
+        white
+            .execute("desk.getBook1()", host_context(), &QLOptions::default())
+            .expect_err("non-whitelisted method")
+            .error_code(),
+        error_codes::METHOD_NOT_FOUND
+    );
+
+    let open = desk_runner(QLSecurityStrategy::open());
+    assert_eq!(
+        open.execute("desk.book1", host_context(), &QLOptions::default())
+            .expect("open field")
+            .result(),
+        &DataValue::Str("Thinking in Rust".to_string())
+    );
+    assert_eq!(
+        open.execute("desk.getBook2()", host_context(), &QLOptions::default())
+            .expect("open method")
+            .result(),
+        &DataValue::Str("Effective Rust".to_string())
+    );
 }
 
 // ---------- CheckOptions / static analysis ----------

@@ -53,7 +53,10 @@ impl NewFilledInstanceInstruction {
 
     /// Java `newInstance`: zero-arg constructor.
     fn new_instance(&self, q_context: &dyn QContext) -> Result<DataValue, QLException> {
-        let Some(constructor) = q_context.registry().load_constructor(&self.new_cls) else {
+        let Some(constructor) = q_context
+            .registry()
+            .load_constructor_for_args(&self.new_cls, &[])
+        else {
             return Err(self.error_reporter.report(
                 error_codes::INVOKE_CONSTRUCTOR_UNKNOWN_ERROR,
                 error_codes::error_msg(error_codes::INVOKE_CONSTRUCTOR_UNKNOWN_ERROR),

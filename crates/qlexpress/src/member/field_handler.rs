@@ -37,6 +37,7 @@ impl Preferred {
         // 真名命中(Java: propertyName.equals(field.getName()))。
         if native_type.fields.contains_key(property_name)
             || native_type.static_fields.contains_key(property_name)
+            || native_type.static_field_cells.contains_key(property_name)
         {
             return Some(property_name.to_string());
         }

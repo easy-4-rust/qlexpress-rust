@@ -45,7 +45,10 @@ impl QLambdaMethod {
     pub fn call(&self, params: &[DataValue]) -> Result<QResult, QLException> {
         if let Some(meta_clz) = as_meta_class(&self.bean) {
             // Static method path (Java `bean instanceof MetaClass`).
-            if let Some(method) = self.registry.resolve_method(&self.bean, &self.method_name) {
+            if let Some(method) =
+                self.registry
+                    .resolve_method_for_args(&self.bean, &self.method_name, params)
+            {
                 let value =
                     crate::runtime::member::invoke_native_method(&self.bean, &method, params)?;
                 return Ok(QResult::Return(value.get()));
@@ -61,7 +64,7 @@ impl QLambdaMethod {
             let rest = &params[1..];
             if self
                 .registry
-                .resolve_method(&params[0], &self.method_name)
+                .resolve_method_for_args(&params[0], &self.method_name, &params[1..])
                 .is_none()
             {
                 return Err(self.method_not_found(rest));

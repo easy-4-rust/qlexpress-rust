@@ -26,6 +26,13 @@ pub fn generate(
         .map(|f| gen_field_entry(f, qlexpress_path))
         .collect();
 
+    let field_setter_entries: Vec<TokenStream> = item
+        .fields
+        .iter()
+        .filter(|f| !f.attrs.skip && !f.attrs.readonly)
+        .map(|f| gen_field_setter_entry(f, qlexpress_path))
+        .collect();
+
     let field_alias_entries: Vec<TokenStream> = item
         .fields
         .iter()
@@ -44,6 +51,9 @@ pub fn generate(
 
     let mut combined = TokenStream::new();
     for entry in field_entries {
+        combined.extend(entry);
+    }
+    for entry in field_setter_entries {
         combined.extend(entry);
     }
     for entry in field_alias_entries {
@@ -69,7 +79,7 @@ pub fn generate(
             {
                 use ::std::collections::HashMap;
                 use #qlexpress_path::runtime::member::{
-                    NativeFieldGetter, NativeType,
+                    NativeFieldGetter, NativeFieldSetter, NativeType,
                 };
 
                 let mut t = NativeType::named(#type_name);
@@ -77,6 +87,27 @@ pub fn generate(
                 #combined
                 t
             }
+        }
+    }
+}
+
+fn gen_field_setter_entry(f: &FieldSpec, qlexpress_path: &syn::Path) -> TokenStream {
+    let path = qlexpress_path;
+    let name = f.ident.to_string();
+    quote! {
+        {
+            let s: NativeFieldSetter = ::std::rc::Rc::new(
+                move |
+                    bean: & #path::runtime::value::DataValue,
+                    value: & #path::runtime::value::DataValue,
+                | -> bool {
+                    let Some(cell) = bean.as_object_ref() else {
+                        return false;
+                    };
+                    cell.borrow_mut().set_field(#name, value)
+                }
+            );
+            t.field_setters.insert(#name.to_string(), s);
         }
     }
 }

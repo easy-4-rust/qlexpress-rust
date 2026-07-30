@@ -19,9 +19,35 @@ pub struct DefaultClassSupplier {
 }
 
 impl DefaultClassSupplier {
-    /// Java `DefaultClassSupplier.getInstance()` — 一个空供应器。
+    /// Java `DefaultClassSupplier.getInstance()`。Java 通过 `Class.forName`
+    /// 天然能解析 JDK 类型；Rust 预注册运行时内建实现与常用接口，保证默认
+    /// `java.lang` / `java.util` / `java.math` 导入具有同样的可解析性。
     pub fn instance() -> Self {
-        DefaultClassSupplier::default()
+        let mut supplier = DefaultClassSupplier::default();
+        for qualified_name in [
+            "java.lang.Object",
+            "java.lang.String",
+            "java.lang.Boolean",
+            "java.lang.Integer",
+            "java.lang.Long",
+            "java.lang.Double",
+            "java.lang.System",
+            "java.lang.RuntimeException",
+            "java.lang.NullPointerException",
+            "java.lang.Iterable",
+            "java.util.Collection",
+            "java.util.List",
+            "java.util.ArrayList",
+            "java.util.Set",
+            "java.util.HashSet",
+            "java.util.Map",
+            "java.util.HashMap",
+            "java.util.LinkedHashMap",
+            "java.math.BigInteger",
+        ] {
+            supplier.register(qualified_name);
+        }
+        supplier
     }
 
     /// 注册一个可加载类型名(Rust 替代类路径可见性)。
@@ -45,11 +71,15 @@ mod tests {
     #[test]
     fn registered_names_load() {
         let mut supplier = DefaultClassSupplier::instance();
-        assert_eq!(supplier.load_cls("java.lang.String"), None);
-        supplier.register("java.lang.String");
         assert_eq!(
             supplier.load_cls("java.lang.String"),
             Some("java.lang.String".to_string())
+        );
+        assert_eq!(supplier.load_cls("com.example.HostType"), None);
+        supplier.register("com.example.HostType");
+        assert_eq!(
+            supplier.load_cls("com.example.HostType"),
+            Some("com.example.HostType".to_string())
         );
     }
 }

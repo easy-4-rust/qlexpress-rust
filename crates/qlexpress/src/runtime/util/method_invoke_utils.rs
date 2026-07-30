@@ -81,7 +81,7 @@ pub fn find_method_and_invoke(
     registry: &NativeRegistry,
     error_reporter: &dyn ErrorReporter,
 ) -> Result<QValue, QLException> {
-    if let Some(method) = registry.resolve_method(bean, method_name) {
+    if let Some(method) = registry.resolve_method_for_args(bean, method_name, params) {
         return invoke_native_method(bean, &method, params);
     }
     // 宿主对象动态分派(NativeObject::call_method,对应 Java 反射调用)。

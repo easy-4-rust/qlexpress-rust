@@ -94,7 +94,6 @@ fn build_expression_trace(
     path: &mut TracePath,
     expression_trace_map: &mut HashMap<i32, TracePath>,
 ) -> ExpressionTrace {
-    expression_trace_map.insert(point.position(), path.clone());
     let children = point
         .children()
         .iter()
@@ -106,6 +105,10 @@ fn build_expression_trace(
             trace
         })
         .collect();
+    // Java `convertPoint2Trace` 先递归 children，最后 `traceMap.put`
+    // 当前节点。多个 trace point 共享源码起点时（典型是 switch case 的
+    // BLOCK 与首条赋值），父节点必须覆盖子节点的索引。
+    expression_trace_map.insert(point.position(), path.clone());
     ExpressionTrace::new(
         point.trace_type(),
         point.token(),
