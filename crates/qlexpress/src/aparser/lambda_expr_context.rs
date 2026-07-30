@@ -15,6 +15,8 @@ pub struct LambdaExprContext {
     pub lbrace: Option<TerminalNode>,
     /// 该语法规则中的 `block_statements` 子节点、终结符或节点集合。
     pub block_statements: Option<Box<Node>>,
+    /// 块形式 Lambda 的右花括号。
+    pub rbrace: Option<TerminalNode>,
     /// 该语法规则中的 `expression` 子节点、终结符或节点集合。
     pub expression: Option<Box<Node>>,
 }

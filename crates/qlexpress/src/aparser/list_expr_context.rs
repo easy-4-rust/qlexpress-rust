@@ -11,4 +11,6 @@ pub struct ListExprContext {
     pub lbrack: TerminalNode,
     /// 该语法规则中的 `list_items` 子节点、终结符或节点集合。
     pub list_items: Option<Box<Node>>,
+    /// 列表字面量右方括号。
+    pub rbrack: TerminalNode,
 }

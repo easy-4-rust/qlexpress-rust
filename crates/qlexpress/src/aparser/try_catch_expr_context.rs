@@ -9,8 +9,12 @@ use super::terminal_node::TerminalNode;
 pub struct TryCatchExprContext {
     /// 该语法规则中的 `try_token` 子节点、终结符或节点集合。
     pub try_token: TerminalNode,
+    /// try 主体左花括号。
+    pub lbrace: TerminalNode,
     /// 该语法规则中的 `block_statements` 子节点、终结符或节点集合。
     pub block_statements: Option<Box<Node>>,
+    /// try 主体右花括号。
+    pub rbrace: TerminalNode,
     /// 该语法规则中的 `try_catches` 子节点、终结符或节点集合。
     pub try_catches: Option<Box<Node>>,
     /// 该语法规则中的 `try_finally` 子节点、终结符或节点集合。

@@ -94,3 +94,20 @@ pub(crate) fn push_all<'a>(out: &mut Vec<ChildRef<'a>>, list: &'a [Node]) {
         out.push(n(node));
     }
 }
+
+/// 按 `节点, 分隔符, 节点...` 的 Java `children` 顺序写入列表。
+///
+/// `separators` 可以与 `nodes` 等长，用于保留 Java 允许的尾随逗号；
+/// 也可以比 `nodes` 少一个，用于普通分隔列表。
+pub(crate) fn push_interleaved<'a>(
+    out: &mut Vec<ChildRef<'a>>,
+    nodes: &'a [Node],
+    separators: &'a [TerminalNode],
+) {
+    for (index, node) in nodes.iter().enumerate() {
+        out.push(n(node));
+        if let Some(separator) = separators.get(index) {
+            out.push(t(separator));
+        }
+    }
+}

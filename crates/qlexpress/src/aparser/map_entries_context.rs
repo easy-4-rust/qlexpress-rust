@@ -12,4 +12,6 @@ pub struct MapEntriesContext {
     pub empty_colon: Option<TerminalNode>,
     /// 该语法规则中的 `entries` 子节点、终结符或节点集合。
     pub entries: Vec<Node>,
+    /// Map 条目之间以及可选尾部的逗号。
+    pub commas: Vec<TerminalNode>,
 }

@@ -14,8 +14,8 @@ use crate::runtime::value::DataValue;
 /// (职责:把 `Class<?>` 作为脚本值传递,支持静态字段/静态方法访问与
 /// `instanceof` 右操作数;存储于 `DataValue::Object` 内)。
 ///
-/// Java 版还实现了 `equals`/`hashCode`(按 `clz` 比较);Rust 侧脚本相等
-/// 语义由操作符层处理,这里通过 [`as_meta_class`] 取回 `ClassRef` 后比较。
+/// `PartialEq/Eq/Hash` 全部仅按 `clz`，对应 Java `equals/hashCode`。
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct MetaClass {
     /// 被包装的类(Java `Class<?> clz`)。
     clz: ClassRef,
@@ -75,5 +75,29 @@ pub fn as_meta_class(value: &DataValue) -> Option<ClassRef> {
             .map(|meta| meta.clz.clone())
     } else {
         None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+
+    use super::*;
+
+    /// `SOURCE_PARITY`：Java `MetaClass#equals/hashCode` 仅取决于 `clz`。
+    #[test]
+    fn equality_and_hash_code_are_class_based() {
+        let first = MetaClass::new(ClassRef::from_name("java.lang.String"));
+        let same = MetaClass::new(ClassRef::from_name("java.lang.String"));
+        let different = MetaClass::new(ClassRef::from_name("java.lang.Integer"));
+        assert_eq!(first, same);
+        assert_ne!(first, different);
+
+        let mut first_hash = DefaultHasher::new();
+        first.hash(&mut first_hash);
+        let mut same_hash = DefaultHasher::new();
+        same.hash(&mut same_hash);
+        assert_eq!(first_hash.finish(), same_hash.finish());
     }
 }

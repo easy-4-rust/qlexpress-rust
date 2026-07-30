@@ -11,4 +11,6 @@ pub struct GroupExprContext {
     pub lparen: TerminalNode,
     /// 该语法规则中的 `expression` 子节点、终结符或节点集合。
     pub expression: Box<Node>,
+    /// 分组表达式右圆括号。
+    pub rparen: TerminalNode,
 }

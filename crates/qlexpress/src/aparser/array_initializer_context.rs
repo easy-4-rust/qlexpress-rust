@@ -11,4 +11,6 @@ pub struct ArrayInitializerContext {
     pub lbrace: TerminalNode,
     /// 该语法规则中的 `initializers` 子节点、终结符或节点集合。
     pub initializers: Option<Box<Node>>,
+    /// 数组初始化器右花括号。
+    pub rbrace: TerminalNode,
 }

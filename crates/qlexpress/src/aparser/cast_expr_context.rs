@@ -11,6 +11,8 @@ pub struct CastExprContext {
     pub lparen: TerminalNode,
     /// 该语法规则中的 `decl_type` 子节点、终结符或节点集合。
     pub decl_type: Box<Node>,
+    /// 类型转换声明后的右圆括号。
+    pub rparen: TerminalNode,
     /// 该语法规则中的 `primary` 子节点、终结符或节点集合。
     pub primary: Box<Node>,
 }

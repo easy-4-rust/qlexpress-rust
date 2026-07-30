@@ -11,6 +11,10 @@ pub struct MacroStatementContext {
     pub macro_token: TerminalNode,
     /// 该语法规则中的 `var_id` 子节点、终结符或节点集合。
     pub var_id: Box<Node>,
+    /// 宏体左花括号。
+    pub lbrace: TerminalNode,
     /// 该语法规则中的 `block_statements` 子节点、终结符或节点集合。
     pub block_statements: Option<Box<Node>>,
+    /// 宏体右花括号。
+    pub rbrace: TerminalNode,
 }

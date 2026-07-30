@@ -11,6 +11,8 @@ pub struct ThenBodyContext {
     pub lbrace: Option<TerminalNode>,
     /// 该语法规则中的 `block_statements` 子节点、终结符或节点集合。
     pub block_statements: Option<Box<Node>>,
+    /// 花括号形式 then 体的右花括号。
+    pub rbrace: Option<TerminalNode>,
     /// 该语法规则中的 `non_expression_statement` 子节点、终结符或节点集合。
     pub non_expression_statement: Option<Box<Node>>,
     /// 该语法规则中的 `expression` 子节点、终结符或节点集合。

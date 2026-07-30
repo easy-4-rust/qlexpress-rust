@@ -754,6 +754,7 @@ mod tests {
             })),
             question: None,
             then_expr: None,
+            colon: None,
             else_expr: None,
         });
 

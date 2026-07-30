@@ -11,4 +11,6 @@ pub struct ImportPackContext {
     pub import_token: TerminalNode,
     /// 该语法规则中的 `var_ids` 子节点、终结符或节点集合。
     pub var_ids: Vec<Node>,
+    /// import 声明结尾分号。Java 不把包通配符本身加入 `children`。
+    pub semi: TerminalNode,
 }

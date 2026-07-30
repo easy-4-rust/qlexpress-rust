@@ -9,6 +9,10 @@ use super::terminal_node::TerminalNode;
 pub struct TryFinallyContext {
     /// 该语法规则中的 `finally_token` 子节点、终结符或节点集合。
     pub finally_token: TerminalNode,
+    /// finally 主体左花括号。
+    pub lbrace: TerminalNode,
     /// 该语法规则中的 `block_statements` 子节点、终结符或节点集合。
     pub block_statements: Option<Box<Node>>,
+    /// finally 主体右花括号。
+    pub rbrace: TerminalNode,
 }

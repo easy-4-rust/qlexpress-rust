@@ -9,12 +9,18 @@ use super::terminal_node::TerminalNode;
 pub struct QlIfContext {
     /// 该语法规则中的 `if_token` 子节点、终结符或节点集合。
     pub if_token: TerminalNode,
+    /// 条件左圆括号。
+    pub lparen: TerminalNode,
     /// 该语法规则中的 `then_keyword` 子节点、终结符或节点集合。
     pub then_keyword: Option<TerminalNode>,
     /// 该语法规则中的 `condition` 子节点、终结符或节点集合。
     pub condition: Box<Node>,
+    /// 条件右圆括号。
+    pub rparen: TerminalNode,
     /// 该语法规则中的 `then_body` 子节点、终结符或节点集合。
     pub then_body: Box<Node>,
     /// 该语法规则中的 `else_body` 子节点、终结符或节点集合。
     pub else_body: Option<Box<Node>>,
+    /// `else` 关键字；无 else 分支时为 `None`。
+    pub else_keyword: Option<TerminalNode>,
 }

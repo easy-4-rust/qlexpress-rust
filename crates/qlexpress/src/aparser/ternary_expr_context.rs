@@ -13,6 +13,8 @@ pub struct TernaryExprContext {
     pub question: Option<TerminalNode>,
     /// 该语法规则中的 `then_expr` 子节点、终结符或节点集合。
     pub then_expr: Option<Box<Node>>,
+    /// 三元表达式冒号；无三元分支时为 `None`。
+    pub colon: Option<TerminalNode>,
     /// 该语法规则中的 `else_expr` 子节点、终结符或节点集合。
     pub else_expr: Option<Box<Node>>,
 }

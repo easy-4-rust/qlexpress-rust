@@ -78,6 +78,7 @@ pub use runtime::value::{DataValue, NativeObject, QValue, Value};
 /// 对应 Java `runtime.function.CustomFunction` / `api.*` /
 /// `runtime.operator.CustomBinaryOperator`。
 pub use api::{BatchAddFunctionResult, QLFunctionalVarargs};
+pub use annotation::{QLFunctionMethod, QLFunctionProvider};
 pub use runtime::function::CustomFunction;
 pub use runtime::operator::custom_binary_operator::CustomBinaryOperator;
 

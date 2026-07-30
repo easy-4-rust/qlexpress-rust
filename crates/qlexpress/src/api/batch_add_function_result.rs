@@ -1,15 +1,16 @@
 //! 批量注册函数结果,对应 Java `com.alibaba.qlexpress4.api.BatchAddFunctionResult`。
-//! 职责:记录批量 `addFunction` 中每个函数名的注册成败(部分失败语义)。
+//! 职责:记录批量 `addFunction` 中每个条目的注册成败(部分失败语义)。
 
 /// 批量注册函数结果。对应 Java: com.alibaba.qlexpress4.api.BatchAddFunctionResult
 ///
-/// Java 语义:批量注册时单个函数失败不会中断整体,成功的函数名进 `succ`
-/// 列表,失败的进 `fail` 列表;调用方通过 `getSucc()` / `getFail()` 读取。
+/// Java 语义:批量注册时单个条目失败不会中断整体。脚本定义批量入口记录
+/// 函数名；`addObjFunction/addStaticFunction` 按 Java 原实现记录宿主方法原名
+/// （同一方法有多个别名时可重复出现）。
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct BatchAddFunctionResult {
-    /// 注册成功的函数名列表。对应 Java 字段 `succ`。
+    /// 注册成功的条目标识列表。对应 Java 字段 `succ`。
     succ: Vec<String>,
-    /// 注册失败的函数名列表。对应 Java 字段 `fail`。
+    /// 注册失败的条目标识列表。对应 Java 字段 `fail`。
     fail: Vec<String>,
 }
 

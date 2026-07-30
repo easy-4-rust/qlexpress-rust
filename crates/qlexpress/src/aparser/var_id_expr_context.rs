@@ -13,4 +13,6 @@ pub struct VarIdExprContext {
     pub lparen: Option<TerminalNode>,
     /// 该语法规则中的 `argument_list` 子节点、终结符或节点集合。
     pub argument_list: Option<Box<Node>>,
+    /// 调用右圆括号；普通变量引用时为 `None`。
+    pub rparen: Option<TerminalNode>,
 }

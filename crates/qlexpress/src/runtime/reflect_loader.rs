@@ -7,6 +7,9 @@
 
 use std::rc::Rc;
 
+use crate::exception::error_codes;
+use crate::exception::error_reporter::ErrorReporter;
+use crate::exception::QLException;
 use crate::runtime::class_ref::ClassRef;
 use crate::runtime::function::{as_native_method, ExtensionFunction};
 use crate::runtime::native_registry::NativeRegistry;
@@ -110,6 +113,35 @@ impl ReflectLoader {
     /// 获取当前成员安全策略。对应 Java `securityStrategy` 字段。
     pub fn security_strategy(&self) -> QLSecurityStrategy {
         self.registry.security_strategy()
+    }
+
+    /// 将原生方法调用失败转换为带脚本位置的运行时异常。
+    ///
+    /// 对应 Java 静态方法
+    /// `ReflectLoader#unwrapMethodInvokeEx(ErrorReporter, String, Exception)`。
+    /// Rust 原生闭包不会产生 JVM `InvocationTargetException` 包装：
+    /// `INVOKE_METHOD_WITH_WRONG_ARGUMENTS` 对应 `IllegalArgumentException`，
+    /// 其余由调用目标返回的错误对应 `InvocationTargetException#getTargetException`。
+    /// JVM 反射访问层的“未知异常”在安全 Rust 闭包调用模型中不可产生。
+    pub fn unwrap_method_invoke_ex(
+        error_reporter: &dyn ErrorReporter,
+        method_name: &str,
+        error: QLException,
+    ) -> QLException {
+        if error.error_code() == error_codes::INVOKE_METHOD_WITH_WRONG_ARGUMENTS {
+            return error_reporter.report_format(
+                error_codes::INVOKE_METHOD_WITH_WRONG_ARGUMENTS,
+                error_codes::error_msg(error_codes::INVOKE_METHOD_WITH_WRONG_ARGUMENTS),
+                &[method_name.to_string()],
+            );
+        }
+        error_reporter
+            .report_format(
+                error_codes::INVOKE_METHOD_INNER_ERROR,
+                error_codes::error_msg(error_codes::INVOKE_METHOD_INNER_ERROR),
+                &[method_name.to_string()],
+            )
+            .with_cause(error)
     }
 }
 

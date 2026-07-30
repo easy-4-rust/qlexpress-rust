@@ -15,6 +15,7 @@ use crate::runtime::meta_class::as_meta_class;
 use crate::runtime::native_registry::NativeRegistry;
 use crate::runtime::native_type::NativeMethod;
 use crate::runtime::qlambda::QLambda;
+use crate::runtime::reflect_loader::ReflectLoader;
 use crate::runtime::value::{DataValue, QValue};
 
 /// 调用已解析的原生方法。对应 Java `MethodInvokeUtils.invokeIMethod`
@@ -36,10 +37,10 @@ pub fn invoke_native_method(
 /// Rust 侧脚本失败已是 `QLException`,与 Java 的「原样重抛」分支一致。
 pub fn invoke_i_method(
     bean: &DataValue,
-    _method_name: &str,
+    method_name: &str,
     method: &Rc<dyn IMethod>,
     params: &[DataValue],
-    _error_reporter: &dyn ErrorReporter,
+    error_reporter: &dyn ErrorReporter,
 ) -> Result<QValue, QLException> {
     let target_types: Vec<_> = method
         .parameter_types()
@@ -51,7 +52,12 @@ pub fn invoke_i_method(
     if !method.is_access() {
         method.set_accessible(true);
     }
-    method.invoke(bean, &convert_result).map(QValue::Data)
+    method
+        .invoke(bean, &convert_result)
+        .map(QValue::Data)
+        .map_err(|error| {
+            ReflectLoader::unwrap_method_invoke_ex(error_reporter, method_name, error)
+        })
 }
 
 /// 对应 Java 私有方法 `MethodInvokeUtils.findQLambdaInstance`:
@@ -83,17 +89,7 @@ pub fn find_method_and_invoke(
 ) -> Result<QValue, QLException> {
     if let Some(method) = registry.resolve_method_for_args(bean, method_name, params) {
         return invoke_native_method(bean, &method, params).map_err(|error| {
-            if error.is_host_origin() {
-                error_reporter
-                    .report_format(
-                        error_codes::INVOKE_METHOD_INNER_ERROR,
-                        error_codes::error_msg(error_codes::INVOKE_METHOD_INNER_ERROR),
-                        &[method_name.to_string()],
-                    )
-                    .with_cause(error)
-            } else {
-                error
-            }
+            ReflectLoader::unwrap_method_invoke_ex(error_reporter, method_name, error)
         });
     }
     // 宿主对象动态分派(NativeObject::call_method,对应 Java 反射调用)。
@@ -111,17 +107,11 @@ pub fn find_method_and_invoke(
                 .borrow_mut()
                 .call_method(method_name, params)
                 .map_err(|error| {
-                    if error.is_host_origin() {
-                        error_reporter
-                            .report_format(
-                                error_codes::INVOKE_METHOD_INNER_ERROR,
-                                error_codes::error_msg(error_codes::INVOKE_METHOD_INNER_ERROR),
-                                &[method_name.to_string()],
-                            )
-                            .with_cause(error)
-                    } else {
-                        error
-                    }
+                    ReflectLoader::unwrap_method_invoke_ex(
+                        error_reporter,
+                        method_name,
+                        error,
+                    )
                 })?;
             return Ok(QValue::Data(result));
         }

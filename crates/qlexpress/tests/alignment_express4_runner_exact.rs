@@ -30,7 +30,7 @@ use qlexpress::runtime::parameters::Parameters;
 use qlexpress::runtime::qcontext::QContext;
 use qlexpress::runtime::value::{DataValue, QValue};
 use qlexpress::security::ql_security_strategy::QLSecurityStrategy;
-use qlexpress::Express4Runner;
+use qlexpress::{Express4Runner, QLFunctionMethod, QLFunctionProvider};
 
 fn assert_integer(value: &DataValue, expected: i64) {
     match value {
@@ -1516,4 +1516,98 @@ fn java_extension_function_test() {
         .execute("1.add2(2,3)", HashMap::new(), &QLOptions::default())
         .expect("number add2 extension");
     assert_integer(add2.result(), 6);
+}
+
+fn annotated_constant(value: i32) -> Rc<dyn CustomFunction> {
+    Rc::new(
+        move |_context: &mut dyn QContext, _parameters: &Parameters| {
+            Ok(DataValue::Int(value))
+        },
+    )
+}
+
+struct AnnotatedObjectFunctions;
+
+impl QLFunctionProvider for AnnotatedObjectFunctions {
+    fn ql_object_function_methods(&self) -> Vec<QLFunctionMethod> {
+        vec![
+            // Java 先检查 public，因此未标注的 private 方法也进入 fail。
+            QLFunctionMethod::new("hidden", false, None, annotated_constant(-1)),
+            // public 且未标注的方法被忽略。
+            QLFunctionMethod::new("ignored", true, None, annotated_constant(-1)),
+            QLFunctionMethod::new(
+                "sum",
+                true,
+                Some(vec!["annotated".to_string(), "duplicate".to_string()]),
+                annotated_constant(7),
+            ),
+            QLFunctionMethod::new(
+                "second",
+                true,
+                Some(vec!["duplicate".to_string()]),
+                annotated_constant(9),
+            ),
+        ]
+    }
+}
+
+struct AnnotatedStaticFunctions;
+
+impl QLFunctionProvider for AnnotatedStaticFunctions {
+    fn ql_static_function_methods() -> Vec<QLFunctionMethod> {
+        vec![QLFunctionMethod::new(
+            "staticValue",
+            true,
+            Some(vec!["staticValue".to_string()]),
+            annotated_constant(11),
+        )]
+    }
+}
+
+/// `SOURCE_PARITY`：Java `Express4Runner#addObjFunction` 的声明方法扫描、
+/// 非公开失败、无注解忽略、多别名重复记录和 put-if-absent 冲突语义。
+#[test]
+fn java_add_obj_function_annotation_scan() {
+    let runner = Express4Runner::new();
+    let result = runner.add_obj_function(&AnnotatedObjectFunctions);
+
+    assert_eq!(
+        result.get_succ(),
+        &vec!["sum".to_string(), "sum".to_string()]
+    );
+    assert_eq!(
+        result.get_fail(),
+        &vec!["hidden".to_string(), "second".to_string()]
+    );
+    assert_integer(
+        runner
+            .execute("annotated()", HashMap::new(), &QLOptions::default())
+            .expect("annotated function")
+            .result(),
+        7,
+    );
+    // duplicate 保留第一个注册的方法。
+    assert_integer(
+        runner
+            .execute("duplicate()", HashMap::new(), &QLOptions::default())
+            .expect("first duplicate function")
+            .result(),
+        7,
+    );
+}
+
+/// `SOURCE_PARITY`：Java `Express4Runner#addStaticFunction(Class<?>)`。
+#[test]
+fn java_add_static_function_annotation_scan() {
+    let runner = Express4Runner::new();
+    let result = runner.add_static_function::<AnnotatedStaticFunctions>();
+    assert_eq!(result.get_succ(), &vec!["staticValue".to_string()]);
+    assert!(result.get_fail().is_empty());
+    assert_integer(
+        runner
+            .execute("staticValue()", HashMap::new(), &QLOptions::default())
+            .expect("static annotated function")
+            .result(),
+        11,
+    );
 }

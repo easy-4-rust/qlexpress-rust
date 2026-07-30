@@ -5,6 +5,10 @@
 
 pub mod ql_alias;
 pub mod ql_function;
+pub mod ql_function_method;
+pub mod ql_function_provider;
 
 pub use ql_alias::QLAlias;
 pub use ql_function::QLFunction;
+pub use ql_function_method::QLFunctionMethod;
+pub use ql_function_provider::QLFunctionProvider;

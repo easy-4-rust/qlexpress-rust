@@ -49,6 +49,8 @@ use crate::api::parsecache::serializable_parse_cache_importer::{
 };
 use crate::api::parsecache::{LoadedCompileCache, LoadedParseCache, SerializableParseCache};
 use crate::api::ql_functional_varargs::QLFunctionalVarargs;
+use crate::annotation::ql_function_method::QLFunctionMethod;
+use crate::annotation::ql_function_provider::QLFunctionProvider;
 use crate::check_options::CheckOptions;
 use crate::exception::ql_syntax_exception::QLSyntaxException;
 use crate::exception::QLException;
@@ -78,6 +80,7 @@ use crate::runtime::qcontext::QContext;
 use crate::runtime::qlambda_trace::QLambdaTrace;
 use crate::runtime::qlambda_definition::QLambdaDefinition;
 use crate::runtime::qlambda_definition_inner::QLambdaDefinitionInner;
+use crate::utils::ql_function_util::QLFunctionUtil;
 use crate::runtime::qvm_global_scope::QvmGlobalScope;
 use crate::runtime::qvm_runtime::{current_time_millis, QvmRuntime};
 use crate::runtime::reflect_loader::ReflectLoader;
@@ -1102,6 +1105,59 @@ impl Express4Runner {
                 result.add_succ(name);
             } else {
                 result.add_fail(name);
+            }
+        }
+        result
+    }
+
+    /// 扫描并注册实例方法上的 `@QLFunction` 元数据。
+    ///
+    /// 对应 Java `addObjFunction(Object)`。Rust 由
+    /// [`QLFunctionProvider`] 显式提供 `getDeclaredMethods()` 等价清单；
+    /// 非公开方法先进入失败列表，公开且带注解的方法按每个别名尝试
+    /// `putIfAbsent` 注册。结果列表记录宿主方法原名，与 Java 完全一致。
+    pub fn add_obj_function<P>(&self, object: &P) -> BatchAddFunctionResult
+    where
+        P: QLFunctionProvider + ?Sized,
+    {
+        self.add_function_by_annotation(object.ql_object_function_methods())
+    }
+
+    /// 扫描并注册类型静态方法上的 `@QLFunction` 元数据。
+    ///
+    /// 对应 Java `addStaticFunction(Class<?>)`；Rust 以类型参数代替 JVM
+    /// `Class<?>`，其余成功/失败与重复名称语义与实例入口相同。
+    pub fn add_static_function<P>(&self) -> BatchAddFunctionResult
+    where
+        P: QLFunctionProvider,
+    {
+        self.add_function_by_annotation(P::ql_static_function_methods())
+    }
+
+    /// Java 私有方法 `addFunctionByAnnotation(Class<?>, Object)` 的 Rust
+    /// 显式元数据适配。
+    fn add_function_by_annotation(
+        &self,
+        methods: Vec<QLFunctionMethod>,
+    ) -> BatchAddFunctionResult {
+        let mut result = BatchAddFunctionResult::new();
+        for method in methods {
+            if !method.is_public() {
+                result.add_fail(method.method_name());
+                continue;
+            }
+            let function_names = method.function_names();
+            if !QLFunctionUtil::contains_ql_function_for_method(function_names) {
+                continue;
+            }
+            for function_name in QLFunctionUtil::get_ql_function_value(function_names)
+                .unwrap_or_default()
+            {
+                if self.add_function_shared(function_name, method.function()) {
+                    result.add_succ(method.method_name());
+                } else {
+                    result.add_fail(method.method_name());
+                }
             }
         }
         result

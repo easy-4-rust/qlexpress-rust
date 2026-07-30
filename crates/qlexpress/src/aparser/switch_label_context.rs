@@ -13,4 +13,6 @@ pub struct SwitchLabelContext {
     pub default_token: Option<TerminalNode>,
     /// 该语法规则中的 `expression` 子节点、终结符或节点集合。
     pub expression: Option<Box<Node>>,
+    /// 标签末尾冒号。
+    pub colon: TerminalNode,
 }

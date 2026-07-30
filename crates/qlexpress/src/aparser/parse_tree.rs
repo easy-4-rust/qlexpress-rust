@@ -16,16 +16,89 @@ impl Node {
     }
 
     /// 节点文本(孩子文本拼接)。对应 Java 方法 `ParseTree.getText`。
-    /// Java `ParseTree.getText`: concatenation of the stored child texts.
-    ///
-    /// Punctuation Java keeps only in the untyped child list (parentheses,
-    /// commas) is omitted; token-level texts match Java exactly.
+    /// Java `ParseTree.getText`: concatenation of every stored child text,
+    /// including punctuation retained by `expectInto`/`consumeNode`.
     pub fn text(&self) -> String {
         let mut out = String::new();
         for child in self.children() {
             out.push_str(&child.text());
         }
         out
+    }
+
+    /// 判断当前规则节点是否没有孩子。对应 Java `RuleContext#isEmpty()`。
+    pub fn is_empty(&self) -> bool {
+        self.children().is_empty()
+    }
+
+    /// 返回直接孩子数量。对应 Java `RuleContext#getChildCount()`。
+    pub fn child_count(&self) -> usize {
+        self.children().len()
+    }
+
+    /// 返回指定位置的直接孩子。
+    ///
+    /// 与 Java `RuleContext#getChild(int)` 相同，索引越界时会 panic
+    /// （对应 Java `IndexOutOfBoundsException`）。
+    pub fn child(&self, index: usize) -> ChildRef<'_> {
+        self.children()[index]
+    }
+
+    /// 返回满足谓词的第 `index` 个规则孩子。
+    ///
+    /// 这是 Java `RuleContext#getChild(Class<T>, int)` 的 Rust 类型安全
+    /// 适配；未找到时返回 `None`，对应 Java 的 `null`。
+    pub fn rule_child(
+        &self,
+        index: usize,
+        mut predicate: impl FnMut(&Node) -> bool,
+    ) -> Option<&Node> {
+        self.children()
+            .into_iter()
+            .filter_map(|child| match child {
+                ChildRef::Node(node) if predicate(node) => Some(node),
+                _ => None,
+            })
+            .nth(index)
+    }
+
+    /// 返回全部满足谓词的规则孩子。
+    ///
+    /// 对应 Java `RuleContext#getRuleContexts(Class<T>)`。
+    pub fn rule_contexts(
+        &self,
+        mut predicate: impl FnMut(&Node) -> bool,
+    ) -> Vec<&Node> {
+        self.children()
+            .into_iter()
+            .filter_map(|child| match child {
+                ChildRef::Node(node) if predicate(node) => Some(node),
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// 返回第一个指定 token 类型的直接终结符。
+    ///
+    /// 对应 Java `RuleContext#tokenNode(int)`。
+    pub fn token_node(&self, token_type: i32) -> Option<&super::terminal_node::TerminalNode> {
+        self.children().into_iter().find_map(|child| match child {
+            ChildRef::Term(term) if term.symbol().token_type() == token_type => Some(term),
+            _ => None,
+        })
+    }
+
+    /// 返回全部指定 token 类型的直接终结符。
+    ///
+    /// 对应 Java `RuleContext#tokenNodes(int)`。
+    pub fn token_nodes(&self, token_type: i32) -> Vec<&super::terminal_node::TerminalNode> {
+        self.children()
+            .into_iter()
+            .filter_map(|child| match child {
+                ChildRef::Term(term) if term.symbol().token_type() == token_type => Some(term),
+                _ => None,
+            })
+            .collect()
     }
 
     /// 节点覆盖的第一个 token。对应 Java 方法 `RuleContext.getStart`。
@@ -48,6 +121,132 @@ impl Node {
     /// 对应 Java: com.alibaba.qlexpress4.aparser.ParseTree#line。
     pub fn line(&self) -> Option<i32> {
         self.start_token().map(Token::line)
+    }
+
+    /// 以 Java `RuleContext#toStringTree()` 格式输出语法树。
+    pub fn to_string_tree(&self) -> String {
+        let children = self.children();
+        if children.is_empty() {
+            return self.text();
+        }
+        let mut output = format!("({}", self.rule_name());
+        for child in children {
+            output.push(' ');
+            match child {
+                ChildRef::Node(node) => output.push_str(&node.to_string_tree()),
+                ChildRef::Term(term) => output.push_str(term.text()),
+            }
+        }
+        output.push(')');
+        output
+    }
+
+    /// 返回 Java `*Context` 去掉 `Context` 后的规则名称。
+    fn rule_name(&self) -> &'static str {
+        macro_rules! rule_name {
+            ($($variant:ident),* $(,)?) => {
+                match self {
+                    $(Node::$variant(_) => stringify!($variant)),*
+                }
+            };
+        }
+        rule_name!(
+            Program,
+            BlockStatements,
+            LocalVariableDeclarationStatement,
+            ThrowStatement,
+            WhileStatement,
+            TraditionalForStatement,
+            ForEachStatement,
+            FunctionStatement,
+            MacroStatement,
+            BreakContinueStatement,
+            ReturnStatement,
+            EmptyStatement,
+            ExpressionStatement,
+            NonExpressionStatement,
+            LocalVariableDeclaration,
+            ForInit,
+            VariableDeclaratorList,
+            VariableDeclarator,
+            VariableDeclaratorId,
+            VariableInitializer,
+            ArrayInitializer,
+            VariableInitializerList,
+            DeclType,
+            DeclTypeNoArr,
+            PrimitiveType,
+            ClsType,
+            Dims,
+            DimExprs,
+            Expression,
+            LeftHandSide,
+            AssignOperator,
+            TernaryExpr,
+            BaseExpr,
+            LeftAsso,
+            Binaryop,
+            Primary,
+            PrefixExpress,
+            SuffixExpress,
+            ConstExpr,
+            CastExpr,
+            GroupExpr,
+            NewObjExpr,
+            NewEmptyArrExpr,
+            NewInitArrExpr,
+            VarIdExpr,
+            TypeExpr,
+            ListExpr,
+            ListItems,
+            MapExpr,
+            BlockExpr,
+            ContextSelectExpr,
+            QlIf,
+            ThenBody,
+            ElseBody,
+            SwitchExpr,
+            SwitchCaseGroups,
+            SwitchStatementGroup,
+            SwitchExprGroup,
+            SwitchLabels,
+            SwitchLabel,
+            SwitchExpressionLabel,
+            ExpressionList,
+            TryCatchExpr,
+            TryCatches,
+            TryCatch,
+            CatchParams,
+            TryFinally,
+            MapEntries,
+            MapEntry,
+            ClsValue,
+            EValue,
+            IdKey,
+            StringKey,
+            QuoteStringKey,
+            MethodInvoke,
+            FieldAccess,
+            MethodAccess,
+            IndexExpr,
+            CustomPath,
+            FieldId,
+            SingleIndex,
+            SliceIndex,
+            ArgumentList,
+            Literal,
+            DoubleQuoteStringLiteral,
+            StringExpression,
+            BoolenLiteral,
+            LambdaExpr,
+            LambdaParameters,
+            FormalOrInferredParameterList,
+            FormalOrInferredParameter,
+            ImportCls,
+            ImportPack,
+            OpId,
+            VarId
+        )
     }
 
     /// 双分派到类型化 Visitor 方法。对应 Java 方法 `*Context.accept`。

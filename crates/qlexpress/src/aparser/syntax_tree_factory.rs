@@ -4,7 +4,9 @@
 //! [`Node::accept`] 派发至同名 Visitor 方法,等价于 Java 的运行时 accept(visitor) 双分派。
 //! 本文件由 `syntax_tree.rs` 拆分而来(SPEC §5.5 一类一文件),仅移动代码与补充中文注释,行为完全一致。
 
-use super::rule_context::{n, push_all, push_opt, push_opt_term, t, ChildRef, HasChildren};
+use super::rule_context::{
+    n, push_all, push_interleaved, push_opt, push_opt_term, t, ChildRef, HasChildren,
+};
 
 pub use super::argument_list_context::ArgumentListContext;
 pub use super::array_initializer_context::ArrayInitializerContext;
@@ -184,18 +186,29 @@ impl HasChildren for ThrowStatementContext {
 
 impl HasChildren for WhileStatementContext {
     fn children(&self) -> Vec<ChildRef<'_>> {
-        let mut out = vec![t(&self.while_token), n(&self.expression)];
+        let mut out = vec![
+            t(&self.while_token),
+            t(&self.lparen),
+            n(&self.expression),
+            t(&self.rparen),
+            t(&self.lbrace),
+        ];
         push_opt(&mut out, &self.block_statements);
+        out.push(t(&self.rbrace));
         out
     }
 }
 
 impl HasChildren for TraditionalForStatementContext {
     fn children(&self) -> Vec<ChildRef<'_>> {
-        let mut out = vec![t(&self.for_token), n(&self.for_init)];
+        let mut out = vec![t(&self.for_token), t(&self.lparen), n(&self.for_init)];
         push_opt(&mut out, &self.for_condition);
+        out.push(t(&self.condition_semi));
         push_opt(&mut out, &self.for_update);
+        out.push(t(&self.rparen));
+        out.push(t(&self.lbrace));
         push_opt(&mut out, &self.block_statements);
+        out.push(t(&self.rbrace));
         out
     }
 }
@@ -212,28 +225,40 @@ impl HasChildren for ForInitContext {
 
 impl HasChildren for ForEachStatementContext {
     fn children(&self) -> Vec<ChildRef<'_>> {
-        let mut out = vec![t(&self.for_token)];
+        let mut out = vec![t(&self.for_token), t(&self.lparen)];
         push_opt(&mut out, &self.decl_type);
         out.push(n(&self.var_id));
+        out.push(t(&self.colon));
         out.push(n(&self.expression));
+        out.push(t(&self.rparen));
+        out.push(t(&self.lbrace));
         push_opt(&mut out, &self.block_statements);
+        out.push(t(&self.rbrace));
         out
     }
 }
 
 impl HasChildren for FunctionStatementContext {
     fn children(&self) -> Vec<ChildRef<'_>> {
-        let mut out = vec![t(&self.function_token), n(&self.var_id)];
+        let mut out = vec![
+            t(&self.function_token),
+            n(&self.var_id),
+            t(&self.lparen),
+        ];
         push_opt(&mut out, &self.params);
+        out.push(t(&self.rparen));
+        out.push(t(&self.lbrace));
         push_opt(&mut out, &self.block_statements);
+        out.push(t(&self.rbrace));
         out
     }
 }
 
 impl HasChildren for MacroStatementContext {
     fn children(&self) -> Vec<ChildRef<'_>> {
-        let mut out = vec![t(&self.macro_token), n(&self.var_id)];
+        let mut out = vec![t(&self.macro_token), n(&self.var_id), t(&self.lbrace)];
         push_opt(&mut out, &self.block_statements);
+        out.push(t(&self.rbrace));
         out
     }
 }
@@ -278,13 +303,16 @@ impl HasChildren for LocalVariableDeclarationContext {
 
 impl HasChildren for VariableDeclaratorListContext {
     fn children(&self) -> Vec<ChildRef<'_>> {
-        self.variables.iter().map(n).collect()
+        let mut out = Vec::new();
+        push_interleaved(&mut out, &self.variables, &self.commas);
+        out
     }
 }
 
 impl HasChildren for VariableDeclaratorContext {
     fn children(&self) -> Vec<ChildRef<'_>> {
         let mut out = vec![n(&self.id)];
+        push_opt_term(&mut out, &self.equals);
         push_opt(&mut out, &self.initializer);
         out
     }
@@ -311,13 +339,16 @@ impl HasChildren for ArrayInitializerContext {
     fn children(&self) -> Vec<ChildRef<'_>> {
         let mut out = vec![t(&self.lbrace)];
         push_opt(&mut out, &self.initializers);
+        out.push(t(&self.rbrace));
         out
     }
 }
 
 impl HasChildren for VariableInitializerListContext {
     fn children(&self) -> Vec<ChildRef<'_>> {
-        self.initializers.iter().map(n).collect()
+        let mut out = Vec::new();
+        push_interleaved(&mut out, &self.initializers, &self.commas);
+        out
     }
 }
 
@@ -360,7 +391,17 @@ impl HasChildren for DimsContext {
 
 impl HasChildren for DimExprsContext {
     fn children(&self) -> Vec<ChildRef<'_>> {
-        self.expressions.iter().map(n).collect()
+        let mut out = Vec::with_capacity(self.expressions.len() * 3);
+        for (index, expression) in self.expressions.iter().enumerate() {
+            if let Some(lbrack) = self.brackets.get(index * 2) {
+                out.push(t(lbrack));
+            }
+            out.push(n(expression));
+            if let Some(rbrack) = self.brackets.get(index * 2 + 1) {
+                out.push(t(rbrack));
+            }
+        }
+        out
     }
 }
 
@@ -380,6 +421,7 @@ impl HasChildren for LeftHandSideContext {
         let mut out = vec![n(&self.var_id)];
         push_opt_term(&mut out, &self.lparen);
         push_opt(&mut out, &self.argument_list);
+        push_opt_term(&mut out, &self.rparen);
         push_all(&mut out, &self.path_parts);
         out
     }
@@ -396,6 +438,7 @@ impl HasChildren for TernaryExprContext {
         let mut out = vec![n(&self.condition)];
         push_opt_term(&mut out, &self.question);
         push_opt(&mut out, &self.then_expr);
+        push_opt_term(&mut out, &self.colon);
         push_opt(&mut out, &self.else_expr);
         out
     }
@@ -456,13 +499,18 @@ impl HasChildren for ConstExprContext {
 
 impl HasChildren for CastExprContext {
     fn children(&self) -> Vec<ChildRef<'_>> {
-        vec![t(&self.lparen), n(&self.decl_type), n(&self.primary)]
+        vec![
+            t(&self.lparen),
+            n(&self.decl_type),
+            t(&self.rparen),
+            n(&self.primary),
+        ]
     }
 }
 
 impl HasChildren for GroupExprContext {
     fn children(&self) -> Vec<ChildRef<'_>> {
-        vec![t(&self.lparen), n(&self.expression)]
+        vec![t(&self.lparen), n(&self.expression), t(&self.rparen)]
     }
 }
 
@@ -470,7 +518,9 @@ impl HasChildren for NewObjExprContext {
     fn children(&self) -> Vec<ChildRef<'_>> {
         let mut out = vec![t(&self.new_token)];
         push_all(&mut out, &self.var_ids);
+        out.push(t(&self.lparen));
         push_opt(&mut out, &self.argument_list);
+        out.push(t(&self.rparen));
         out
     }
 }
@@ -501,6 +551,7 @@ impl HasChildren for VarIdExprContext {
         let mut out = vec![n(&self.var_id)];
         push_opt_term(&mut out, &self.lparen);
         push_opt(&mut out, &self.argument_list);
+        push_opt_term(&mut out, &self.rparen);
         out
     }
 }
@@ -515,19 +566,26 @@ impl HasChildren for ListExprContext {
     fn children(&self) -> Vec<ChildRef<'_>> {
         let mut out = vec![t(&self.lbrack)];
         push_opt(&mut out, &self.list_items);
+        out.push(t(&self.rbrack));
         out
     }
 }
 
 impl HasChildren for ListItemsContext {
     fn children(&self) -> Vec<ChildRef<'_>> {
-        self.expressions.iter().map(n).collect()
+        let mut out = Vec::new();
+        push_interleaved(&mut out, &self.expressions, &self.commas);
+        out
     }
 }
 
 impl HasChildren for MapExprContext {
     fn children(&self) -> Vec<ChildRef<'_>> {
-        vec![t(&self.lbrace), n(&self.map_entries)]
+        vec![
+            t(&self.lbrace),
+            n(&self.map_entries),
+            t(&self.rbrace),
+        ]
     }
 }
 
@@ -535,6 +593,7 @@ impl HasChildren for BlockExprContext {
     fn children(&self) -> Vec<ChildRef<'_>> {
         let mut out = vec![t(&self.lbrace)];
         push_opt(&mut out, &self.block_statements);
+        out.push(t(&self.rbrace));
         out
     }
 }
@@ -547,9 +606,15 @@ impl HasChildren for ContextSelectExprContext {
 
 impl HasChildren for QlIfContext {
     fn children(&self) -> Vec<ChildRef<'_>> {
-        let mut out = vec![t(&self.if_token), n(&self.condition)];
+        let mut out = vec![
+            t(&self.if_token),
+            t(&self.lparen),
+            n(&self.condition),
+            t(&self.rparen),
+        ];
         push_opt_term(&mut out, &self.then_keyword);
         out.push(n(&self.then_body));
+        push_opt_term(&mut out, &self.else_keyword);
         push_opt(&mut out, &self.else_body);
         out
     }
@@ -560,6 +625,7 @@ impl HasChildren for ThenBodyContext {
         let mut out = Vec::new();
         push_opt_term(&mut out, &self.lbrace);
         push_opt(&mut out, &self.block_statements);
+        push_opt_term(&mut out, &self.rbrace);
         push_opt(&mut out, &self.non_expression_statement);
         push_opt(&mut out, &self.expression);
         out
@@ -571,6 +637,7 @@ impl HasChildren for ElseBodyContext {
         let mut out = Vec::new();
         push_opt_term(&mut out, &self.lbrace);
         push_opt(&mut out, &self.block_statements);
+        push_opt_term(&mut out, &self.rbrace);
         push_opt(&mut out, &self.ql_if);
         push_opt(&mut out, &self.non_expression_statement);
         push_opt(&mut out, &self.expression);
@@ -580,8 +647,15 @@ impl HasChildren for ElseBodyContext {
 
 impl HasChildren for SwitchExprContext {
     fn children(&self) -> Vec<ChildRef<'_>> {
-        let mut out = vec![t(&self.switch_token), n(&self.expression)];
+        let mut out = vec![
+            t(&self.switch_token),
+            t(&self.lparen),
+            n(&self.expression),
+            t(&self.rparen),
+            t(&self.lbrace),
+        ];
         push_opt(&mut out, &self.groups);
+        out.push(t(&self.rbrace));
         out
     }
 }
@@ -618,6 +692,7 @@ impl HasChildren for SwitchLabelContext {
         push_opt_term(&mut out, &self.case_token);
         push_opt_term(&mut out, &self.default_token);
         push_opt(&mut out, &self.expression);
+        out.push(t(&self.colon));
         out
     }
 }
@@ -635,14 +710,17 @@ impl HasChildren for SwitchExpressionLabelContext {
 
 impl HasChildren for ExpressionListContext {
     fn children(&self) -> Vec<ChildRef<'_>> {
-        self.expressions.iter().map(n).collect()
+        let mut out = Vec::new();
+        push_interleaved(&mut out, &self.expressions, &self.commas);
+        out
     }
 }
 
 impl HasChildren for TryCatchExprContext {
     fn children(&self) -> Vec<ChildRef<'_>> {
-        let mut out = vec![t(&self.try_token)];
+        let mut out = vec![t(&self.try_token), t(&self.lbrace)];
         push_opt(&mut out, &self.block_statements);
+        out.push(t(&self.rbrace));
         push_opt(&mut out, &self.try_catches);
         push_opt(&mut out, &self.try_finally);
         out
@@ -657,8 +735,15 @@ impl HasChildren for TryCatchesContext {
 
 impl HasChildren for TryCatchContext {
     fn children(&self) -> Vec<ChildRef<'_>> {
-        let mut out = vec![t(&self.catch_token), n(&self.catch_params)];
+        let mut out = vec![
+            t(&self.catch_token),
+            t(&self.lparen),
+            n(&self.catch_params),
+            t(&self.rparen),
+            t(&self.lbrace),
+        ];
         push_opt(&mut out, &self.block_statements);
+        out.push(t(&self.rbrace));
         out
     }
 }
@@ -666,7 +751,7 @@ impl HasChildren for TryCatchContext {
 impl HasChildren for CatchParamsContext {
     fn children(&self) -> Vec<ChildRef<'_>> {
         let mut out = Vec::new();
-        push_all(&mut out, &self.decl_types);
+        push_interleaved(&mut out, &self.decl_types, &self.bit_ors);
         out.push(n(&self.var_id));
         out
     }
@@ -674,8 +759,9 @@ impl HasChildren for CatchParamsContext {
 
 impl HasChildren for TryFinallyContext {
     fn children(&self) -> Vec<ChildRef<'_>> {
-        let mut out = vec![t(&self.finally_token)];
+        let mut out = vec![t(&self.finally_token), t(&self.lbrace)];
         push_opt(&mut out, &self.block_statements);
+        out.push(t(&self.rbrace));
         out
     }
 }
@@ -684,14 +770,14 @@ impl HasChildren for MapEntriesContext {
     fn children(&self) -> Vec<ChildRef<'_>> {
         let mut out = Vec::new();
         push_opt_term(&mut out, &self.empty_colon);
-        push_all(&mut out, &self.entries);
+        push_interleaved(&mut out, &self.entries, &self.commas);
         out
     }
 }
 
 impl HasChildren for MapEntryContext {
     fn children(&self) -> Vec<ChildRef<'_>> {
-        vec![n(&self.map_key), n(&self.map_value)]
+        vec![n(&self.map_key), t(&self.colon), n(&self.map_value)]
     }
 }
 
@@ -727,8 +813,9 @@ impl HasChildren for QuoteStringKeyContext {
 
 impl HasChildren for MethodInvokeContext {
     fn children(&self) -> Vec<ChildRef<'_>> {
-        let mut out = vec![t(&self.dot), n(&self.var_id)];
+        let mut out = vec![t(&self.dot), n(&self.var_id), t(&self.lparen)];
         push_opt(&mut out, &self.argument_list);
+        out.push(t(&self.rparen));
         out
     }
 }
@@ -749,6 +836,7 @@ impl HasChildren for IndexExprContext {
     fn children(&self) -> Vec<ChildRef<'_>> {
         let mut out = vec![t(&self.lbrack)];
         push_opt(&mut out, &self.index_value_expr);
+        out.push(t(&self.rbrack));
         out
     }
 }
@@ -789,7 +877,9 @@ impl HasChildren for SliceIndexContext {
 
 impl HasChildren for ArgumentListContext {
     fn children(&self) -> Vec<ChildRef<'_>> {
-        self.expressions.iter().map(n).collect()
+        let mut out = Vec::new();
+        push_interleaved(&mut out, &self.expressions, &self.commas);
+        out
     }
 }
 
@@ -823,6 +913,7 @@ impl HasChildren for StringExpressionContext {
         let mut out = vec![t(&self.start)];
         push_opt_term(&mut out, &self.selector_variable);
         push_opt(&mut out, &self.expression);
+        push_opt_term(&mut out, &self.rbrace);
         out
     }
 }
@@ -838,6 +929,7 @@ impl HasChildren for LambdaExprContext {
         let mut out = vec![n(&self.lambda_parameters), t(&self.arrow)];
         push_opt_term(&mut out, &self.lbrace);
         push_opt(&mut out, &self.block_statements);
+        push_opt_term(&mut out, &self.rbrace);
         push_opt(&mut out, &self.expression);
         out
     }
@@ -847,14 +939,18 @@ impl HasChildren for LambdaParametersContext {
     fn children(&self) -> Vec<ChildRef<'_>> {
         let mut out = Vec::new();
         push_opt(&mut out, &self.var_id);
+        push_opt_term(&mut out, &self.lparen);
         push_opt(&mut out, &self.params);
+        push_opt_term(&mut out, &self.rparen);
         out
     }
 }
 
 impl HasChildren for FormalOrInferredParameterListContext {
     fn children(&self) -> Vec<ChildRef<'_>> {
-        self.params.iter().map(n).collect()
+        let mut out = Vec::new();
+        push_interleaved(&mut out, &self.params, &self.commas);
+        out
     }
 }
 
@@ -871,6 +967,7 @@ impl HasChildren for ImportClsContext {
     fn children(&self) -> Vec<ChildRef<'_>> {
         let mut out = vec![t(&self.import_token)];
         push_all(&mut out, &self.var_ids);
+        out.push(t(&self.semi));
         out
     }
 }
@@ -879,6 +976,7 @@ impl HasChildren for ImportPackContext {
     fn children(&self) -> Vec<ChildRef<'_>> {
         let mut out = vec![t(&self.import_token)];
         push_all(&mut out, &self.var_ids);
+        out.push(t(&self.semi));
         out
     }
 }

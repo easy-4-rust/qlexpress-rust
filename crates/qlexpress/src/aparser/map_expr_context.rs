@@ -11,4 +11,6 @@ pub struct MapExprContext {
     pub lbrace: TerminalNode,
     /// 该语法规则中的 `map_entries` 子节点、终结符或节点集合。
     pub map_entries: Box<Node>,
+    /// Map 字面量右花括号。
+    pub rbrace: TerminalNode,
 }

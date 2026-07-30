@@ -13,6 +13,8 @@ pub struct LeftHandSideContext {
     pub lparen: Option<TerminalNode>,
     /// 该语法规则中的 `argument_list` 子节点、终结符或节点集合。
     pub argument_list: Option<Box<Node>>,
+    /// 函数调用头的右圆括号；非调用左值时为 `None`。
+    pub rparen: Option<TerminalNode>,
     /// 该语法规则中的 `path_parts` 子节点、终结符或节点集合。
     pub path_parts: Vec<Node>,
 }

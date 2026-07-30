@@ -455,30 +455,34 @@ impl<'a> QLParser<'a> {
 
     fn parse_while_statement(&mut self) -> PResult<Node> {
         let while_token = self.consume_node();
-        self.expect(LPAREN, "'('")?;
+        let lparen = self.expect(LPAREN, "'('")?;
         self.skip_newlines();
         let expression = self.parse_expression()?;
         self.skip_newlines();
-        self.expect(RPAREN, "')'")?;
-        let block_statements = self.parse_braced_block()?;
+        let rparen = self.expect(RPAREN, "')'")?;
+        let (lbrace, block_statements, rbrace) = self.parse_braced_block()?;
         Ok(Node::WhileStatement(WhileStatementContext {
             while_token,
+            lparen,
             expression: Box::new(expression),
+            rparen,
+            lbrace,
             block_statements: block_statements.map(Box::new),
+            rbrace,
         }))
     }
 
     /// Java `parseBracedBlock`: `{ ... }`, `Ok(None)` for an empty block.
-    fn parse_braced_block(&mut self) -> PResult<Option<Node>> {
-        self.expect(LBRACE, "'{'")?;
+    fn parse_braced_block(&mut self) -> PResult<(TerminalNode, Option<Node>, TerminalNode)> {
+        let lbrace = self.expect(LBRACE, "'{'")?;
         self.skip_newlines();
         let mut block = None;
         if !self.la(RBRACE) {
             block = Some(self.parse_block_statements_until(RBRACE)?);
         }
         self.skip_newlines();
-        self.expect(RBRACE, "'}'")?;
-        Ok(block)
+        let rbrace = self.expect(RBRACE, "'}'")?;
+        Ok((lbrace, block, rbrace))
     }
 
     fn parse_for_statement(&mut self) -> PResult<Node> {
@@ -517,7 +521,7 @@ impl<'a> QLParser<'a> {
 
     fn parse_traditional_for_statement(&mut self) -> PResult<Node> {
         let for_token = self.consume_node();
-        self.expect(LPAREN, "'('")?;
+        let lparen = self.expect(LPAREN, "'('")?;
         self.skip_newlines();
         let for_init = self.parse_for_init()?;
         self.skip_newlines();
@@ -526,7 +530,7 @@ impl<'a> QLParser<'a> {
         } else {
             None
         };
-        self.expect(SEMI, "';'")?;
+        let condition_semi = self.expect(SEMI, "';'")?;
         self.skip_newlines();
         let for_update = if !self.la(RPAREN) {
             Some(Box::new(self.parse_expression()?))
@@ -534,15 +538,20 @@ impl<'a> QLParser<'a> {
             None
         };
         self.skip_newlines();
-        self.expect(RPAREN, "')'")?;
-        let block_statements = self.parse_braced_block()?;
+        let rparen = self.expect(RPAREN, "')'")?;
+        let (lbrace, block_statements, rbrace) = self.parse_braced_block()?;
         Ok(Node::TraditionalForStatement(
             TraditionalForStatementContext {
                 for_token,
+                lparen,
                 for_init: Box::new(for_init),
                 for_condition,
+                condition_semi,
                 for_update,
+                rparen,
+                lbrace,
                 block_statements: block_statements.map(Box::new),
+                rbrace,
             },
         ))
     }
@@ -575,7 +584,7 @@ impl<'a> QLParser<'a> {
 
     fn parse_for_each_statement(&mut self) -> PResult<Node> {
         let for_token = self.consume_node();
-        self.expect(LPAREN, "'('")?;
+        let lparen = self.expect(LPAREN, "'('")?;
         self.skip_newlines();
         let decl_type = if !self.single_for_each_var_before_colon() {
             Some(Box::new(self.parse_decl_type()?))
@@ -583,24 +592,29 @@ impl<'a> QLParser<'a> {
             None
         };
         let var_id = self.parse_var_id()?;
-        self.expect(COLON, "':'")?;
+        let colon = self.expect(COLON, "':'")?;
         let expression = self.parse_expression()?;
         self.skip_newlines();
-        self.expect(RPAREN, "')'")?;
-        let block_statements = self.parse_braced_block()?;
+        let rparen = self.expect(RPAREN, "')'")?;
+        let (lbrace, block_statements, rbrace) = self.parse_braced_block()?;
         Ok(Node::ForEachStatement(ForEachStatementContext {
             for_token,
+            lparen,
             decl_type,
             var_id: Box::new(var_id),
+            colon,
             expression: Box::new(expression),
+            rparen,
+            lbrace,
             block_statements: block_statements.map(Box::new),
+            rbrace,
         }))
     }
 
     fn parse_function_statement(&mut self) -> PResult<Node> {
         let function_token = self.consume_node();
         let var_id = self.parse_var_id()?;
-        self.expect(LPAREN, "'('")?;
+        let lparen = self.expect(LPAREN, "'('")?;
         self.skip_newlines();
         let params = if !self.la(RPAREN) {
             Some(Box::new(self.parse_formal_or_inferred_parameter_list()?))
@@ -608,24 +622,30 @@ impl<'a> QLParser<'a> {
             None
         };
         self.skip_newlines();
-        self.expect(RPAREN, "')'")?;
-        let block_statements = self.parse_braced_block()?;
+        let rparen = self.expect(RPAREN, "')'")?;
+        let (lbrace, block_statements, rbrace) = self.parse_braced_block()?;
         Ok(Node::FunctionStatement(FunctionStatementContext {
             function_token,
             var_id: Box::new(var_id),
+            lparen,
             params,
+            rparen,
+            lbrace,
             block_statements: block_statements.map(Box::new),
+            rbrace,
         }))
     }
 
     fn parse_macro_statement(&mut self) -> PResult<Node> {
         let macro_token = self.consume_node();
         let var_id = self.parse_var_id()?;
-        let block_statements = self.parse_braced_block()?;
+        let (lbrace, block_statements, rbrace) = self.parse_braced_block()?;
         Ok(Node::MacroStatement(MacroStatementContext {
             macro_token,
             var_id: Box::new(var_id),
+            lbrace,
             block_statements: block_statements.map(Box::new),
+            rbrace,
         }))
     }
 
@@ -704,11 +724,12 @@ impl<'a> QLParser<'a> {
     fn parse_variable_declarator_list(&mut self) -> PResult<Node> {
         let mut ctx = VariableDeclaratorListContext {
             variables: Vec::new(),
+            commas: Vec::new(),
         };
         ctx.variables.push(self.parse_variable_declarator()?);
         self.skip_newlines();
         while self.la(COMMA) {
-            self.consume();
+            ctx.commas.push(self.consume_node());
             self.skip_newlines();
             ctx.variables.push(self.parse_variable_declarator()?);
             self.skip_newlines();
@@ -718,15 +739,19 @@ impl<'a> QLParser<'a> {
 
     fn parse_variable_declarator(&mut self) -> PResult<Node> {
         let id = self.parse_variable_declarator_id()?;
-        let initializer = if self.la(EQ) {
-            self.consume();
+        let (equals, initializer) = if self.la(EQ) {
+            let equals = self.consume_node();
             self.skip_newlines();
-            Some(Box::new(self.parse_variable_initializer()?))
+            (
+                Some(equals),
+                Some(Box::new(self.parse_variable_initializer()?)),
+            )
         } else {
-            None
+            (None, None)
         };
         Ok(Node::VariableDeclarator(VariableDeclaratorContext {
             id: Box::new(id),
+            equals,
             initializer,
         }))
     }
@@ -772,21 +797,23 @@ impl<'a> QLParser<'a> {
             None
         };
         self.skip_newlines();
-        self.expect(RBRACE, "'}'")?;
+        let rbrace = self.expect(RBRACE, "'}'")?;
         Ok(Node::ArrayInitializer(ArrayInitializerContext {
             lbrace,
             initializers,
+            rbrace,
         }))
     }
 
     fn parse_variable_initializer_list(&mut self) -> PResult<Node> {
         let mut ctx = VariableInitializerListContext {
             initializers: Vec::new(),
+            commas: Vec::new(),
         };
         ctx.initializers.push(self.parse_variable_initializer()?);
         self.skip_newlines();
         while self.la(COMMA) {
-            self.consume();
+            ctx.commas.push(self.consume_node());
             self.skip_newlines();
             if self.la(RBRACE) {
                 break;
@@ -838,6 +865,7 @@ impl<'a> QLParser<'a> {
             var_id: Box::new(var_id),
             lparen: None,
             argument_list: None,
+            rparen: None,
             path_parts: Vec::new(),
         };
         if self.la(LPAREN) {
@@ -847,7 +875,7 @@ impl<'a> QLParser<'a> {
                 ctx.argument_list = Some(Box::new(self.parse_argument_list()?));
             }
             self.skip_newlines();
-            self.expect(RPAREN, "')'")?;
+            ctx.rparen = Some(self.expect(RPAREN, "')'")?);
         }
         loop {
             let before_newlines = self.p;
@@ -885,13 +913,14 @@ impl<'a> QLParser<'a> {
             condition: Box::new(condition),
             question: None,
             then_expr: None,
+            colon: None,
             else_expr: None,
         };
         if self.la(QUESTION) {
             ctx.question = Some(self.consume_node());
             self.skip_newlines();
             ctx.then_expr = Some(Box::new(self.parse_base_expr(0)?));
-            self.expect(COLON, "':'")?;
+            ctx.colon = Some(self.expect(COLON, "':'")?);
             self.skip_newlines();
             ctx.else_expr = Some(Box::new(self.parse_expression()?));
         }
@@ -1041,11 +1070,12 @@ impl<'a> QLParser<'a> {
                 self.skip_newlines();
                 let decl_type = self.parse_decl_type()?;
                 self.skip_newlines();
-                self.expect(RPAREN, "')'")?;
+                let rparen = self.expect(RPAREN, "')'")?;
                 let primary = self.parse_primary()?;
                 return Ok(Node::CastExpr(CastExprContext {
                     lparen,
                     decl_type: Box::new(decl_type),
+                    rparen,
                     primary: Box::new(primary),
                 }));
             }
@@ -1053,10 +1083,11 @@ impl<'a> QLParser<'a> {
             self.skip_newlines();
             let expression = self.parse_expression()?;
             self.skip_newlines();
-            self.expect(RPAREN, "')'")?;
+            let rparen = self.expect(RPAREN, "')'")?;
             return Ok(Node::GroupExpr(GroupExprContext {
                 lparen,
                 expression: Box::new(expression),
+                rparen,
             }));
         }
         if self.la(NEW) {
@@ -1092,6 +1123,7 @@ impl<'a> QLParser<'a> {
                 var_id: Box::new(var_id),
                 lparen: None,
                 argument_list: None,
+                rparen: None,
             };
             if self.la(LPAREN) {
                 ctx.lparen = Some(self.consume_node());
@@ -1100,7 +1132,7 @@ impl<'a> QLParser<'a> {
                     ctx.argument_list = Some(Box::new(self.parse_argument_list()?));
                 }
                 self.skip_newlines();
-                self.expect(RPAREN, "')'")?;
+                ctx.rparen = Some(self.expect(RPAREN, "')'")?);
             }
             return Ok(Node::VarIdExpr(ctx));
         }
@@ -1151,7 +1183,7 @@ impl<'a> QLParser<'a> {
                 },
                 _ => unreachable!("parse_decl_type_no_arr returns DeclTypeNoArr"),
             };
-            self.expect(LPAREN, "'('")?;
+            let lparen = self.expect(LPAREN, "'('")?;
             self.skip_newlines();
             let argument_list = if !self.la(RPAREN) {
                 Some(Box::new(self.parse_argument_list()?))
@@ -1159,11 +1191,13 @@ impl<'a> QLParser<'a> {
                 None
             };
             self.skip_newlines();
-            self.expect(RPAREN, "')'")?;
+            let rparen = self.expect(RPAREN, "')'")?;
             return Ok(Node::NewObjExpr(NewObjExprContext {
                 new_token,
                 var_ids,
+                lparen,
                 argument_list,
+                rparen,
             }));
         }
         if self.la(LBRACK) && !self.la_at(1, RBRACK) {
@@ -1193,15 +1227,20 @@ impl<'a> QLParser<'a> {
             None
         };
         self.skip_newlines();
-        self.expect(RBRACK, "']'")?;
-        Ok(Node::ListExpr(ListExprContext { lbrack, list_items }))
+        let rbrack = self.expect(RBRACK, "']'")?;
+        Ok(Node::ListExpr(ListExprContext {
+            lbrack,
+            list_items,
+            rbrack,
+        }))
     }
 
     fn parse_list_items(&mut self) -> PResult<Node> {
         let mut expressions = vec![self.parse_expression()?];
+        let mut commas = Vec::new();
         self.skip_newlines();
         while self.la(COMMA) {
-            self.consume();
+            commas.push(self.consume_node());
             self.skip_newlines();
             if self.la(RBRACK) {
                 break;
@@ -1209,7 +1248,10 @@ impl<'a> QLParser<'a> {
             expressions.push(self.parse_expression()?);
             self.skip_newlines();
         }
-        Ok(Node::ListItems(ListItemsContext { expressions }))
+        Ok(Node::ListItems(ListItemsContext {
+            expressions,
+            commas,
+        }))
     }
 
     fn parse_map_expr(&mut self) -> PResult<Node> {
@@ -1218,6 +1260,7 @@ impl<'a> QLParser<'a> {
         let mut map_entries = MapEntriesContext {
             empty_colon: None,
             entries: Vec::new(),
+            commas: Vec::new(),
         };
         if self.la(COLON) {
             map_entries.empty_colon = Some(self.consume_node());
@@ -1225,7 +1268,7 @@ impl<'a> QLParser<'a> {
             map_entries.entries.push(self.parse_map_entry()?);
             self.skip_newlines();
             while self.la(COMMA) {
-                self.consume();
+                map_entries.commas.push(self.consume_node());
                 self.skip_newlines();
                 if self.la(RBRACE) {
                     break;
@@ -1235,17 +1278,18 @@ impl<'a> QLParser<'a> {
             }
         }
         self.skip_newlines();
-        self.expect(RBRACE, "'}'")?;
+        let rbrace = self.expect(RBRACE, "'}'")?;
         Ok(Node::MapExpr(MapExprContext {
             lbrace,
             map_entries: Box::new(Node::MapEntries(map_entries)),
+            rbrace,
         }))
     }
 
     fn parse_map_entry(&mut self) -> PResult<Node> {
         let map_key = self.parse_map_key()?;
         self.skip_newlines();
-        self.expect(COLON, "':'")?;
+        let colon = self.expect(COLON, "':'")?;
         self.skip_newlines();
         let map_value = if map_key.text() == "'@class'" && self.la(QUOTE_STRING_LITERAL) {
             Node::ClsValue(ClsValueContext {
@@ -1258,6 +1302,7 @@ impl<'a> QLParser<'a> {
         };
         Ok(Node::MapEntry(MapEntryContext {
             map_key: Box::new(map_key),
+            colon,
             map_value: Box::new(map_value),
         }))
     }
@@ -1295,10 +1340,11 @@ impl<'a> QLParser<'a> {
             None
         };
         self.skip_newlines();
-        self.expect(RBRACE, "'}'")?;
+        let rbrace = self.expect(RBRACE, "'}'")?;
         Ok(Node::BlockExpr(BlockExprContext {
             lbrace,
             block_statements,
+            rbrace,
         }))
     }
 }
@@ -1310,11 +1356,11 @@ impl<'a> QLParser<'a> {
 impl<'a> QLParser<'a> {
     fn parse_ql_if(&mut self) -> PResult<Node> {
         let if_token = self.consume_node();
-        self.expect(LPAREN, "'('")?;
+        let lparen = self.expect(LPAREN, "'('")?;
         self.skip_newlines();
         let condition = self.parse_expression()?;
         self.skip_newlines();
-        self.expect(RPAREN, "')'")?;
+        let rparen = self.expect(RPAREN, "')'")?;
         self.skip_newlines();
         let then_keyword = if self.la(THEN) {
             let kw = self.consume_node();
@@ -1326,20 +1372,26 @@ impl<'a> QLParser<'a> {
         let then_body = self.parse_then_body()?;
         let save = self.p;
         self.skip_newlines();
-        let else_body = if self.la(ELSE) {
-            self.consume();
+        let (else_keyword, else_body) = if self.la(ELSE) {
+            let else_keyword = self.consume_node();
             self.skip_newlines();
-            Some(Box::new(self.parse_else_body()?))
+            (
+                Some(else_keyword),
+                Some(Box::new(self.parse_else_body()?)),
+            )
         } else {
             self.p = save;
-            None
+            (None, None)
         };
         Ok(Node::QlIf(QlIfContext {
             if_token,
+            lparen,
             then_keyword,
             condition: Box::new(condition),
+            rparen,
             then_body: Box::new(then_body),
             else_body,
+            else_keyword,
         }))
     }
 
@@ -1353,10 +1405,11 @@ impl<'a> QLParser<'a> {
                 None
             };
             self.skip_newlines();
-            self.expect(RBRACE, "'}'")?;
+            let rbrace = self.expect(RBRACE, "'}'")?;
             return Ok(Node::ThenBody(ThenBodyContext {
                 lbrace: Some(lbrace),
                 block_statements,
+                rbrace: Some(rbrace),
                 non_expression_statement: None,
                 expression: None,
             }));
@@ -1366,6 +1419,7 @@ impl<'a> QLParser<'a> {
             return Ok(Node::ThenBody(ThenBodyContext {
                 lbrace: None,
                 block_statements: None,
+                rbrace: None,
                 non_expression_statement: Some(Box::new(non_expression_statement)),
                 expression: None,
             }));
@@ -1374,6 +1428,7 @@ impl<'a> QLParser<'a> {
         Ok(Node::ThenBody(ThenBodyContext {
             lbrace: None,
             block_statements: None,
+            rbrace: None,
             non_expression_statement: None,
             expression: Some(Box::new(expression)),
         }))
@@ -1389,10 +1444,11 @@ impl<'a> QLParser<'a> {
                 None
             };
             self.skip_newlines();
-            self.expect(RBRACE, "'}'")?;
+            let rbrace = self.expect(RBRACE, "'}'")?;
             return Ok(Node::ElseBody(ElseBodyContext {
                 lbrace: Some(lbrace),
                 block_statements,
+                rbrace: Some(rbrace),
                 ql_if: None,
                 non_expression_statement: None,
                 expression: None,
@@ -1403,6 +1459,7 @@ impl<'a> QLParser<'a> {
             return Ok(Node::ElseBody(ElseBodyContext {
                 lbrace: None,
                 block_statements: None,
+                rbrace: None,
                 ql_if: Some(Box::new(ql_if)),
                 non_expression_statement: None,
                 expression: None,
@@ -1413,6 +1470,7 @@ impl<'a> QLParser<'a> {
             return Ok(Node::ElseBody(ElseBodyContext {
                 lbrace: None,
                 block_statements: None,
+                rbrace: None,
                 ql_if: None,
                 non_expression_statement: Some(Box::new(non_expression_statement)),
                 expression: None,
@@ -1422,6 +1480,7 @@ impl<'a> QLParser<'a> {
         Ok(Node::ElseBody(ElseBodyContext {
             lbrace: None,
             block_statements: None,
+            rbrace: None,
             ql_if: None,
             non_expression_statement: None,
             expression: Some(Box::new(expression)),
@@ -1430,12 +1489,12 @@ impl<'a> QLParser<'a> {
 
     fn parse_switch_expr(&mut self) -> PResult<Node> {
         let switch_token = self.consume_node();
-        self.expect(LPAREN, "'('")?;
+        let lparen = self.expect(LPAREN, "'('")?;
         self.skip_newlines();
         let expression = self.parse_expression()?;
         self.skip_newlines();
-        self.expect(RPAREN, "')'")?;
-        self.expect(LBRACE, "'{'")?;
+        let rparen = self.expect(RPAREN, "')'")?;
+        let lbrace = self.expect(LBRACE, "'{'")?;
         self.skip_newlines();
         let groups = if !self.la(RBRACE) {
             Some(Box::new(self.parse_switch_case_groups()?))
@@ -1443,11 +1502,15 @@ impl<'a> QLParser<'a> {
             None
         };
         self.skip_newlines();
-        self.expect(RBRACE, "'}'")?;
+        let rbrace = self.expect(RBRACE, "'}'")?;
         Ok(Node::SwitchExpr(SwitchExprContext {
             switch_token,
+            lparen,
             expression: Box::new(expression),
+            rparen,
+            lbrace,
             groups,
+            rbrace,
         }))
     }
 
@@ -1541,6 +1604,7 @@ impl<'a> QLParser<'a> {
                 case_token: None,
                 default_token: None,
                 expression: None,
+                colon: TerminalNode::new(self.lt().clone()),
             };
             if self.la(CASE) {
                 label.case_token = Some(self.consume_node());
@@ -1548,7 +1612,7 @@ impl<'a> QLParser<'a> {
             } else {
                 label.default_token = Some(self.consume_node());
             }
-            self.expect(COLON, "':'")?;
+            label.colon = self.expect(COLON, "':'")?;
             ctx.labels.push(Node::SwitchLabel(label));
             self.skip_newlines();
         }
@@ -1558,11 +1622,12 @@ impl<'a> QLParser<'a> {
     fn parse_expression_list_until_arrow(&mut self) -> PResult<Node> {
         let mut ctx = ExpressionListContext {
             expressions: Vec::new(),
+            commas: Vec::new(),
         };
         ctx.expressions.push(self.parse_expression()?);
         self.skip_newlines();
         while self.la(COMMA) {
-            self.consume();
+            ctx.commas.push(self.consume_node());
             self.skip_newlines();
             ctx.expressions.push(self.parse_expression()?);
             self.skip_newlines();
@@ -1572,7 +1637,7 @@ impl<'a> QLParser<'a> {
 
     fn parse_try_catch_expr(&mut self) -> PResult<Node> {
         let try_token = self.consume_node();
-        let block_statements = self.parse_braced_block()?;
+        let (lbrace, block_statements, rbrace) = self.parse_braced_block()?;
         let save = self.p;
         self.skip_newlines();
         let try_catches = if self.la(CATCH) {
@@ -1601,7 +1666,9 @@ impl<'a> QLParser<'a> {
         };
         Ok(Node::TryCatchExpr(TryCatchExprContext {
             try_token,
+            lbrace,
             block_statements: block_statements.map(Box::new),
+            rbrace,
             try_catches,
             try_finally,
         }))
@@ -1609,14 +1676,18 @@ impl<'a> QLParser<'a> {
 
     fn parse_try_catch(&mut self) -> PResult<Node> {
         let catch_token = self.consume_node();
-        self.expect(LPAREN, "'('")?;
+        let lparen = self.expect(LPAREN, "'('")?;
         let catch_params = self.parse_catch_params()?;
-        self.expect(RPAREN, "')'")?;
-        let block_statements = self.parse_braced_block()?;
+        let rparen = self.expect(RPAREN, "')'")?;
+        let (lbrace, block_statements, rbrace) = self.parse_braced_block()?;
         Ok(Node::TryCatch(TryCatchContext {
             catch_token,
+            lparen,
             catch_params: Box::new(catch_params),
+            rparen,
+            lbrace,
             block_statements: block_statements.map(Box::new),
+            rbrace,
         }))
     }
 
@@ -1625,27 +1696,32 @@ impl<'a> QLParser<'a> {
             let var_id = self.parse_var_id()?;
             return Ok(Node::CatchParams(CatchParamsContext {
                 decl_types: Vec::new(),
+                bit_ors: Vec::new(),
                 var_id: Box::new(var_id),
             }));
         }
         let mut decl_types = vec![self.parse_decl_type()?];
+        let mut bit_ors = Vec::new();
         while self.la(BIT_OR) {
-            self.consume();
+            bit_ors.push(self.consume_node());
             decl_types.push(self.parse_decl_type()?);
         }
         let var_id = self.parse_var_id()?;
         Ok(Node::CatchParams(CatchParamsContext {
             decl_types,
+            bit_ors,
             var_id: Box::new(var_id),
         }))
     }
 
     fn parse_try_finally(&mut self) -> PResult<Node> {
         let finally_token = self.consume_node();
-        let block_statements = self.parse_braced_block()?;
+        let (lbrace, block_statements, rbrace) = self.parse_braced_block()?;
         Ok(Node::TryFinally(TryFinallyContext {
             finally_token,
+            lbrace,
             block_statements: block_statements.map(Box::new),
+            rbrace,
         }))
     }
 
@@ -1658,6 +1734,7 @@ impl<'a> QLParser<'a> {
             arrow,
             lbrace: None,
             block_statements: None,
+            rbrace: None,
             expression: None,
         };
         if self.la(LBRACE) && !self.is_map_expr_ahead() {
@@ -1667,7 +1744,7 @@ impl<'a> QLParser<'a> {
                 ctx.block_statements = Some(Box::new(self.parse_block_statements_until(RBRACE)?));
             }
             self.skip_newlines();
-            self.expect(RBRACE, "'}'")?;
+            ctx.rbrace = Some(self.expect(RBRACE, "'}'")?);
         } else {
             ctx.expression = Some(Box::new(self.parse_expression()?));
         }
@@ -1679,28 +1756,35 @@ impl<'a> QLParser<'a> {
             let var_id = self.parse_var_id()?;
             return Ok(Node::LambdaParameters(LambdaParametersContext {
                 var_id: Some(Box::new(var_id)),
+                lparen: None,
                 params: None,
+                rparen: None,
             }));
         }
-        self.expect(LPAREN, "'('")?;
+        let lparen = self.expect(LPAREN, "'('")?;
         let params = if !self.la(RPAREN) {
             Some(Box::new(self.parse_formal_or_inferred_parameter_list()?))
         } else {
             None
         };
-        self.expect(RPAREN, "')'")?;
+        let rparen = self.expect(RPAREN, "')'")?;
         Ok(Node::LambdaParameters(LambdaParametersContext {
             var_id: None,
+            lparen: Some(lparen),
             params,
+            rparen: Some(rparen),
         }))
     }
 
     fn parse_formal_or_inferred_parameter_list(&mut self) -> PResult<Node> {
-        let mut ctx = FormalOrInferredParameterListContext { params: Vec::new() };
+        let mut ctx = FormalOrInferredParameterListContext {
+            params: Vec::new(),
+            commas: Vec::new(),
+        };
         ctx.params.push(self.parse_formal_or_inferred_parameter()?);
         self.skip_newlines();
         while self.la(COMMA) {
-            self.consume();
+            ctx.commas.push(self.consume_node());
             self.skip_newlines();
             ctx.params.push(self.parse_formal_or_inferred_parameter()?);
             self.skip_newlines();
@@ -1748,7 +1832,9 @@ impl<'a> QLParser<'a> {
                 let mut ctx = MethodInvokeContext {
                     dot,
                     var_id: Box::new(var_id),
+                    lparen: TerminalNode::new(self.lt().clone()),
                     argument_list: None,
+                    rparen: TerminalNode::new(self.lt().clone()),
                     chain: ChainKind::Plain,
                 };
                 self.parse_method_arguments(&mut ctx)?;
@@ -1774,7 +1860,9 @@ impl<'a> QLParser<'a> {
                 let mut ctx = MethodInvokeContext {
                     dot: token,
                     var_id: Box::new(var_id),
+                    lparen: TerminalNode::new(self.lt().clone()),
                     argument_list: None,
+                    rparen: TerminalNode::new(self.lt().clone()),
                     chain,
                 };
                 self.parse_method_arguments(&mut ctx)?;
@@ -1845,13 +1933,13 @@ impl<'a> QLParser<'a> {
     }
 
     fn parse_method_arguments(&mut self, ctx: &mut MethodInvokeContext) -> PResult<()> {
-        self.expect(LPAREN, "'('")?;
+        ctx.lparen = self.expect(LPAREN, "'('")?;
         self.skip_newlines();
         if !self.la(RPAREN) {
             ctx.argument_list = Some(Box::new(self.parse_argument_list()?));
         }
         self.skip_newlines();
-        self.expect(RPAREN, "')'")?;
+        ctx.rparen = self.expect(RPAREN, "')'")?;
         Ok(())
     }
 
@@ -1914,11 +2002,12 @@ impl<'a> QLParser<'a> {
     fn parse_argument_list(&mut self) -> PResult<Node> {
         let mut ctx = ArgumentListContext {
             expressions: Vec::new(),
+            commas: Vec::new(),
         };
         ctx.expressions.push(self.parse_expression()?);
         self.skip_newlines();
         while self.la(COMMA) {
-            self.consume();
+            ctx.commas.push(self.consume_node());
             self.skip_newlines();
             ctx.expressions.push(self.parse_expression()?);
             self.skip_newlines();
@@ -1985,16 +2074,18 @@ impl<'a> QLParser<'a> {
                         start,
                         selector_variable: Some(self.consume_node()),
                         expression: None,
+                        rbrace: None,
                     }
                 } else {
                     self.skip_newlines();
                     let expression = self.parse_expression()?;
                     self.skip_newlines();
-                    self.expect(RBRACE, "'}'")?;
+                    let rbrace = self.expect(RBRACE, "'}'")?;
                     StringExpressionContext {
                         start,
                         selector_variable: None,
                         expression: Some(Box::new(expression)),
+                        rbrace: Some(rbrace),
                     }
                 };
                 ctx.parts
@@ -2030,16 +2121,18 @@ impl<'a> QLParser<'a> {
                 self.consume();
             }
         }
-        self.expect(SEMI, "';'")?;
+        let semi = self.expect(SEMI, "';'")?;
         if is_pack {
             Ok(Node::ImportPack(ImportPackContext {
                 import_token,
                 var_ids: ids,
+                semi,
             }))
         } else {
             Ok(Node::ImportCls(ImportClsContext {
                 import_token,
                 var_ids: ids,
+                semi,
             }))
         }
     }
@@ -2194,17 +2287,21 @@ impl<'a> QLParser<'a> {
 
     fn parse_dim_exprs(&mut self) -> PResult<Node> {
         let mut expressions = Vec::new();
+        let mut brackets = Vec::new();
         loop {
-            self.expect(LBRACK, "'['")?;
+            brackets.push(self.expect(LBRACK, "'['")?);
             self.skip_newlines();
             expressions.push(self.parse_expression()?);
             self.skip_newlines();
-            self.expect(RBRACK, "']'")?;
+            brackets.push(self.expect(RBRACK, "']'")?);
             if !(self.la(LBRACK) && !self.la_at(1, RBRACK)) {
                 break;
             }
         }
-        Ok(Node::DimExprs(DimExprsContext { expressions }))
+        Ok(Node::DimExprs(DimExprsContext {
+            expressions,
+            brackets,
+        }))
     }
 
     fn parse_op_id(&mut self) -> PResult<Node> {
@@ -2720,6 +2817,58 @@ mod tests {
             },
             other => panic!("expected left asso, got {other:?}"),
         }
+    }
+
+    /// `SOURCE_PARITY`：Java `RuleContext#getText()` 会拼接
+    /// `expectInto/consumeNode` 写入的全部标点，同时不包含
+    /// `consumeNextStatement` 和 import 路径中以普通 `consume` 跳过的 token。
+    #[test]
+    fn rule_context_text_preserves_exact_java_children() {
+        let cases = [
+            (
+                "while (a) { b = [1, 2,]; }",
+                "while(a){b=[1,2,]}",
+            ),
+            (
+                "function f(int a, b) { return a ? b : 0; }",
+                "functionf(inta,b){returna?b:0}",
+            ),
+            ("x = {'a': 1, b: 2,};", "x={'a':1,b:2,}"),
+            ("x = new Foo(1, 2).bar();", "x=newFoo(1,2).bar()"),
+            (
+                "try { x = 1; } catch (A | B e) { x = 2; } finally { x = 3; }",
+                "try{x=1}catch(A|Be){x=2}finally{x=3}",
+            ),
+            ("f = (a, b) -> { return a; };", "f=(a,b)->{returna}"),
+            ("x = \"${a}\";", "x=\"${a}\""),
+            ("import a.b.C; x = 1;", "importabC;x=1"),
+        ];
+
+        for (script, expected) in cases {
+            assert_eq!(parse(script).text(), expected, "script: {script}");
+        }
+    }
+
+    /// `SOURCE_PARITY`：Java `RuleContext` 的 child/token/bounds/tree-string
+    /// 查询必须观察到右圆括号，而不是在 Rust 所有权适配中丢失它。
+    #[test]
+    fn rule_context_queries_include_punctuation_and_bounds() {
+        let tree = parse("(a);");
+        let expression = expr_statement(&statements(&tree)[0]);
+        let group = match primary_of(base_expr(expression)).pathable.as_deref() {
+            Some(Node::GroupExpr(group)) => group,
+            other => panic!("expected group expression, got {other:?}"),
+        };
+        let group_node = Node::GroupExpr(group.clone());
+
+        assert_eq!(group_node.child_count(), 3);
+        assert_eq!(group_node.child(0).text(), "(");
+        assert_eq!(group_node.child(2).text(), ")");
+        assert_eq!(group_node.token_nodes(LPAREN).len(), 1);
+        assert_eq!(group_node.token_nodes(RPAREN).len(), 1);
+        assert_eq!(group_node.start_token().map(Token::text), Some("("));
+        assert_eq!(group_node.stop_token().map(Token::text), Some(")"));
+        assert!(group_node.to_string_tree().starts_with("(GroupExpr ("));
     }
 
     // ------------------------------------------------------------------

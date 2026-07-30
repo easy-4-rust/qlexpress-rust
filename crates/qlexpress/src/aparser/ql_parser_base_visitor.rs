@@ -228,6 +228,7 @@ mod tests {
                 })),
                 lparen: None,
                 argument_list: None,
+                rparen: None,
                 path_parts: vec![],
             }))),
             assign_operator: Some(Box::new(Node::AssignOperator(AssignOperatorContext {
@@ -247,6 +248,7 @@ mod tests {
                                 })),
                                 lparen: None,
                                 argument_list: None,
+                                rparen: None,
                             }))),
                             path_parts: vec![],
                             suffix: None,
@@ -256,6 +258,7 @@ mod tests {
                     })),
                     question: None,
                     then_expr: None,
+                    colon: None,
                     else_expr: None,
                 }))),
             }))),

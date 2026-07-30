@@ -12,8 +12,12 @@ pub struct MethodInvokeContext {
     pub dot: TerminalNode,
     /// 该语法规则中的 `var_id` 子节点、终结符或节点集合。
     pub var_id: Box<Node>,
+    /// 方法参数左圆括号。
+    pub lparen: TerminalNode,
     /// 该语法规则中的 `argument_list` 子节点、终结符或节点集合。
     pub argument_list: Option<Box<Node>>,
+    /// 方法参数右圆括号。
+    pub rparen: TerminalNode,
     /// 该语法规则中的 `chain` 子节点、终结符或节点集合。
     pub chain: ChainKind,
 }

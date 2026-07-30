@@ -13,4 +13,6 @@ pub struct StringExpressionContext {
     pub selector_variable: Option<TerminalNode>,
     /// 该语法规则中的 `expression` 子节点、终结符或节点集合。
     pub expression: Option<Box<Node>>,
+    /// 普通动态表达式的右花括号；selector token 形式不另有闭合 token。
+    pub rbrace: Option<TerminalNode>,
 }
