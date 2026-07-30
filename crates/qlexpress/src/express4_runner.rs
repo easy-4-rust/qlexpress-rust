@@ -7,8 +7,9 @@
 //!
 //! Rust 适配要点(对照 Java 逐条):
 //! - Java 的编译缓存为 `ConcurrentHashMap<String, Future<QCompileCache>>`
-//!   (并发去重编译);Rust 单线程 `Rc` 体系下退化为
-//!   `RefCell<HashMap<String, Rc<_>>>`,命中语义一致(同一 script 只编译一次)。
+//!   (并发去重编译);Rust 单线程 `Rc` 体系使用不淘汰的兼容缓存，命中语义
+//!   一致(同一 script 只编译一次)。`execute_checked` 另用物理隔离的按租户
+//!   有界 LRU，不能淘汰或污染兼容缓存。
 //!   多线程宿主使用 `ConcurrentParseCache` 共享纯数据编译产物，每个工作
 //!   线程持有本地 Runner，避免把 `Rc/RefCell` 错误标记为 `Send`。
 //! - Java `Map<String, Object>` 上下文 → Rust `HashMap<String, DataValue>`
@@ -93,6 +94,58 @@ use crate::security::{Capability, SandboxProfile};
 /// runner 身份令牌分配器(Java 以 `this` 引用相等判断 `LoadedParseCache`
 /// 绑定关系;Rust 为每个 runner 分配唯一序号,见 [`LoadedParseCache`])。
 static RUNNER_IDENTITY: AtomicUsize = AtomicUsize::new(1);
+const JAVA_COMPATIBLE_CACHE_TENANT: &str = "__java_compatible__";
+const UNBOUNDED_CACHE_CAPACITY: usize = usize::MAX;
+
+/// Java `addExtendFunction(String, Class, QLFunctionalVarargs)` 中匿名
+/// `ExtensionFunction` 的 Rust 对等适配器。
+struct VarargsExtensionFunction<F> {
+    name: String,
+    binding_class: ClassRef,
+    functional_varargs: F,
+}
+
+impl<F> ExtensionFunction for VarargsExtensionFunction<F>
+where
+    F: QLFunctionalVarargs,
+{
+    fn parameter_types(&self) -> Vec<ClassRef> {
+        vec![ClassRef::array_of(ClassRef::Named(
+            "java.lang.Object".to_string(),
+        ))]
+    }
+
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    fn declaring_class(&self) -> ClassRef {
+        self.binding_class.clone()
+    }
+
+    fn invoke(
+        &self,
+        object: &DataValue,
+        arguments: &[DataValue],
+    ) -> Result<DataValue, QLException> {
+        let [DataValue::Array(var_args)] = arguments else {
+            return Err(QLException::for_test(
+                crate::exception::QLExceptionKind::Runtime,
+                format!("invoke method '{}' with wrong arguments", self.name),
+                crate::exception::error_codes::INVOKE_METHOD_WITH_WRONG_ARGUMENTS,
+            ));
+        };
+        let var_args = var_args.borrow();
+        let mut extension_arguments = Vec::with_capacity(var_args.len() + 1);
+        extension_arguments.push(object.clone());
+        extension_arguments.extend(var_args.iter().cloned());
+        self.functional_varargs.call(&extension_arguments)
+    }
+
+    fn is_var_args(&self) -> bool {
+        true
+    }
+}
 
 /// QlExpress Rust 的解析、编译、执行与宿主扩展统一门面。
 ///
@@ -103,11 +156,16 @@ static RUNNER_IDENTITY: AtomicUsize = AtomicUsize::new(1);
 pub struct Express4Runner {
     /// 操作符管理器。对应 Java 字段 `operatorManager`。
     operator_manager: OperatorManager,
-    /// 编译缓存(script → 编译产物)。对应 Java 字段 `compileCache`
-    /// (Java 值为 `Future<QCompileCache>`,Rust 直接缓存产物,见文件头)。
+    /// Java 兼容编译缓存(script → 编译产物)。对应 Java 字段
+    /// `compileCache`；与 Java 的无界 `ConcurrentHashMap` 一样，在显式
+    /// 清理前不淘汰条目。
     compile_cache: RefCell<CompileCacheStore>,
-    /// 用户注册函数表。对应 Java 字段 `userDefineFunction`。
-    user_define_functions: RefCell<UserDefineFunctions>,
+    /// `execute_checked` 专用的按租户有界 LRU；与 Java 兼容缓存物理隔离，
+    /// 防止安全租户淘汰普通执行入口已经冻结的编译语义。
+    secure_compile_cache: RefCell<CompileCacheStore>,
+    /// 用户注册函数表。对应 Java 字段 `userDefineFunction`；共享给已创建
+    /// Lambda 的全局作用域，使后续注册与 Java Map 引用语义一致。
+    user_define_functions: Rc<RefCell<UserDefineFunctions>>,
     /// 编译期函数表。对应 Java 字段 `compileTimeFunctions`。
     compile_time_functions: RefCell<CompileTimeFunctions>,
     /// 全局宏作用域。对应 Java 字段 `globalScope`。
@@ -161,7 +219,8 @@ impl Express4Runner {
         Express4Runner {
             operator_manager: OperatorManager::new(),
             compile_cache: RefCell::new(CompileCacheStore::new()),
-            user_define_functions: RefCell::new(HashMap::new()),
+            secure_compile_cache: RefCell::new(CompileCacheStore::new()),
+            user_define_functions: Rc::new(RefCell::new(HashMap::new())),
             compile_time_functions: RefCell::new(HashMap::new()),
             global_scope: Rc::new(GeneratorScope::new("global", None)),
             reflect_loader,
@@ -180,13 +239,6 @@ impl Express4Runner {
     /// 取注册表(只读)。对应 Java 内部对 `reflectLoader` 的访问。
     pub fn registry(&self) -> &Rc<NativeRegistry> {
         self.reflect_loader.registry()
-    }
-
-    /// 注册表可变访问(`&mut self` 且注册表未被 QVM 共享时)。
-    fn registry_mut(&mut self) -> &mut NativeRegistry {
-        self.reflect_loader
-            .registry_mut()
-            .expect("Express4Runner registry must not be shared outside execute")
     }
 
     // ------------------------------------------------------------------
@@ -406,7 +458,7 @@ impl Express4Runner {
 
         let compile_cache = if sandbox_profile.compile_cache.enabled {
             let cached = {
-                self.compile_cache
+                self.secure_compile_cache
                     .borrow_mut()
                     .get(&sandbox_profile.tenant_id, script)
             };
@@ -418,7 +470,7 @@ impl Express4Runner {
                         .map_err(QLSyntaxException::into_exception)?,
                 );
                 self.validate_instruction_budget(&compiled, sandbox_profile)?;
-                self.compile_cache.borrow_mut().insert(
+                self.secure_compile_cache.borrow_mut().insert(
                     &sandbox_profile.tenant_id,
                     script.to_string(),
                     Rc::clone(&compiled),
@@ -587,9 +639,9 @@ impl Express4Runner {
     ) -> Result<QLResult, QLException> {
         let debug = self.init_options.is_debug();
         let start = current_time_millis();
-        let global_scope = QvmGlobalScope::with_context(
+        let global_scope = QvmGlobalScope::with_shared_context(
             context,
-            self.user_define_functions.borrow().clone(),
+            Rc::clone(&self.user_define_functions),
             ql_options.attachments().clone(),
             ql_options.is_pollute_user_context(),
         );
@@ -627,9 +679,9 @@ impl Express4Runner {
         ql_options: &QLOptions,
         sandbox_profile: &SandboxProfile,
     ) -> Result<QLResult, QLException> {
-        let global_scope = QvmGlobalScope::with_context(
+        let global_scope = QvmGlobalScope::with_shared_context(
             context,
-            self.user_define_functions.borrow().clone(),
+            Rc::clone(&self.user_define_functions),
             ql_options.attachments().clone(),
             ql_options.is_pollute_user_context(),
         );
@@ -757,18 +809,20 @@ impl Express4Runner {
         &self,
         script: &str,
     ) -> Result<Rc<LoadedCompileCache>, QLSyntaxException> {
-        const LEGACY_TENANT: &str = "__java_compatible__";
-        const LEGACY_CACHE_CAPACITY: usize = 1024;
-        if let Some(cached) = self.compile_cache.borrow_mut().get(LEGACY_TENANT, script) {
+        if let Some(cached) = self
+            .compile_cache
+            .borrow_mut()
+            .get(JAVA_COMPATIBLE_CACHE_TENANT, script)
+        {
             return Ok(cached);
         }
         let compiled = Rc::new(self.parse_definition(script)?);
         self.compile_cache.borrow_mut().insert(
-            LEGACY_TENANT,
+            JAVA_COMPATIBLE_CACHE_TENANT,
             script.to_string(),
             Rc::clone(&compiled),
-            LEGACY_CACHE_CAPACITY,
-            LEGACY_CACHE_CAPACITY,
+            UNBOUNDED_CACHE_CAPACITY,
+            UNBOUNDED_CACHE_CAPACITY,
         );
         Ok(compiled)
     }
@@ -924,9 +978,9 @@ impl Express4Runner {
             Rc::clone(self.reflect_loader.registry()),
             current_time_millis(),
         ));
-        let global_scope = QvmGlobalScope::with_context(
+        let global_scope = QvmGlobalScope::with_shared_context(
             context,
-            self.user_define_functions.borrow().clone(),
+            Rc::clone(&self.user_define_functions),
             ql_options.attachments().clone(),
             ql_options.is_pollute_user_context(),
         );
@@ -940,14 +994,25 @@ impl Express4Runner {
         QLambdaTrace::new(q_lambda, traces)
     }
 
-    /// 清空编译缓存。对应 Java 方法 `clearCompileCache()`。
+    /// 清空 Java 兼容缓存及安全租户缓存。对应 Java 方法
+    /// `clearCompileCache()`；安全租户缓存是 Rust 增强，因此同时清理，避免
+    /// 宿主请求清空后仍命中旧的安全编译产物。
     pub fn clear_compile_cache(&self) {
         self.compile_cache.borrow_mut().clear();
+        self.secure_compile_cache.borrow_mut().clear();
     }
 
-    /// 返回 Runner 编译缓存统计。该统计覆盖兼容入口和安全租户入口。
+    /// 返回 Runner 编译缓存统计。该快照汇总互相隔离的 Java 兼容缓存与
+    /// 安全租户缓存。
     pub fn compile_cache_stats(&self) -> crate::security::CacheStats {
-        self.compile_cache.borrow().stats()
+        let compatible = self.compile_cache.borrow().stats();
+        let secure = self.secure_compile_cache.borrow().stats();
+        crate::security::CacheStats {
+            entries: compatible.entries.saturating_add(secure.entries),
+            hits: compatible.hits.saturating_add(secure.hits),
+            misses: compatible.misses.saturating_add(secure.misses),
+            evictions: compatible.evictions.saturating_add(secure.evictions),
+        }
     }
 
     /// 默认 import 管理器。对应 Java 私有方法 `inheritDefaultImport()`。
@@ -1017,11 +1082,11 @@ impl Express4Runner {
         let loaded = self.import_parse_cache(cache)?;
         let script = loaded.get_script().unwrap_or_default().to_string();
         self.compile_cache.borrow_mut().insert(
-            "__java_compatible__",
+            JAVA_COMPATIBLE_CACHE_TENANT,
             script,
             Rc::new(loaded.get_compile_cache().clone()),
-            1024,
-            1024,
+            UNBOUNDED_CACHE_CAPACITY,
+            UNBOUNDED_CACHE_CAPACITY,
         );
         Ok(())
     }
@@ -1244,9 +1309,9 @@ impl Express4Runner {
         context: Rc<dyn ExpressContext>,
         ql_options: &QLOptions,
     ) -> Result<BatchAddFunctionResult, QLException> {
-        let global_scope = QvmGlobalScope::with_context(
+        let global_scope = QvmGlobalScope::with_shared_context(
             context,
-            self.user_define_functions.borrow().clone(),
+            Rc::clone(&self.user_define_functions),
             ql_options.attachments().clone(),
             ql_options.is_pollute_user_context(),
         );
@@ -1381,11 +1446,38 @@ impl Express4Runner {
             });
     }
 
+    /// 注册可变参数扩展函数。对应 Java 方法
+    /// `addExtendFunction(String name, Class<?> bindingClass,
+    /// QLFunctionalVarargs functionalVarargs)`。
+    ///
+    /// 参数转换器先把脚本实参收集为 `Object[]`；调用闭包时再按 Java 匿名
+    /// `ExtensionFunction` 的实现展开，并把接收者置于参数 0。
+    ///
+    /// # 参数
+    ///
+    /// - `name`：脚本中调用的扩展方法名。
+    /// - `binding_class`：允许接收该扩展方法的声明类型。
+    /// - `functional_varargs`：接收 `[接收者, 脚本参数...]` 的宿主逻辑。
+    pub fn add_extend_function_varargs<F>(
+        &mut self,
+        name: impl Into<String>,
+        binding_class: ClassRef,
+        functional_varargs: F,
+    ) where
+        F: QLFunctionalVarargs + 'static,
+    {
+        self.add_extend_function(VarargsExtensionFunction {
+            name: name.into(),
+            binding_class,
+            functional_varargs,
+        });
+    }
+
     /// 注册原生类型(SPEC §4 宿主 API;Java 无同名方法,对应
     /// 「让类对脚本可见」的显式注册)。
     /// 对应 Java: com.alibaba.qlexpress4.Express4Runner#registerNativeType。
     pub fn register_native_type(&mut self, native_type: NativeType) {
-        self.registry_mut().register_type(native_type);
+        self.registry().register_type(native_type);
     }
 
     /// 通过 `#[derive(QLExpressType)]` 宏注册原生类型。对应

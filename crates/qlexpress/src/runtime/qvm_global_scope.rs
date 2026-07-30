@@ -26,7 +26,10 @@ pub struct QvmGlobalScope {
     /// 脚本中首次提及的变量(Java `Map<String, LeftValue> newVariables`)。
     new_variables: HashMap<String, Rc<RefCell<dyn LeftValue>>>,
     /// 外部(宿主注册)函数(Java `Map<String, CustomFunction> externalFunction`)。
-    external_functions: HashMap<String, Rc<dyn CustomFunction>>,
+    ///
+    /// Java 直接保存 runner 的同一张 Map；这里也共享同一注册表，使已经
+    /// 创建的 Lambda 能观察后续宿主函数注册。
+    external_functions: Rc<RefCell<HashMap<String, Rc<dyn CustomFunction>>>>,
     /// 用户附加数据(Java `qlOptions.getAttachments()`,每次查找时透传给上下文)。
     attachments: Attachments,
     /// Java `qlOptions.isPolluteUserContext()`,每次查找时判定。
@@ -56,6 +59,31 @@ impl QvmGlobalScope {
     pub fn with_context(
         external_variable: Rc<dyn ExpressContext>,
         external_functions: HashMap<String, Rc<dyn CustomFunction>>,
+        attachments: Attachments,
+        pollute_user_context: bool,
+    ) -> Self {
+        Self::with_shared_context(
+            external_variable,
+            Rc::new(RefCell::new(external_functions)),
+            attachments,
+            pollute_user_context,
+        )
+    }
+
+    /// 使用共享宿主函数表创建全局作用域。
+    ///
+    /// 对应 Java 构造器直接保存 `externalFunction` Map 引用的行为；runner
+    /// 通过此入口保证已创建 Lambda 与后续函数注册共享同一可见性边界。
+    ///
+    /// # 参数
+    ///
+    /// - `external_variable`：外部变量上下文。
+    /// - `external_functions`：runner 生命周期内共享的宿主函数表。
+    /// - `attachments`：查询外部上下文时透传的附加数据。
+    /// - `pollute_user_context`：赋值是否写穿外部上下文。
+    pub fn with_shared_context(
+        external_variable: Rc<dyn ExpressContext>,
+        external_functions: Rc<RefCell<HashMap<String, Rc<dyn CustomFunction>>>>,
         attachments: Attachments,
         pollute_user_context: bool,
     ) -> Self {
@@ -134,12 +162,18 @@ impl QvmGlobalScope {
 
     /// 对应 Java 方法 `getFunction`:此处仅外部函数可见。
     pub fn get_function(&self, function_name: &str) -> Option<Rc<dyn CustomFunction>> {
-        self.external_functions.get(function_name).cloned()
+        self.external_functions
+            .borrow()
+            .get(function_name)
+            .cloned()
     }
 
     /// 对应 Java 方法 `getFunctionTable`。
-    pub fn function_table(&self) -> &HashMap<String, Rc<dyn CustomFunction>> {
-        &self.external_functions
+    ///
+    /// Rust 返回当前快照，避免把内部 `RefCell` 借用泄漏到调用方；单个函数
+    /// 查找仍直接读取共享表，因此后续注册立即可见。
+    pub fn function_table(&self) -> HashMap<String, Rc<dyn CustomFunction>> {
+        self.external_functions.borrow().clone()
     }
 
     /// 脚本自建变量表(Java `newVariables`)。

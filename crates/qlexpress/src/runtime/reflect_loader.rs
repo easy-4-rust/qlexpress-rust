@@ -13,7 +13,7 @@ use crate::exception::QLException;
 use crate::runtime::class_ref::ClassRef;
 use crate::runtime::function::{as_native_method, ExtensionFunction};
 use crate::runtime::native_registry::NativeRegistry;
-use crate::runtime::native_type::{NativeConstructor, NativeMethod};
+use crate::runtime::native_type::{NativeConstructor, NativeMethod, NativeMethodCandidate};
 use crate::runtime::value::{DataValue, QValue};
 use crate::security::ql_security_strategy::QLSecurityStrategy;
 
@@ -63,12 +63,6 @@ impl ReflectLoader {
         &self.registry
     }
 
-    /// 当注册表尚未被运行时共享时获取可变引用，供宿主注册成员。
-    /// 对应 Java: com.alibaba.qlexpress4.runtime.ReflectLoader#registryMut。
-    pub fn registry_mut(&mut self) -> Option<&mut NativeRegistry> {
-        Rc::get_mut(&mut self.registry)
-    }
-
     /// 注册一个成员扩展函数。
     ///
     /// 对应 Java：`ReflectLoader#addExtendFunction(ExtensionFunction)`。
@@ -78,15 +72,24 @@ impl ReflectLoader {
     /// # 参数
     ///
     /// - `extension_function`：声明接收者类型、方法签名与调用实现的扩展。
-    pub fn add_extend_function<F>(&mut self, extension_function: F)
+    pub fn add_extend_function<F>(&self, extension_function: F)
     where
         F: ExtensionFunction + 'static,
     {
         let method_name = extension_function.name().to_string();
-        let type_name = extension_function.declaring_class().java_name().to_string();
-        self.registry_mut()
-            .expect("ReflectLoader registry must be uniquely owned while registering extensions")
-            .register_method(type_name, method_name, as_native_method(extension_function));
+        let declaring_class = extension_function.declaring_class();
+        let parameter_types = extension_function.parameter_types();
+        let var_args = extension_function.is_var_args();
+        self.registry
+            .register_extension_candidate(
+                declaring_class,
+                method_name,
+                NativeMethodCandidate::new(
+                    parameter_types,
+                    var_args,
+                    as_native_method(extension_function),
+                ),
+            );
     }
 
     /// 是否允许宿主注册非公开成员。对应 Java 字段 `allowPrivateAccess`。

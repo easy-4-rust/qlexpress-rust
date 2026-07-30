@@ -214,7 +214,7 @@ impl QScope {
     pub fn function_table(this: &ScopeRef) -> HashMap<String, Rc<dyn CustomFunction>> {
         let borrowed = this.borrow();
         match &borrowed.kind {
-            QScopeKind::Global(global) => global.function_table().clone(),
+            QScopeKind::Global(global) => global.function_table(),
             QScopeKind::Block(block) => block.function_table().clone(),
         }
     }

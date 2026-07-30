@@ -53,6 +53,27 @@ fn java_parse_to_cache_test() {
     assert!(Rc::ptr_eq(&first, &second));
 }
 
+/// SOURCE_PARITY: Java `compileCache` 在显式 `clearCompileCache()` 前不会
+/// 因容量自动淘汰；覆盖旧实现 1024 条目上限的回归。
+#[test]
+fn java_compatible_compile_cache_is_not_lru_bounded() {
+    let runner = Express4Runner::new();
+    let first = runner
+        .parse_to_definition_with_cache("0")
+        .expect("populate first cache entry");
+    for value in 1..=1_024 {
+        runner
+            .parse_to_definition_with_cache(&value.to_string())
+            .expect("populate Java-compatible cache");
+    }
+    let first_again = runner
+        .parse_to_definition_with_cache("0")
+        .expect("first entry must remain cached");
+
+    assert!(Rc::ptr_eq(&first, &first_again));
+    assert_eq!(runner.compile_cache_stats().evictions, 0);
+}
+
 /// SOURCE_PARITY: Java `Express4Runner#parseToLambda(String, ExpressContext,
 /// QLOptions)`，并覆盖 `QLOptions.cache` 的两条分支。
 #[test]
@@ -90,6 +111,34 @@ fn java_parse_to_lambda_script_overload() {
         3,
     );
     assert_eq!(runner.compile_cache_stats().entries, 1);
+}
+
+/// SOURCE_PARITY: Java `parseToLambda` 的全局作用域保存 runner
+/// `userDefineFunction` Map 的同一引用，创建 Lambda 后新增的函数仍然可见。
+#[test]
+fn existing_lambda_observes_later_runner_function_registration() {
+    let runner = Express4Runner::new();
+    let lambda = runner
+        .parse_to_lambda(
+            "lateBound()",
+            Rc::new(EmptyContext),
+            &QLOptions::default(),
+        )
+        .expect("unknown runtime function names compile to dynamic lookup");
+
+    assert!(runner.add_function(
+        "lateBound",
+        |_context: &mut dyn QContext, _parameters: &Parameters| Ok(DataValue::Int(42)),
+    ));
+
+    assert_eq!(
+        lambda
+            .q_lambda()
+            .call(&[])
+            .expect("existing lambda must see later function")
+            .value(),
+        DataValue::Int(42)
+    );
 }
 
 /// SOURCE_PARITY: Java `parseToLambda(LoadedParseCache, ...)` 与
@@ -1492,6 +1541,33 @@ impl ExtensionFunction for AddExtension {
     }
 }
 
+struct OverloadedExtension {
+    parameter_types: Vec<ClassRef>,
+    result: &'static str,
+}
+
+impl ExtensionFunction for OverloadedExtension {
+    fn parameter_types(&self) -> Vec<ClassRef> {
+        self.parameter_types.clone()
+    }
+
+    fn name(&self) -> &str {
+        "pick"
+    }
+
+    fn declaring_class(&self) -> ClassRef {
+        ClassRef::Named("java.lang.String".to_string())
+    }
+
+    fn invoke(
+        &self,
+        _object: &DataValue,
+        _arguments: &[DataValue],
+    ) -> Result<DataValue, QLException> {
+        Ok(DataValue::Str(self.result.to_string()))
+    }
+}
+
 /// Java `Express4RunnerTest#extensionFunctionTest`。
 #[test]
 fn java_extension_function_test() {
@@ -1516,6 +1592,89 @@ fn java_extension_function_test() {
         .execute("1.add2(2,3)", HashMap::new(), &QLOptions::default())
         .expect("number add2 extension");
     assert_integer(add2.result(), 6);
+}
+
+/// RUST_OBLIGATION: Java `ReflectLoader.extensionFunctions` 使用列表保存候选；
+/// 同一声明类、同一方法名的不同签名必须共存并按实参选择。
+#[test]
+fn extension_function_overloads_do_not_overwrite_each_other() {
+    let mut runner = Express4Runner::new();
+    runner.add_extend_function(OverloadedExtension {
+        parameter_types: Vec::new(),
+        result: "zero",
+    });
+    runner.add_extend_function(OverloadedExtension {
+        parameter_types: vec![ClassRef::from_name("int")],
+        result: "one",
+    });
+
+    let zero = runner
+        .execute("'x'.pick()", HashMap::new(), &QLOptions::default())
+        .expect("zero-argument extension overload");
+    assert_eq!(zero.result(), &DataValue::Str("zero".to_string()));
+
+    let one = runner
+        .execute("'x'.pick(7)", HashMap::new(), &QLOptions::default())
+        .expect("one-argument extension overload");
+    assert_eq!(one.result(), &DataValue::Str("one".to_string()));
+}
+
+/// RUST_OBLIGATION: Java
+/// `Express4Runner#addExtendFunction(String, Class, QLFunctionalVarargs)`
+/// 将接收者放在参数 0，并在其后展开全部脚本实参。
+#[test]
+fn varargs_extension_function_receives_receiver_then_script_arguments() {
+    let mut runner = Express4Runner::new();
+    runner.add_extend_function_varargs(
+        "describe",
+        ClassRef::Named("java.lang.String".to_string()),
+        |arguments: &[DataValue]| {
+            Ok(DataValue::Str(
+                arguments
+                    .iter()
+                    .map(DataValue::string_value_of)
+                    .collect::<Vec<_>>()
+                    .join("|"),
+            ))
+        },
+    );
+
+    let result = runner
+        .execute(
+            "'root'.describe(1, 'leaf')",
+            HashMap::new(),
+            &QLOptions::default(),
+        )
+        .expect("varargs extension");
+    assert_eq!(
+        result.result(),
+        &DataValue::Str("root|1|leaf".to_string())
+    );
+}
+
+/// RUST_OBLIGATION: Java `ReflectLoader` 由 runner 与已创建 Lambda 共享；
+/// Lambda 创建后新增的扩展函数仍须对该 Lambda 可见。
+#[test]
+fn extension_registration_remains_visible_to_existing_lambda() {
+    let mut runner = Express4Runner::new();
+    let lambda = runner
+        .parse_to_lambda(
+            "'jack'.hello()",
+            Rc::new(EmptyContext),
+            &QLOptions::default(),
+        )
+        .expect("compile lambda before registering extension");
+
+    runner.add_extend_function(HelloExtension);
+
+    assert_eq!(
+        lambda
+            .q_lambda()
+            .call(&[])
+            .expect("existing lambda must observe later registration")
+            .value(),
+        DataValue::Str("Hello,jack".to_string())
+    );
 }
 
 fn annotated_constant(value: i32) -> Rc<dyn CustomFunction> {

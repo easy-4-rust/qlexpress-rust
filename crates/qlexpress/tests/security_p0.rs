@@ -2,6 +2,7 @@
 #![allow(clippy::result_large_err)]
 
 use std::collections::{HashMap, HashSet};
+use std::rc::Rc;
 use std::time::{Duration, Instant};
 
 use qlexpress::operator::operator_check_strategy::OperatorCheckStrategy;
@@ -251,6 +252,27 @@ fn cache_is_tenant_bounded_lru_and_reports_statistics() {
     assert_eq!(stats.entries, 3);
     assert!(stats.hits >= 1);
     assert!(stats.evictions >= 1);
+}
+
+#[test]
+fn secure_lru_cannot_evict_java_compatible_cache_entries() {
+    let runner = Express4Runner::new();
+    let compatible = runner
+        .parse_to_definition_with_cache("40 + 2")
+        .expect("populate Java-compatible cache");
+    let profile = profile_with(|profile| {
+        profile.tenant_id = "bounded".into();
+        profile.compile_cache.max_entries = 1;
+        profile.compile_cache.max_entries_per_tenant = 1;
+    });
+
+    execute(&runner, "1", &profile).expect("first secure cache entry");
+    execute(&runner, "2", &profile).expect("evict first secure cache entry");
+
+    let compatible_again = runner
+        .parse_to_definition_with_cache("40 + 2")
+        .expect("Java-compatible entry must survive secure LRU eviction");
+    assert!(Rc::ptr_eq(&compatible, &compatible_again));
 }
 
 #[test]

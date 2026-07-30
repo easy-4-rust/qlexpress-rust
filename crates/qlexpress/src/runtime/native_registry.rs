@@ -55,10 +55,19 @@ use crate::utils::cache_util::CacheUtil;
 /// 对应 Java: 无（Rust 原生适配）。
 pub struct NativeRegistry {
     /// 类型名 -> 注册类型(Java 侧为 `ClassLoader` 可加载的所有类)。
-    types: HashMap<String, NativeType>,
+    ///
+    /// Java `ReflectLoader` 在已创建运行时或 Lambda 仍持有加载器时也允许
+    /// 继续注册扩展能力。Rust 运行时通过 `Rc` 共享本注册表，因此类型表
+    /// 使用内部可变性，并以 `Rc<NativeType>` 快照供一次解析过程稳定读取。
+    types: RefCell<HashMap<String, Rc<NativeType>>>,
     /// 扩展函数表。Java `ReflectLoader.loadMethod` 在隔离策略判断之前解析
     /// `ExtensionFunction`，因此它必须与受安全策略约束的反射方法分开。
-    extension_methods: HashMap<(String, String), NativeMethod>,
+    extension_methods: RefCell<HashMap<(String, String), NativeMethod>>,
+    /// 带 Java 形参签名的扩展函数候选，按注册顺序保存。对应 Java
+    /// `CopyOnWriteArrayList<ExtensionFunction>`，允许同一声明类型和名称
+    /// 注册多个重载并在调用现场交给 `MemberResolver` 选择。
+    extension_method_candidates:
+        RefCell<Vec<(ClassRef, String, NativeMethodCandidate)>>,
     /// 成员访问安全策略(Java `ReflectLoader.securityStrategy`)。
     /// `RefCell`:注册表经 `Rc` 共享给 QVM,策略需在 runner 层可改。
     security_strategy: RefCell<QLSecurityStrategy>,
@@ -75,8 +84,9 @@ impl NativeRegistry {
     /// 返回默认开放成员策略且不包含任何类型或扩展方法的注册表。
     pub fn new() -> Self {
         NativeRegistry {
-            types: HashMap::new(),
-            extension_methods: HashMap::new(),
+            types: RefCell::new(HashMap::new()),
+            extension_methods: RefCell::new(HashMap::new()),
+            extension_method_candidates: RefCell::new(Vec::new()),
             // 注册表裸用时默认放行;Express4Runner 构造时按
             // `InitOptions.securityStrategy` 覆盖(Java 默认 `isolation`)。
             security_strategy: RefCell::new(QLSecurityStrategy::open()),
@@ -144,7 +154,7 @@ impl NativeRegistry {
     ///
     /// 返回已注册 QLExpress 内建 Java 类型锚点的注册表。
     pub fn with_builtins() -> Self {
-        let mut registry = NativeRegistry::new();
+        let registry = NativeRegistry::new();
         registry.register_builtin_types();
         registry
     }
@@ -154,8 +164,10 @@ impl NativeRegistry {
     /// # Arguments
     ///
     /// * `native_type` - 包含规范类型名及显式构造器、字段和方法的描述。
-    pub fn register_type(&mut self, native_type: NativeType) {
-        self.types.insert(native_type.name.clone(), native_type);
+    pub fn register_type(&self, native_type: NativeType) {
+        self.types
+            .borrow_mut()
+            .insert(native_type.name.clone(), Rc::new(native_type));
     }
 
     /// 按名取注册类型。对应 Java `Class.forName` 命中已供给类型。
@@ -166,9 +178,10 @@ impl NativeRegistry {
     ///
     /// # Returns
     ///
-    /// 类型已经显式注册时返回只读描述，否则返回 `None`。
-    pub fn get_type(&self, name: &str) -> Option<&NativeType> {
-        self.types.get(name)
+    /// 类型已经显式注册时返回共享只读快照，否则返回 `None`。该快照不会
+    /// 阻止宿主继续向同一注册表登记其他类型或替换同名类型。
+    pub fn get_type(&self, name: &str) -> Option<Rc<NativeType>> {
+        self.types.borrow().get(name).map(Rc::clone)
     }
 
     /// 为指定类型追加(或覆盖)一个扩展函数。
@@ -182,13 +195,38 @@ impl NativeRegistry {
     /// * `method_name` - 脚本调用的方法名。
     /// * `method` - 接收目标值和实参数组的宿主实现。
     pub fn register_method(
-        &mut self,
+        &self,
         type_name: impl Into<String>,
         method_name: impl Into<String>,
         method: NativeMethod,
     ) {
         self.extension_methods
+            .borrow_mut()
             .insert((type_name.into(), method_name.into()), method);
+    }
+
+    /// 按 Java `ExtensionFunction` 签名追加一个扩展函数候选。
+    ///
+    /// 对应 Java `ReflectLoader#addExtendFunction` 向
+    /// `CopyOnWriteArrayList` 追加元素的行为；同名候选不会覆盖，解析时同时
+    /// 考虑声明类型可赋值关系、精确参数、数值转换和 varargs。
+    ///
+    /// # 参数
+    ///
+    /// - `declaring_class`：扩展函数声明的接收者类型。
+    /// - `method_name`：脚本中的实例方法名。
+    /// - `candidate`：形参签名、varargs 标志与调用实现。
+    pub fn register_extension_candidate(
+        &self,
+        declaring_class: ClassRef,
+        method_name: impl Into<String>,
+        candidate: NativeMethodCandidate,
+    ) {
+        self.extension_method_candidates.borrow_mut().push((
+            declaring_class,
+            method_name.into(),
+            candidate,
+        ));
     }
 
     /// 按 Java `@QLAlias` 语义把脚本方法名解析为注册表中的真实方法名。
@@ -241,8 +279,7 @@ impl NativeRegistry {
         if !self.check_member(clz.java_name(), "<init>") {
             return None;
         }
-        self.types
-            .get(clz.java_name())
+        self.get_type(clz.java_name())
             .and_then(|native_type| native_type.constructor.as_ref().map(Rc::clone))
     }
 
@@ -265,7 +302,7 @@ impl NativeRegistry {
         if !self.check_member(clz.java_name(), "<init>") {
             return None;
         }
-        let native_type = self.types.get(clz.java_name())?;
+        let native_type = self.get_type(clz.java_name())?;
         if let Some(candidate) =
             self.select_constructor_candidate(&native_type.constructor_candidates, args)
         {
@@ -361,9 +398,9 @@ impl NativeRegistry {
                             return Some(QValue::Data(bean.clone()));
                         }
                         let name = clz.java_name();
-                        let native_type = self.types.get(name)?;
+                        let native_type = self.get_type(name)?;
                         let registered_name =
-                            PreferredFieldHandler::gather_field_recursive(native_type, field_name)?;
+                            PreferredFieldHandler::gather_field_recursive(&native_type, field_name)?;
                         // 安全策略接线点(Java ReflectLoader.check):
                         // 静态字段访问前过 QLSecurityStrategy。
                         if skip_security || self.check_member(name, &registered_name) {
@@ -390,11 +427,10 @@ impl NativeRegistry {
                     None => {
                         let type_name = obj.borrow().native_type_name().to_string();
                         let registered_name = self
-                            .types
-                            .get(&type_name)
+                            .get_type(&type_name)
                             .and_then(|native_type| {
                                 PreferredFieldHandler::gather_field_recursive(
-                                    native_type,
+                                    &native_type,
                                     field_name,
                                 )
                             })
@@ -402,7 +438,7 @@ impl NativeRegistry {
                         if !skip_security && !self.check_member(&type_name, &registered_name) {
                             return None;
                         }
-                        if let Some(native_type) = self.types.get(&type_name) {
+                        if let Some(native_type) = self.get_type(&type_name) {
                             if let (Some(getter), Some(setter)) = (
                                 native_type.fields.get(&registered_name),
                                 native_type.field_setters.get(&registered_name),
@@ -438,9 +474,9 @@ impl NativeRegistry {
                 // 注册的实例字段(按 Java 类型名)。
                 // 安全策略接线点:实例字段访问前过 QLSecurityStrategy。
                 let type_name = bean.data_type_name();
-                let native_type = self.types.get(type_name)?;
+                let native_type = self.get_type(type_name)?;
                 let registered_name =
-                    PreferredFieldHandler::gather_field_recursive(native_type, field_name)?;
+                    PreferredFieldHandler::gather_field_recursive(&native_type, field_name)?;
                 if !skip_security && !self.check_member(type_name, &registered_name) {
                     return None;
                 }
@@ -495,9 +531,9 @@ impl NativeRegistry {
                 }));
             }
             let name = meta.java_name();
-            let native_type = self.types.get(name)?;
+            let native_type = self.get_type(name)?;
             let registered_name =
-                Self::resolve_registered_method_name(native_type, method_name, true);
+                Self::resolve_registered_method_name(&native_type, method_name, true);
             // 安全策略接线点:静态方法访问前过 QLSecurityStrategy。
             if !self.check_member(name, registered_name) {
                 return None;
@@ -510,15 +546,16 @@ impl NativeRegistry {
         let type_name = native_type_name(bean);
         // Java 先解析扩展函数，再判断是否为隔离策略。
         if let Some(method) = self
-            .resolve_extension_method(bean, method_name)
+            .resolve_extension_method(bean, method_name, &[])
             .or_else(|| builtin_extension_method(bean, method_name))
         {
             return Some(method);
         }
-        let native_type = self.types.get(&type_name);
+        let native_type = self.get_type(&type_name);
         let registered_name = native_type
+            .as_ref()
             .map(|native_type| {
-                Self::resolve_registered_method_name(native_type, method_name, false)
+                Self::resolve_registered_method_name(native_type.as_ref(), method_name, false)
             })
             .unwrap_or(method_name);
         // Java 反射方法（含 Rust 内建 JDK 方法子集）统一通过安全策略；
@@ -530,6 +567,7 @@ impl NativeRegistry {
             return Some(method);
         }
         if let Some(method) = native_type
+            .as_ref()
             .and_then(|native_type| native_type.methods.get(registered_name).map(Rc::clone))
         {
             return Some(method);
@@ -574,7 +612,7 @@ impl NativeRegistry {
         let type_name = native_type_name(bean);
         // Java 扩展函数优先于反射成员。
         if let Some(method) = self
-            .resolve_extension_method(bean, method_name)
+            .resolve_extension_method(bean, method_name, args)
             .or_else(|| builtin_extension_method(bean, method_name))
         {
             return Some(method);
@@ -586,7 +624,7 @@ impl NativeRegistry {
             return Some(method);
         }
         // 未显式登记候选时继续兼容内建方法表。
-        if self.types.get(&type_name).is_none_or(|native_type| {
+        if self.get_type(&type_name).is_none_or(|native_type| {
             native_type
                 .method_candidates
                 .get(method_name)
@@ -605,21 +643,52 @@ impl NativeRegistry {
         &self,
         bean: &DataValue,
         method_name: &str,
+        args: &[DataValue],
     ) -> Option<NativeMethod> {
+        let argument_type = runtime_class_ref(bean);
+        let signed_candidates = self
+            .extension_method_candidates
+            .borrow()
+            .iter()
+            .filter_map(|(declaring_class, registered_name, candidate)| {
+                (registered_name == method_name
+                    && self.is_assignable(declaring_class, &argument_type))
+                .then(|| candidate.clone())
+            })
+            .collect::<Vec<_>>();
+        if let Some(candidate) = self.select_method_candidate(&signed_candidates, args) {
+            return Some(wrap_method_candidate(candidate));
+        }
+
+        // 早期 Rust API 的无签名注册项保留为兼容回退；Java 对应入口全部
+        // 使用上面的签名候选，不会因同名注册而覆盖。
         let type_name = native_type_name(bean);
         if let Some(method) = self
             .extension_methods
+            .borrow()
             .get(&(type_name.clone(), method_name.to_string()))
+            .map(Rc::clone)
         {
-            return Some(Rc::clone(method));
+            return Some(method);
         }
-        let argument_type = runtime_class_ref(bean);
-        self.extension_methods
+        let candidates = self
+            .extension_methods
+            .borrow()
             .iter()
-            .find_map(|((declaring_type, registered_name), method)| {
+            .map(|((declaring_type, registered_name), method)| {
+                (
+                    declaring_type.clone(),
+                    registered_name.clone(),
+                    Rc::clone(method),
+                )
+            })
+            .collect::<Vec<_>>();
+        candidates
+            .into_iter()
+            .find_map(|(declaring_type, registered_name, method)| {
                 (registered_name == method_name
-                    && self.is_assignable(&ClassRef::Named(declaring_type.clone()), &argument_type))
-                .then(|| Rc::clone(method))
+                    && self.is_assignable(&ClassRef::Named(declaring_type), &argument_type))
+                .then_some(method)
             })
     }
 
@@ -631,9 +700,9 @@ impl NativeRegistry {
         is_static: bool,
         bean: &DataValue,
     ) -> Option<NativeMethod> {
-        let native_type = self.types.get(type_name)?;
+        let native_type = self.get_type(type_name)?;
         let registered_name =
-            Self::resolve_registered_method_name(native_type, method_name, is_static);
+            Self::resolve_registered_method_name(&native_type, method_name, is_static);
         if !self.check_member(type_name, registered_name) {
             return None;
         }
@@ -718,11 +787,10 @@ impl NativeRegistry {
         if name.starts_with("java.util.function.") || name == "java.lang.Runnable" {
             return true;
         }
-        self.types
-            .get(name)
+        self.get_type(name)
             .is_some_and(|native_type| {
                 self.function_interface_cache
-                    .is_function_interface(native_type)
+                    .is_function_interface(&native_type)
             })
     }
 
@@ -781,7 +849,7 @@ impl NativeRegistry {
             return false;
         }
         visited.push(type_name.to_string());
-        self.types.get(type_name).is_some_and(|native_type| {
+        self.get_type(type_name).is_some_and(|native_type| {
             native_type.supertypes.iter().any(|supertype| {
                 supertype == expected_supertype
                     || self.type_extends(supertype, expected_supertype, visited)
@@ -791,7 +859,7 @@ impl NativeRegistry {
 
     /// 注册内建锚点类型,供 `ClassSupplier` 式查询与宿主覆盖挂接;
     /// 实际分派在 [`builtin_method`]。对应 Java 中这些 JDK 类天然可被反射。
-    fn register_builtin_types(&mut self) {
+    fn register_builtin_types(&self) {
         let mut system = NativeType::named("java.lang.System");
         system.static_methods.insert(
             "currentTimeMillis".to_string(),

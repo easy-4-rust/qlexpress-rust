@@ -202,9 +202,10 @@ fn registry_ext_trait_registers_derived_type() {
 #[test]
 fn express4_runner_register_qlexpress_type() {
     let mut runner = Express4Runner::new();
-    runner.register_qlexpress_type::<Box2D>();
-    // Verify the type made it into the runner's registry.
+    // RUST_OBLIGATION: 已创建的 QVM/Lambda 会持有同一个注册表句柄；
+    // 后续注册必须对既有句柄可见，不能因 `Rc` 已共享而 panic 或复制分叉。
     let registry = runner.registry().clone();
+    runner.register_qlexpress_type::<Box2D>();
     assert!(registry.get_type("Box2D").is_some());
 }
 
