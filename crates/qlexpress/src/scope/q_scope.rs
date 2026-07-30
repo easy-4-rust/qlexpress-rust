@@ -9,11 +9,12 @@ use std::rc::Rc;
 
 pub use super::q_scope_kind::QScopeKind;
 use crate::exception::QLException;
-use crate::runtime::data::convert::obj_type_convertor::TargetType;
+use crate::runtime::class_ref::ClassRef;
 use crate::runtime::data::AssignableDataValue;
 use crate::runtime::fixed_size_stack::FixedSizeStack;
 use crate::runtime::function::CustomFunction;
 use crate::runtime::left_value::LeftValue;
+use crate::runtime::native_registry::NativeRegistry;
 use crate::runtime::parameters::Parameters;
 use crate::runtime::qvm_global_scope::QvmGlobalScope;
 use crate::runtime::scope::qvm_block_scope::QvmBlockScope;
@@ -144,16 +145,20 @@ impl QScope {
     pub fn define_local_symbol(
         this: &ScopeRef,
         var_name: &str,
-        var_clz: Option<TargetType>,
+        var_clz: Option<ClassRef>,
         value: DataValue,
+        type_registry: Rc<NativeRegistry>,
     ) {
         let mut borrowed = this.borrow_mut();
         match &mut borrowed.kind {
             QScopeKind::Global(global) => global.define_local_symbol(var_name),
             QScopeKind::Block(block) => {
                 let slot: Rc<RefCell<dyn LeftValue>> = match var_clz {
-                    Some(clz) => Rc::new(RefCell::new(AssignableDataValue::with_type(
-                        var_name, value, clz,
+                    Some(clz) => Rc::new(RefCell::new(AssignableDataValue::with_class(
+                        var_name,
+                        value,
+                        clz,
+                        type_registry,
                     ))),
                     None => Rc::new(RefCell::new(AssignableDataValue::new(var_name, value))),
                 };
@@ -291,7 +296,13 @@ mod tests {
     fn symbol_defined_in_child_is_invisible_in_parent() {
         let parent = stack_scope();
         let child = QScope::new_scope(&parent);
-        QScope::define_local_symbol(&child, "x", None, DataValue::Int(1));
+        QScope::define_local_symbol(
+            &child,
+            "x",
+            None,
+            DataValue::Int(1),
+            Rc::new(NativeRegistry::new()),
+        );
         assert_eq!(
             QScope::get_symbol_value(&child, "x").unwrap(),
             Some(DataValue::Int(1))

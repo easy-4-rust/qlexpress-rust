@@ -2,6 +2,7 @@
 //! `ParametersTypeConvertor`.
 
 use crate::runtime::value::DataValue;
+use crate::runtime::class_ref::ClassRef;
 
 use super::obj_type_convertor::{ObjTypeConvertor, TargetType};
 
@@ -55,7 +56,10 @@ impl ParametersTypeConvertor {
                 ObjTypeConvertor::cast(argument, *param_type).into_converted()
             })
             .collect();
-        result.push(DataValue::array(var_args));
+        result.push(DataValue::array_with_component(
+            var_args,
+            ClassRef::Primitive(item_type),
+        ));
         result
     }
 }
@@ -84,12 +88,17 @@ mod tests {
         let args = vec![DataValue::Int(1), DataValue::Int(2), DataValue::Int(3)];
         let result =
             ParametersTypeConvertor::cast(&args, &[TargetType::Long, TargetType::Int], true);
+        assert_eq!(result[0], DataValue::Long(1));
+        let DataValue::Array(var_args) = &result[1] else {
+            panic!("varargs array expected");
+        };
         assert_eq!(
-            result,
-            vec![
-                DataValue::Long(1),
-                DataValue::array(vec![DataValue::Int(2), DataValue::Int(3)])
-            ]
+            var_args.borrow().as_slice(),
+            &[DataValue::Int(2), DataValue::Int(3)]
+        );
+        assert_eq!(
+            var_args.borrow().component_type(),
+            &ClassRef::Primitive(TargetType::Int)
         );
     }
 
@@ -98,6 +107,14 @@ mod tests {
         let args = vec![DataValue::Int(1)];
         let result =
             ParametersTypeConvertor::cast(&args, &[TargetType::Long, TargetType::Int], true);
-        assert_eq!(result, vec![DataValue::Long(1), DataValue::array(vec![])]);
+        assert_eq!(result[0], DataValue::Long(1));
+        let DataValue::Array(var_args) = &result[1] else {
+            panic!("empty varargs array expected");
+        };
+        assert!(var_args.borrow().is_empty());
+        assert_eq!(
+            var_args.borrow().component_type(),
+            &ClassRef::Primitive(TargetType::Int)
+        );
     }
 }

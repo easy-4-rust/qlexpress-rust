@@ -3,7 +3,9 @@
 use crate::exception::error_codes;
 use crate::exception::error_reporter::ErrorReporter;
 use crate::exception::QLException;
-use crate::runtime::data::convert::obj_type_convertor::{ObjTypeConvertor, TargetType};
+use crate::runtime::class_ref::ClassRef;
+use crate::runtime::data::convert::obj_type_convertor::ObjTypeConvertor;
+use crate::runtime::native_registry::NativeRegistry;
 use crate::runtime::value::{DataValue, Value};
 
 /// `LeftValue` 接口的 Rust 实现，保留对应对象的领域职责与公开契约。
@@ -12,10 +14,18 @@ use crate::runtime::value::{DataValue, Value};
 /// 对应 Java: com.alibaba.qlexpress4.runtime.LeftValue。
 pub trait LeftValue: Value {
     /// 处理 defined type 对应的接口职责。
-    /// 无显式参数；返回：`Option<TargetType>`。
+    /// 无显式参数；返回：`Option<ClassRef>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/LeftValue.java`，方法 `definedType`。
     /// Java `getDefinedType`; `None` mirrors `null` (no declared type).
-    fn defined_type(&self) -> Option<TargetType>;
+    fn defined_type(&self) -> Option<ClassRef>;
+
+    /// 返回声明类型校验所使用的宿主类型注册表。
+    ///
+    /// Java 直接通过 `Class#isInstance` 检查具名引用；Rust 左值在需要时
+    /// 保存定义现场的注册表以复现继承关系。
+    fn type_registry(&self) -> Option<&NativeRegistry> {
+        None
+    }
 
     /// 更新 inner。
     /// 参数：`new_value`；返回：无。
@@ -43,15 +53,17 @@ pub trait LeftValue: Value {
         error_reporter: &dyn ErrorReporter,
     ) -> Result<(), QLException> {
         let define_type = self.defined_type();
-        let result = ObjTypeConvertor::cast_opt(&new_value, define_type);
+        let result =
+            ObjTypeConvertor::cast_class(&new_value, define_type.as_ref(), self.type_registry());
         if !result.is_convertible() {
             let value_type = if new_value.is_null() {
                 "null".to_string()
             } else {
-                new_value.data_type_name().to_string()
+                new_value.runtime_type_name()
             };
             let define_type_name = define_type
-                .map(TargetType::java_name)
+                .as_ref()
+                .map(ClassRef::java_name)
                 .unwrap_or("java.lang.Object")
                 .to_string();
             return Err(error_reporter.report_format(

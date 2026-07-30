@@ -24,7 +24,7 @@ use crate::runtime::instruction::{
     StringJoinInstruction, ThrowInstruction, TraceEvaluatedInstruction, TracePeekInstruction,
     TryCatchInstruction, UnaryInstruction, WhileInstruction,
 };
-use crate::runtime::member::as_meta_class;
+use crate::runtime::member::{as_meta_class, ClassRef};
 use crate::runtime::qlambda_definition::QLambdaDefinition;
 use crate::runtime::qlambda_definition_inner::QLambdaDefinitionInner;
 use crate::runtime::trace::trace_type;
@@ -145,13 +145,13 @@ impl<'a> SerializableParseCacheExporter<'a> {
             .iter()
             .map(|param| SerializableParam {
                 name: Some(param.name().to_string()),
-                // Java: className(param.getClazz());Rust 的 None(Java null)按
-                // Object 类型名导出(TargetType::Any)
+                // Java: className(param.getClazz())；None 只服务手工构造的
+                // 无声明类型参数，按 Object 导出。
                 class_name: Some(
                     param
                         .clazz()
-                        .unwrap_or(TargetType::Any)
-                        .java_name()
+                        .map(ClassRef::java_name)
+                        .unwrap_or("java.lang.Object")
                         .to_string(),
                 ),
             })
@@ -298,7 +298,11 @@ impl<'a> SerializableParseCacheExporter<'a> {
             );
             operands.insert(
                 "className".to_string(),
-                Value::from(inst.define_clz().unwrap_or(TargetType::Any).java_name()),
+                Value::from(
+                    inst.define_clz()
+                        .map(ClassRef::java_name)
+                        .unwrap_or("java.lang.Object"),
+                ),
             );
         } else if let Some(inst) = any.and_then(|a| a.downcast_ref::<NewInstanceInstruction>()) {
             opcode = "NEW_INSTANCE";

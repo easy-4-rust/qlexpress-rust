@@ -69,7 +69,7 @@ impl QLInstruction for NewInstanceInstruction {
         else {
             let param_types = objs
                 .iter()
-                .map(|o| o.data_type_name().to_string())
+                .map(DataValue::runtime_type_name)
                 .collect::<Vec<_>>()
                 .join(", ");
             return Err(self.error_reporter.report_format(

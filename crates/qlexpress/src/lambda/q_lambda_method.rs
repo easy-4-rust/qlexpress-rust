@@ -58,7 +58,7 @@ impl QLambdaMethod {
             }
             // Java: first argument must be an instance of the class; the
             // method is then resolved on it with the remaining arguments.
-            if params[0].data_type_name() != meta_clz.java_name() {
+            if !self.registry.is_value_assignable(meta_clz, &params[0]) {
                 return Err(self.method_not_found(params));
             }
             let rest = &params[1..];
@@ -94,7 +94,7 @@ impl QLambdaMethod {
     fn method_not_found(&self, types: &[DataValue]) -> QLException {
         let types_render = types
             .iter()
-            .map(|t| t.data_type_name().to_string())
+            .map(DataValue::runtime_type_name)
             .collect::<Vec<_>>()
             .join(", ");
         PureErrReporter::INSTANCE.report(

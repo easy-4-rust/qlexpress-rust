@@ -839,13 +839,13 @@ fn wrap_in_array(base_type: ClassRef, layers: usize) -> ClassRef {
 
 /// Java `Object.class` (untyped declaration target).
 fn object_cls() -> ClassRef {
-    ClassRef::Primitive(TargetType::Any)
+    ClassRef::Named("java.lang.Object".to_string())
 }
 
-/// Conversion target for `DefineLocalInstruction`/`NewArrayInstruction`:
-/// primitive targets map directly; named classes have no `TargetType`
-/// equivalent and compile to `None`/`Any` (no static conversion check,
-/// like declaring `Object`).
+/// 数组组件和原语默认值仍使用的转换目标。
+///
+/// Lambda 参数、foreach 变量和局部变量本身保留完整 [`ClassRef`]；这里只
+/// 为尚以 [`TargetType`] 存储组件类型的数组指令提取原语类型。
 fn decl_target_type(cls: &ClassRef) -> Option<TargetType> {
     match cls {
         ClassRef::Primitive(target) => Some(*target),
@@ -1056,7 +1056,7 @@ impl<'a> QvmInstructionVisitor<'a> {
             .decl_type
             .as_ref()
             .map(|decl| self.parse_decl_type(decl));
-        Param::new(param_name, param_cls.as_ref().and_then(decl_target_type))
+        Param::new(param_name, param_cls)
     }
 
     /// Java `parseLambdaParams`.
@@ -1065,7 +1065,7 @@ impl<'a> QvmInstructionVisitor<'a> {
             return vec![];
         };
         if let Some(var_id) = &ctx.var_id {
-            return vec![Param::new(var_id.text(), None)];
+            return vec![Param::new(var_id.text(), Some(object_cls()))];
         }
         match &ctx.params {
             Some(params) => self.parse_formal_or_inferred_parameter_list(params),
@@ -1128,12 +1128,13 @@ impl<'a> QvmInstructionVisitor<'a> {
                 }
             };
             if catch_params.decl_types.is_empty() {
-                let handler = handler_for(self, Param::new(e_name.clone(), None));
+                let handler =
+                    handler_for(self, Param::new(e_name.clone(), Some(object_cls())));
                 exception_table.push((object_cls(), handler));
             }
             for decl_type in &catch_params.decl_types {
                 let exception_type = self.parse_decl_type(decl_type);
-                let param = Param::new(e_name.clone(), decl_target_type(&exception_type));
+                let param = Param::new(e_name.clone(), Some(exception_type.clone()));
                 let handler = handler_for(self, param);
                 exception_table.push((exception_type, handler));
             }
@@ -1246,13 +1247,12 @@ impl<'a> QvmInstructionVisitor<'a> {
             return;
         }
         if let Some(array_initializer) = &ctx.array_initializer {
-            let target = decl_target_type(decl_cls).unwrap_or(TargetType::Any);
-            self.new_arr_with_initializers(target, array_initializer);
+            self.new_arr_with_initializers(decl_cls.clone(), array_initializer);
         }
     }
 
     /// Java `newArrWithInitializers`.
-    fn new_arr_with_initializers(&mut self, component_cls: TargetType, array_initializer: &Node) {
+    fn new_arr_with_initializers(&mut self, component_cls: ClassRef, array_initializer: &Node) {
         let Node::ArrayInitializer(ctx) = array_initializer else {
             return;
         };
@@ -1452,7 +1452,7 @@ impl<'a> Visitor for QvmInstructionVisitor<'a> {
         let (body_definition, _) = self.loop_body_visitor_definition(
             ctx.block_statements.as_deref(),
             body_scope_name,
-            vec![Param::new(ctx.var_id.text(), decl_target_type(&it_var_cls))],
+            vec![Param::new(ctx.var_id.text(), Some(it_var_cls.clone()))],
             Rc::clone(&for_each_err_reporter),
         );
 
@@ -1794,7 +1794,7 @@ impl<'a> Visitor for QvmInstructionVisitor<'a> {
             self.add_instruction(Box::new(DefineLocalInstruction::new(
                 reporter,
                 variable_name,
-                decl_target_type(&decl_cls),
+                Some(decl_cls.clone()),
             )));
         }
     }
@@ -2107,7 +2107,7 @@ impl<'a> Visitor for QvmInstructionVisitor<'a> {
         let arr_cls = self.parse_decl_type_no_arr(&ctx.decl_type_no_arr);
         self.add_instruction(Box::new(MultiNewArrayInstruction::new(
             self.new_reporter_with_token(ctx.new_token.symbol()),
-            decl_target_type(&arr_cls).unwrap_or(TargetType::Any),
+            arr_cls,
             dims,
         )));
     }
@@ -2119,10 +2119,9 @@ impl<'a> Visitor for QvmInstructionVisitor<'a> {
         }
         let cls = self.parse_decl_type_no_arr(&ctx.decl_type_no_arr);
         // Java `embedClsInDims(cls, dims - 1)`: array-of-component class.
-        // `TargetType` has no array representation, so the component type
-        // itself is used (element conversion only matters for primitives).
+        let dimensions = dims_dim_count(&ctx.dims);
         self.new_arr_with_initializers(
-            decl_target_type(&cls).unwrap_or(TargetType::Any),
+            wrap_in_array(cls, dimensions.saturating_sub(1)),
             &ctx.array_initializer,
         );
     }
@@ -2888,7 +2887,7 @@ impl<'a> QvmInstructionVisitor<'a> {
         self.add_instruction(Box::new(DefineLocalInstruction::new(
             Rc::clone(&switch_error_reporter),
             switch_var_name.clone(),
-            Some(TargetType::Any),
+            Some(object_cls()),
         )));
 
         let groups: Vec<&SwitchStatementGroupContext> = switch_groups(ctx)
@@ -3104,7 +3103,7 @@ impl<'a> QvmInstructionVisitor<'a> {
         self.add_instruction(Box::new(DefineLocalInstruction::new(
             Rc::clone(&switch_error_reporter),
             switch_var_name.clone(),
-            Some(TargetType::Any),
+            Some(object_cls()),
         )));
 
         let groups: Vec<&SwitchExprGroupContext> = switch_groups(ctx)

@@ -1,6 +1,6 @@
 //! Lambda 定义中的参数声明。
 
-use crate::convert::obj_type_convertor::TargetType;
+use crate::runtime::class_ref::ClassRef;
 
 /// Lambda 参数名和可选声明类型。
 ///
@@ -10,5 +10,5 @@ use crate::convert::obj_type_convertor::TargetType;
 #[derive(Clone, Debug)]
 pub struct Param {
     pub(crate) name: String,
-    pub(crate) clazz: Option<TargetType>,
+    pub(crate) clazz: Option<ClassRef>,
 }

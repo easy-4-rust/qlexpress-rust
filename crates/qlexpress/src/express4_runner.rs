@@ -1318,7 +1318,7 @@ impl Express4Runner {
             true,
             Rc::new(move |bean, args| {
                 let flat: Vec<DataValue> = match args {
-                    [DataValue::Array(items)] => items.borrow().clone(),
+                    [DataValue::Array(items)] => items.borrow().to_vec(),
                     _ => args.to_vec(),
                 };
                 method(bean, &flat)

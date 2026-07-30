@@ -49,7 +49,10 @@ fn build_main_definition(manager: &OperatorManager) -> Rc<dyn QLambdaDefinition>
     Rc::new(QLambdaDefinitionInner::new(
         "main",
         instructions,
-        vec![Param::new("a", Some(TargetType::Int))],
+        vec![Param::new(
+            "a",
+            Some(ClassRef::Primitive(TargetType::Int)),
+        )],
         2,
     ))
 }
@@ -115,7 +118,7 @@ fn export_json_import_round_trip() {
     assert_eq!(restored_inner.params_type()[0].name(), "a");
     assert_eq!(
         restored_inner.params_type()[0].clazz(),
-        Some(TargetType::Int)
+        Some(&ClassRef::Primitive(TargetType::Int))
     );
     let const_inst = restored_inner.instructions()[1]
         .as_any()

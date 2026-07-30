@@ -8,7 +8,7 @@ use std::time::Instant;
 
 use crate::exception::QLException;
 use crate::ql_options::Attachments;
-use crate::runtime::data::convert::obj_type_convertor::TargetType;
+use crate::runtime::class_ref::ClassRef;
 use crate::runtime::function::CustomFunction;
 use crate::runtime::left_value::LeftValue;
 use crate::runtime::member::NativeRegistry;
@@ -102,7 +102,7 @@ pub trait QContext {
     fn define_local_symbol(
         &mut self,
         var_name: &str,
-        var_clz: Option<TargetType>,
+        var_clz: Option<ClassRef>,
         value: DataValue,
     );
 

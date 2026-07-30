@@ -13,7 +13,6 @@ use crate::class_supplier::ClassSupplier;
 use crate::exception::default_err_reporter::DefaultErrReporter;
 use crate::exception::error_codes;
 use crate::exception::error_reporter::ErrorReporter;
-use crate::runtime::data::convert::obj_type_convertor::TargetType;
 use crate::runtime::instruction::{
     BreakContinueInstruction, CallFunctionInstruction, CallInstruction, CastInstruction,
     CheckTimeOutInstruction, CloseScopeInstruction, ConstInstruction, DefineFunctionInstruction,
@@ -54,10 +53,7 @@ pub type ImportResult<T> = Result<T, SerializableParseCacheException>;
 /// - Java `load(null)` 抛错;Rust 以引用接收,无 null 入参(其余校验一致);
 /// - Java `runnerIdentity` 为任意 `Object`(引用相等);Rust 为 `usize`
 ///   身份令牌(见 [`LoadedParseCache`]);
-/// - Java `Param.clazz` 为任意 `Class`;Rust [`Param`] 仅持有 [`TargetType`],
-///   非原始/包装类的命名类型按 `None`(Java `Object`)处理;
-/// - `NEW_ARRAY`/`MULTI_NEW_ARRAY`/`DEFINE_LOCAL` 的命名类型同理按
-///   `TargetType::Any`(Java `Object`)近似。
+/// - Java 类对象由 Rust [`ClassRef`] 保存规范类名与原语目标。
 pub struct SerializableParseCacheImporter<'a> {
     /// 操作符管理器。对应 Java 字段 `operatorManager`。
     operator_manager: &'a dyn OperatorFactory,
@@ -189,12 +185,7 @@ impl<'a> SerializableParseCacheImporter<'a> {
             .clone()
             .ok_or_else(|| self.invalid(owner, "lambda param className is required"))?;
         let class_ref = self.load_class(&class_name, owner)?;
-        // Java Param.clazz 为 Class;Rust Param 仅持有 TargetType(见结构体偏差说明)
-        let target = match class_ref {
-            ClassRef::Primitive(target) => Some(target),
-            ClassRef::Named(_) => None,
-        };
-        Ok(Param::new(name, target))
+        Ok(Param::new(name, Some(class_ref)))
     }
 
     /// 对应 Java 私有方法 `importInstruction` 的 opcode 分派
@@ -312,7 +303,10 @@ impl<'a> SerializableParseCacheImporter<'a> {
             "DEFINE_LOCAL" => Box::new(DefineLocalInstruction::new(
                 Rc::clone(&reporter),
                 self.required_string(operands, "variableName", inst)?,
-                Some(self.required_target_type(operands, "className", inst)?),
+                Some(self.load_class(
+                    &self.required_string(operands, "className", inst)?,
+                    inst,
+                )?),
             )),
             "NEW_INSTANCE" => Box::new(NewInstanceInstruction::new(
                 Rc::clone(&reporter),
@@ -326,12 +320,18 @@ impl<'a> SerializableParseCacheImporter<'a> {
             )),
             "NEW_ARRAY" => Box::new(NewArrayInstruction::new(
                 Rc::clone(&reporter),
-                self.required_target_type(operands, "componentClassName", inst)?,
+                self.load_class(
+                    &self.required_string(operands, "componentClassName", inst)?,
+                    inst,
+                )?,
                 self.required_int(operands, "length", inst)? as usize,
             )),
             "MULTI_NEW_ARRAY" => Box::new(MultiNewArrayInstruction::new(
                 Rc::clone(&reporter),
-                self.required_target_type(operands, "componentClassName", inst)?,
+                self.load_class(
+                    &self.required_string(operands, "componentClassName", inst)?,
+                    inst,
+                )?,
                 self.required_int(operands, "dims", inst)? as usize,
             )),
             "NEW_LIST" => Box::new(NewListInstruction::new(
@@ -727,6 +727,10 @@ impl<'a> SerializableParseCacheImporter<'a> {
         class_name: &str,
         owner: Option<&SerializableInstruction>,
     ) -> ImportResult<ClassRef> {
+        if let Some(component_name) = class_name.strip_suffix("[]") {
+            let component = self.load_class(component_name, owner)?;
+            return Ok(ClassRef::Named(format!("{}[]", component.java_name())));
+        }
         // Java primitiveClass:boolean/byte/char/short/int/long/float/double/void
         match class_name {
             "boolean" | "byte" | "char" | "short" | "int" | "long" | "float" | "double" => {
@@ -755,21 +759,6 @@ impl<'a> SerializableParseCacheImporter<'a> {
                     &[class_name.to_string()],
                 ),
             )),
-        }
-    }
-
-    /// 读取需要 [`TargetType`] 的操作数(className/componentClassName);
-    /// 命名类型按 `TargetType::Any`(Java `Object`)近似(见结构体偏差说明)。
-    fn required_target_type(
-        &self,
-        operands: &Map<String, Value>,
-        name: &str,
-        owner: Option<&SerializableInstruction>,
-    ) -> ImportResult<TargetType> {
-        let class_name = self.required_string(operands, name, owner)?;
-        match self.load_class(&class_name, owner)? {
-            ClassRef::Primitive(target) => Ok(target),
-            ClassRef::Named(_) => Ok(TargetType::Any),
         }
     }
 

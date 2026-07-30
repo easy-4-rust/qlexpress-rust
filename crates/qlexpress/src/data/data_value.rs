@@ -7,8 +7,11 @@ use std::rc::Rc;
 
 use num_bigint::BigInt;
 
+use crate::runtime::class_ref::ClassRef;
 use crate::runtime::data::index_map::IndexMap;
+use crate::runtime::data::java_array::JavaArray;
 use crate::runtime::data::java_array_list::JavaArrayList;
+use crate::runtime::native_registry::NativeRegistry;
 use crate::runtime::native_object::NativeObject;
 use crate::runtime::qlambda::QLambda;
 use crate::runtime::value::Value;
@@ -49,7 +52,7 @@ pub enum DataValue {
     /// Java `LinkedHashMap` 引用。
     Map(Rc<RefCell<IndexMap>>),
     /// Java 数组引用。
-    Array(Rc<RefCell<Vec<DataValue>>>),
+    Array(Rc<RefCell<JavaArray>>),
     /// Java `QLambda`。
     Lambda(Rc<QLambda>),
     /// 显式注册的宿主对象。
@@ -105,6 +108,21 @@ impl DataValue {
         }
     }
 
+    /// 返回实际 Java 运行时类型名。
+    ///
+    /// 与 [`Self::data_type_name`] 的静态枚举标签不同，宿主对象返回
+    /// [`NativeObject::native_type_name`](crate::runtime::native_object::NativeObject::native_type_name)；
+    /// 对应 Java `value.getClass().getName()`。
+    pub fn runtime_type_name(&self) -> String {
+        match self {
+            DataValue::Object(object) => object.borrow().native_type_name().to_string(),
+            DataValue::Array(array) => {
+                format!("{}[]", array.borrow().component_type().java_name())
+            }
+            _ => self.data_type_name().to_string(),
+        }
+    }
+
     /// 读取布尔值；非布尔返回 `None`。Rust 便捷方法。
     /// 对应 Java: com.alibaba.qlexpress4.runtime.data.DataValue#asBool。
     pub fn as_bool(&self) -> Option<bool> {
@@ -132,7 +150,38 @@ impl DataValue {
     /// 创建 Java 数组值。Rust 便捷构造方法。
     /// 对应 Java: com.alibaba.qlexpress4.runtime.data.DataValue#array。
     pub fn array(items: Vec<DataValue>) -> DataValue {
-        DataValue::Array(Rc::new(RefCell::new(items)))
+        let component_type = items
+            .first()
+            .filter(|first| !first.is_null())
+            .map(|first| ClassRef::from_name(&first.runtime_type_name()))
+            .filter(|first_type| {
+                items.iter().skip(1).all(|item| {
+                    ClassRef::from_name(&item.runtime_type_name()) == *first_type
+                })
+            })
+            .unwrap_or_else(|| ClassRef::Named("java.lang.Object".to_string()));
+        DataValue::array_with_component(items, component_type)
+    }
+
+    /// 创建无需宿主继承查询的声明组件类型数组。
+    pub fn array_with_component(items: Vec<DataValue>, component_type: ClassRef) -> DataValue {
+        DataValue::Array(Rc::new(RefCell::new(JavaArray::typed_without_registry(
+            items,
+            component_type,
+        ))))
+    }
+
+    /// 创建携带完整 Java 声明组件类型的数组值。
+    pub fn array_with_type(
+        items: Vec<DataValue>,
+        component_type: ClassRef,
+        type_registry: Rc<NativeRegistry>,
+    ) -> DataValue {
+        DataValue::Array(Rc::new(RefCell::new(JavaArray::typed(
+            items,
+            component_type,
+            type_registry,
+        ))))
     }
 
     /// 创建 Java `LinkedHashMap` 值。Rust 便捷构造方法。
@@ -251,9 +300,8 @@ impl PartialEq for DataValue {
             (List(left), List(right)) => {
                 Rc::ptr_eq(left, right) || *left.borrow() == *right.borrow()
             }
-            (Array(left), Array(right)) => {
-                Rc::ptr_eq(left, right) || *left.borrow() == *right.borrow()
-            }
+            // Java 数组沿用 Object.equals，按引用身份比较。
+            (Array(left), Array(right)) => Rc::ptr_eq(left, right),
             (Map(left), Map(right)) => Rc::ptr_eq(left, right) || *left.borrow() == *right.borrow(),
             (Lambda(left), Lambda(right)) => Rc::ptr_eq(left, right),
             (Object(left), Object(right)) => {

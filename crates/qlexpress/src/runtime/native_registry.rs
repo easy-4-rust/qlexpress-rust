@@ -744,6 +744,19 @@ impl NativeRegistry {
         self.type_extends(arg_name, param_name, &mut Vec::new())
     }
 
+    /// 判断运行时值是否可赋给完整 Java 类型引用。
+    ///
+    /// 对应 Java `Class#isInstance`，并保留 Lambda 到函数式接口的代理适配。
+    pub fn is_value_assignable(&self, target: &ClassRef, value: &DataValue) -> bool {
+        if value.is_null() || target.is_java_object() {
+            return true;
+        }
+        if matches!(value, DataValue::Lambda(_)) && self.is_function_interface(target) {
+            return true;
+        }
+        self.is_assignable(target, &runtime_class_ref(value))
+    }
+
     fn type_extends(
         &self,
         type_name: &str,

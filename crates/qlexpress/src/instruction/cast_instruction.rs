@@ -66,44 +66,22 @@ impl QLInstruction for CastInstruction {
             q_context.push(QValue::Data(DataValue::NULL_VALUE));
             return Ok(QResult::NEXT_INSTRUCTION);
         }
-        let converted = match &target_clz {
-            ClassRef::Primitive(target) => {
-                let result = ObjTypeConvertor::cast(&value_data, *target);
-                if !result.is_convertible() {
-                    return Err(self.error_reporter.report_format(
-                        error_codes::INCOMPATIBLE_TYPE_CAST,
-                        error_codes::error_msg(error_codes::INCOMPATIBLE_TYPE_CAST),
-                        &[
-                            value.type_name().to_string(),
-                            target_clz.java_name().to_string(),
-                        ],
-                    ));
-                }
-                result.into_converted()
-            }
-            ClassRef::Named(name) => {
-                // Java `ObjTypeConvertor.cast` for reference types succeeds
-                // when the value is assignable to the target class.
-                let value_type = value_data.data_type_name();
-                let assignable = name == "java.lang.Object"
-                    || name == value_type
-                    || matches!(&value_data, DataValue::Object(obj) if {
-                        let n = obj.borrow().native_type_name().to_string();
-                        n == *name
-                    });
-                if !assignable {
-                    return Err(self.error_reporter.report_format(
-                        error_codes::INCOMPATIBLE_TYPE_CAST,
-                        error_codes::error_msg(error_codes::INCOMPATIBLE_TYPE_CAST),
-                        &[
-                            value.type_name().to_string(),
-                            target_clz.java_name().to_string(),
-                        ],
-                    ));
-                }
-                value_data
-            }
-        };
+        let result = ObjTypeConvertor::cast_class(
+            &value_data,
+            Some(&target_clz),
+            Some(q_context.registry().as_ref()),
+        );
+        if !result.is_convertible() {
+            return Err(self.error_reporter.report_format(
+                error_codes::INCOMPATIBLE_TYPE_CAST,
+                error_codes::error_msg(error_codes::INCOMPATIBLE_TYPE_CAST),
+                &[
+                    value_data.runtime_type_name(),
+                    target_clz.java_name().to_string(),
+                ],
+            ));
+        }
+        let converted = result.into_converted();
         q_context.push(QValue::Data(converted));
         Ok(QResult::NEXT_INSTRUCTION)
     }

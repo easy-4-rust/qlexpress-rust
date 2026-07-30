@@ -1,7 +1,11 @@
 //! A named, assignable variable slot, mirroring Java `AssignableDataValue`.
 
+use std::rc::Rc;
+
+use crate::runtime::class_ref::ClassRef;
 use crate::runtime::data::convert::obj_type_convertor::TargetType;
 use crate::runtime::left_value::LeftValue;
+use crate::runtime::native_registry::NativeRegistry;
 use crate::runtime::value::{DataValue, Value};
 
 /// 保存局部变量当前值，并在赋值时执行可选声明类型转换的左值。
@@ -12,7 +16,8 @@ use crate::runtime::value::{DataValue, Value};
 pub struct AssignableDataValue {
     symbol_name: Option<String>,
     value: DataValue,
-    define_type: Option<TargetType>,
+    define_type: Option<ClassRef>,
+    type_registry: Option<Rc<NativeRegistry>>,
 }
 
 impl AssignableDataValue {
@@ -26,6 +31,7 @@ impl AssignableDataValue {
             symbol_name: Some(symbol_name.into()),
             value,
             define_type: None,
+            type_registry: None,
         }
     }
 
@@ -43,7 +49,26 @@ impl AssignableDataValue {
         AssignableDataValue {
             symbol_name: Some(symbol_name.into()),
             value,
+            define_type: Some(ClassRef::Primitive(define_type)),
+            type_registry: None,
+        }
+    }
+
+    /// 使用完整 Java 声明类型和宿主注册表创建变量槽。
+    ///
+    /// 对应 Java `AssignableDataValue(String,Object,Class<?>)`；具名宿主类型
+    /// 不再降级为 `Object`。
+    pub fn with_class(
+        symbol_name: impl Into<String>,
+        value: DataValue,
+        define_type: ClassRef,
+        type_registry: Rc<NativeRegistry>,
+    ) -> Self {
+        AssignableDataValue {
+            symbol_name: Some(symbol_name.into()),
+            value,
             define_type: Some(define_type),
+            type_registry: Some(type_registry),
         }
     }
 }
@@ -59,8 +84,12 @@ impl Value for AssignableDataValue {
 }
 
 impl LeftValue for AssignableDataValue {
-    fn defined_type(&self) -> Option<TargetType> {
-        self.define_type
+    fn defined_type(&self) -> Option<ClassRef> {
+        self.define_type.clone()
+    }
+
+    fn type_registry(&self) -> Option<&NativeRegistry> {
+        self.type_registry.as_deref()
     }
 
     fn set_inner(&mut self, new_value: DataValue) {

@@ -6,7 +6,8 @@ use crate::exception::error_codes;
 use crate::exception::error_reporter::ErrorReporter;
 use crate::exception::QLException;
 use crate::ql_options::QLOptions;
-use crate::runtime::data::convert::obj_type_convertor::{ObjTypeConvertor, TargetType};
+use crate::runtime::class_ref::ClassRef;
+use crate::runtime::data::convert::obj_type_convertor::ObjTypeConvertor;
 use crate::runtime::instruction::QLInstruction;
 use crate::runtime::q_result::QResult;
 use crate::runtime::qcontext::QContext;
@@ -22,7 +23,7 @@ use std::rc::Rc;
 pub struct DefineLocalInstruction {
     error_reporter: Rc<dyn ErrorReporter>,
     variable_name: String,
-    define_clz: Option<TargetType>,
+    define_clz: Option<ClassRef>,
 }
 
 impl DefineLocalInstruction {
@@ -30,7 +31,7 @@ impl DefineLocalInstruction {
     pub fn new(
         error_reporter: Rc<dyn ErrorReporter>,
         variable_name: impl Into<String>,
-        define_clz: Option<TargetType>,
+        define_clz: Option<ClassRef>,
     ) -> Self {
         DefineLocalInstruction {
             error_reporter,
@@ -45,8 +46,8 @@ impl DefineLocalInstruction {
     }
 
     /// 对应 Java 方法 `defineClz`。
-    pub fn define_clz(&self) -> Option<TargetType> {
-        self.define_clz
+    pub fn define_clz(&self) -> Option<&ClassRef> {
+        self.define_clz.as_ref()
     }
 }
 
@@ -62,7 +63,11 @@ impl QLInstruction for DefineLocalInstruction {
         _ql_options: &QLOptions,
     ) -> Result<QResult, QLException> {
         let init_value = q_context.pop().get();
-        let ql_convert_result = ObjTypeConvertor::cast_opt(&init_value, self.define_clz);
+        let ql_convert_result = ObjTypeConvertor::cast_class(
+            &init_value,
+            self.define_clz.as_ref(),
+            Some(q_context.registry().as_ref()),
+        );
         if !ql_convert_result.is_convertible() {
             // Java reportFormat(INCOMPATIBLE_ASSIGNMENT_TYPE, msg,
             //   defineClz.getName(), initValue class name)
@@ -71,20 +76,21 @@ impl QLInstruction for DefineLocalInstruction {
                 error_codes::error_msg(error_codes::INCOMPATIBLE_ASSIGNMENT_TYPE),
                 &[
                     self.define_clz
-                        .map(TargetType::java_name)
+                        .as_ref()
+                        .map(ClassRef::java_name)
                         .unwrap_or("java.lang.Object")
                         .to_string(),
                     if init_value.is_null() {
                         "null".to_string()
                     } else {
-                        init_value.data_type_name().to_string()
+                        init_value.runtime_type_name()
                     },
                 ],
             ));
         }
         q_context.define_local_symbol(
             &self.variable_name,
-            self.define_clz,
+            self.define_clz.clone(),
             ql_convert_result.into_converted(),
         );
         Ok(QResult::NEXT_INSTRUCTION)

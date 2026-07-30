@@ -67,7 +67,7 @@ impl QLInstruction for CallInstruction {
             return Err(self.error_reporter.report_format(
                 error_codes::OBJECT_NOT_CALLABLE,
                 error_codes::error_msg(error_codes::OBJECT_NOT_CALLABLE),
-                &[bean.data_type_name().to_string()],
+                &[bean.runtime_type_name()],
             ));
         };
         let params: Vec<DataValue> = (0..self.arg_num)

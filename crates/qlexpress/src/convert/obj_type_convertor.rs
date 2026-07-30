@@ -5,6 +5,8 @@
 //! registry (SPEC §4/§6), not here.
 
 use crate::runtime::value::DataValue;
+use crate::runtime::class_ref::ClassRef;
+use crate::runtime::native_registry::NativeRegistry;
 
 use super::{to_big_dec_string, to_big_int, to_f64, to_i64};
 
@@ -139,6 +141,41 @@ impl ObjTypeConvertor {
         match target {
             None => QConverted::converted(value.clone()),
             Some(t) => Self::cast(value, t),
+        }
+    }
+
+    /// 按完整 Java `Class<?>` 引用执行转换。
+    ///
+    /// 原语/包装类型沿用数值与字符转换；具名引用类型按注册表中的继承关系
+    /// 校验并保持原值。对应 Java `type.isInstance(value)` 分支。
+    pub fn cast_class(
+        value: &DataValue,
+        target: Option<&ClassRef>,
+        registry: Option<&NativeRegistry>,
+    ) -> QConverted {
+        let Some(target) = target else {
+            return QConverted::converted(value.clone());
+        };
+        match target {
+            ClassRef::Primitive(target) => Self::cast(value, *target),
+            ClassRef::Named(_) if value.is_null() => QConverted::converted(value.clone()),
+            ClassRef::Named(name) if name == "java.lang.Object" => {
+                QConverted::converted(value.clone())
+            }
+            ClassRef::Named(_) => {
+                let assignable = match registry {
+                    Some(registry) => registry.is_value_assignable(target, value),
+                    None => {
+                        let value_type_name = value.runtime_type_name();
+                        target.java_name() == value_type_name.as_str()
+                    }
+                };
+                if assignable {
+                    QConverted::converted(value.clone())
+                } else {
+                    QConverted::un_convertible()
+                }
+            }
         }
     }
 

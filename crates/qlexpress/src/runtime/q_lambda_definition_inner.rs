@@ -6,7 +6,7 @@
 use std::rc::Rc;
 
 use crate::ql_options::QLOptions;
-use crate::runtime::data::convert::obj_type_convertor::TargetType;
+use crate::runtime::class_ref::ClassRef;
 use crate::runtime::delegate_qcontext::DelegateQContext;
 use crate::runtime::instruction::Instruction;
 use crate::runtime::qcontext::QContext;
@@ -18,7 +18,7 @@ pub use super::param::Param;
 
 impl Param {
     /// 构造参数声明。对应 Java 构造器 `Param(name, clazz)`。
-    pub fn new(name: impl Into<String>, clazz: Option<TargetType>) -> Self {
+    pub fn new(name: impl Into<String>, clazz: Option<ClassRef>) -> Self {
         Param {
             name: name.into(),
             clazz,
@@ -31,8 +31,8 @@ impl Param {
     }
 
     /// 参数声明类型(`None` = Java `null`)。对应 Java 方法 `getClazz`。
-    pub fn clazz(&self) -> Option<TargetType> {
-        self.clazz
+    pub fn clazz(&self) -> Option<&ClassRef> {
+        self.clazz.as_ref()
     }
 }
 

@@ -6,8 +6,8 @@ use std::cell::RefCell;
 use crate::exception::error_codes;
 use crate::exception::error_reporter::ErrorReporter;
 use crate::exception::QLException;
+use crate::runtime::class_ref::ClassRef;
 use crate::runtime::data::convert::obj_type_convertor::ObjTypeConvertor;
-use crate::runtime::data::convert::obj_type_convertor::TargetType;
 use crate::runtime::left_value::LeftValue;
 use crate::runtime::value::{DataValue, Value};
 
@@ -19,7 +19,7 @@ use crate::runtime::value::{DataValue, Value};
 pub struct FieldValue {
     get_op: Box<dyn Fn() -> DataValue>,
     set_op: RefCell<Box<dyn FnMut(DataValue) -> bool>>,
-    define_type: Option<TargetType>,
+    define_type: Option<ClassRef>,
 }
 
 impl FieldValue {
@@ -27,7 +27,7 @@ impl FieldValue {
     pub fn new(
         get_op: Box<dyn Fn() -> DataValue>,
         set_op: Box<dyn FnMut(DataValue) -> bool>,
-        define_type: Option<TargetType>,
+        define_type: Option<ClassRef>,
     ) -> Self {
         FieldValue {
             get_op,
@@ -48,8 +48,8 @@ impl Value for FieldValue {
 }
 
 impl LeftValue for FieldValue {
-    fn defined_type(&self) -> Option<TargetType> {
-        self.define_type
+    fn defined_type(&self) -> Option<ClassRef> {
+        self.define_type.clone()
     }
 
     fn set_inner(&mut self, new_value: DataValue) {
@@ -66,7 +66,7 @@ impl LeftValue for FieldValue {
         new_value: DataValue,
         error_reporter: &dyn ErrorReporter,
     ) -> Result<(), QLException> {
-        let converted = ObjTypeConvertor::cast_opt(&new_value, self.define_type);
+        let converted = ObjTypeConvertor::cast_class(&new_value, self.define_type.as_ref(), None);
         if !converted.is_convertible() || !(self.set_op.borrow_mut())(converted.into_converted()) {
             let source_type = if new_value.is_null() {
                 "null"
@@ -75,7 +75,8 @@ impl LeftValue for FieldValue {
             };
             let target_type = self
                 .define_type
-                .map(TargetType::java_name)
+                .as_ref()
+                .map(ClassRef::java_name)
                 .unwrap_or_else(|| self.get().data_type_name());
             return Err(error_reporter.report_format(
                 error_codes::INCOMPATIBLE_ASSIGNMENT_TYPE,
@@ -115,7 +116,13 @@ mod tests {
                 true
             }
         };
-        let mut field = FieldValue::new(Box::new(getter), Box::new(setter), Some(TargetType::Int));
+        let mut field = FieldValue::new(
+            Box::new(getter),
+            Box::new(setter),
+            Some(ClassRef::Primitive(
+                crate::runtime::data::convert::obj_type_convertor::TargetType::Int,
+            )),
+        );
         assert_eq!(field.get(), DataValue::Int(1));
         // Typed set converts Long -> Int through ObjTypeConvertor.
         field

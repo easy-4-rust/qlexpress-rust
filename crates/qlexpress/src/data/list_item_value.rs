@@ -3,7 +3,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use crate::runtime::data::convert::obj_type_convertor::TargetType;
+use crate::runtime::class_ref::ClassRef;
 use crate::runtime::data::JavaArrayList;
 use crate::runtime::left_value::LeftValue;
 use crate::runtime::value::{DataValue, Value};
@@ -36,9 +36,9 @@ impl Value for ListItemValue {
 
 impl LeftValue for ListItemValue {
     /// Java returns `Object.class` — every value is accepted
-    /// ([`TargetType::Any`]).
-    fn defined_type(&self) -> Option<TargetType> {
-        Some(TargetType::Any)
+    /// (`java.lang.Object`)。
+    fn defined_type(&self) -> Option<ClassRef> {
+        Some(ClassRef::Named("java.lang.Object".to_string()))
     }
 
     /// Java `list.set(index, newValue)`.

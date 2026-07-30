@@ -59,7 +59,7 @@ impl SpreadGetFieldInstruction {
     ) -> Result<(), QLException> {
         let items = match traversable {
             DataValue::List(l) => l.borrow().to_vec(),
-            DataValue::Array(a) => a.borrow().clone(),
+            DataValue::Array(a) => a.borrow().to_vec(),
             _ => vec![],
         };
         for item in items {

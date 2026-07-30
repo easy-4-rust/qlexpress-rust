@@ -7,7 +7,7 @@ use crate::exception::error_reporter::ErrorReporter;
 use crate::exception::{QLException, QLExceptionKind};
 use crate::ql_options::QLOptions;
 use crate::runtime::instruction::QLInstruction;
-use crate::runtime::data::JavaArrayList;
+use crate::runtime::data::{JavaArray, JavaArrayList};
 use crate::runtime::member::ClassRef;
 use crate::runtime::q_result::QResult;
 use crate::runtime::qcontext::QContext;
@@ -24,14 +24,14 @@ use std::rc::Rc;
 /// Rust 数组统一为共享 `Vec<DataValue>`。
 #[derive(Clone)]
 pub(crate) struct ReflectArrayIterable {
-    arr_obj: Rc<RefCell<Vec<DataValue>>>,
+    arr_obj: Rc<RefCell<JavaArray>>,
 }
 
 impl ReflectArrayIterable {
     /// 创建数组可迭代适配器。
     ///
     /// 对应 Java 私有构造器 `ReflectArrayIterable(Object)`。
-    pub(crate) fn new(arr_obj: Rc<RefCell<Vec<DataValue>>>) -> Self {
+    pub(crate) fn new(arr_obj: Rc<RefCell<JavaArray>>) -> Self {
         Self { arr_obj }
     }
 
@@ -51,7 +51,7 @@ impl ReflectArrayIterable {
 /// 对应 Java：
 /// `ForEachInstruction.ReflectArrayIterable.ReflectArrayIterator`。
 pub(crate) struct ReflectArrayIterator {
-    arr_obj: Rc<RefCell<Vec<DataValue>>>,
+    arr_obj: Rc<RefCell<JavaArray>>,
     cursor: usize,
 }
 
@@ -263,7 +263,7 @@ impl QLInstruction for ForEachInstruction {
                                 if item.is_null() {
                                     "null".to_string()
                                 } else {
-                                    item.data_type_name().to_string()
+                                    item.runtime_type_name()
                                 },
                             ],
                         ));
@@ -305,10 +305,10 @@ mod tests {
     /// ReflectArrayIterator#hasNext/next。
     #[test]
     fn reflect_array_iterator_advances_in_array_order() {
-        let array = Rc::new(RefCell::new(vec![
+        let array = Rc::new(RefCell::new(JavaArray::object(vec![
             DataValue::Int(1),
             DataValue::Int(2),
-        ]));
+        ])));
         let iterable = ReflectArrayIterable::new(array);
         let mut iterator = iterable.iterator();
         assert!(iterator.has_next());

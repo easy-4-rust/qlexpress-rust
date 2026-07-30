@@ -87,16 +87,17 @@ impl QLInstruction for MethodInvokeInstruction {
                 error_codes::error_msg(error_codes::NULL_METHOD_ACCESS),
             ));
         }
+        let bean_type_name = bean.runtime_type_name();
         if !q_context
             .q_runtime()
-            .is_method_capability_allowed(bean.data_type_name(), &self.method_name)
+            .is_method_capability_allowed(&bean_type_name, &self.method_name)
         {
             return Err(crate::runtime::execution_budget::budget_error(
                 crate::exception::QLExceptionKind::Runtime,
                 "SANDBOX_CAPABILITY_DENIED",
                 format!(
                     "method capability is not allowed: {}.{}",
-                    bean.data_type_name(),
+                    bean_type_name,
                     self.method_name
                 ),
             ));

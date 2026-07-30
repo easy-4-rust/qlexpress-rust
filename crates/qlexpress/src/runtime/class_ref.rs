@@ -17,6 +17,12 @@ pub enum ClassRef {
     Named(String),
 }
 
+impl From<TargetType> for ClassRef {
+    fn from(value: TargetType) -> Self {
+        ClassRef::Primitive(value)
+    }
+}
+
 impl ClassRef {
     /// 对应 Java 方法 `Class.getName()`。
     pub fn java_name(&self) -> &str {

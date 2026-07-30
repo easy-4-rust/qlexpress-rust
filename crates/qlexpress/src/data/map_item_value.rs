@@ -3,7 +3,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use crate::runtime::data::convert::obj_type_convertor::TargetType;
+use crate::runtime::class_ref::ClassRef;
 use crate::runtime::data::index_map::IndexMap;
 use crate::runtime::left_value::LeftValue;
 use crate::runtime::value::{DataValue, Value};
@@ -67,7 +67,7 @@ impl Value for MapItemValue {
 
 impl LeftValue for MapItemValue {
     /// Java returns `null` (no declared type).
-    fn defined_type(&self) -> Option<TargetType> {
+    fn defined_type(&self) -> Option<ClassRef> {
         None
     }
 

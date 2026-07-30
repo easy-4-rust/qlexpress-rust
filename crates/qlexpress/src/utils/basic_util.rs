@@ -80,18 +80,7 @@ impl BasicUtil {
             }
             DataValue::Array(values) => {
                 let values = values.borrow();
-                let component = values
-                    .first()
-                    .map(Self::type_of_value)
-                    .filter(|first| {
-                        values
-                            .iter()
-                            .skip(1)
-                            .all(|value| Self::type_of_value(value) == *first)
-                    })
-                    .map(|class_ref| class_ref.java_name().to_string())
-                    .unwrap_or_else(|| "java.lang.Object".to_string());
-                ClassRef::Named(format!("{component}[]"))
+                ClassRef::Named(format!("{}[]", values.component_type().java_name()))
             }
             DataValue::Object(object) => {
                 ClassRef::Named(object.borrow().native_type_name().to_string())

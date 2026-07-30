@@ -122,14 +122,18 @@ impl QLInstruction for SliceInstruction {
             }
             DataValue::Array(arr) => {
                 // Java arraySlice
-                let len = arr.borrow().len() as i64;
+                let borrowed = arr.borrow();
+                let len = borrowed.len() as i64;
                 let start = java_index(len, start_int).max(0);
                 let end = java_index(len, end_int).min(len);
-                let result = if start >= end {
-                    DataValue::array(vec![])
+                let values = if start >= end {
+                    vec![]
                 } else {
-                    DataValue::array(arr.borrow()[start as usize..end as usize].to_vec())
+                    borrowed[start as usize..end as usize].to_vec()
                 };
+                let result = DataValue::Array(Rc::new(std::cell::RefCell::new(
+                    borrowed.copy_with_values(values),
+                )));
                 q_context.push(QValue::Data(result));
             }
             DataValue::Null if ql_options.is_avoid_null_pointer() => {

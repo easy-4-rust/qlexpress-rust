@@ -66,7 +66,7 @@ impl SpreadMethodInvokeInstruction {
     ) -> Result<(), QLException> {
         let items = match traversable {
             DataValue::List(l) => l.borrow().to_vec(),
-            DataValue::Array(a) => a.borrow().clone(),
+            DataValue::Array(a) => a.borrow().to_vec(),
             _ => vec![],
         };
         for item in items {
@@ -97,16 +97,17 @@ impl SpreadMethodInvokeInstruction {
 
         if !Self::is_traversable(item) {
             // Leaf node - invoke method directly
+            let item_type_name = item.runtime_type_name();
             if !q_context
                 .q_runtime()
-                .is_method_capability_allowed(item.data_type_name(), &self.method_name)
+                .is_method_capability_allowed(&item_type_name, &self.method_name)
             {
                 return Err(crate::runtime::execution_budget::budget_error(
                     crate::exception::QLExceptionKind::Runtime,
                     "SANDBOX_CAPABILITY_DENIED",
                     format!(
                         "method capability is not allowed: {}.{}",
-                        item.data_type_name(),
+                        item_type_name,
                         self.method_name
                     ),
                 ));
@@ -122,16 +123,17 @@ impl SpreadMethodInvokeInstruction {
             return Ok(());
         }
         // If item itself is traversable, try to invoke method on it first
+        let item_type_name = item.runtime_type_name();
         if !q_context
             .q_runtime()
-            .is_method_capability_allowed(item.data_type_name(), &self.method_name)
+            .is_method_capability_allowed(&item_type_name, &self.method_name)
         {
             return Err(crate::runtime::execution_budget::budget_error(
                 crate::exception::QLExceptionKind::Runtime,
                 "SANDBOX_CAPABILITY_DENIED",
                 format!(
                     "method capability is not allowed: {}.{}",
-                    item.data_type_name(),
+                    item_type_name,
                     self.method_name
                 ),
             ));

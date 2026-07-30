@@ -6,7 +6,8 @@ use crate::exception::error_codes;
 use crate::exception::error_reporter::ErrorReporter;
 use crate::exception::QLException;
 use crate::ql_options::QLOptions;
-use crate::runtime::data::convert::obj_type_convertor::{ObjTypeConvertor, TargetType};
+use crate::runtime::class_ref::ClassRef;
+use crate::runtime::data::convert::obj_type_convertor::ObjTypeConvertor;
 use crate::runtime::instruction::QLInstruction;
 use crate::runtime::q_result::QResult;
 use crate::runtime::qcontext::QContext;
@@ -23,13 +24,13 @@ use std::rc::Rc;
 /// Mirrors Java `NewArrayInstruction`.
 pub struct NewArrayInstruction {
     error_reporter: Rc<dyn ErrorReporter>,
-    clz: TargetType,
+    clz: ClassRef,
     length: usize,
 }
 
 impl NewArrayInstruction {
     /// 构造指令,对应 Java 构造器 `NewArrayInstruction`。
-    pub fn new(error_reporter: Rc<dyn ErrorReporter>, clz: TargetType, length: usize) -> Self {
+    pub fn new(error_reporter: Rc<dyn ErrorReporter>, clz: ClassRef, length: usize) -> Self {
         NewArrayInstruction {
             error_reporter,
             clz,
@@ -38,8 +39,8 @@ impl NewArrayInstruction {
     }
 
     /// 对应 Java 方法 `clz`。
-    pub fn clz(&self) -> TargetType {
-        self.clz
+    pub fn clz(&self) -> &ClassRef {
+        &self.clz
     }
 
     /// 对应 Java 方法 `length`。
@@ -76,7 +77,11 @@ impl QLInstruction for NewArrayInstruction {
         let mut array = Vec::with_capacity(self.length);
         for i in 0..init_items.size() {
             let init_item_obj = init_items.get_value(i);
-            let ql_convert_result = ObjTypeConvertor::cast(&init_item_obj, self.clz);
+            let ql_convert_result = ObjTypeConvertor::cast_class(
+                &init_item_obj,
+                Some(&self.clz),
+                Some(q_context.registry().as_ref()),
+            );
             if !ql_convert_result.is_convertible() {
                 return Err(self.error_reporter.report_format(
                     error_codes::INCOMPATIBLE_ARRAY_ITEM_TYPE,
@@ -86,7 +91,7 @@ impl QLInstruction for NewArrayInstruction {
                         if init_item_obj.is_null() {
                             "null".to_string()
                         } else {
-                            init_item_obj.data_type_name().to_string()
+                            init_item_obj.runtime_type_name()
                         },
                         self.clz.java_name().to_string(),
                     ],
@@ -94,7 +99,11 @@ impl QLInstruction for NewArrayInstruction {
             }
             array.push(ql_convert_result.into_converted());
         }
-        q_context.push(QValue::Data(DataValue::array(array)));
+        q_context.push(QValue::Data(DataValue::array_with_type(
+            array,
+            self.clz.clone(),
+            Rc::clone(q_context.registry()),
+        )));
         Ok(QResult::NEXT_INSTRUCTION)
     }
 

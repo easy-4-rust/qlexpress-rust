@@ -10,7 +10,8 @@ use crate::exception::error_reporter::ErrorReporter;
 use crate::exception::pure_err_reporter::PureErrReporter;
 use crate::exception::QLException;
 use crate::ql_options::QLOptions;
-use crate::runtime::data::convert::obj_type_convertor::{ObjTypeConvertor, TargetType};
+use crate::runtime::class_ref::ClassRef;
+use crate::runtime::data::convert::obj_type_convertor::ObjTypeConvertor;
 use crate::runtime::data::AssignableDataValue;
 use crate::runtime::delegate_qcontext::DelegateQContext;
 use crate::runtime::function::CustomFunction;
@@ -131,19 +132,23 @@ impl QLambdaInner {
         for (i, param_definition) in params_definition.iter().enumerate().take(params.len()) {
             let origin_param_i = &params[i];
             let target_cls = param_definition.clazz();
-            let ql_convert_result = ObjTypeConvertor::cast_opt(origin_param_i, target_cls);
+            let ql_convert_result = ObjTypeConvertor::cast_class(
+                origin_param_i,
+                target_cls,
+                Some(self.q_context.registry().as_ref()),
+            );
             if !ql_convert_result.is_convertible() {
                 // Java: UserDefineException(INVALID_ARGUMENT, ...)
                 let message = format!(
                     "invalid argument at index {} (start from 0), required type {}, but {} provided",
                     i,
                     target_cls
-                        .map(TargetType::java_name)
+                        .map(ClassRef::java_name)
                         .unwrap_or("java.lang.Object"),
                     if origin_param_i.is_null() {
                         "null".to_string()
                     } else {
-                        origin_param_i.data_type_name().to_string()
+                        origin_param_i.runtime_type_name()
                     }
                 );
                 return Err(
@@ -151,10 +156,11 @@ impl QLambdaInner {
                 );
             }
             let slot: Rc<std::cell::RefCell<dyn LeftValue>> = match target_cls {
-                Some(clz) => Rc::new(std::cell::RefCell::new(AssignableDataValue::with_type(
+                Some(clz) => Rc::new(std::cell::RefCell::new(AssignableDataValue::with_class(
                     param_definition.name(),
                     ql_convert_result.into_converted(),
-                    clz,
+                    clz.clone(),
+                    Rc::clone(self.q_context.registry()),
                 ))),
                 None => Rc::new(std::cell::RefCell::new(AssignableDataValue::new(
                     param_definition.name(),
@@ -167,10 +173,11 @@ impl QLambdaInner {
         // 其余未传参数绑定 null(Java 语义)
         for param_definition in params_definition.iter().skip(params.len()) {
             let slot: Rc<std::cell::RefCell<dyn LeftValue>> = match param_definition.clazz() {
-                Some(clz) => Rc::new(std::cell::RefCell::new(AssignableDataValue::with_type(
+                Some(clz) => Rc::new(std::cell::RefCell::new(AssignableDataValue::with_class(
                     param_definition.name(),
                     DataValue::Null,
-                    clz,
+                    clz.clone(),
+                    Rc::clone(self.q_context.registry()),
                 ))),
                 None => Rc::new(std::cell::RefCell::new(AssignableDataValue::new(
                     param_definition.name(),

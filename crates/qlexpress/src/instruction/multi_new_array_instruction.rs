@@ -6,6 +6,7 @@ use crate::exception::error_codes;
 use crate::exception::error_reporter::ErrorReporter;
 use crate::exception::QLException;
 use crate::ql_options::QLOptions;
+use crate::runtime::class_ref::ClassRef;
 use crate::runtime::data::convert::obj_type_convertor::TargetType;
 use crate::runtime::instruction::QLInstruction;
 use crate::runtime::q_result::QResult;
@@ -18,18 +19,17 @@ use std::rc::Rc;
 /// 示例：`new int[1][2][][]`。
 /// 操作：创建多维数组；输入栈元素数为 `dims`，输出一个数组值。
 ///
-/// Mirrors Java `MultiNewArrayInstruction`. Rust arrays are untyped
-/// `Vec<DataValue>`; extra dimensions become nested arrays filled with
-/// `Null` (Java: zero-initialised multi-dimensional arrays).
+/// Mirrors Java `MultiNewArrayInstruction`，每一层数组保存其声明组件类型，
+/// 叶子元素按 Java 原语/引用默认值初始化。
 pub struct MultiNewArrayInstruction {
     error_reporter: Rc<dyn ErrorReporter>,
-    clz: TargetType,
+    clz: ClassRef,
     dims: usize,
 }
 
 impl MultiNewArrayInstruction {
     /// 构造指令,对应 Java 构造器 `MultiNewArrayInstruction`。
-    pub fn new(error_reporter: Rc<dyn ErrorReporter>, clz: TargetType, dims: usize) -> Self {
+    pub fn new(error_reporter: Rc<dyn ErrorReporter>, clz: ClassRef, dims: usize) -> Self {
         MultiNewArrayInstruction {
             error_reporter,
             clz,
@@ -38,8 +38,8 @@ impl MultiNewArrayInstruction {
     }
 
     /// 对应 Java 方法 `clz`。
-    pub fn clz(&self) -> TargetType {
-        self.clz
+    pub fn clz(&self) -> &ClassRef {
+        &self.clz
     }
 
     /// 对应 Java 方法 `dims`。
@@ -47,15 +47,26 @@ impl MultiNewArrayInstruction {
         self.dims
     }
 
-    /// Java `Array.newInstance(clz, dims...)`: nested arrays, leaf elements
-    /// zero-initialised (here `Null`, since script arrays are untyped).
-    fn build_array(dims: &[i64]) -> DataValue {
-        match dims.split_first() {
-            None => DataValue::Null,
-            Some((&len, rest)) => {
-                DataValue::array((0..len.max(0)).map(|_| Self::build_array(rest)).collect())
-            }
-        }
+    /// Java `Array.newInstance(clz, dims...)`。
+    fn build_array(
+        clz: &ClassRef,
+        dims: &[i64],
+        registry: Rc<crate::runtime::native_registry::NativeRegistry>,
+    ) -> DataValue {
+        let (&len, rest) = dims
+            .split_first()
+            .expect("MultiNewArrayInstruction requires at least one dimension");
+        let component_type = wrap_array_type(clz, rest.len());
+        let values = if rest.is_empty() {
+            (0..len)
+                .map(|_| default_array_item(clz))
+                .collect::<Vec<_>>()
+        } else {
+            (0..len)
+                .map(|_| Self::build_array(clz, rest, Rc::clone(&registry)))
+                .collect::<Vec<_>>()
+        };
+        DataValue::array_with_type(values, component_type, registry)
     }
 }
 
@@ -70,6 +81,13 @@ impl QLInstruction for MultiNewArrayInstruction {
         q_context: &mut dyn QContext,
         ql_options: &QLOptions,
     ) -> Result<QResult, QLException> {
+        if self.dims == 0 {
+            return Err(QLException::host_error(
+                crate::exception::QLExceptionKind::Runtime,
+                "java.lang.IllegalArgumentException",
+                "java.lang.IllegalArgumentException",
+            ));
+        }
         let dim_values = q_context.pop_n(self.dims);
         let mut dim_array = Vec::with_capacity(self.dims);
         for i in 0..self.dims {
@@ -81,6 +99,13 @@ impl QLInstruction for MultiNewArrayInstruction {
                 ));
             }
             let dim_len = crate::runtime::data::convert::to_i64(&dim_value);
+            if dim_len < 0 {
+                return Err(QLException::host_error(
+                    crate::exception::QLExceptionKind::Runtime,
+                    "java.lang.NegativeArraySizeException",
+                    "java.lang.NegativeArraySizeException",
+                ));
+            }
             if !ql_options.check_arr_len(dim_len as i32) {
                 return Err(self.error_reporter.report_format(
                     error_codes::EXCEED_MAX_ARR_LENGTH,
@@ -100,7 +125,11 @@ impl QLInstruction for MultiNewArrayInstruction {
             }
             budget.charge_collection_items(total_items)?;
         }
-        q_context.push(QValue::Data(Self::build_array(&dim_array)));
+        q_context.push(QValue::Data(Self::build_array(
+            &self.clz,
+            &dim_array,
+            Rc::clone(q_context.registry()),
+        )));
         Ok(QResult::NEXT_INSTRUCTION)
     }
 
@@ -122,5 +151,34 @@ impl QLInstruction for MultiNewArrayInstruction {
 
     fn error_reporter(&self) -> &Rc<dyn ErrorReporter> {
         &self.error_reporter
+    }
+}
+
+fn wrap_array_type(component_type: &ClassRef, dimensions: usize) -> ClassRef {
+    if dimensions == 0 {
+        return component_type.clone();
+    }
+    ClassRef::Named(format!(
+        "{}{}",
+        component_type.java_name(),
+        "[]".repeat(dimensions)
+    ))
+}
+
+fn default_array_item(component_type: &ClassRef) -> DataValue {
+    match component_type {
+        ClassRef::Primitive(TargetType::Boolean) => DataValue::Bool(false),
+        ClassRef::Primitive(TargetType::Byte) => DataValue::Byte(0),
+        ClassRef::Primitive(TargetType::Short) => DataValue::Short(0),
+        ClassRef::Primitive(TargetType::Int) => DataValue::Int(0),
+        ClassRef::Primitive(TargetType::Long) => DataValue::Long(0),
+        ClassRef::Primitive(TargetType::Float) => DataValue::Float(0.0),
+        ClassRef::Primitive(TargetType::Double) => DataValue::Double(0.0),
+        ClassRef::Primitive(TargetType::Character) => DataValue::Char(0),
+        // BigInteger/BigDecimal 是引用类型；Object/具名类同样初始化为 null。
+        ClassRef::Primitive(TargetType::BigInteger)
+        | ClassRef::Primitive(TargetType::BigDecimal)
+        | ClassRef::Primitive(TargetType::Any)
+        | ClassRef::Named(_) => DataValue::Null,
     }
 }

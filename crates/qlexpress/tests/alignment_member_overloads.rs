@@ -14,6 +14,7 @@ use qlexpress::exception::QLException;
 use qlexpress::ql_options::QLOptions;
 use qlexpress::runtime::class_ref::ClassRef;
 use qlexpress::runtime::data::convert::obj_type_convertor::TargetType;
+use qlexpress::runtime::data::AssignableDataValue;
 use qlexpress::runtime::delegate_qcontext::DelegateQContext;
 use qlexpress::runtime::instruction::{
     MethodInvokeInstruction, NewInstanceInstruction, QLInstruction,
@@ -312,6 +313,40 @@ fn method_registry() -> Rc<NativeRegistry> {
     );
     registry.register_type(child9);
     Rc::new(registry)
+}
+
+/// SOURCE_PARITY: Java `ObjTypeConvertor#noNeedConvert` 使用
+/// `Class#isInstance`，因此声明为父类的变量接受注册子类实例，但拒绝无关类型。
+#[test]
+fn named_declared_type_preserves_registered_assignability() {
+    let registry = method_registry();
+    let mut slot = AssignableDataValue::with_class(
+        "value",
+        DataValue::Null,
+        named("test.Parent"),
+        Rc::clone(&registry),
+    );
+
+    slot.set(
+        FixtureObject::data("test.Child"),
+        &PureErrReporter::INSTANCE,
+    )
+    .expect("registered child must be assignable to parent");
+    let DataValue::Object(current) = slot.get() else {
+        panic!("host object expected");
+    };
+    assert_eq!(current.borrow().native_type_name(), "test.Child");
+
+    let error = slot
+        .set(
+            DataValue::Str("not a parent".to_string()),
+            &PureErrReporter::INSTANCE,
+        )
+        .unwrap_err();
+    assert_eq!(
+        error.error_code(),
+        error_codes::INCOMPATIBLE_ASSIGNMENT_TYPE
+    );
 }
 
 #[test]
