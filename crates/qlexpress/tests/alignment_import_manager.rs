@@ -68,3 +68,44 @@ fn without_default_import_unqualified_fails() {
     let r = runner.execute("Calc.answer()", HashMap::new(), &opts());
     assert!(r.is_err());
 }
+
+/// SOURCE_PARITY: Java `InitOptions#getDefaultImport()` 返回实际可变 List；
+/// runner 创建后追加默认导入，后续编译必须立即读取到新条目。
+#[test]
+fn existing_runner_observes_later_default_import_mutation() {
+    use qlexpress::runtime::native_type::NativeType;
+    use qlexpress::runtime::value::DataValue;
+
+    let mut supplier = DefaultClassSupplier::instance();
+    supplier.register("com.example.Calc");
+    let options = InitOptions::builder()
+        .class_supplier(Rc::new(supplier))
+        .security_strategy(QLSecurityStrategy::open())
+        .build();
+    let retained_options = options.clone();
+    let mut runner = Express4Runner::with_init_options(options);
+    let mut calc = NativeType::named("com.example.Calc");
+    calc.static_methods.insert(
+        "answer".to_string(),
+        Rc::new(|_bean, _args| Ok(DataValue::Long(42))),
+    );
+    runner.register_native_type(calc);
+
+    assert!(
+        runner
+            .execute("Calc.answer()", HashMap::new(), &opts())
+            .is_err(),
+        "unqualified type must not resolve before the late import"
+    );
+
+    retained_options
+        .default_import_mut()
+        .push(QLImport::import_cls("com.example.Calc"));
+    assert_eq!(
+        runner
+            .execute("Calc.answer()", HashMap::new(), &opts())
+            .expect("existing runner must observe the late import")
+            .into_result(),
+        DataValue::Long(42)
+    );
+}

@@ -33,6 +33,9 @@ pub struct QLOptions {
     /// Attachments passed to user-defined functions/operators/macros; only
     /// used to pass data, never as variable values. Default empty.
     attachments: SharedAttachments,
+    /// 默认附件来自 Java `Collections.emptyMap()`，不可修改；调用方显式
+    /// 提供附件 Map 后才允许通过 [`Self::attachments_mut`] 写入。
+    attachments_mutable: bool,
     /// Allow caching the compile result of the script. Default false.
     cache: bool,
     /// Avoid null pointer. Default false.
@@ -82,6 +85,10 @@ impl QLOptions {
     ///
     /// 返回附件表的独占借用；该借用存续期间不能再次借用附件。
     pub fn attachments_mut(&self) -> RefMut<'_, Attachments> {
+        assert!(
+            self.attachments_mutable,
+            "UnsupportedOperationException: default attachments map is immutable"
+        );
         self.attachments.borrow_mut()
     }
 
@@ -146,6 +153,7 @@ pub struct QLOptionsBuilder {
     pollute_user_context: bool,
     timeout_millis: i64,
     attachments: SharedAttachments,
+    attachments_mutable: bool,
     cache: bool,
     avoid_null_pointer: bool,
     max_arr_length: i32,
@@ -161,6 +169,7 @@ impl QLOptionsBuilder {
             pollute_user_context: false,
             timeout_millis: -1,
             attachments: Rc::new(RefCell::new(HashMap::new())),
+            attachments_mutable: false,
             cache: false,
             avoid_null_pointer: false,
             max_arr_length: -1,
@@ -190,6 +199,7 @@ impl QLOptionsBuilder {
     /// 设置传递给自定义扩展的附件并返回构建器。对应 Java: `QLOptions.Builder#attachments`。
     pub fn attachments(mut self, attachments: Attachments) -> Self {
         self.attachments = Rc::new(RefCell::new(attachments));
+        self.attachments_mutable = true;
         self
     }
 
@@ -203,6 +213,7 @@ impl QLOptionsBuilder {
     /// - `attachments`：需要与选项和运行时共享的附件表。
     pub fn shared_attachments(mut self, attachments: SharedAttachments) -> Self {
         self.attachments = attachments;
+        self.attachments_mutable = true;
         self
     }
 
@@ -243,6 +254,7 @@ impl QLOptionsBuilder {
             pollute_user_context: self.pollute_user_context,
             timeout_millis: self.timeout_millis,
             attachments: self.attachments,
+            attachments_mutable: self.attachments_mutable,
             cache: self.cache,
             avoid_null_pointer: self.avoid_null_pointer,
             max_arr_length: self.max_arr_length,
@@ -304,7 +316,9 @@ mod tests {
 
     #[test]
     fn cloned_options_share_the_java_attachment_map_identity() {
-        let opts = QLOptions::builder().build();
+        let opts = QLOptions::builder()
+            .attachments(HashMap::new())
+            .build();
         let cloned = opts.clone();
 
         opts.attachments_mut()
@@ -314,6 +328,19 @@ mod tests {
             cloned.attachments().get("late"),
             Some(&DataValue::Int(42))
         );
+    }
+
+    #[test]
+    fn default_attachment_map_is_immutable_like_java_collections_empty_map() {
+        let options = QLOptions::default();
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            options
+                .attachments_mut()
+                .insert("forbidden".to_string(), DataValue::Int(1));
+        }));
+
+        assert!(result.is_err());
+        assert!(options.attachments().is_empty());
     }
 
     #[test]

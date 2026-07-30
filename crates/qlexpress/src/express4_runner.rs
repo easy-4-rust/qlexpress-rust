@@ -1768,11 +1768,13 @@ impl Express4Runner {
                 }
                 Ok(())
             }
-            QLSecurityStrategy::Open | QLSecurityStrategy::BlackList(_) => {
+            QLSecurityStrategy::Open
+            | QLSecurityStrategy::BlackList(_)
+            | QLSecurityStrategy::Custom(_) => {
                 Err(crate::runtime::execution_budget::budget_error(
                     crate::exception::QLExceptionKind::Runtime,
                     "SANDBOX_NATIVE_POLICY_UNSAFE",
-                    "execute_checked requires Isolation or an explicit native WhiteList",
+                    "execute_checked requires Isolation or an explicit enumerable native WhiteList",
                 ))
             }
         }

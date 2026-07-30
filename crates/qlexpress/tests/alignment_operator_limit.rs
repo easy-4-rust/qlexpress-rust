@@ -280,3 +280,35 @@ fn runner_execute_unaffected_by_check_strategy() {
     // 黑名单包含 `=`,check 会拒绝,但 execute 仍能跑出正确结果。
     assert!(runner().check("a = 1", &opts).is_err());
 }
+
+/// SOURCE_PARITY: Java `OperatorCheckStrategy` 是公开接口，业务宿主可让
+/// `isAllowed` 读取动态配置；已构造的 `CheckOptions` 必须保留该策略实例。
+#[test]
+fn custom_operator_strategy_observes_dynamic_host_policy() {
+    use std::cell::Cell;
+    use std::collections::HashSet;
+    use std::rc::Rc;
+
+    let allow_plus = Rc::new(Cell::new(false));
+    let captured = Rc::clone(&allow_plus);
+    let options = CheckOptions::builder()
+        .operator_check_strategy(OperatorCheckStrategy::custom(
+            move |operator| operator != "+" || captured.get(),
+            HashSet::from(["+".to_string()]),
+        ))
+        .build();
+    let runner = runner();
+
+    assert_eq!(
+        runner
+            .check("1 + 2", &options)
+            .expect_err("custom policy initially denies plus")
+            .error_code(),
+        error_codes::OPERATOR_NOT_ALLOWED
+    );
+
+    allow_plus.set(true);
+    runner
+        .check("1 + 2", &options)
+        .expect("existing options must observe the updated custom policy");
+}

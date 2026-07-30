@@ -1,5 +1,6 @@
 //! Runner-initialization options, mirroring Java `InitOptions`.
 
+use std::cell::{Ref, RefCell, RefMut};
 use std::rc::Rc;
 
 use crate::aparser::import_manager::QLImport;
@@ -12,6 +13,12 @@ use crate::security::ql_security_strategy::QLSecurityStrategy;
 /// Debug info sink; Java `Consumer<String>`.
 pub type DebugInfoConsumer = Rc<dyn Fn(String)>;
 
+/// 在初始化选项、其克隆和 runner 之间共享的默认导入列表。
+///
+/// Java `InitOptions#getDefaultImport()` 返回构建器创建的实际可变 List；
+/// Rust 通过该句柄保留 runner 创建后继续追加导入的可见性。
+pub type SharedDefaultImports = Rc<RefCell<Vec<QLImport>>>;
+
 /// 创建 [`Express4Runner`](crate::Express4Runner) 时固定的解析、调试与安全选项。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/InitOptions.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Initialization options, mirroring Java `InitOptions`.
@@ -21,7 +28,7 @@ pub struct InitOptions {
     class_supplier: Rc<dyn ClassSupplier>,
     /// Default imports for scripts; Java defaults to packs `java.lang`,
     /// `java.util`, `java.math`, `java.util.stream`, `java.util.function`.
-    default_import: Vec<QLImport>,
+    default_import: SharedDefaultImports,
     /// Enable debug mode. Default false.
     debug: bool,
     /// Consumes all debug info; valid when `debug` is true. Defaults to
@@ -56,10 +63,31 @@ impl InitOptions {
         &self.class_supplier
     }
 
-    /// 返回默认导入项列表。
-    /// 对应 Java: `InitOptions#getDefaultImport`；Rust 返回只读切片避免复制。
-    pub fn default_import(&self) -> &[QLImport] {
-        &self.default_import
+    /// 返回默认导入项列表的只读借用。
+    /// 对应 Java: `InitOptions#getDefaultImport` 的读取用法。
+    pub fn default_import(&self) -> Ref<'_, Vec<QLImport>> {
+        self.default_import.borrow()
+    }
+
+    /// 返回默认导入项列表的可变借用。
+    ///
+    /// Java `InitOptions#getDefaultImport()` 返回实际 List，调用方对其追加
+    /// 的导入会影响已创建 runner 的后续编译。
+    ///
+    /// # 返回值
+    ///
+    /// 返回共享默认导入列表的独占借用。
+    pub fn default_import_mut(&self) -> RefMut<'_, Vec<QLImport>> {
+        self.default_import.borrow_mut()
+    }
+
+    /// 返回默认导入列表的共享句柄。
+    ///
+    /// # 返回值
+    ///
+    /// 返回指向同一默认导入列表的引用计数句柄。
+    pub fn shared_default_imports(&self) -> SharedDefaultImports {
+        Rc::clone(&self.default_import)
     }
 
     /// 返回是否输出编译调试信息。对应 Java: `InitOptions#isDebug`。
@@ -118,7 +146,7 @@ impl Default for InitOptions {
 impl std::fmt::Debug for InitOptions {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("InitOptions")
-            .field("default_import", &self.default_import)
+            .field("default_import", &self.default_import.borrow())
             .field("debug", &self.debug)
             .field("security_strategy", &self.security_strategy)
             .field("allow_private_access", &self.allow_private_access)
@@ -137,7 +165,7 @@ impl std::fmt::Debug for InitOptions {
 /// 对应 Java: com.alibaba.qlexpress4.InitOptions。
 pub struct InitOptionsBuilder {
     class_supplier: Rc<dyn ClassSupplier>,
-    default_import: Vec<QLImport>,
+    default_import: SharedDefaultImports,
     debug: bool,
     debug_info_consumer: DebugInfoConsumer,
     security_strategy: QLSecurityStrategy,
@@ -155,13 +183,13 @@ impl InitOptionsBuilder {
     pub fn new() -> Self {
         InitOptionsBuilder {
             class_supplier: Rc::new(DefaultClassSupplier::instance()),
-            default_import: vec![
+            default_import: Rc::new(RefCell::new(vec![
                 QLImport::import_pack("java.lang"),
                 QLImport::import_pack("java.util"),
                 QLImport::import_pack("java.math"),
                 QLImport::import_pack("java.util.stream"),
                 QLImport::import_pack("java.util.function"),
-            ],
+            ])),
             debug: false,
             debug_info_consumer: Rc::new(|s| println!("{s}")),
             security_strategy: QLSecurityStrategy::isolation(),
@@ -184,8 +212,18 @@ impl InitOptionsBuilder {
     /// 参数：`default_import`；返回：`Self`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/InitOptions.java`，方法 `addDefaultImport`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `addDefaultImport`: appends to the default import list.
-    pub fn add_default_import(mut self, default_import: Vec<QLImport>) -> Self {
-        self.default_import.extend(default_import);
+    pub fn add_default_import(self, default_import: Vec<QLImport>) -> Self {
+        self.default_import.borrow_mut().extend(default_import);
+        self
+    }
+
+    /// 使用调用方共享的默认导入列表。
+    ///
+    /// # 参数
+    ///
+    /// - `default_import`：需要由选项和 runner 持续观察的导入列表。
+    pub fn shared_default_imports(mut self, default_import: SharedDefaultImports) -> Self {
+        self.default_import = default_import;
         self
     }
 
@@ -363,6 +401,22 @@ mod tests {
         assert_eq!(opts.selector_start(), "#{");
         assert_eq!(opts.selector_end(), "}]");
         assert!(!opts.is_strict_new_lines());
+    }
+
+    #[test]
+    fn cloned_options_share_mutable_default_imports_like_java_list_reference() {
+        let options = InitOptions::default();
+        let cloned = options.clone();
+
+        options
+            .default_import_mut()
+            .push(QLImport::import_cls("com.example.LateType"));
+
+        assert_eq!(cloned.default_import().len(), 6);
+        assert_eq!(
+            cloned.default_import().last().map(QLImport::target),
+            Some("com.example.LateType")
+        );
     }
 
     #[test]

@@ -20,6 +20,8 @@
 //! `runtime/operator/` 子包逐类落地。
 
 use std::collections::HashSet;
+use std::fmt;
+use std::rc::Rc;
 
 pub use super::black_operator_check_strategy::BlackOperatorCheckStrategy;
 pub use super::default_operator_check_strategy::DefaultOperatorCheckStrategy;
@@ -33,7 +35,7 @@ pub use super::white_operator_check_strategy::WhiteOperatorCheckStrategy;
 /// - `Blacklist(set)` ↔ `OperatorCheckStrategy.blacklist(set)`
 ///
 /// 下游消费者（`CheckOptions` 等）直接持有该枚举做 `Clone`/`PartialEq`。
-#[derive(Clone, Debug, PartialEq, Eq, Default)]
+#[derive(Clone)]
 /// 对应 Java: com.alibaba.qlexpress4.operator.OperatorCheckStrategy。
 pub enum OperatorCheckStrategy {
     /// Java `OperatorCheckStrategy.allowAll()`。
@@ -43,7 +45,61 @@ pub enum OperatorCheckStrategy {
     Whitelist(HashSet<String>),
     /// Java `OperatorCheckStrategy.blacklist(Set<String>)`：这些操作符被禁止。
     Blacklist(HashSet<String>),
+    /// 业务宿主实现 Java `OperatorCheckStrategy` 的 Rust 闭包适配。
+    Custom {
+        check: Rc<dyn Fn(&str) -> bool>,
+        operators: HashSet<String>,
+    },
 }
+
+impl Default for OperatorCheckStrategy {
+    fn default() -> Self {
+        Self::AllowAll
+    }
+}
+
+impl fmt::Debug for OperatorCheckStrategy {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::AllowAll => formatter.write_str("AllowAll"),
+            Self::Whitelist(operators) => formatter
+                .debug_tuple("Whitelist")
+                .field(operators)
+                .finish(),
+            Self::Blacklist(operators) => formatter
+                .debug_tuple("Blacklist")
+                .field(operators)
+                .finish(),
+            Self::Custom { operators, .. } => formatter
+                .debug_struct("Custom")
+                .field("operators", operators)
+                .finish_non_exhaustive(),
+        }
+    }
+}
+
+impl PartialEq for OperatorCheckStrategy {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::AllowAll, Self::AllowAll) => true,
+            (Self::Whitelist(left), Self::Whitelist(right))
+            | (Self::Blacklist(left), Self::Blacklist(right)) => left == right,
+            (
+                Self::Custom {
+                    check: left_check,
+                    operators: left_operators,
+                },
+                Self::Custom {
+                    check: right_check,
+                    operators: right_operators,
+                },
+            ) => Rc::ptr_eq(left_check, right_check) && left_operators == right_operators,
+            _ => false,
+        }
+    }
+}
+
+impl Eq for OperatorCheckStrategy {}
 
 impl OperatorCheckStrategy {
     /// 创建允许全部操作符的默认检查策略。
@@ -73,6 +129,30 @@ impl OperatorCheckStrategy {
         OperatorCheckStrategy::Blacklist(forbidden_operators)
     }
 
+    /// 使用宿主闭包创建自定义操作符检查策略。
+    ///
+    /// Java `OperatorCheckStrategy` 是公开接口，宿主可以从动态配置决定每个
+    /// 操作符是否允许；闭包捕获的共享状态会被已构造的 [`CheckOptions`]
+    /// 持续观察。
+    ///
+    /// # 参数
+    ///
+    /// - `check`：接收操作符文本并返回是否允许。
+    /// - `operators`：用于诊断和策略展示的相关操作符集合。
+    ///
+    /// # 返回值
+    ///
+    /// 返回共享自定义检查逻辑的策略。
+    pub fn custom<F>(check: F, operators: HashSet<String>) -> Self
+    where
+        F: Fn(&str) -> bool + 'static,
+    {
+        Self::Custom {
+            check: Rc::new(check),
+            operators,
+        }
+    }
+
     /// Java `isAllowed(String)` —— 判断操作符是否被允许。
     /// 对应 Java: com.alibaba.qlexpress4.operator.OperatorCheckStrategy#isAllowed。
     pub fn is_allowed(&self, operator: &str) -> bool {
@@ -80,6 +160,7 @@ impl OperatorCheckStrategy {
             OperatorCheckStrategy::AllowAll => true,
             OperatorCheckStrategy::Whitelist(allowed) => allowed.contains(operator),
             OperatorCheckStrategy::Blacklist(forbidden) => !forbidden.contains(operator),
+            OperatorCheckStrategy::Custom { check, .. } => check(operator),
         }
     }
 
@@ -88,7 +169,9 @@ impl OperatorCheckStrategy {
     pub fn operators(&self) -> &HashSet<String> {
         match self {
             OperatorCheckStrategy::AllowAll => DefaultOperatorCheckStrategy::empty_set(),
-            OperatorCheckStrategy::Whitelist(ops) | OperatorCheckStrategy::Blacklist(ops) => ops,
+            OperatorCheckStrategy::Whitelist(ops)
+            | OperatorCheckStrategy::Blacklist(ops)
+            | OperatorCheckStrategy::Custom { operators: ops, .. } => ops,
         }
     }
 }
@@ -162,5 +245,21 @@ mod tests {
                 "op={op}"
             );
         }
+    }
+
+    #[test]
+    fn custom_strategy_preserves_java_interface_extensibility() {
+        let allow_plus = Rc::new(std::cell::Cell::new(false));
+        let captured = Rc::clone(&allow_plus);
+        let strategy = OperatorCheckStrategy::custom(
+            move |operator| operator != "+" || captured.get(),
+            set(&["+"]),
+        );
+
+        assert!(!strategy.is_allowed("+"));
+        allow_plus.set(true);
+        assert!(strategy.is_allowed("+"));
+        assert_eq!(strategy.operators(), &set(&["+"]));
+        assert_eq!(strategy.clone(), strategy);
     }
 }

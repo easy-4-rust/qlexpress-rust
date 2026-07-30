@@ -320,6 +320,38 @@ fn java_express4_runner_security_strategy_test() {
     );
 }
 
+/// SOURCE_PARITY: Java `QLSecurityStrategy` 是业务宿主可实现的接口；策略
+/// 状态发生变化后，已构造 runner 的后续成员解析必须读取最新决策。
+#[test]
+fn custom_security_strategy_is_extensible_and_observes_shared_state() {
+    use qlexpress::security::ql_security_strategy::NativeMember;
+    use std::collections::HashSet;
+
+    let allowed = Rc::new(RefCell::new(HashSet::new()));
+    let captured = Rc::clone(&allowed);
+    let runner = desk_runner(QLSecurityStrategy::custom(move |member| {
+        captured.borrow().contains(member)
+    }));
+    let get_book2 = NativeMember::new("com.example.HostDesk", "getBook2");
+
+    assert_eq!(
+        runner
+            .execute("desk.getBook2()", host_context(), &QLOptions::default())
+            .expect_err("custom strategy initially denies the member")
+            .error_code(),
+        error_codes::METHOD_NOT_FOUND
+    );
+
+    allowed.borrow_mut().insert(get_book2);
+    assert_eq!(
+        runner
+            .execute("desk.getBook2()", host_context(), &QLOptions::default())
+            .expect("existing runner must observe the updated custom policy")
+            .result(),
+        &DataValue::Str("Effective Rust".to_string())
+    );
+}
+
 // ---------- CheckOptions / static analysis ----------
 
 #[test]
