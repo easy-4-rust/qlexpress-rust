@@ -172,12 +172,16 @@ def doc_mentions_java_method(
         )
         if value
     }
-    markers = {
-        f"#{method}",
-        *(f"{owner}#{method}" for owner in owners),
-        *(f"{owner}.{method}" for owner in owners),
-    }
-    return any(marker in doc for marker in markers)
+    owner_patterns = [
+        rf"{re.escape(owner)}(?:#|\.){re.escape(method)}(?![A-Za-z0-9_])"
+        for owner in owners
+    ]
+    patterns = [
+        rf"#{re.escape(method)}(?![A-Za-z0-9_])",
+        rf"(?<![A-Za-z0-9_]){re.escape(method)}\s*\(",
+        *owner_patterns,
+    ]
+    return any(re.search(pattern, doc) for pattern in patterns)
 
 
 def load_nodes(db_path: Path) -> list[Node]:
@@ -313,6 +317,159 @@ def source_rust_types(
     return result
 
 
+def source_rust_fields(
+    rust_root: Path,
+    rust_source_root: Path,
+    test_cutoffs: dict[str, int],
+) -> list[Node]:
+    """发现 CodeGraph 1.4.1 尚未暴露的 Rust 结构体字段。
+
+    字段候选用于识别 JavaBean getter/setter 以及生成式 Parser context
+    accessor 的 Rust 数据形态。它只证明“存在可能承接该值的字段”，不证明
+    可见性、复制/借用、校验、错误或副作用契约等价。
+    """
+    struct_start = re.compile(
+        r"^\s*(?:pub(?:\s*\([^)]*\))?\s+)?"
+        r"struct\s+([A-Za-z_][A-Za-z0-9_]*)\b[^;]*\{"
+    )
+    field = re.compile(
+        r"^\s*(?P<visibility>pub(?:\s*\([^)]*\))?\s+)?"
+        r"(?P<name>[A-Za-z_][A-Za-z0-9_]*)\s*:\s*(?P<type>.+?)(?:,\s*)?$"
+    )
+    result: list[Node] = []
+    for path in sorted((rust_root / rust_source_root).rglob("*.rs")):
+        relative = path.relative_to(rust_root).as_posix()
+        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+        cutoff = test_cutoffs.get(relative, len(lines) + 1)
+        depth = 0
+        owner: tuple[str, int] | None = None
+        for index, line in enumerate(lines[: cutoff - 1], 1):
+            if owner and depth <= owner[1]:
+                owner = None
+            start = struct_start.match(line)
+            if start:
+                owner = (start.group(1), depth)
+            elif owner and depth == owner[1] + 1:
+                match = field.match(line)
+                if match:
+                    doc_lines: list[str] = []
+                    cursor = index - 2
+                    while cursor >= 0:
+                        stripped = lines[cursor].strip()
+                        if stripped.startswith("///"):
+                            doc_lines.append(stripped[3:].lstrip())
+                            cursor -= 1
+                            continue
+                        if stripped.startswith("#[") or not stripped:
+                            cursor -= 1
+                            continue
+                        break
+                    doc_lines.reverse()
+                    name = match.group("name")
+                    result.append(
+                        Node(
+                            id=f"source:field:{relative}:{index}:{owner[0]}:{name}",
+                            kind="field",
+                            name=name,
+                            qualified_name=f"{owner[0]}::{name}",
+                            file_path=relative,
+                            start_line=index,
+                            end_line=index,
+                            docstring="\n".join(doc_lines),
+                            signature=line.strip(),
+                            visibility=(
+                                "public"
+                                if match.group("visibility")
+                                else "private"
+                            ),
+                        )
+                    )
+            depth += line.count("{") - line.count("}")
+    return result
+
+
+def source_rust_methods(
+    rust_root: Path,
+    rust_source_root: Path,
+    test_cutoffs: dict[str, int],
+) -> list[Node]:
+    """从源码补齐普通 Rust 方法的完整 rustdoc。
+
+    CodeGraph 1.4.1 对带属性、trait impl 和部分普通方法的 docstring 可能为
+    空；源码候选用于恢复显式 Java 方法来源锚点。合并时仍以 CodeGraph 的
+    符号身份与调用边为主。
+    """
+    owner_start = re.compile(
+        r"^\s*(?:pub(?:\s*\([^)]*\))?\s+)?"
+        r"(?:unsafe\s+)?(?:trait|impl(?:\s*<[^>]*>)?)\b"
+    )
+    function = re.compile(
+        r"^\s*(?P<visibility>pub(?:\s*\([^)]*\))?\s+)?"
+        r"(?:(?:async|const|unsafe|extern(?:\s+\"[^\"]+\")?)\s+)*"
+        r"fn\s+(?P<name>[A-Za-z_][A-Za-z0-9_]*)\b"
+    )
+    result: list[Node] = []
+    for path in sorted((rust_root / rust_source_root).rglob("*.rs")):
+        relative = path.relative_to(rust_root).as_posix()
+        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+        cutoff = test_cutoffs.get(relative, len(lines) + 1)
+        depth = 0
+        owner_stack: list[tuple[str, int]] = []
+        for index, line in enumerate(lines[: cutoff - 1], 1):
+            while owner_stack and depth <= owner_stack[-1][1]:
+                owner_stack.pop()
+            if owner_start.match(line) and "{" in line:
+                owner_match = re.search(
+                    r"\bfor\s+([A-Za-z_][A-Za-z0-9_]*)",
+                    line,
+                )
+                if not owner_match:
+                    owner_match = re.search(
+                        r"\b(?:trait|impl(?:\s*<[^>]*>)?)\s+"
+                        r"([A-Za-z_][A-Za-z0-9_]*)",
+                        line,
+                    )
+                if owner_match:
+                    owner_stack.append((owner_match.group(1), depth))
+            match = function.match(line)
+            if match:
+                doc_lines: list[str] = []
+                cursor = index - 2
+                while cursor >= 0:
+                    stripped = lines[cursor].strip()
+                    if stripped.startswith("///"):
+                        doc_lines.append(stripped[3:].lstrip())
+                        cursor -= 1
+                        continue
+                    if stripped.startswith("#[") or not stripped:
+                        cursor -= 1
+                        continue
+                    break
+                doc_lines.reverse()
+                name = match.group("name")
+                owner = owner_stack[-1][0] if owner_stack else path.stem
+                result.append(
+                    Node(
+                        id=f"source:method:{relative}:{index}:{owner}:{name}",
+                        kind="method",
+                        name=name,
+                        qualified_name=f"{owner}::{name}",
+                        file_path=relative,
+                        start_line=index,
+                        end_line=index,
+                        docstring="\n".join(doc_lines),
+                        signature=line.strip(),
+                        visibility=(
+                            "public"
+                            if match.group("visibility")
+                            else "private"
+                        ),
+                    )
+                )
+            depth += line.count("{") - line.count("}")
+    return result
+
+
 def source_rust_modules(
     rust_root: Path,
     rust_source_root: Path,
@@ -441,13 +598,26 @@ def merge_rust_methods(
     source_methods: list[Node],
 ) -> list[Node]:
     """合并 CodeGraph 方法与宏展开方法候选。"""
-    result = list(codegraph_methods)
+    source_by_location = {
+        (node.name, node.file_path, node.start_line): node
+        for node in source_methods
+    }
+    result = []
+    for node in codegraph_methods:
+        source = source_by_location.get(
+            (node.name, node.file_path, node.start_line)
+        )
+        result.append(
+            replace(node, docstring=source.docstring)
+            if source and len(source.docstring) > len(node.docstring)
+            else node
+        )
     known = {
-        (node.name, node.qualified_name, node.file_path)
+        (node.name, node.file_path, node.start_line)
         for node in codegraph_methods
     }
     for node in source_methods:
-        key = (node.name, node.qualified_name, node.file_path)
+        key = (node.name, node.file_path, node.start_line)
         if key not in known:
             result.append(node)
             known.add(key)
@@ -550,13 +720,14 @@ def rust_test_markers(rust_root: Path) -> dict[str, list[dict[str, Any]]]:
 
 def method_candidates(
     java_method: Node,
-    rust_methods: list[Node],
+    rust_members: list[Node],
     candidate_files: set[str],
     owner_names: set[str],
     java_owner_name: str | None,
 ) -> list[Node]:
     expected_name = camel_to_snake(java_method.name)
     names = {expected_name}
+    special_names: set[str] = set()
     for prefix in ("get", "set", "is"):
         if java_method.name.startswith(prefix) and len(java_method.name) > len(prefix):
             suffix = java_method.name[len(prefix) :]
@@ -567,35 +738,75 @@ def method_candidates(
                     names.add(f"set_{adapted}")
     if java_method.name == "toString":
         names.add("to_string")
+    if (
+        java_method.name == "accept"
+        and java_owner_name
+        and java_owner_name.endswith("Context")
+    ):
+        visitor_target = re.sub(r"Context$", "", java_owner_name)
+        special_names.update(
+            {
+                "accept",
+                f"visit_{camel_to_snake(visitor_target)}",
+            }
+        )
+    if re.fullmatch(r"[A-Z][A-Z0-9_]*", java_method.name):
+        token_name = java_method.name.lower()
+        names.update({token_name, f"{token_name}_token", "token", "terminal"})
     if java_method.name in {
         Path(java_method.file_path).stem,
         java_owner_name,
     }:
         names.update({"new", "default", "with_init_options"})
+        if java_owner_name:
+            names.add(java_owner_name)
+    parser_generated_owner = (
+        java_owner_name is not None
+        and java_owner_name.endswith("Context")
+        and Path(java_method.file_path).stem == "QLParser"
+    )
+    number_math_impl = (
+        java_owner_name == "NumberMath"
+        and java_method.name.endswith("Impl")
+    )
     return [
-        method
-        for method in rust_methods
-        if method.name in names
+        member
+        for member in rust_members
+        if member.name in names
         and (
-            method.file_path in candidate_files
+            member.file_path in candidate_files
             or any(
-                method.qualified_name.startswith(f"{owner_name}::")
+                member.qualified_name.startswith(f"{owner_name}::")
                 for owner_name in owner_names
+            )
+            or (
+                parser_generated_owner
+                and member.kind == "field"
+                and "/aparser/" in member.file_path
+            )
+            or (
+                number_math_impl
+                and "/number/" in member.file_path
             )
         )
         or (
             (
-                method.file_path in candidate_files
+                member.file_path in candidate_files
                 or any(
-                    method.qualified_name.startswith(f"{owner_name}::")
+                    member.qualified_name.startswith(f"{owner_name}::")
                     for owner_name in owner_names
                 )
             )
             and doc_mentions_java_method(
-                method.docstring,
+                member.docstring,
                 java_method,
                 java_owner_name,
             )
+        )
+        or (
+            member.name in special_names
+            and "/aparser/" in member.file_path
+            and member.kind in {"method", "function"}
         )
     ]
 
@@ -660,12 +871,25 @@ def main() -> int:
             if node.kind in {"method", "function"}
             and is_rust_production(node, rust_source_root, test_cutoffs)
         ],
-        source_rust_macro_methods(
-            rust_root,
-            rust_source_root,
-            test_cutoffs,
-        ),
+        [
+            *source_rust_methods(
+                rust_root,
+                rust_source_root,
+                test_cutoffs,
+            ),
+            *source_rust_macro_methods(
+                rust_root,
+                rust_source_root,
+                test_cutoffs,
+            ),
+        ],
     )
+    rust_fields = source_rust_fields(
+        rust_root,
+        rust_source_root,
+        test_cutoffs,
+    )
+    rust_members = [*rust_methods, *rust_fields, *rust_types]
 
     rust_files = {
         path.relative_to(rust_root).as_posix()
@@ -851,7 +1075,7 @@ def main() -> int:
             owner_names.update(rust_names_for_java_type.get(owner.id, set()))
         candidates = method_candidates(
             java_method,
-            rust_methods,
+            rust_members,
             candidate_files,
             owner_names,
             owner.name if owner else None,
@@ -865,16 +1089,24 @@ def main() -> int:
                 "java": node_dict(java_method),
                 "java_owner": node_dict(owner) if owner else None,
                 "direct_java_calls": java_call_graph.get(java_method.id, []),
-                "candidate_rust_methods": [
+                "candidate_rust_members": [
                     node_dict(candidate) for candidate in candidates
                 ],
+                "candidate_rust_methods": [
+                    node_dict(candidate)
+                    for candidate in candidates
+                    if candidate.kind in {"method", "function"}
+                ],
+                "candidate_mapping_kinds": sorted(
+                    {candidate.kind for candidate in candidates}
+                ),
                 "test_evidence": test_markers.get(marker_key, []),
                 "state": state,
                 "semantic_evidence": [],
                 "review_note": (
                     "同名候选不证明重载、参数、返回值、错误和副作用等价。"
                     if state == "UNVERIFIED"
-                    else "未发现名称级 Rust 候选；需要人工确认适配名或补齐实现。"
+                    else "未发现方法、字段、类型或分派级 Rust 候选；需要人工确认适配名或补齐实现。"
                 ),
             }
         )
@@ -890,6 +1122,11 @@ def main() -> int:
         candidate["doc"]
         for row in method_rows
         for candidate in row["candidate_rust_methods"]
+    ]
+    member_candidates = [
+        candidate
+        for row in method_rows
+        for candidate in row["candidate_rust_members"]
     ]
     comment_coverage = {
         "java_primary_objects_with_doc": sum(
@@ -914,9 +1151,13 @@ def main() -> int:
         ),
     }
     evidence_coverage = {
-        "java_methods_with_name_candidate": sum(
+        "java_methods_with_member_candidate": sum(
+            bool(row["candidate_rust_members"]) for row in method_rows
+        ),
+        "java_methods_with_method_candidate": sum(
             bool(row["candidate_rust_methods"]) for row in method_rows
         ),
+        "rust_member_candidates": len(member_candidates),
         "java_methods_with_explicit_test_marker": sum(
             bool(row["test_evidence"]) for row in method_rows
         ),

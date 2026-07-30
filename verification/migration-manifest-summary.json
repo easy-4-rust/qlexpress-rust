@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-07-30T18:23:49.623299+00:00",
+  "generated_at": "2026-07-30T18:42:04.258841+00:00",
   "policy": {
     "source": "rust-java-migration + rust-java-migration-testing",
     "retain_package_segments": 1,
@@ -72,19 +72,11 @@
     },
     "rust": {
       "root": "/Users/wandl/workspaces/workspace-github-easy-4-rust/qlexpress-rust",
-      "sha": "cd0a7a876fec7dfa1812220da24843c0027c9c5e",
+      "sha": "e4cf77e4802bf12e9ce540061d73f01210e6f248",
       "branch": "dev",
       "dirty": true,
       "status": [
-        "M crates/qlexpress/src/aparser/chain_kind.rs",
-        " M crates/qlexpress/src/aparser/exist_var_stack.rs",
-        " M crates/qlexpress/src/aparser/node.rs",
-        " M crates/qlexpress/src/aparser/parse_fail.rs",
-        " M crates/qlexpress/src/instruction/for_each_instruction.rs",
-        " M crates/qlexpress/src/member/method_handler.rs",
-        " M crates/qlexpress/src/runtime/parameters.rs",
-        " M crates/qlexpress/src/runtime/reflect_loader.rs",
-        " M scripts/generate_migration_manifest.py",
+        "M scripts/generate_migration_manifest.py",
         " M verification/migration-manifest-summary.json"
       ],
       "codegraph": {
@@ -151,8 +143,8 @@
       "UNVERIFIED": 136
     },
     "method_states": {
-      "MISSING": 497,
-      "UNVERIFIED": 1317
+      "MISSING": 148,
+      "UNVERIFIED": 1666
     },
     "explicit_test_marker_keys": 288,
     "comment_coverage": {
@@ -161,12 +153,14 @@
       "rust_object_candidates_with_chinese_doc": 430,
       "rust_object_candidates_with_java_source_trace": 423,
       "java_methods_with_doc": 90,
-      "rust_method_candidates": 1565,
-      "rust_method_candidates_with_chinese_doc": 1125,
-      "rust_method_candidates_with_java_source_trace": 939
+      "rust_method_candidates": 2070,
+      "rust_method_candidates_with_chinese_doc": 1497,
+      "rust_method_candidates_with_java_source_trace": 1209
     },
     "evidence_coverage": {
-      "java_methods_with_name_candidate": 1317,
+      "java_methods_with_member_candidate": 1666,
+      "java_methods_with_method_candidate": 1491,
+      "rust_member_candidates": 4031,
       "java_methods_with_explicit_test_marker": 32,
       "java_methods_with_direct_call_graph": 835,
       "direct_java_call_edges_recorded": 2257
