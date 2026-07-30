@@ -16,7 +16,7 @@ import re
 import sqlite3
 import subprocess
 from collections import defaultdict
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -133,6 +133,53 @@ def camel_to_snake(name: str) -> str:
     )
 
 
+def java_type_markers(java_type: Node) -> set[str]:
+    """返回 Rust 注释中常见的 Java 类型来源写法。"""
+    qualified = java_type.qualified_name.replace("::", ".")
+    owner = Path(java_type.file_path).stem
+    markers = {qualified, java_type.name}
+    if java_type.name != owner:
+        markers.update(
+            {
+                f"{owner}.{java_type.name}",
+                f"{owner}::{java_type.name}",
+                f"{owner} 内部类 {java_type.name}",
+            }
+        )
+    return markers
+
+
+def doc_mentions_java_type(doc: str, java_type: Node) -> bool:
+    if not doc:
+        return False
+    return any(marker in doc for marker in java_type_markers(java_type))
+
+
+def doc_mentions_java_method(
+    doc: str,
+    java_method: Node,
+    java_owner_name: str | None,
+) -> bool:
+    """判断 Rust 文档是否显式追溯到指定 Java 方法。"""
+    if not doc:
+        return False
+    method = java_method.name
+    owners = {
+        value
+        for value in (
+            java_owner_name,
+            Path(java_method.file_path).stem,
+        )
+        if value
+    }
+    markers = {
+        f"#{method}",
+        *(f"{owner}#{method}" for owner in owners),
+        *(f"{owner}.{method}" for owner in owners),
+    }
+    return any(marker in doc for marker in markers)
+
+
 def load_nodes(db_path: Path) -> list[Node]:
     connection = sqlite3.connect(db_path)
     connection.row_factory = sqlite3.Row
@@ -203,6 +250,208 @@ def cfg_test_cutoffs(rust_root: Path, rust_source_root: Path) -> dict[str, int]:
                 cutoffs[relative] = line_number
                 break
     return cutoffs
+
+
+def source_rust_types(
+    rust_root: Path,
+    rust_source_root: Path,
+    test_cutoffs: dict[str, int],
+) -> list[Node]:
+    """补齐 CodeGraph 当前未提取的 Rust 单元结构体等类型声明。
+
+    CodeGraph 1.4.1 能提取普通结构体、枚举和 trait，但会漏掉
+    ``pub struct Foo;`` 形式的单元结构体。源码扫描只作为候选发现兜底，
+    不据此推断语义已完成。
+    """
+    declaration = re.compile(
+        r"^\s*(?P<visibility>pub(?:\s*\([^)]*\))?\s+)?"
+        r"(?:(?:unsafe|auto)\s+)?"
+        r"(?P<kind>struct|enum|trait|type)\s+"
+        r"(?P<name>[A-Za-z_][A-Za-z0-9_]*)\b"
+    )
+    kind_map = {"type": "type_alias"}
+    result: list[Node] = []
+    for path in sorted((rust_root / rust_source_root).rglob("*.rs")):
+        relative = path.relative_to(rust_root).as_posix()
+        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+        cutoff = test_cutoffs.get(relative, len(lines) + 1)
+        for index, line in enumerate(lines[: cutoff - 1], 1):
+            match = declaration.match(line)
+            if not match:
+                continue
+            doc_lines: list[str] = []
+            cursor = index - 2
+            while cursor >= 0:
+                stripped = lines[cursor].strip()
+                if stripped.startswith("///"):
+                    doc_lines.append(stripped[3:].lstrip())
+                    cursor -= 1
+                    continue
+                if stripped.startswith("#[") or not stripped:
+                    cursor -= 1
+                    continue
+                break
+            doc_lines.reverse()
+            kind = kind_map.get(match.group("kind"), match.group("kind"))
+            name = match.group("name")
+            result.append(
+                Node(
+                    id=f"source:{kind}:{relative}:{index}:{name}",
+                    kind=kind,
+                    name=name,
+                    qualified_name=name,
+                    file_path=relative,
+                    start_line=index,
+                    end_line=index,
+                    docstring="\n".join(doc_lines),
+                    signature=line.strip(),
+                    visibility=(
+                        "public" if match.group("visibility") else "private"
+                    ),
+                )
+            )
+    return result
+
+
+def source_rust_modules(
+    rust_root: Path,
+    rust_source_root: Path,
+) -> dict[str, Node]:
+    """将文件级 ``//!`` 文档暴露为静态工具类/接口的模块候选。"""
+    result: dict[str, Node] = {}
+    for path in sorted((rust_root / rust_source_root).rglob("*.rs")):
+        relative = path.relative_to(rust_root).as_posix()
+        docs: list[str] = []
+        for line in path.read_text(
+            encoding="utf-8",
+            errors="replace",
+        ).splitlines():
+            stripped = line.strip()
+            if stripped.startswith("//!"):
+                docs.append(stripped[3:].lstrip())
+                continue
+            if not stripped and docs:
+                continue
+            break
+        if docs:
+            result[relative] = Node(
+                id=f"source:module:{relative}",
+                kind="module",
+                name=path.stem,
+                qualified_name=relative,
+                file_path=relative,
+                start_line=1,
+                end_line=1,
+                docstring="\n".join(docs),
+                signature=f"mod {path.stem}",
+                visibility="public",
+            )
+    return result
+
+
+def merge_rust_types(codegraph_types: list[Node], source_types: list[Node]) -> list[Node]:
+    """合并 CodeGraph 类型与源码兜底类型，避免重复候选。"""
+    source_by_key = {
+        (node.kind, node.name, node.file_path): node
+        for node in source_types
+    }
+    result = []
+    for node in codegraph_types:
+        source = source_by_key.get((node.kind, node.name, node.file_path))
+        result.append(
+            replace(node, docstring=source.docstring)
+            if source and len(source.docstring) > len(node.docstring)
+            else node
+        )
+    known = {
+        (node.kind, node.name, node.file_path)
+        for node in codegraph_types
+    }
+    for node in source_types:
+        key = (node.kind, node.name, node.file_path)
+        if key not in known:
+            result.append(node)
+            known.add(key)
+    return result
+
+
+def source_rust_macro_methods(
+    rust_root: Path,
+    rust_source_root: Path,
+    test_cutoffs: dict[str, int],
+) -> list[Node]:
+    """发现类型内部 ``*_methods! { method(Type); }`` 生成的方法。
+
+    这类方法在编译后真实存在，但 CodeGraph 只看到宏调用，未展开成方法节点。
+    """
+    type_start = re.compile(
+        r"^\s*(?:pub(?:\s*\([^)]*\))?\s+)?"
+        r"(?:struct|enum|trait)\s+([A-Za-z_][A-Za-z0-9_]*)\b[^;]*\{"
+    )
+    macro_start = re.compile(r"\b[A-Za-z_][A-Za-z0-9_]*_methods!\s*\{")
+    macro_entry = re.compile(
+        r"^\s*([a-z_][A-Za-z0-9_]*)\s*"
+        r"\(\s*[A-Za-z_][A-Za-z0-9_:<>, ]*\s*\)\s*;\s*$"
+    )
+    result: list[Node] = []
+    for path in sorted((rust_root / rust_source_root).rglob("*.rs")):
+        relative = path.relative_to(rust_root).as_posix()
+        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+        cutoff = test_cutoffs.get(relative, len(lines) + 1)
+        depth = 0
+        type_stack: list[tuple[str, int]] = []
+        macro_stack: list[tuple[str, int]] = []
+        for index, line in enumerate(lines[: cutoff - 1], 1):
+            while type_stack and depth <= type_stack[-1][1]:
+                type_stack.pop()
+            while macro_stack and depth <= macro_stack[-1][1]:
+                macro_stack.pop()
+            type_match = type_start.match(line)
+            if type_match:
+                type_stack.append((type_match.group(1), depth))
+            if macro_start.search(line) and type_stack:
+                macro_stack.append((type_stack[-1][0], depth))
+            entry = macro_entry.match(line)
+            if entry and macro_stack:
+                owner = macro_stack[-1][0]
+                name = entry.group(1)
+                result.append(
+                    Node(
+                        id=f"source:macro-method:{relative}:{index}:{owner}:{name}",
+                        kind="method",
+                        name=name,
+                        qualified_name=f"{owner}::{name}",
+                        file_path=relative,
+                        start_line=index,
+                        end_line=index,
+                        docstring=(
+                            "宏展开方法；候选来源由迁移清单生成器记录，"
+                            "仍需语义与测试证据。"
+                        ),
+                        signature=line.strip(),
+                        visibility="public",
+                    )
+                )
+            depth += line.count("{") - line.count("}")
+    return result
+
+
+def merge_rust_methods(
+    codegraph_methods: list[Node],
+    source_methods: list[Node],
+) -> list[Node]:
+    """合并 CodeGraph 方法与宏展开方法候选。"""
+    result = list(codegraph_methods)
+    known = {
+        (node.name, node.qualified_name, node.file_path)
+        for node in codegraph_methods
+    }
+    for node in source_methods:
+        key = (node.name, node.qualified_name, node.file_path)
+        if key not in known:
+            result.append(node)
+            known.add(key)
+    return result
 
 
 def is_rust_production(
@@ -279,7 +528,7 @@ def rust_test_markers(rust_root: Path) -> dict[str, list[dict[str, Any]]]:
         lines = text.splitlines()
         for index, line in enumerate(lines):
             for match in marker_pattern.finditer(line):
-                nearby = "\n".join(lines[max(0, index - 4) : index + 18])
+                nearby = "\n".join(lines[max(0, index - 4) : index + 36])
                 test = re.search(
                     r"#\s*\[\s*test(?:\s*\([^]]*\))?\s*\][\s\S]*?"
                     r"\bfn\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(",
@@ -293,6 +542,7 @@ def rust_test_markers(rust_root: Path) -> dict[str, list[dict[str, Any]]]:
                         "file": path.relative_to(rust_root).as_posix(),
                         "line": index + 1,
                         "test": test.group(1),
+                        "declared_adaptation": "ADAPTED" in nearby,
                     }
                 )
     return dict(markers)
@@ -302,15 +552,51 @@ def method_candidates(
     java_method: Node,
     rust_methods: list[Node],
     candidate_files: set[str],
+    owner_names: set[str],
+    java_owner_name: str | None,
 ) -> list[Node]:
     expected_name = camel_to_snake(java_method.name)
     names = {expected_name}
-    if java_method.name == Path(java_method.file_path).stem:
+    for prefix in ("get", "set", "is"):
+        if java_method.name.startswith(prefix) and len(java_method.name) > len(prefix):
+            suffix = java_method.name[len(prefix) :]
+            if suffix[0].isupper():
+                adapted = camel_to_snake(suffix)
+                names.add(adapted)
+                if prefix == "set":
+                    names.add(f"set_{adapted}")
+    if java_method.name == "toString":
+        names.add("to_string")
+    if java_method.name in {
+        Path(java_method.file_path).stem,
+        java_owner_name,
+    }:
         names.update({"new", "default", "with_init_options"})
     return [
         method
         for method in rust_methods
-        if method.file_path in candidate_files and method.name in names
+        if method.name in names
+        and (
+            method.file_path in candidate_files
+            or any(
+                method.qualified_name.startswith(f"{owner_name}::")
+                for owner_name in owner_names
+            )
+        )
+        or (
+            (
+                method.file_path in candidate_files
+                or any(
+                    method.qualified_name.startswith(f"{owner_name}::")
+                    for owner_name in owner_names
+                )
+            )
+            and doc_mentions_java_method(
+                method.docstring,
+                java_method,
+                java_owner_name,
+            )
+        )
     ]
 
 
@@ -356,18 +642,30 @@ def main() -> int:
         and node.name.startswith("<")
     ]
     test_cutoffs = cfg_test_cutoffs(rust_root, rust_source_root)
-    rust_types = [
+    codegraph_rust_types = [
         node
         for node in rust_nodes
         if node.kind in RUST_TYPE_KINDS
         and is_rust_production(node, rust_source_root, test_cutoffs)
     ]
-    rust_methods = [
-        node
-        for node in rust_nodes
-        if node.kind in {"method", "function"}
-        and is_rust_production(node, rust_source_root, test_cutoffs)
-    ]
+    rust_types = merge_rust_types(
+        codegraph_rust_types,
+        source_rust_types(rust_root, rust_source_root, test_cutoffs),
+    )
+    rust_modules_by_file = source_rust_modules(rust_root, rust_source_root)
+    rust_methods = merge_rust_methods(
+        [
+            node
+            for node in rust_nodes
+            if node.kind in {"method", "function"}
+            and is_rust_production(node, rust_source_root, test_cutoffs)
+        ],
+        source_rust_macro_methods(
+            rust_root,
+            rust_source_root,
+            test_cutoffs,
+        ),
+    )
 
     rust_files = {
         path.relative_to(rust_root).as_posix()
@@ -377,8 +675,10 @@ def main() -> int:
     for path in rust_files:
         rust_files_by_name[Path(path).name].append(path)
     rust_types_by_file: dict[str, list[Node]] = defaultdict(list)
+    rust_types_by_name: dict[str, list[Node]] = defaultdict(list)
     for node in rust_types:
         rust_types_by_file[node.file_path].append(node)
+        rust_types_by_name[node.name].append(node)
 
     java_types_by_file: dict[str, list[Node]] = defaultdict(list)
     for node in [*primary_types, *nested_types]:
@@ -399,7 +699,8 @@ def main() -> int:
     test_markers = rust_test_markers(rust_root)
 
     object_rows: list[dict[str, Any]] = []
-    files_for_java_object: dict[str, set[str]] = {}
+    files_for_java_type: dict[str, set[str]] = {}
+    rust_names_for_java_type: dict[str, set[str]] = {}
     state_counts: dict[str, int] = defaultdict(int)
     for java_type in primary_types:
         expected_file = expected_rust_file(
@@ -417,7 +718,23 @@ def main() -> int:
                 for node in rust_types_by_file.get(expected_file, [])
                 if node.name == java_type.name
             ]
-            state = "UNVERIFIED" if exact_types else "PARTIAL"
+            traced_types = [
+                node
+                for node in rust_types_by_file.get(expected_file, [])
+                if node not in exact_types
+                and doc_mentions_java_type(node.docstring, java_type)
+            ]
+            module_candidate = rust_modules_by_file.get(expected_file)
+            if (
+                module_candidate
+                and doc_mentions_java_type(
+                    module_candidate.docstring,
+                    java_type,
+                )
+            ):
+                traced_types.append(module_candidate)
+            candidate_types = [*exact_types, *traced_types]
+            state = "UNVERIFIED" if candidate_types else "PARTIAL"
         elif same_name_files:
             candidate_files = set(same_name_files)
             exact_types = [
@@ -426,20 +743,34 @@ def main() -> int:
                 for node in rust_types_by_file.get(path, [])
                 if node.name == java_type.name
             ]
+            candidate_types = exact_types
             state = "MISPLACED"
         else:
             candidate_files = set()
             exact_types = []
+            candidate_types = []
             state = "MISSING"
         assert state in STRICT_STATES
         state_counts[state] += 1
-        files_for_java_object[java_type.id] = candidate_files
+        files_for_java_type[java_type.id] = candidate_files
+        rust_names_for_java_type[java_type.id] = {
+            node.name for node in candidate_types
+        }
         object_rows.append(
             {
                 "java": node_dict(java_type),
                 "expected_rust_file": expected_file,
                 "candidate_rust_files": sorted(candidate_files),
-                "candidate_rust_types": [node_dict(node) for node in exact_types],
+                "candidate_rust_types": [
+                    node_dict(node) for node in candidate_types
+                ],
+                "candidate_mapping": (
+                    "EXACT_NAME"
+                    if exact_types
+                    else "JAVA_SOURCE_TRACE"
+                    if candidate_types
+                    else None
+                ),
                 "state": state,
                 "semantic_evidence": [],
                 "review_note": (
@@ -458,19 +789,24 @@ def main() -> int:
     nested_state_counts: dict[str, int] = defaultdict(int)
     for nested_type in nested_types:
         parent_row = object_rows_by_file[nested_type.file_path]
-        candidate_files = set(parent_row["candidate_rust_files"])
-        exact_types = [
+        exact_types = list(rust_types_by_name.get(nested_type.name, []))
+        traced_types = [
             node
-            for path in candidate_files
-            for node in rust_types_by_file.get(path, [])
-            if node.name == nested_type.name
+            for node in rust_types
+            if node not in exact_types
+            and doc_mentions_java_type(node.docstring, nested_type)
         ]
-        if exact_types:
-            state = (
-                "MISPLACED"
-                if parent_row["state"] == "MISPLACED"
-                else "UNVERIFIED"
-            )
+        candidate_types = sorted(
+            [*exact_types, *traced_types],
+            key=lambda node: (node.file_path, node.start_line),
+        )
+        candidate_files = {node.file_path for node in candidate_types}
+        files_for_java_type[nested_type.id] = candidate_files
+        rust_names_for_java_type[nested_type.id] = {
+            node.name for node in candidate_types
+        }
+        if candidate_types:
+            state = "UNVERIFIED"
         else:
             state = "MISSING"
         nested_state_counts[state] += 1
@@ -478,13 +814,23 @@ def main() -> int:
             {
                 "java": node_dict(nested_type),
                 "owning_java_object": parent_row["java"]["qualified_name"],
-                "candidate_rust_types": [node_dict(node) for node in exact_types],
+                "candidate_rust_files": sorted(candidate_files),
+                "candidate_rust_types": [
+                    node_dict(node) for node in candidate_types
+                ],
+                "candidate_mapping": (
+                    "EXACT_NAME"
+                    if exact_types
+                    else "JAVA_SOURCE_TRACE"
+                    if candidate_types
+                    else None
+                ),
                 "state": state,
                 "semantic_evidence": [],
                 "review_note": (
                     "内部类型仍需独立核对字段、构造和行为契约。"
-                    if exact_types
-                    else "未在所属 Rust 对象文件中发现同名内部类型。"
+                    if candidate_types
+                    else "未在 Rust 生产源码中发现同名内部类型。"
                 ),
             }
         )
@@ -495,10 +841,21 @@ def main() -> int:
     for java_method in java_methods:
         owner = nearest_owner(java_method, java_types_by_file)
         primary = primary_by_file.get(java_method.file_path)
-        candidate_files = (
-            files_for_java_object.get(primary.id, set()) if primary else set()
+        candidate_files = set()
+        owner_names: set[str] = set()
+        if primary:
+            candidate_files.update(files_for_java_type.get(primary.id, set()))
+            owner_names.update(rust_names_for_java_type.get(primary.id, set()))
+        if owner:
+            candidate_files.update(files_for_java_type.get(owner.id, set()))
+            owner_names.update(rust_names_for_java_type.get(owner.id, set()))
+        candidates = method_candidates(
+            java_method,
+            rust_methods,
+            candidate_files,
+            owner_names,
+            owner.name if owner else None,
         )
-        candidates = method_candidates(java_method, rust_methods, candidate_files)
         state = "UNVERIFIED" if candidates else "MISSING"
         method_state_counts[state] += 1
         source_class = Path(java_method.file_path).stem
@@ -632,6 +989,34 @@ def main() -> int:
             args.test_inventory.read_text(encoding="utf-8")
         )
         manifest["summary"]["tests"] = test_inventory["summary"]
+        java_test_rows = []
+        java_test_mapping_counts: dict[str, int] = defaultdict(int)
+        for java_test in test_inventory["java_tests"]:
+            marker_key = (
+                f"{Path(java_test['file']).stem}#{java_test['name']}"
+            )
+            evidence = test_markers.get(marker_key, [])
+            discovery_state = "MAPPED" if evidence else "MISSING"
+            java_test_mapping_counts[discovery_state] += 1
+            java_test_rows.append(
+                {
+                    "java": java_test,
+                    "marker": marker_key,
+                    "rust_test_evidence": evidence,
+                    "discovery_state": discovery_state,
+                    "parity_state": "UNVERIFIED",
+                    "review_note": (
+                        "显式来源标记仅证明测试映射存在；仍需核对输入、断言、"
+                        "异常、边界和副作用后标记 EXACT 或 ADAPTED。"
+                        if evidence
+                        else "未发现显式 Rust 测试来源标记。"
+                    ),
+                }
+            )
+        manifest["summary"]["java_test_mapping_states"] = dict(
+            sorted(java_test_mapping_counts.items())
+        )
+        manifest["java_test_mappings"] = java_test_rows
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",

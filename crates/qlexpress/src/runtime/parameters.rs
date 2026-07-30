@@ -7,6 +7,9 @@ use crate::runtime::value::{DataValue, QValue};
 /// The result of popping `n` elements from the operand stack, mirroring
 /// Java `Parameters`. Elements keep their original stack order: index 0 is
 /// the deepest of the popped elements (Java `StackSwapParameters`).
+/// 对应 Java:
+/// `com.alibaba.qlexpress4.runtime.FixedSizeStack.StackSwapParameters`；
+/// Rust 让弹出结果拥有值，避免 Java 内部类对原栈数组和游标的借用。
 #[derive(Clone, Debug)]
 /// 对应 Java: com.alibaba.qlexpress4.runtime.Parameters。
 pub struct Parameters {

@@ -4,7 +4,7 @@ use crate::exception::QLSyntaxException;
 
 /// 区分可回溯的试探失败与用户可见语法错误。
 ///
-/// 对应 Java: `QLParser.QLParseBacktrack` 与
+/// 对应 Java: `com.alibaba.qlexpress4.aparser.QLParser.QLParseBacktrack` 与
 /// `QLSyntaxException` 两条控制流。
 #[derive(Debug)]
 pub enum ParseFail {

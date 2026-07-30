@@ -101,6 +101,19 @@ use super::while_statement_context::WhileStatementContext;
 /// (flattened: Java's abstract intermediates `BlockStatementContext`,
 /// `PathPartContext`, `MapKeyContext`, ... are represented directly by the
 /// concrete variants).
+///
+/// 下列 Java 抽象分组类型没有实例字段或独立执行逻辑，Rust 以 `Node`
+/// 枚举的受限变体集合保留其闭合类型语义：
+///
+/// - 对应 Java: `com.alibaba.qlexpress4.aparser.QLParser.BlockStatementContext`
+/// - 对应 Java: `com.alibaba.qlexpress4.aparser.QLParser.PrimaryNoFixPathableContext`
+/// - 对应 Java: `com.alibaba.qlexpress4.aparser.QLParser.PrimaryNoFixNonPathableContext`
+/// - 对应 Java: `com.alibaba.qlexpress4.aparser.QLParser.MapValueContext`
+/// - 对应 Java: `com.alibaba.qlexpress4.aparser.QLParser.MapKeyContext`
+/// - 对应 Java: `com.alibaba.qlexpress4.aparser.QLParser.PathPartContext`
+/// - 对应 Java: `com.alibaba.qlexpress4.aparser.QLParser.IndexValueExprContext`
+/// - 对应 Java: `com.alibaba.qlexpress4.aparser.QLParser.ImportDeclarationContext`
+/// - 对应 Java: `com.alibaba.qlexpress4.aparser.QLParser.SwitchCaseGroupContext`
 #[derive(Clone, Debug)]
 pub enum Node {
     /// `Program` 语法规则节点。

@@ -15,6 +15,11 @@ use crate::utils::basic_util::BasicUtil;
 
 /// 方法处理器。对应 Java: com.alibaba.qlexpress4.member.MethodHandler
 /// (职责:getter/setter 查找与带访问控制的方法调用)。
+///
+/// Java 内部 `GetterCandidateMethod` 只临时保存 `(method, priority)`；
+/// Rust 在 [`MethodHandler::get_getter`] 中以 `Option<NativeMethod>` 和固定
+/// `getX`/`isX` 检查顺序表达同一选择状态。对应 Java:
+/// `com.alibaba.qlexpress4.member.MethodHandler.GetterCandidateMethod`。
 pub struct MethodHandler;
 
 impl MethodHandler {

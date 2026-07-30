@@ -18,6 +18,14 @@ use crate::security::ql_security_strategy::QLSecurityStrategy;
 /// 对应 Java: `com.alibaba.qlexpress4.runtime.ReflectLoader`。Java 的
 /// `allowPrivateAccess` 在 Rust 中表示“宿主是否选择注册非公开成员”；
 /// Rust 不会绕过语言可见性，因此该标志作为注册策略元数据保留。
+///
+/// Java 的下列内部键/缓存对象只服务 JVM 反射发现；Rust 把已经解析的字段、
+/// 方法和扩展函数直接存入 [`NativeRegistry`] 的类型化 `HashMap`，从而保留
+/// 重用语义而不保留 JVM `Class`/`Method` 身份：
+///
+/// - 对应 Java: `com.alibaba.qlexpress4.runtime.ReflectLoader.FieldReflectCache`
+/// - 对应 Java: `com.alibaba.qlexpress4.runtime.ReflectLoader.ExtensionMapKey`
+/// - 对应 Java: `com.alibaba.qlexpress4.runtime.ReflectLoader.MethodCacheKey`
 pub struct ReflectLoader {
     registry: Rc<NativeRegistry>,
     allow_private_access: bool,

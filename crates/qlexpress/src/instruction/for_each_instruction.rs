@@ -21,6 +21,14 @@ use std::rc::Rc;
 /// Output: 0
 ///
 /// Mirrors Java `ForEachInstruction`.
+///
+/// Java 为反射数组额外创建两层适配器；Rust 的 `DataValue::Array` 已是有类型
+/// 的元素序列，因此在 `execute` 中直接取得同顺序快照：
+///
+/// - 对应 Java:
+///   `com.alibaba.qlexpress4.runtime.instruction.ForEachInstruction.ReflectArrayIterable`
+/// - 对应 Java:
+///   `com.alibaba.qlexpress4.runtime.instruction.ForEachInstruction.ReflectArrayIterable.ReflectArrayIterator`
 pub struct ForEachInstruction {
     error_reporter: Rc<dyn ErrorReporter>,
     body: Rc<dyn QLambdaDefinition>,
