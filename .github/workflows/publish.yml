@@ -74,13 +74,17 @@ jobs:
           derive_published=false
           core_published=false
 
-          if cargo info "qlexpress-derive@${VERSION}" >/dev/null 2>&1; then
+          # Force a registry lookup. Without --registry, cargo info resolves the
+          # local workspace package first and incorrectly reports it as published.
+          if cargo info --registry crates-io "qlexpress-derive@${VERSION}" >/dev/null 2>&1; then
             derive_published=true
           fi
-          if cargo info "qlexpress@${VERSION}" >/dev/null 2>&1; then
+          if cargo info --registry crates-io "qlexpress@${VERSION}" >/dev/null 2>&1; then
             core_published=true
           fi
 
+          echo "qlexpress-derive ${VERSION} published: ${derive_published}"
+          echo "qlexpress ${VERSION} published: ${core_published}"
           echo "derive=${derive_published}" >> "${GITHUB_OUTPUT}"
           echo "core=${core_published}" >> "${GITHUB_OUTPUT}"
 
@@ -104,7 +108,7 @@ jobs:
           set -euo pipefail
 
           for attempt in $(seq 1 30); do
-            if cargo info "qlexpress-derive@${VERSION}" >/dev/null 2>&1; then
+            if cargo info --registry crates-io "qlexpress-derive@${VERSION}" >/dev/null 2>&1; then
               echo "qlexpress-derive ${VERSION} is available"
               exit 0
             fi
