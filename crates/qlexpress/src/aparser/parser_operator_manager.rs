@@ -6,19 +6,7 @@
 //! concrete implementation backed by the runtime operator table is Stage-2+
 //! work.
 
-/// `OpType` 枚举的 Rust 实现，保留对应对象的领域职责与公开契约。
-/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/ParserOperatorManager.java`；具体对象路径见 `docs/对象级对照表.md`。
-/// Java `ParserOperatorManager.OpType`.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-/// 对应 Java: com.alibaba.qlexpress4.aparser.ParserOperatorManager。
-pub enum OpType {
-    /// Prefix (unary) operator, e.g. `!x`.
-    Prefix,
-    /// Suffix (postfix) operator, e.g. `x++`.
-    Suffix,
-    /// Infix (binary) operator, e.g. `a + b`.
-    Middle,
-}
+pub use super::op_type::OpType;
 
 /// `ParserOperatorManager` 接口的 Rust 实现，保留对应对象的领域职责与公开契约。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/ParserOperatorManager.java`；具体对象路径见 `docs/对象级对照表.md`。

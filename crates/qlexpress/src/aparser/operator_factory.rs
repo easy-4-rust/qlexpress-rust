@@ -7,7 +7,6 @@
 //! [`OperatorManager::register_default_binary_operator`] and friends. The
 //! lookup/custom-operator/alias semantics are fully ported here.
 
-use std::collections::HashMap;
 use std::rc::Rc;
 
 use super::parser_operator_manager::{OpType, ParserOperatorManager};
@@ -118,27 +117,7 @@ impl BinaryOperator for AliasedBinaryOperator {
     }
 }
 
-/// 管理内建、自定义操作符及别名，并为词法分析和编译提供优先级查询。
-/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/ParserOperatorManager.java`；具体对象路径见 `docs/对象级对照表.md`。
-/// Java `OperatorManager`: built-in operator tables plus user-registered
-/// custom operators, operator aliases and keyword aliases.
-///
-/// Unlike Java (static default maps), the default tables live in the
-/// instance and start empty; Stage 4 registers the built-in operators.
-#[derive(Default)]
-/// 对应 Java: com.alibaba.qlexpress4.runtime.operator.OperatorManager。
-pub struct OperatorManager {
-    /// Java `DEFAULT_BINARY_OPERATOR_MAP`.
-    default_binary_operator_map: HashMap<String, Rc<dyn BinaryOperator>>,
-    /// Java `DEFAULT_PREFIX_UNARY_OPERATOR_MAP`.
-    default_prefix_unary_operator_map: HashMap<String, Rc<dyn UnaryOperator>>,
-    /// Java `DEFAULT_SUFFIX_UNARY_OPERATOR_MAP`.
-    default_suffix_unary_operator_map: HashMap<String, Rc<dyn UnaryOperator>>,
-    /// Java `customBinaryOperatorMap`.
-    custom_binary_operator_map: HashMap<String, Rc<dyn BinaryOperator>>,
-    /// Java `keyWordAliases`.
-    key_word_aliases: HashMap<String, i32>,
-}
+pub use super::operator_manager::OperatorManager;
 
 impl OperatorManager {
     /// 创建对象实例。

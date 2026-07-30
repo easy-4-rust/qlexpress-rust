@@ -11,29 +11,7 @@
 
 use crate::runtime::value::DataValue;
 
-/// 将一个 catch 类型映射到对应异常处理 Lambda。
-/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/QLException.java`；具体对象路径见 `docs/对象级对照表.md`。
-/// One exception handler entry, mirroring
-/// `com.alibaba.qlexpress4.runtime.ExceptionTable.ExceptionTableEntry`.
-///
-/// - `start_pc`: inclusive lower bound of the program-counter range.
-/// - `end_pc`: exclusive upper bound.
-/// - `handler_pc`: jump target on match.
-/// - `catch_type`: type-name filter (Java FQN, e.g. `java.lang.Exception`);
-///   `None` matches any exception (`finally`-style handlers).
-///
-/// 对应 Java: com.alibaba.qlexpress4.runtime.ExceptionTable。
-#[derive(Clone, Debug)]
-pub struct ExceptionTableEntry {
-    /// 异常处理区间的起始指令位置（包含）。
-    pub start_pc: usize,
-    /// 异常处理区间的结束指令位置（不包含）。
-    pub end_pc: usize,
-    /// 匹配异常后跳转的处理器指令位置。
-    pub handler_pc: usize,
-    /// 可捕获的 Java 异常类型；为空表示 finally/catch-all。
-    pub catch_type: Option<String>,
-}
+pub use super::exception_table_entry::ExceptionTableEntry;
 
 impl ExceptionTableEntry {
     /// 判断程序计数器是否落在该异常处理区间内。

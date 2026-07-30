@@ -5,35 +5,9 @@
 //! canonical name `String` returned from [`ClassSupplier::load_cls`]
 //! (`Some(name)` plays the role of Java's non-null `Class<?>`).
 
-/// `ImportScope` 枚举的 Rust 实现，保留对应对象的领域职责与公开契约。
-/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/ImportManager.java`；具体对象路径见 `docs/对象级对照表.md`。
-/// Java `ImportManager.ImportScope`.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-/// 对应 Java: com.alibaba.qlexpress4.aparser.ImportManager。
-pub enum ImportScope {
-    /// `import java.lang.*;`
-    Pack,
-    /// `import a.b.Cls.*;` (inner class)
-    InnerCls,
-    /// `import java.lang.String;`
-    Cls,
-    /// `import java.lang.String as Str;`
-    Alias,
-}
-
-/// 表示一个包导入、类型导入或静态成员导入声明。
-/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/ImportManager.java`；具体对象路径见 `docs/对象级对照表.md`。
-/// One import declaration, mirroring Java `ImportManager.QLImport`.
-#[derive(Clone, Debug, PartialEq, Eq)]
-/// 对应 Java: com.alibaba.qlexpress4.aparser.ImportManager。
-pub struct QLImport {
-    scope: ImportScope,
-    /// Import target: package path for `Pack`, class path for `Cls`/
-    /// `InnerCls`/`Alias`.
-    target: String,
-    /// Alias name; only meaningful for [`ImportScope::Alias`].
-    alias: Option<String>,
-}
+pub use super::import_scope::ImportScope;
+pub use super::load_part_qualified_result::LoadPartQualifiedResult;
+pub use super::ql_import::QLImport;
 
 impl QLImport {
     /// 添加或注册 pack。
@@ -138,18 +112,6 @@ pub struct ImportManager<'a> {
     imported_packs: Vec<QLImport>,
     /// Simple name (or alias) -> loaded canonical class name.
     imported_clses: HashMap<String, String>,
-}
-
-/// 限定名解析结果：已解析类型及尚未消费的路径起始位置。
-/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/ImportManager.java`；具体对象路径见 `docs/对象级对照表.md`。
-/// Java `ImportManager.LoadPartQualifiedResult`.
-#[derive(Clone, Debug, PartialEq, Eq)]
-/// 对应 Java: com.alibaba.qlexpress4.aparser.ImportManager。
-pub struct LoadPartQualifiedResult {
-    /// The loaded class canonical name (`None` plays Java's null Class).
-    cls: Option<String>,
-    /// First field index that is not part of the class path.
-    rest_index: usize,
 }
 
 impl LoadPartQualifiedResult {

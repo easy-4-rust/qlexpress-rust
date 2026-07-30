@@ -5,6 +5,8 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
+pub use super::native_constructor_candidate::NativeConstructorCandidate;
+pub use super::native_method_candidate::NativeMethodCandidate;
 use crate::exception::QLException;
 use crate::runtime::class_ref::ClassRef;
 use crate::runtime::value::DataValue;
@@ -26,19 +28,6 @@ pub type NativeFieldSetter = Rc<dyn Fn(&DataValue, &DataValue) -> bool>;
 /// 可写静态字段存储。对应 Java 非 `final static Field` 的共享可变值。
 pub type NativeStaticField = Rc<RefCell<DataValue>>;
 
-/// 带 Java 形参签名的方法候选。多个同名候选按声明顺序保存，由
-/// `MemberResolver` 在调用现场根据实参类型选择。
-/// 对应 Java: `Method` 及其参数签名的 Rust 显式注册适配。
-#[derive(Clone)]
-pub struct NativeMethodCandidate {
-    /// Java `Method#getParameterTypes()`；可变参数末项保存组件类型。
-    pub parameter_types: Vec<ClassRef>,
-    /// Java `Method#isVarArgs()`。
-    pub var_args: bool,
-    /// 实际方法体。
-    pub method: NativeMethod,
-}
-
 impl NativeMethodCandidate {
     /// 创建一个显式签名的方法候选。
     /// 对应 Java: 无（Rust 原生适配）。
@@ -49,18 +38,6 @@ impl NativeMethodCandidate {
             method,
         }
     }
-}
-
-/// 带 Java 形参签名的构造器候选。
-#[derive(Clone)]
-/// 对应 Java: 无（Rust 原生适配）。
-pub struct NativeConstructorCandidate {
-    /// Java `Constructor#getParameterTypes()`；可变参数末项保存组件类型。
-    pub parameter_types: Vec<ClassRef>,
-    /// Java `Constructor#isVarArgs()`。
-    pub var_args: bool,
-    /// 实际构造器。
-    pub constructor: NativeConstructor,
 }
 
 impl NativeConstructorCandidate {

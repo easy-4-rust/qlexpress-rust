@@ -47,8 +47,7 @@ impl MethodHandler {
     }
 }
 
-/// 带访问控制的方法调用。对应 Java: `MethodHandler.Access`(静态嵌套类)。
-pub struct Access;
+pub use super::access::Access;
 
 impl Access {
     /// 对应 Java 方法 `Access.accessMethodValue(IMethod, Object, Object[])`:

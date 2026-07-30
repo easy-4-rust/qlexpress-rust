@@ -4,20 +4,10 @@
 //! (Java 以 `List<ParseTree> children` 存储,Rust 以借用枚举 + trait 实现同等语义)。
 //! 本文件由 `syntax_tree.rs` 拆分而来(SPEC §5.5 一类一文件),仅移动代码与补充中文注释,行为完全一致。
 
+pub use super::child_ref::ChildRef;
 use super::syntax_tree_factory::Node;
 use super::terminal_node::TerminalNode;
 use super::token::Token;
-
-/// 语法节点的借用孩子:规则节点或终结符。对应 Java: `ParseTree` 孩子元素(Rust 适配,无同名 Java 类)
-/// A borrowed child of a syntax node: either a rule node or a terminal,
-/// mirroring Java `ParseTree` children.
-#[derive(Clone, Copy, Debug)]
-pub enum ChildRef<'a> {
-    /// 非终结语法树节点。
-    Node(&'a Node),
-    /// 终结符语法树节点。
-    Term(&'a TerminalNode),
-}
 
 impl<'a> ChildRef<'a> {
     /// 返回当前节点或 Token 对应的源码文本。
@@ -59,13 +49,16 @@ impl<'a> ChildRef<'a> {
 
 /// 可按源码顺序枚举孩子的节点契约。对应 Java: `RuleContext.children` 访问能力(Rust 适配 trait)
 /// Anything that can enumerate its children in source order.
-pub trait HasChildren {
+pub trait RuleContext {
     /// 处理 children 对应的接口职责。
     /// 无显式参数；返回：`Vec<ChildRef<'_>>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/RuleContext.java`，方法 `children`。
     /// Children in the exact order the Java parser `addChild`ed them.
     fn children(&self) -> Vec<ChildRef<'_>>;
 }
+
+/// 兼容既有 Rust API 的名称；实际 Java 对偶对象为 [`RuleContext`]。
+pub use RuleContext as HasChildren;
 
 // ---------------------------------------------------------------------------
 // Helper constructors used by the `children()` implementations.

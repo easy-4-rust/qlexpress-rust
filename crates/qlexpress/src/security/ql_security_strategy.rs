@@ -6,17 +6,7 @@
 
 use std::collections::HashSet;
 
-/// 供原生成员安全策略匹配的“声明类型 + 成员名”标识。
-/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/security/QLSecurityStrategy.java`；具体对象路径见 `docs/对象级对照表.md`。
-/// Identifies a native member (method/field) for security checks.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-/// 对应 Java: com.alibaba.qlexpress4.security.QLSecurityStrategy。
-pub struct NativeMember {
-    /// Native type name (as registered in the native registry).
-    pub type_name: String,
-    /// Member (method or field) name.
-    pub member_name: String,
-}
+pub use super::native_member::NativeMember;
 
 impl NativeMember {
     /// 创建用于安全策略匹配的“类型名 + 成员名”描述符。

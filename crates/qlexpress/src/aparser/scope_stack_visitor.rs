@@ -15,13 +15,7 @@ use super::syntax_tree_factory::{
     TryCatchContext, TryCatchExprContext,
 };
 
-/// Java `ScopeStackVisitor` 的 `existStack` 字段。
-/// The `existStack` field of Java `ScopeStackVisitor`.
-#[derive(Clone, Debug)]
-/// 对应 Java: com.alibaba.qlexpress4.aparser.ScopeStackVisitor。
-pub struct ScopeStack<S: ExistStack> {
-    stack: S,
-}
+pub use super::scope_stack::ScopeStack;
 
 impl<S: ExistStack> ScopeStack<S> {
     /// 使用根变量存在性栈创建作用域状态。

@@ -88,17 +88,7 @@ const MAX_DOUBLE_TEXT: &str = "1.7976931348623157E308";
 /// Java `TIMEOUT_CHECK_GAP`.
 const TIMEOUT_CHECK_GAP: i32 = 5;
 
-/// `Context` 枚举的 Rust 实现，保留对应对象的领域职责与公开契约。
-/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/QvmInstructionVisitor.java`；具体对象路径见 `docs/对象级对照表.md`。
-/// Java `QvmInstructionVisitor.Context`.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-/// 对应 Java: com.alibaba.qlexpress4.aparser.QvmInstructionVisitor。
-pub enum Context {
-    /// 普通语句块。
-    Block,
-    /// 宏展开语句块。
-    Macro,
-}
+pub use super::instruction_context::Context;
 
 /// `SharedInstruction` 类型别名的 Rust 实现，保留对应对象的领域职责与公开契约。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/QvmInstructionVisitor.java`；具体对象路径见 `docs/对象级对照表.md`。

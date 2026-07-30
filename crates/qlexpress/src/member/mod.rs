@@ -2,8 +2,12 @@
 //!
 //! 一类一文件(SPEC §5.5):本文件仅做 mod 声明与 re-export,不含实现。
 
+pub mod access;
 pub mod field_handler;
 pub mod method_handler;
+pub mod preferred;
 
-pub use field_handler::{FieldHandler, Preferred};
-pub use method_handler::{Access, MethodHandler};
+pub use access::Access;
+pub use field_handler::FieldHandler;
+pub use method_handler::MethodHandler;
+pub use preferred::Preferred;

@@ -8,16 +8,7 @@ const REPORT_TEMPLATE: &str = "[Error {0}: {1}]\n[Near: {2}]\n{3}\n[Line: {4}, C
 
 const SNIPPET_EXTENSION_LEN: usize = 20;
 
-/// 将错误原因、源码片段和行列位置格式化为 Java 兼容异常消息。
-/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/ExMessageUtil.java`；具体对象路径见 `docs/对象级对照表.md`。
-/// A formatted error message plus the snippet extracted around the error,
-/// mirroring Java `ExMessageUtil.ExMessage`.
-#[derive(Clone, Debug, PartialEq, Eq)]
-/// 对应 Java: com.alibaba.qlexpress4.exception.ExMessageUtil。
-pub struct ExMessage {
-    message: String,
-    snippet: String,
-}
+pub use super::ex_message::ExMessage;
 
 impl ExMessage {
     /// 创建格式化错误消息及其脚本片段。

@@ -24,18 +24,7 @@ pub trait ExistStack: Sized {
     fn add(&mut self, var_name: String);
 }
 
-/// 持久化作用域栈,out-var/out-function 各 Visitor 共用。
-/// 对应 Java: 各 Visitor 中重复的 `ExistVarStack`/`ExistFunctionStack` 私有类
-/// (Java 无独立顶层类,此处聚合为统一实现)。
-///
-/// Persistent scope stack shared by the out-var/out-function visitors,
-/// mirroring the duplicated `ExistVarStack`/`ExistFunctionStack` private
-/// classes in the Java visitors.
-#[derive(Clone, Debug, Default)]
-pub struct ExistVarStack {
-    parent: Option<Rc<ExistVarStack>>,
-    exist_vars: HashSet<String>,
-}
+pub use super::exist_var_stack::ExistVarStack;
 
 impl ExistVarStack {
     /// 构造根作用域。对应 Java `new ExistVarStack(null)`。

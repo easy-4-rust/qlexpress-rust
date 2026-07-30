@@ -9,27 +9,9 @@ use std::fmt;
 use super::error_codes;
 use super::ex_message_util::ExMessageUtil;
 use super::lsp::{Diagnostic, Position, Range};
+pub use super::ql_exception_kind::QLExceptionKind;
 use super::ql_syntax_exception::QLSyntaxException;
 use crate::runtime::value::DataValue;
-
-/// `QLExceptionKind` 枚举的 Rust 实现，保留对应对象的领域职责与公开契约。
-/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/QLException.java`；具体对象路径见 `docs/对象级对照表.md`。
-/// Which Java exception subclass this error corresponds to.
-///
-/// Java models the error hierarchy as classes (`QLSyntaxException`,
-/// `QLRuntimeException`, `QLTimeoutException`); Rust models it as a single
-/// error type plus this discriminant so the engine can use
-/// `Result<T, QLException>` everywhere (SPEC §3.4).
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-/// 对应 Java: com.alibaba.qlexpress4.exception.QLException。
-pub enum QLExceptionKind {
-    /// `QLSyntaxException` — parse/scan time error.
-    Syntax,
-    /// `QLRuntimeException` — runtime error, may carry a catchable object.
-    Runtime,
-    /// `QLTimeoutException` — script exceeded its timeout.
-    Timeout,
-}
 
 /// QlExpress 对外统一异常，保存类别、稳定错误码、原因、位置和可选抛出值。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/QLException.java`；具体对象路径见 `docs/对象级对照表.md`。

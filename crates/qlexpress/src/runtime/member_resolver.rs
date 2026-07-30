@@ -12,27 +12,7 @@ use crate::runtime::class_ref::ClassRef;
 use crate::runtime::i_method::IMethod;
 use crate::utils::basic_util::NumKind;
 
-/// 匹配优先级。对应 Java: `MemberResolver.MatchPriority`(枚举,
-/// `priority` 字段越大越优先)。
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum MatchPriority {
-    /// 不匹配(Java `MISMATCH(-1)`)。
-    Mismatch,
-    /// 扩展匹配,如实参可赋给 `Object`(Java `EXTEND(0)`)。
-    Extend,
-    /// 数值窄化,如 BigDecimal -> int(Java `NUMBER_DEMOTION(9)`)。
-    NumberDemotion,
-    /// 数值提升,如 int -> long(Java `NUMBER_PROMOTION(8)`,实际优先级
-    /// 按 `8 + argLevel - paramLevel` 计算)。
-    NumberPromotion,
-    /// 拆箱,如 Integer -> int(Java `UNBOX(9)`;Rust 中包装/原语同型,
-    /// 该档与「精确」重合,保留以对齐 Java 优先级数值)。
-    Unbox,
-    /// Lambda 适配函数式接口(Java `LAMBDA(10)`)。
-    Lambda,
-    /// 类型完全相同(Java `EQUAL(11)`)。
-    Equal,
-}
+pub use super::match_priority::MatchPriority;
 
 impl MatchPriority {
     /// 对应 Java 字段 `priority`。

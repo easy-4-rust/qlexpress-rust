@@ -11,8 +11,7 @@ use crate::utils::ql_alias_utils::QLAliasUtils;
 /// (职责:按属性名(含别名)在类型上定位字段)。
 pub struct FieldHandler;
 
-/// 优选处理。对应 Java: `FieldHandler.Preferred`(静态嵌套类)。
-pub struct Preferred;
+pub use super::preferred::Preferred;
 
 impl Preferred {
     /// 对应 Java 方法 `Preferred.preHandleAlias(Class<?>, String)`:

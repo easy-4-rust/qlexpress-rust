@@ -1,17 +1,6 @@
 use std::fmt;
 
-/// `ExceptionType` 枚举的 Rust 实现，保留对应对象的领域职责与公开契约。
-/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/UserDefineException.java`；具体对象路径见 `docs/对象级对照表.md`。
-/// User-defined error type for custom functions/operators, mirroring Java
-/// `UserDefineException.ExceptionType`.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-/// 对应 Java: com.alibaba.qlexpress4.exception.UserDefineException。
-pub enum ExceptionType {
-    /// 非法参数业务异常。
-    InvalidArgument,
-    /// 通用业务异常。
-    BizException,
-}
+pub use super::exception_type::ExceptionType;
 
 /// 用户脚本或宿主扩展显式报告的业务异常包装。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/UserDefineException.java`；具体对象路径见 `docs/对象级对照表.md`。
