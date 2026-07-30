@@ -171,10 +171,9 @@ impl BaseBinaryOperator {
         right_value: &DataValue,
     ) -> Result<DataValue, QLException> {
         if ql_options.is_precise() {
-            NumberMath::add(
-                &NumberMath::to_big_decimal(left_value),
-                &NumberMath::to_big_decimal(right_value),
-            )
+            let left_decimal = NumberMath::to_big_decimal(left_value)?;
+            let right_decimal = NumberMath::to_big_decimal(right_value)?;
+            NumberMath::add(&left_decimal, &right_decimal)
         } else {
             NumberMath::add(left_value, right_value)
         }
@@ -216,10 +215,9 @@ impl BaseBinaryOperator {
         right_value: &DataValue,
     ) -> Result<DataValue, QLException> {
         if ql_options.is_precise() {
-            NumberMath::subtract(
-                &NumberMath::to_big_decimal(left_value),
-                &NumberMath::to_big_decimal(right_value),
-            )
+            let left_decimal = NumberMath::to_big_decimal(left_value)?;
+            let right_decimal = NumberMath::to_big_decimal(right_value)?;
+            NumberMath::subtract(&left_decimal, &right_decimal)
         } else {
             NumberMath::subtract(left_value, right_value)
         }
@@ -238,10 +236,9 @@ impl BaseBinaryOperator {
         let right_value = right.get();
         if Self::is_both_number(left, right) {
             let result = if ql_options.is_precise() {
-                NumberMath::multiply(
-                    &NumberMath::to_big_decimal(&left_value),
-                    &NumberMath::to_big_decimal(&right_value),
-                )
+                let left_decimal = NumberMath::to_big_decimal(&left_value)?;
+                let right_decimal = NumberMath::to_big_decimal(&right_value)?;
+                NumberMath::multiply(&left_decimal, &right_decimal)
             } else {
                 NumberMath::multiply(&left_value, &right_value)
             };
@@ -272,10 +269,9 @@ impl BaseBinaryOperator {
         let right_value = right.get();
         if Self::is_both_number(left, right) {
             let result = if ql_options.is_precise() {
-                NumberMath::divide(
-                    &NumberMath::to_big_decimal(&left_value),
-                    &NumberMath::to_big_decimal(&right_value),
-                )
+                let left_decimal = NumberMath::to_big_decimal(&left_value)?;
+                let right_decimal = NumberMath::to_big_decimal(&right_value)?;
+                NumberMath::divide(&left_decimal, &right_decimal)
             } else {
                 NumberMath::divide(&left_value, &right_value)
             };
@@ -302,10 +298,9 @@ impl BaseBinaryOperator {
         let right_value = right.get();
         if Self::is_both_number(left, right) {
             let result = if ql_options.is_precise() {
-                NumberMath::remainder(
-                    &NumberMath::to_big_decimal(&left_value),
-                    &NumberMath::to_big_decimal(&right_value),
-                )
+                let left_decimal = NumberMath::to_big_decimal(&left_value)?;
+                let right_decimal = NumberMath::to_big_decimal(&right_value)?;
+                NumberMath::remainder(&left_decimal, &right_decimal)
             } else {
                 NumberMath::remainder(&left_value, &right_value)
             };

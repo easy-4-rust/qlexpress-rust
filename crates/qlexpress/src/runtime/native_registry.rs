@@ -926,7 +926,7 @@ impl NativeRegistry {
             "valueOf".to_string(),
             Rc::new(|_bean, args| match args {
                 [value] if value.is_number() => Ok(DataValue::BigInt(
-                    crate::runtime::data::convert::to_big_int(value),
+                    num_bigint::BigInt::from(crate::runtime::data::convert::to_i64(value)),
                 )),
                 _ => Err(wrong_args("BigInteger.valueOf")),
             }),

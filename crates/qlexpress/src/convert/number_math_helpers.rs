@@ -16,7 +16,7 @@
 use std::cmp::Ordering;
 
 use num_bigint::BigInt;
-use num_traits::ToPrimitive;
+use num_traits::{Signed, ToPrimitive, Zero};
 
 use crate::runtime::value::DataValue;
 use crate::utils::basic_util::NumKind;
@@ -80,8 +80,9 @@ pub fn number_compare(left: &DataValue, right: &DataValue) -> Option<Ordering> {
     match math_domain(left, right)? {
         MathDomain::FloatingPoint => {
             // Java FloatingPointMath.compareTo 使用 Double.compare 语义；
-            // `total_cmp` 与其一致（NaN 最大，-0.0 < 0.0）。
-            Some(to_f64(left).total_cmp(&to_f64(right)))
+            // 所有 NaN payload/sign 必须先 canonicalize，不能直接用
+            // Rust `total_cmp`（它会区分负 NaN 与 payload）。
+            Some(java_double_compare(to_f64(left), to_f64(right)))
         }
         MathDomain::BigDecimal => Some(big_dec_compare(
             &to_big_dec_string(left),
@@ -89,6 +90,28 @@ pub fn number_compare(left: &DataValue, right: &DataValue) -> Option<Ordering> {
         )),
         MathDomain::BigInteger => Some(to_big_int(left).cmp(&to_big_int(right))),
         MathDomain::Long | MathDomain::Integer => Some(to_i64(left).cmp(&to_i64(right))),
+    }
+}
+
+/// Java `Double.compare(double, double)`：普通数值先比较，随后使用
+/// `doubleToLongBits`（canonical NaN）区分 `-0.0`、`+0.0` 与 NaN。
+fn java_double_compare(left: f64, right: f64) -> Ordering {
+    if left < right {
+        return Ordering::Less;
+    }
+    if left > right {
+        return Ordering::Greater;
+    }
+    let left_bits = canonical_double_bits(left) as i64;
+    let right_bits = canonical_double_bits(right) as i64;
+    left_bits.cmp(&right_bits)
+}
+
+fn canonical_double_bits(value: f64) -> u64 {
+    if value.is_nan() {
+        0x7ff8_0000_0000_0000
+    } else {
+        value.to_bits()
     }
 }
 
@@ -167,22 +190,35 @@ pub fn to_i64(value: &DataValue) -> i64 {
 /// 转换到 Java `BigInteger` 数域。
 /// 对应 Java: 无（Rust 原生适配）。
 pub fn to_big_int(value: &DataValue) -> BigInt {
+    try_to_big_int(value).unwrap_or_else(BigInt::zero)
+}
+
+/// Java `NumberMath.toBigInteger(Number)` 的可失败版本。
+///
+/// 有限 Float/Double 必须先经 Java `toString()` 再构造 BigDecimal 并向零
+/// 截断，因而不受 i128 范围限制；NaN/Infinity 对应 Java
+/// `NumberFormatException`，返回 `None` 交由调用层映射异常/不可转换。
+pub fn try_to_big_int(value: &DataValue) -> Option<BigInt> {
     match value {
-        DataValue::Byte(v) => BigInt::from(*v),
-        DataValue::Short(v) => BigInt::from(*v),
-        DataValue::Int(v) => BigInt::from(*v),
-        DataValue::Long(v) => BigInt::from(*v),
-        DataValue::Float(v) => BigInt::from(*v as i128),
-        DataValue::Double(v) => BigInt::from(*v as i128),
-        DataValue::BigInt(v) => v.clone(),
-        DataValue::BigDec(v) => big_dec_to_big_int(v),
-        _ => BigInt::from(0),
+        DataValue::Byte(v) => Some(BigInt::from(*v)),
+        DataValue::Short(v) => Some(BigInt::from(*v)),
+        DataValue::Int(v) => Some(BigInt::from(*v)),
+        DataValue::Long(v) => Some(BigInt::from(*v)),
+        DataValue::Float(v) if v.is_finite() => {
+            Some(big_dec_to_big_int(&java_f32_to_string(*v)))
+        }
+        DataValue::Double(v) if v.is_finite() => {
+            Some(big_dec_to_big_int(&java_f64_to_string(*v)))
+        }
+        DataValue::BigInt(v) => Some(v.clone()),
+        DataValue::BigDec(v) => Some(big_dec_to_big_int(v)),
+        _ => None,
     }
 }
 
 /// Java `NumberMath.toBigDecimal(n)` 在本项目的字符串存储形态：
-/// 整数保留精确位数；二进制浮点使用最短可往返表示
-/// （近似 Java `new BigDecimal(double)` 的精确展开，详见 stage notes）。
+/// 整数保留精确位数；二进制浮点先按 `Float/Double.toString()` 生成 Java
+/// 规范文本，再对应 `new BigDecimal(n.toString())` 构造十进制值。
 /// 对应 Java: 无（Rust 原生适配）。
 pub fn to_big_dec_string(value: &DataValue) -> String {
     match value {
@@ -199,55 +235,254 @@ pub fn to_big_dec_string(value: &DataValue) -> String {
 }
 
 /// Java `Float.toString(float)` 的最短可往返文本和指数展示阈值。
+///
+/// 参数：`value` 为待格式化的 IEEE-754 单精度值。
+/// 返回：与 Java `Float.toString(float)` 一致的文本。
 pub fn java_f32_to_string(value: f32) -> String {
-    java_binary_float_to_string(value as f64, format!("{value:e}"))
+    if let Some(special) = java_float_special_string(value as f64) {
+        return special;
+    }
+
+    let bits = value.to_bits();
+    let negative = bits >> 31 != 0;
+    let magnitude_bits = bits & 0x7fff_ffff;
+    let exponent_bits = (magnitude_bits >> 23) & 0xff;
+    let fraction = magnitude_bits & 0x7f_ffff;
+    let (significand, binary_exponent) = if exponent_bits == 0 {
+        (u64::from(fraction), -149)
+    } else {
+        (
+            u64::from((1_u32 << 23) | fraction),
+            exponent_bits as i32 - 127 - 23,
+        )
+    };
+
+    java_finite_float_to_string(
+        negative,
+        significand,
+        binary_exponent,
+        (value.abs() as f64).log10().floor() as i32,
+        9,
+        |candidate| {
+            candidate
+                .parse::<f32>()
+                .is_ok_and(|parsed| parsed.to_bits() == magnitude_bits)
+        },
+    )
 }
 
 /// Java `Double.toString(double)` 的最短可往返文本和指数展示阈值。
+///
+/// 参数：`value` 为待格式化的 IEEE-754 双精度值。
+/// 返回：与 Java `Double.toString(double)` 一致的文本。
 pub fn java_f64_to_string(value: f64) -> String {
-    java_binary_float_to_string(value, format!("{value:e}"))
+    if let Some(special) = java_float_special_string(value) {
+        return special;
+    }
+
+    let bits = value.to_bits();
+    let negative = bits >> 63 != 0;
+    let magnitude_bits = bits & 0x7fff_ffff_ffff_ffff;
+    let exponent_bits = (magnitude_bits >> 52) & 0x7ff;
+    let fraction = magnitude_bits & 0x000f_ffff_ffff_ffff;
+    let (significand, binary_exponent) = if exponent_bits == 0 {
+        (fraction, -1074)
+    } else {
+        (
+            (1_u64 << 52) | fraction,
+            exponent_bits as i32 - 1023 - 52,
+        )
+    };
+
+    java_finite_float_to_string(
+        negative,
+        significand,
+        binary_exponent,
+        value.abs().log10().floor() as i32,
+        17,
+        |candidate| {
+            candidate
+                .parse::<f64>()
+                .is_ok_and(|parsed| parsed.to_bits() == magnitude_bits)
+        },
+    )
 }
 
-fn java_binary_float_to_string(value: f64, scientific: String) -> String {
+/// 处理 Java 对零、无穷与 NaN 的固定拼写；有限非零值返回 `None`。
+fn java_float_special_string(value: f64) -> Option<String> {
     if value.is_nan() {
-        return "NaN".to_string();
+        return Some("NaN".to_string());
     }
     if value == f64::INFINITY {
-        return "Infinity".to_string();
+        return Some("Infinity".to_string());
     }
     if value == f64::NEG_INFINITY {
-        return "-Infinity".to_string();
+        return Some("-Infinity".to_string());
     }
     if value == 0.0 {
-        return if value.is_sign_negative() {
+        return Some(if value.is_sign_negative() {
             "-0.0".to_string()
         } else {
             "0.0".to_string()
-        };
+        });
+    }
+    None
+}
+
+/// 在精确二进制有理数上搜索 Java 规定的最短十进制。
+///
+/// Java 的选择规则不是简单复用 Rust `Display`：先选择能往返为原浮点值的
+/// 最少有效位，再在同位数候选中选择与精确值距离最近者，距离相同取偶数。
+/// 科学记数法至少保留两位有效数字，这也是 `Double.MIN_VALUE` 必须输出
+/// `4.9E-324` 而不是 Rust `Display` 的 `5e-324` 的原因。
+fn java_finite_float_to_string(
+    negative: bool,
+    significand: u64,
+    binary_exponent: i32,
+    approximate_decimal_exponent: i32,
+    max_significant_digits: usize,
+    mut round_trips: impl FnMut(&str) -> bool,
+) -> String {
+    let (numerator, denominator) = exact_binary_rational(significand, binary_exponent);
+    let decimal_exponent =
+        exact_decimal_exponent(&numerator, &denominator, approximate_decimal_exponent);
+    let min_significant_digits = if (-3..7).contains(&decimal_exponent) {
+        1
+    } else {
+        2
+    };
+
+    for significant_digits in min_significant_digits..=max_significant_digits {
+        let decimal_power = decimal_exponent - significant_digits as i32 + 1;
+        let (scaled_numerator, scaled_denominator) =
+            scale_for_decimal_digits(&numerator, &denominator, decimal_power);
+        let floor = &scaled_numerator / &scaled_denominator;
+
+        let mut best: Option<(BigInt, BigInt)> = None;
+        // 最近候选必在 floor/ceil；额外检查相邻整数覆盖十进制 decade 边界。
+        for offset in -1_i32..=2 {
+            let candidate = &floor + BigInt::from(offset);
+            if candidate <= BigInt::zero() {
+                continue;
+            }
+            let parse_text = format!("{candidate}e{decimal_power}");
+            if !round_trips(&parse_text) {
+                continue;
+            }
+
+            let distance =
+                (&candidate * &scaled_denominator - &scaled_numerator).abs();
+            let replace = match &best {
+                None => true,
+                Some((best_candidate, best_distance)) => match distance.cmp(best_distance) {
+                    Ordering::Less => true,
+                    Ordering::Greater => false,
+                    Ordering::Equal => {
+                        is_even(&candidate) && !is_even(best_candidate)
+                    }
+                },
+            };
+            if replace {
+                best = Some((candidate, distance));
+            }
+        }
+
+        if let Some((candidate, _)) = best {
+            return format_java_decimal(negative, &candidate.to_string(), decimal_power);
+        }
     }
 
-    let negative = value.is_sign_negative();
-    let unsigned = scientific.strip_prefix('-').unwrap_or(&scientific);
-    let (mantissa, exponent_text) = unsigned
-        .split_once('e')
-        .expect("Rust lower-exp formatting always contains e");
-    let exponent: i32 = exponent_text
-        .parse()
-        .expect("Rust lower-exp exponent is a signed integer");
+    // IEEE-754 f32/f64 分别最多需要 9/17 位即可唯一往返；到达这里表示内部
+    // 算法不变量被破坏，静默退化会重新引入跨语言语义偏差。
+    unreachable!("a finite IEEE-754 value must round-trip within its maximum decimal precision")
+}
+
+/// 将 `significand * 2^binary_exponent` 化为精确的正有理数。
+fn exact_binary_rational(significand: u64, binary_exponent: i32) -> (BigInt, BigInt) {
+    if binary_exponent >= 0 {
+        (
+            BigInt::from(significand) << binary_exponent as usize,
+            BigInt::from(1_u8),
+        )
+    } else {
+        (
+            BigInt::from(significand),
+            BigInt::from(1_u8) << (-binary_exponent) as usize,
+        )
+    }
+}
+
+/// 精确修正 `log10` 给出的 decade，保证 `10^k <= value < 10^(k+1)`。
+fn exact_decimal_exponent(
+    numerator: &BigInt,
+    denominator: &BigInt,
+    mut exponent: i32,
+) -> i32 {
+    while compare_rational_to_power_of_ten(numerator, denominator, exponent) == Ordering::Less {
+        exponent -= 1;
+    }
+    while compare_rational_to_power_of_ten(numerator, denominator, exponent + 1)
+        != Ordering::Less
+    {
+        exponent += 1;
+    }
+    exponent
+}
+
+/// 比较正有理数 `numerator / denominator` 与 `10^exponent`。
+fn compare_rational_to_power_of_ten(
+    numerator: &BigInt,
+    denominator: &BigInt,
+    exponent: i32,
+) -> Ordering {
+    if exponent >= 0 {
+        numerator.cmp(&(denominator * pow10(exponent as usize)))
+    } else {
+        (numerator * pow10((-exponent) as usize)).cmp(denominator)
+    }
+}
+
+/// 把精确值缩放到指定十进制有效位整数所在的有理数。
+fn scale_for_decimal_digits(
+    numerator: &BigInt,
+    denominator: &BigInt,
+    decimal_power: i32,
+) -> (BigInt, BigInt) {
+    if decimal_power >= 0 {
+        (
+            numerator.clone(),
+            denominator * pow10(decimal_power as usize),
+        )
+    } else {
+        (
+            numerator * pow10((-decimal_power) as usize),
+            denominator.clone(),
+        )
+    }
+}
+
+fn pow10(exponent: usize) -> BigInt {
+    BigInt::from(10_u8).pow(exponent as u32)
+}
+
+fn is_even(value: &BigInt) -> bool {
+    (value % BigInt::from(2_u8)).is_zero()
+}
+
+/// 根据 Java 的 `10^-3 <= m < 10^7` 普通记数法边界输出候选。
+fn format_java_decimal(negative: bool, digits: &str, decimal_power: i32) -> String {
     let sign = if negative { "-" } else { "" };
-
-    // Java 使用科学记数法的边界：m >= 10^7 或 m < 10^-3。
+    let exponent = digits.len() as i32 - 1 + decimal_power;
     if !(-3..7).contains(&exponent) {
-        let mantissa = if mantissa.contains('.') {
-            mantissa.to_string()
+        let tail = if digits.len() == 1 {
+            "0"
         } else {
-            format!("{mantissa}.0")
+            &digits[1..]
         };
-        return format!("{sign}{mantissa}E{exponent}");
+        return format!("{sign}{}.{}E{exponent}", &digits[..1], tail);
     }
 
-    let digits = mantissa.replace('.', "");
-    let decimal_position = 1 + exponent;
+    let decimal_position = digits.len() as i32 + decimal_power;
     if decimal_position <= 0 {
         return format!(
             "{sign}0.{}{}",
@@ -279,8 +514,19 @@ pub fn big_dec_to_i128(dec: &str) -> i128 {
 /// Java `BigDecimal.toBigInteger()`：向零截断小数部分并保持任意精度。
 /// 对应 Java: 无（Rust 原生适配）。
 pub fn big_dec_to_big_int(dec: &str) -> BigInt {
-    let (negative, int_part, _) = split_decimal(dec);
-    let digits = int_part.trim_start_matches('0');
+    let (negative, mut digits, scale) = parse_decimal_parts(dec);
+    if digits.is_empty() {
+        return BigInt::zero();
+    }
+    if scale > 0 {
+        let fractional_digits = scale as usize;
+        if fractional_digits >= digits.len() {
+            return BigInt::zero();
+        }
+        digits.truncate(digits.len() - fractional_digits);
+    } else if scale < 0 {
+        digits.extend(std::iter::repeat_n('0', (-scale) as usize));
+    }
     let magnitude = if digits.is_empty() {
         BigInt::from(0)
     } else {
@@ -323,13 +569,10 @@ fn big_int_low_i64(value: &BigInt) -> i64 {
 /// `1.0 == 1.00`）。
 /// 对应 Java: 无（Rust 原生适配）。
 pub fn big_dec_compare(a: &str, b: &str) -> Ordering {
-    let (neg_a, int_a, frac_a) = split_decimal(a);
-    let (neg_b, int_b, frac_b) = split_decimal(b);
-
-    let int_a = int_a.trim_start_matches('0');
-    let int_b = int_b.trim_start_matches('0');
-    let zero_a = int_a.is_empty() && frac_a.chars().all(|c| c == '0');
-    let zero_b = int_b.is_empty() && frac_b.chars().all(|c| c == '0');
+    let (neg_a, digits_a, scale_a) = parse_decimal_parts(a);
+    let (neg_b, digits_b, scale_b) = parse_decimal_parts(b);
+    let zero_a = digits_a.is_empty();
+    let zero_b = digits_b.is_empty();
     if zero_a && zero_b {
         return Ordering::Equal;
     }
@@ -340,7 +583,7 @@ pub fn big_dec_compare(a: &str, b: &str) -> Ordering {
             Ordering::Greater
         };
     }
-    let magnitude = compare_magnitude(int_a, &frac_a, int_b, &frac_b);
+    let magnitude = compare_decimal_magnitude(&digits_a, scale_a, &digits_b, scale_b);
     if neg_a {
         magnitude.reverse()
     } else {
@@ -348,23 +591,68 @@ pub fn big_dec_compare(a: &str, b: &str) -> Ordering {
     }
 }
 
-/// 比较两个十进制 magnitude（同号情况）：先比整数位数/字典序，再逐位比小数。
-fn compare_magnitude(int_a: &str, frac_a: &str, int_b: &str, frac_b: &str) -> Ordering {
-    match int_a.len().cmp(&int_b.len()) {
+/// Java `BigDecimal.toString()` 的规范文本。
+///
+/// 参数：`decimal` 为等价于 Java `BigDecimal` 的十进制/指数文本。
+/// 返回：保留 unscaled value 与 signed scale 的 Java 规范表示。
+pub fn java_big_decimal_to_string(decimal: &str) -> String {
+    let (negative, digits, scale) = parse_decimal_parts(decimal);
+    let digits = if digits.is_empty() {
+        "0"
+    } else {
+        digits.as_str()
+    };
+    let precision = digits.len() as i64;
+    let adjusted_exponent = -scale + precision - 1;
+    let sign = if negative { "-" } else { "" };
+
+    if scale >= 0 && adjusted_exponent >= -6 {
+        if scale == 0 {
+            return format!("{sign}{digits}");
+        }
+        if precision > scale {
+            let decimal_position = (precision - scale) as usize;
+            return format!(
+                "{sign}{}.{}",
+                &digits[..decimal_position],
+                &digits[decimal_position..]
+            );
+        }
+        return format!(
+            "{sign}0.{}{}",
+            "0".repeat((scale - precision) as usize),
+            digits
+        );
+    }
+
+    let coefficient = if digits.len() == 1 {
+        digits.to_string()
+    } else {
+        format!("{}.{}", &digits[..1], &digits[1..])
+    };
+    let exponent_sign = if adjusted_exponent > 0 { "+" } else { "" };
+    format!("{sign}{coefficient}E{exponent_sign}{adjusted_exponent}")
+}
+
+/// 比较两个规范十进制 magnitude：先比较 adjusted exponent，再逐位补零比较。
+fn compare_decimal_magnitude(
+    digits_a: &str,
+    scale_a: i64,
+    digits_b: &str,
+    scale_b: i64,
+) -> Ordering {
+    let exponent_a = digits_a.len() as i64 - 1 - scale_a;
+    let exponent_b = digits_b.len() as i64 - 1 - scale_b;
+    match exponent_a.cmp(&exponent_b) {
         Ordering::Equal => {}
         other => return other,
     }
-    match int_a.cmp(int_b) {
-        Ordering::Equal => {}
-        other => return other,
-    }
-    // 逐位比较小数部分，较短者补零。
-    let max_len = frac_a.len().max(frac_b.len());
-    let mut fa = frac_a.chars();
-    let mut fb = frac_b.chars();
+    let max_len = digits_a.len().max(digits_b.len());
+    let mut a = digits_a.bytes();
+    let mut b = digits_b.bytes();
     for _ in 0..max_len {
-        let da = fa.next().unwrap_or('0');
-        let db = fb.next().unwrap_or('0');
+        let da = a.next().unwrap_or(b'0');
+        let db = b.next().unwrap_or(b'0');
         match da.cmp(&db) {
             Ordering::Equal => continue,
             other => return other,
@@ -373,20 +661,38 @@ fn compare_magnitude(int_a: &str, frac_a: &str, int_b: &str, frac_b: &str) -> Or
     Ordering::Equal
 }
 
-/// 将十进制字符串拆分为 `(负数标记, 整数位数字, 小数位数字)`。
-/// 非数字字符视为 `0`，与引擎解析用户 `BigDec` 输入时的宽容行为一致。
-fn split_decimal(dec: &str) -> (bool, String, String) {
+/// 将 Java `BigDecimal` 文本拆为 `(负数标记, 规范 unscaled digits, signed scale)`。
+fn parse_decimal_parts(dec: &str) -> (bool, String, i64) {
     let trimmed = dec.trim();
     let (negative, body) = match trimmed.strip_prefix('-') {
         Some(rest) => (true, rest),
         None => (false, trimmed.strip_prefix('+').unwrap_or(trimmed)),
     };
-    let (int_part, frac_part) = match body.split_once('.') {
-        Some((i, f)) => (i, f),
-        None => (body, ""),
+    let exponent_index = body.find(['e', 'E']);
+    let (coefficient, exponent) = match exponent_index {
+        Some(index) => (
+            &body[..index],
+            body[index + 1..].parse::<i64>().unwrap_or(0),
+        ),
+        None => (body, 0),
     };
-    let clean = |s: &str| -> String { s.chars().filter(|c| c.is_ascii_digit()).collect() };
-    (negative, clean(int_part), clean(frac_part))
+    let (int_part, frac_part) = match coefficient.split_once('.') {
+        Some((i, f)) => (i, f),
+        None => (coefficient, ""),
+    };
+    let mut digits: String = int_part
+        .chars()
+        .chain(frac_part.chars())
+        .filter(|c| c.is_ascii_digit())
+        .collect();
+    let first_non_zero = digits
+        .bytes()
+        .position(|digit| digit != b'0')
+        .unwrap_or(digits.len());
+    digits.drain(..first_non_zero);
+    let scale =
+        frac_part.chars().filter(|c| c.is_ascii_digit()).count() as i64 - exponent;
+    (negative && !digits.is_empty(), digits, scale)
 }
 
 #[cfg(test)]
@@ -455,6 +761,22 @@ mod tests {
             number_compare(&DataValue::Str("1".into()), &DataValue::Int(1)),
             None
         );
+        assert_eq!(
+            number_compare(&DataValue::Double(-0.0), &DataValue::Double(0.0)),
+            Some(Ordering::Less)
+        );
+        let negative_nan = f64::from_bits(0xfff8_0000_0000_0042);
+        assert_eq!(
+            number_compare(
+                &DataValue::Double(negative_nan),
+                &DataValue::Double(f64::NAN)
+            ),
+            Some(Ordering::Equal)
+        );
+        assert_eq!(
+            number_compare(&DataValue::Double(negative_nan), &DataValue::Double(f64::MAX)),
+            Some(Ordering::Greater)
+        );
     }
 
     #[test]
@@ -477,5 +799,85 @@ mod tests {
         assert_eq!(big_dec_to_i128("12.99"), 12);
         assert_eq!(big_dec_to_i128("-12.99"), -12);
         assert_eq!(big_dec_to_i128("0.5"), 0);
+        assert_eq!(big_dec_to_i128("1.23E+4"), 12_300);
+        assert_eq!(big_dec_to_i128("-1.23E+4"), -12_300);
+        assert_eq!(big_dec_to_i128("1.23E-4"), 0);
+    }
+
+    /// SOURCE_PARITY: Java `BigDecimal.compareTo` 按数值比较指数文本并忽略
+    /// scale，而不是把 `E` 后的数字拼进 coefficient。
+    #[test]
+    fn big_decimal_compare_supports_exponents_and_negative_scale() {
+        assert_eq!(big_dec_compare("1E+2", "100.00"), Ordering::Equal);
+        assert_eq!(big_dec_compare("9.99E+19", "1E+20"), Ordering::Less);
+        assert_eq!(big_dec_compare("-1E-7", "-0.00000009"), Ordering::Less);
+        assert_eq!(big_dec_compare("0E+20", "0.000"), Ordering::Equal);
+    }
+
+    /// SOURCE_PARITY: Java `BigDecimal.toString()` 的 adjusted exponent
+    /// 边界与正指数加号。
+    #[test]
+    fn java_big_decimal_string_matches_jdk_oracle() {
+        let cases = [
+            ("1.0E20", "1.0E+20"),
+            ("1E+2", "1E+2"),
+            ("0E+7", "0E+7"),
+            ("0E-7", "0E-7"),
+            ("0.000001", "0.000001"),
+            ("0.0000001", "1E-7"),
+            ("100.00", "100.00"),
+        ];
+        for (value, expected) in cases {
+            assert_eq!(java_big_decimal_to_string(value), expected);
+        }
+    }
+
+    /// SOURCE_PARITY: Java `Double.toString(double)` 的普通/科学记数法边界、
+    /// 特殊值和 IEEE-754 极值文本。
+    #[test]
+    fn java_double_to_string_matches_jdk_oracle_matrix() {
+        let cases = [
+            (1.0, "1.0"),
+            (1_000_000.0, "1000000.0"),
+            (10_000_000.0, "1.0E7"),
+            (0.001, "0.001"),
+            (0.0001, "1.0E-4"),
+            (1.2345678901234567, "1.2345678901234567"),
+            (1.0E20, "1.0E20"),
+            (-0.0, "-0.0"),
+            (f64::from_bits(1), "4.9E-324"),
+            (f64::MIN_POSITIVE, "2.2250738585072014E-308"),
+            (f64::MAX, "1.7976931348623157E308"),
+            (f64::NAN, "NaN"),
+            (f64::INFINITY, "Infinity"),
+            (f64::NEG_INFINITY, "-Infinity"),
+        ];
+        for (value, expected) in cases {
+            assert_eq!(java_f64_to_string(value), expected, "value={value:?}");
+        }
+    }
+
+    /// SOURCE_PARITY: Java `Float.toString(float)` 必须按单精度值选择最短
+    /// 文本，不能先扩展为 f64 后套用 Rust `Display`。
+    #[test]
+    fn java_float_to_string_matches_jdk_oracle_matrix() {
+        let cases = [
+            (1.0_f32, "1.0"),
+            (1_000_000.0_f32, "1000000.0"),
+            (10_000_000.0_f32, "1.0E7"),
+            (0.001_f32, "0.001"),
+            (0.0001_f32, "1.0E-4"),
+            (1.2345678_f32, "1.2345678"),
+            (-0.0_f32, "-0.0"),
+            (f32::from_bits(1), "1.4E-45"),
+            (f32::MIN_POSITIVE, "1.1754944E-38"),
+            (f32::MAX, "3.4028235E38"),
+            (f32::NAN, "NaN"),
+            (f32::INFINITY, "Infinity"),
+            (f32::NEG_INFINITY, "-Infinity"),
+        ];
+        for (value, expected) in cases {
+            assert_eq!(java_f32_to_string(value), expected, "value={value:?}");
+        }
     }
 }

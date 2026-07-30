@@ -240,7 +240,9 @@ impl DataValue {
                 crate::runtime::data::convert::java_f64_to_string(*value)
             }
             DataValue::BigInt(value) => value.to_string(),
-            DataValue::BigDec(value) => value.clone(),
+            DataValue::BigDec(value) => {
+                crate::runtime::data::convert::java_big_decimal_to_string(value)
+            }
             DataValue::Char(value) => String::from_utf16_lossy(&[*value]),
             DataValue::Str(value) => value.clone(),
             DataValue::List(value) => format!(
@@ -400,6 +402,10 @@ mod tests {
         assert_eq!(
             map.string_value_of(),
             "{name=QlExpress Rust, items=[1, two, null]}"
+        );
+        assert_eq!(
+            DataValue::BigDec("1.0E20".into()).string_value_of(),
+            "1.0E+20"
         );
     }
 

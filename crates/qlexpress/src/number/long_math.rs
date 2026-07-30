@@ -165,6 +165,18 @@ impl LongMath {
         Ok(DataValue::Long(long_value(left) & long_value(right)))
     }
 
+    /// Java `LongMath#bitAndImpl` 保留的公开兼容方法；Java 源中与
+    /// `andImpl` 具有完全相同的实现。
+    ///
+    /// 参数：`left`、`right` 为待按位与的数值。
+    /// 返回：按 `longValue()` 窄化后的 64 位按位与结果。
+    pub fn bit_and_impl(
+        left: &DataValue,
+        right: &DataValue,
+    ) -> Result<DataValue, QLException> {
+        Self::and_impl(left, right)
+    }
+
     /// 执行按位与。
     ///
     /// 对应 Java：`LongMath#bitAndImpl(Number, Number)`。Java 同时保留

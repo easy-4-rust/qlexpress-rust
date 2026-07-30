@@ -33,6 +33,7 @@ use crate::runtime::value::DataValue;
 /// 标记码的 QLException 承载,操作符层识别后可改报 INVALID_ARITHMETIC,
 /// 对齐 Java `BaseBinaryOperator.divide` 的 catch 逻辑)。
 pub(crate) const ARITHMETIC_EXCEPTION: &str = "ARITHMETIC_EXCEPTION";
+pub(crate) const NUMBER_FORMAT_EXCEPTION: &str = "java.lang.NumberFormatException";
 
 /// 对应 Java: NumberMath(静态工具类,无实例状态)。
 pub struct NumberMath;
@@ -365,14 +366,21 @@ impl NumberMath {
     /// Java `NumberMath.toBigDecimal(n)`:整型精确转换;Float/Double 走
     /// `new BigDecimal(n.toString())`(十进制最短表示,非二进制精确展开)。
     /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.NumberMath#toBigDecimal。
-    pub fn to_big_decimal(number: &DataValue) -> DataValue {
-        DataValue::BigDec(convert::to_big_dec_string(number))
+    pub fn to_big_decimal(number: &DataValue) -> Result<DataValue, QLException> {
+        if matches!(number, DataValue::Float(value) if !value.is_finite())
+            || matches!(number, DataValue::Double(value) if !value.is_finite())
+        {
+            return Err(number_format_exception(&number.string_value_of()));
+        }
+        Ok(DataValue::BigDec(convert::to_big_dec_string(number)))
     }
 
     /// Java `NumberMath.toBigInteger(n)`:截断小数部分(向零取整)。
     /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.NumberMath#toBigInteger。
-    pub fn to_big_integer(number: &DataValue) -> DataValue {
-        DataValue::BigInt(convert::to_big_int(number))
+    pub fn to_big_integer(number: &DataValue) -> Result<DataValue, QLException> {
+        convert::try_to_big_int(number)
+            .map(DataValue::BigInt)
+            .ok_or_else(|| number_format_exception(&number.string_value_of()))
     }
 }
 
@@ -428,6 +436,23 @@ pub(crate) fn arithmetic_exception(message: impl Into<String>) -> QLException {
     QLException::for_test(QLExceptionKind::Runtime, message, ARITHMETIC_EXCEPTION)
 }
 
+/// Java `new BigDecimal(text)` 对 NaN/Infinity 抛出的
+/// `NumberFormatException`，保留 JDK 17 的 reason 与可识别类型码。
+pub(crate) fn number_format_exception(text: &str) -> QLException {
+    let invalid = text
+        .trim_start_matches('-')
+        .chars()
+        .next()
+        .unwrap_or('N');
+    QLException::for_test(
+        QLExceptionKind::Runtime,
+        format!(
+            "Character {invalid} is neither a decimal digit number, decimal point, nor \"e\" notation exponential mark."
+        ),
+        NUMBER_FORMAT_EXCEPTION,
+    )
+}
+
 /// Java `Object.toString()` 风格的值字符串(用于异常消息与字符串拼接):
 /// 整型/BigInteger/BigDecimal 输出原始数字,浮点带 `.0`,null → "null"。
 /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.NumberMath#javaValueString。
@@ -440,7 +465,9 @@ pub(crate) fn java_value_string(value: &DataValue) -> String {
         DataValue::Int(v) => v.to_string(),
         DataValue::Long(v) => v.to_string(),
         DataValue::BigInt(v) => v.to_string(),
-        DataValue::BigDec(v) => v.clone(),
+        DataValue::BigDec(v) => {
+            crate::runtime::data::convert::java_big_decimal_to_string(v)
+        }
         DataValue::Float(v) => crate::runtime::data::convert::java_f32_to_string(*v),
         DataValue::Double(v) => crate::runtime::data::convert::java_f64_to_string(*v),
         DataValue::Char(v) => String::from_utf16_lossy(&[*v]),
@@ -559,13 +586,23 @@ mod tests {
         );
 
         assert_eq!(
-            NumberMath::to_big_decimal(&DataValue::Double(1.5)),
+            NumberMath::to_big_decimal(&DataValue::Double(1.5)).unwrap(),
             DataValue::BigDec("1.5".into())
         );
         assert_eq!(
-            NumberMath::to_big_integer(&DataValue::BigDec("-7.9".into())),
+            NumberMath::to_big_integer(&DataValue::BigDec("-7.9".into())).unwrap(),
             DataValue::big_int(-7)
         );
+        assert_eq!(
+            NumberMath::to_big_integer(&DataValue::Double(1.0E100))
+                .unwrap()
+                .string_value_of(),
+            format!("1{}", "0".repeat(100))
+        );
+        for value in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+            let error = NumberMath::to_big_integer(&DataValue::Double(value)).unwrap_err();
+            assert_eq!(error.error_code(), NUMBER_FORMAT_EXCEPTION);
+        }
     }
 
     #[test]

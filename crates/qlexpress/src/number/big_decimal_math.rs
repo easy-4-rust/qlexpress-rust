@@ -12,7 +12,8 @@
 //!   `max(左scale, 右scale, DIVISION_MIN_SCALE(10))`(HALF_UP);
 //! - 除数为零抛 ArithmeticException("Division by zero");
 //! - remainder:`BigDecimal.remainder`(向零取整的余数,符号跟被除数);
-//! - mod:remainder 为负时加除数(恒非负,对齐 Java modImpl)。
+//! - mod:remainder 为负时无条件加除数（逐字对齐 Java `modImpl`；Java
+//!   对负除数不会额外保证非负）。
 
 use super::number_math;
 use crate::exception::QLException;
@@ -25,7 +26,7 @@ pub const DIVISION_EXTRA_PRECISION: usize = 10;
 
 /// Java `DIVISION_MIN_SCALE`(系统属性 `qlexpress4.division.min.scale`,
 /// 默认 10):非整除除法结果的最小 scale。
-pub const DIVISION_MIN_SCALE: usize = 10;
+pub const DIVISION_MIN_SCALE: i64 = 10;
 
 /// 对应 Java: BigDecimalMath(单例,Rust 用零大小类型 + 关联函数)。
 pub struct BigDecimalMath;
@@ -36,11 +37,11 @@ pub struct BigDecimalMath;
 struct Decimal {
     neg: bool,
     digits: Vec<u8>,
-    scale: usize,
+    scale: i64,
 }
 
 impl Decimal {
-    fn zero(scale: usize) -> Decimal {
+    fn zero(scale: i64) -> Decimal {
         Decimal {
             neg: false,
             digits: Vec::new(),
@@ -87,48 +88,74 @@ impl Decimal {
         self
     }
 
-    /// 渲染回 BigDec 存储字符串(Java `BigDecimal.toString` 普通路径:
-    /// 保留 scale 决定的尾随零,如 "1.00"、"0.3333333333")。
-    fn to_plain_string(&self) -> String {
+    /// 按 Java `BigDecimal.toString()` 渲染：
+    /// `scale >= 0 && adjustedExponent >= -6` 使用普通记数法，否则使用
+    /// 带显式指数的规范科学记数法；尾随零由 unscaled value/scale 保留。
+    fn to_java_string(&self) -> String {
         let mut out = String::new();
         if self.neg && !self.is_zero() {
             out.push('-');
         }
-        if self.scale == 0 {
-            if self.digits.is_empty() {
-                out.push('0');
+
+        let digits: Vec<u8> = if self.digits.is_empty() {
+            vec![0]
+        } else {
+            self.digits.clone()
+        };
+        let precision = digits.len() as i64;
+        let adjusted_exponent = -self.scale + precision - 1;
+        if self.scale >= 0 && adjusted_exponent >= -6 {
+            if self.scale == 0 {
+                out.extend(digits.iter().map(|d| (b'0' + d) as char));
+                return out;
+            }
+            if precision > self.scale {
+                let int_len = (precision - self.scale) as usize;
+                out.extend(digits[..int_len].iter().map(|d| (b'0' + d) as char));
+                out.push('.');
+                out.extend(digits[int_len..].iter().map(|d| (b'0' + d) as char));
             } else {
-                out.extend(self.digits.iter().map(|d| (b'0' + d) as char));
+                out.push_str("0.");
+                for _ in 0..(self.scale - precision) {
+                    out.push('0');
+                }
+                out.extend(digits.iter().map(|d| (b'0' + d) as char));
             }
             return out;
         }
-        let len = self.digits.len();
-        if len > self.scale {
-            let int_len = len - self.scale;
-            out.extend(self.digits[..int_len].iter().map(|d| (b'0' + d) as char));
+
+        out.push((b'0' + digits[0]) as char);
+        if digits.len() > 1 {
             out.push('.');
-            out.extend(self.digits[int_len..].iter().map(|d| (b'0' + d) as char));
-        } else {
-            out.push_str("0.");
-            for _ in 0..(self.scale - len) {
-                out.push('0');
-            }
-            out.extend(self.digits.iter().map(|d| (b'0' + d) as char));
+            out.extend(digits[1..].iter().map(|d| (b'0' + d) as char));
         }
+        out.push('E');
+        if adjusted_exponent > 0 {
+            out.push('+');
+        }
+        out.push_str(&adjusted_exponent.to_string());
         out
     }
 }
 
-/// 解析 BigDec 存储字符串为 Decimal(对齐 Stage 0 的 split_decimal 容错规则)。
+/// 解析 Java `BigDecimal(String)` 接受的十进制/指数文本并保留 signed scale。
 fn parse_dec(s: &str) -> Decimal {
     let trimmed = s.trim();
     let (neg, body) = match trimmed.strip_prefix('-') {
         Some(rest) => (true, rest),
         None => (false, trimmed.strip_prefix('+').unwrap_or(trimmed)),
     };
-    let (int_part, frac_part) = match body.split_once('.') {
+    let exponent_index = body.find(['e', 'E']);
+    let (coefficient, exponent) = match exponent_index {
+        Some(index) => (
+            &body[..index],
+            body[index + 1..].parse::<i64>().unwrap_or(0),
+        ),
+        None => (body, 0),
+    };
+    let (int_part, frac_part) = match coefficient.split_once('.') {
         Some((i, f)) => (i, f),
-        None => (body, ""),
+        None => (coefficient, ""),
     };
     let mut digits: Vec<u8> = int_part
         .chars()
@@ -136,7 +163,8 @@ fn parse_dec(s: &str) -> Decimal {
         .filter(|c| c.is_ascii_digit())
         .map(|c| (c as u8) - b'0')
         .collect();
-    let scale = frac_part.chars().filter(|c| c.is_ascii_digit()).count();
+    let scale =
+        frac_part.chars().filter(|c| c.is_ascii_digit()).count() as i64 - exponent;
     let first_nz = digits.iter().position(|&d| d != 0).unwrap_or(digits.len());
     digits.drain(..first_nz);
     Decimal {
@@ -273,8 +301,8 @@ fn divmod_mag(a: &[u8], b: &[u8]) -> (Vec<u8>, Vec<u8>) {
 /// 同号幅值对齐后相加/相减,产出 Decimal。
 fn add_sub(l: &Decimal, r: &Decimal, subtract: bool) -> Decimal {
     let scale = l.scale.max(r.scale);
-    let lm = mul_pow10(&l.digits, scale - l.scale);
-    let rm = mul_pow10(&r.digits, scale - r.scale);
+    let lm = mul_pow10(&l.digits, (scale - l.scale) as usize);
+    let rm = mul_pow10(&r.digits, (scale - r.scale) as usize);
     let r_neg = r.neg ^ subtract;
     if l.neg == r_neg {
         // 同号:幅值相加。
@@ -320,20 +348,20 @@ fn divide_exact(l: &Decimal, r: &Decimal) -> Option<Decimal> {
         return None; // 调用方先判零,这里防御
     }
     if l.is_zero() {
-        // 0 / x = 0,scale 取 max(左scale - 右scale, 0) 的 Java 行为近似为 0.scale 保持。
-        return Some(Decimal::zero(l.scale.max(r.scale)));
+        // Java `BigDecimal.divide` 的零结果保留 preferred scale。
+        return Some(Decimal::zero(l.scale - r.scale));
     }
-    // 结果 scale 从 max(s1 - s2, 0) 起步,逐步放大直到整除。
-    let mut scale = l.scale.saturating_sub(r.scale);
-    // 上界:除数只含因子 2/5 时可整除,所需额外位数不超过除数位数+1;
-    // 超过即不可整除(非终止)。
-    let limit = scale + r.digits.len() + l.digits.len() + 2;
-    loop {
-        if scale > limit {
-            return None;
-        }
+    // 结果 scale 从 preferred scale(s1 - s2) 起步,逐步放大直到整除。
+    let preferred_scale = l.scale - r.scale;
+    let mut scale = preferred_scale;
+    // 十进制 n 位整数若约分后只含 2/5，终止 scale 最多约 3.322n
+    // (`2^k` 是最坏情形)；四倍总位数是严格安全的有限搜索上界。
+    let max_extra_digits = (r.digits.len() + l.digits.len())
+        .saturating_mul(4)
+        .saturating_add(2);
+    for _ in 0..=max_extra_digits {
         // 被除数幅值乘 10^(scale + s2 - s1)。
-        let exp = scale + r.scale - l.scale;
+        let exp = (scale - preferred_scale) as usize;
         let num = mul_pow10(&l.digits, exp);
         let (q, rem) = divmod_mag(&num, &r.digits);
         if rem.is_empty() {
@@ -348,6 +376,7 @@ fn divide_exact(l: &Decimal, r: &Decimal) -> Option<Decimal> {
         }
         scale += 1;
     }
+    None
 }
 
 /// 按 MathContext(precision)(HALF_UP)除法:商保留 precision 位有效数字。
@@ -396,29 +425,24 @@ fn divide_with_precision(l: &Decimal, r: &Decimal, precision: usize) -> Decimal 
     }
     // 商 q 的实际 scale:value = q × 10^(s2-s1-e) ⇒ scale = s1 - s2 + e
     // (+ 进位修正)。
-    let mut scale = l.scale as i64 - r.scale as i64 + e;
+    let mut scale = l.scale - r.scale + e;
     if extra_carry {
         scale -= 1;
     }
-    let digits = if scale < 0 {
-        mul_pow10(&q, (-scale) as usize)
-    } else {
-        q
-    };
     Decimal {
         neg: l.neg != r.neg,
-        digits,
-        scale: scale.max(0) as usize,
+        digits: q,
+        scale,
     }
     .normalized()
 }
 
 /// Java `setScale(newScale, RoundingMode.HALF_UP)`(仅缩 scale 场景)。
-fn set_scale_half_up(d: &Decimal, new_scale: usize) -> Decimal {
+fn set_scale_half_up(d: &Decimal, new_scale: i64) -> Decimal {
     if d.scale <= new_scale {
         return d.clone();
     }
-    let shift = d.scale - new_scale;
+    let shift = (d.scale - new_scale) as usize;
     let divisor = mul_pow10(&[1], shift);
     let (q, rem) = divmod_mag(&d.digits, &divisor);
     let rounded = if cmp_mag(&mul_mag(&rem, &[2]), &divisor) != std::cmp::Ordering::Less {
@@ -441,14 +465,14 @@ impl BigDecimalMath {
     /// Java `absImpl`。
     /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.BigDecimalMath#absImpl。
     pub fn abs_impl(number: &DataValue) -> Result<DataValue, QLException> {
-        Ok(DataValue::BigDec(dec_of(number).abs().to_plain_string()))
+        Ok(DataValue::BigDec(dec_of(number).abs().to_java_string()))
     }
 
     /// Java `addImpl`(精确,scale 取两边较大)。
     /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.BigDecimalMath#addImpl。
     pub fn add_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
         Ok(DataValue::BigDec(
-            add_sub(&dec_of(left), &dec_of(right), false).to_plain_string(),
+            add_sub(&dec_of(left), &dec_of(right), false).to_java_string(),
         ))
     }
 
@@ -459,7 +483,7 @@ impl BigDecimalMath {
     /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.BigDecimalMath#subtractImpl。
     pub fn subtract_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
         Ok(DataValue::BigDec(
-            add_sub(&dec_of(left), &dec_of(right), true).to_plain_string(),
+            add_sub(&dec_of(left), &dec_of(right), true).to_java_string(),
         ))
     }
 
@@ -467,7 +491,7 @@ impl BigDecimalMath {
     /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.BigDecimalMath#multiplyImpl。
     pub fn multiply_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
         Ok(DataValue::BigDec(
-            mul_dec(&dec_of(left), &dec_of(right)).to_plain_string(),
+            mul_dec(&dec_of(left), &dec_of(right)).to_java_string(),
         ))
     }
 
@@ -481,7 +505,7 @@ impl BigDecimalMath {
             return Err(number_math::arithmetic_exception("Division by zero"));
         }
         match divide_exact(&big_left, &big_right) {
-            Some(exact) => Ok(DataValue::BigDec(exact.to_plain_string())),
+            Some(exact) => Ok(DataValue::BigDec(exact.to_java_string())),
             None => {
                 // Java catch(ArithmeticException):非终止小数按默认精度重除。
                 let precision =
@@ -493,7 +517,7 @@ impl BigDecimalMath {
                 } else {
                     result
                 };
-                Ok(DataValue::BigDec(result.to_plain_string()))
+                Ok(DataValue::BigDec(result.to_java_string()))
             }
         }
     }
@@ -517,7 +541,7 @@ impl BigDecimalMath {
     /// Java `unaryMinusImpl`。
     /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.BigDecimalMath#unaryMinusImpl。
     pub fn unary_minus_impl(left: &DataValue) -> Result<DataValue, QLException> {
-        Ok(DataValue::BigDec(dec_of(left).negate().to_plain_string()))
+        Ok(DataValue::BigDec(dec_of(left).negate().to_java_string()))
     }
 
     /// 返回当前数值的一元正号结果。
@@ -526,7 +550,7 @@ impl BigDecimalMath {
     /// Java `unaryPlusImpl`。
     /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.BigDecimalMath#unaryPlusImpl。
     pub fn unary_plus_impl(left: &DataValue) -> Result<DataValue, QLException> {
-        Ok(DataValue::BigDec(dec_of(left).to_plain_string()))
+        Ok(DataValue::BigDec(dec_of(left).to_java_string()))
     }
 
     /// Java `remainderImpl`:`BigDecimal.remainder` = 被除数 - 商(向零取整)×除数。
@@ -539,8 +563,8 @@ impl BigDecimalMath {
         }
         // 统一放大到同一 scale 的整数域:q = trunc(lm / rm) 即向零取整商。
         let scale = l.scale.max(r.scale);
-        let lm = mul_pow10(&l.digits, scale - l.scale);
-        let rm = mul_pow10(&r.digits, scale - r.scale);
+        let lm = mul_pow10(&l.digits, (scale - l.scale) as usize);
+        let rm = mul_pow10(&r.digits, (scale - r.scale) as usize);
         let (q, _) = divmod_mag(&lm, &rm);
         // rem = lm - q × rm(同 scale 下的幅值余数)。
         let prod = mul_mag(&q, &rm);
@@ -558,11 +582,11 @@ impl BigDecimalMath {
                 scale,
             }
             .normalized()
-            .to_plain_string(),
+            .to_java_string(),
         ))
     }
 
-    /// Java `modImpl`:remainder 为负则加除数(结果符号跟除数)。
+    /// Java `modImpl`:remainder 为负则无条件加除数。
     /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.BigDecimalMath#modImpl。
     pub fn mod_impl(self_value: &DataValue, divisor: &DataValue) -> Result<DataValue, QLException> {
         let remainder = Self::remainder_impl(self_value, divisor)?;
@@ -571,7 +595,7 @@ impl BigDecimalMath {
             if rem.neg && !rem.is_zero() {
                 // remainder.signum() < 0 → remainder + divisor。
                 return Self::add_impl(
-                    &DataValue::BigDec(rem.to_plain_string()),
+                    &DataValue::BigDec(rem.to_java_string()),
                     &DataValue::BigDec(convert::to_big_dec_string(divisor)),
                 );
             }
@@ -682,6 +706,15 @@ mod tests {
             .unwrap(),
             DataValue::BigDec("2".to_string())
         );
+        // Java 实现对负除数仍是“负余数 + 除数”，不会强制结果非负。
+        assert_eq!(
+            BigDecimalMath::mod_impl(
+                &DataValue::BigDec("-7".into()),
+                &DataValue::BigDec("-3".into())
+            )
+            .unwrap(),
+            DataValue::BigDec("-4".to_string())
+        );
     }
 
     #[test]
@@ -690,6 +723,63 @@ mod tests {
         assert_eq!(
             BigDecimalMath::divide_impl(&DataValue::Int(1), &DataValue::Long(4)).unwrap(),
             DataValue::BigDec("0.25".to_string())
+        );
+    }
+
+    /// SOURCE_PARITY: Java `BigDecimal(String)` 保留 signed scale，
+    /// `toString()` 在 adjusted exponent 小于 -6 或 scale 为负时使用科学记数法。
+    #[test]
+    fn exponent_input_and_java_to_string_preserve_signed_scale() {
+        let cases = [
+            ("1.0E20", "1.0E+20", -19, 2),
+            ("1E+2", "1E+2", -2, 1),
+            ("0E+7", "0E+7", -7, 1),
+            ("0E-7", "0E-7", 7, 1),
+            ("0.000001", "0.000001", 6, 1),
+            ("0.0000001", "1E-7", 7, 1),
+        ];
+        for (source, expected, scale, precision) in cases {
+            let decimal = parse_dec(source);
+            assert_eq!(decimal.to_java_string(), expected, "source={source}");
+            assert_eq!(decimal.scale, scale, "source={source}");
+            assert_eq!(decimal.precision(), precision, "source={source}");
+        }
+    }
+
+    /// SOURCE_PARITY: signed scale 必须贯穿 add/multiply/exact divide 和
+    /// QLExpress 的非终止除法回退路径。
+    #[test]
+    fn arithmetic_with_negative_scale_matches_jdk_oracle() {
+        assert_eq!(
+            BigDecimalMath::add_impl(
+                &DataValue::BigDec("1.0E+2".into()),
+                &DataValue::BigDec("1".into()),
+            )
+            .unwrap(),
+            DataValue::BigDec("101".into())
+        );
+        assert_eq!(
+            BigDecimalMath::multiply_impl(
+                &DataValue::BigDec("1.0E+2".into()),
+                &DataValue::BigDec("2.00".into()),
+            )
+            .unwrap(),
+            DataValue::BigDec("200.0".into())
+        );
+        assert_eq!(div("1E+2", "2"), DataValue::BigDec("5E+1".into()));
+        assert_eq!(div("1.0E+2", "2"), DataValue::BigDec("5E+1".into()));
+        assert_eq!(div("100", "0.2"), DataValue::BigDec("5.0E+2".into()));
+        assert_eq!(
+            div("1E+20", "3"),
+            DataValue::BigDec("3.3333333333E+19".into())
+        );
+        assert_eq!(
+            BigDecimalMath::remainder_impl(
+                &DataValue::BigDec("5.00E+2".into()),
+                &DataValue::BigDec("3E+1".into()),
+            )
+            .unwrap(),
+            DataValue::BigDec("20".into())
         );
     }
 }

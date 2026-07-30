@@ -8,7 +8,7 @@ use crate::runtime::value::DataValue;
 use crate::runtime::class_ref::ClassRef;
 use crate::runtime::native_registry::NativeRegistry;
 
-use super::{to_big_dec_string, to_big_int, to_f64, to_i64};
+use super::{to_big_dec_string, to_f64, to_i64, try_to_big_int};
 
 pub use super::q_converted::QConverted;
 pub use super::target_type::TargetType;
@@ -117,10 +117,15 @@ impl ObjTypeConvertor {
                 _ => QConverted::un_convertible(),
             },
             TargetType::BigInteger => match value {
-                v if v.is_number() => QConverted::converted(DataValue::BigInt(to_big_int(v))),
+                v if v.is_number() => match try_to_big_int(v) {
+                    Some(converted) => QConverted::converted(DataValue::BigInt(converted)),
+                    None => QConverted::un_convertible(),
+                },
                 _ => QConverted::un_convertible(),
             },
             TargetType::BigDecimal => match value {
+                DataValue::Float(v) if !v.is_finite() => QConverted::un_convertible(),
+                DataValue::Double(v) if !v.is_finite() => QConverted::un_convertible(),
                 v if v.is_number() => {
                     QConverted::converted(DataValue::BigDec(to_big_dec_string(v)))
                 }
