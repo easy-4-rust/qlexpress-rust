@@ -41,7 +41,7 @@ mod tests {
     #[test]
     fn call_ignores_arguments_and_returns_next_instruction() {
         let result = QLambdaEmpty::INSTANCE
-            .call(&[DataValue::Int(1), DataValue::String("ignored".into())])
+            .call(&[DataValue::Int(1), DataValue::Str("ignored".into())])
             .expect("empty lambda must not fail");
 
         assert_eq!(result.get_result_type(), ResultType::NextInstruction);
