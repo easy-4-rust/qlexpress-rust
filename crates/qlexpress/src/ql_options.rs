@@ -1,6 +1,8 @@
 //! Execution options, mirroring Java `QLOptions` (Builder pattern).
 
+use std::cell::{Ref, RefCell, RefMut};
 use std::collections::HashMap;
+use std::rc::Rc;
 
 use crate::runtime::value::DataValue;
 
@@ -9,6 +11,12 @@ use crate::runtime::value::DataValue;
 /// Attachments carried to user-defined function/operator/macro; Java uses
 /// `Map<String, Object>`, Rust uses script values.
 pub type Attachments = HashMap<String, DataValue>;
+
+/// 在选项、全局作用域和 QVM 运行时之间共享的附件 Map。
+///
+/// Java `QLOptions.Builder#attachments(Map)` 保存调用方传入的同一个 Map
+/// 引用；Rust 通过 `Rc<RefCell<_>>` 保留相同的单线程引用与可变性语义。
+pub type SharedAttachments = Rc<RefCell<Attachments>>;
 
 /// 单次脚本执行的 Java 兼容选项集合。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/QLOptions.java`；具体对象路径见 `docs/对象级对照表.md`。
@@ -24,7 +32,7 @@ pub struct QLOptions {
     timeout_millis: i64,
     /// Attachments passed to user-defined functions/operators/macros; only
     /// used to pass data, never as variable values. Default empty.
-    attachments: Attachments,
+    attachments: SharedAttachments,
     /// Allow caching the compile result of the script. Default false.
     cache: bool,
     /// Avoid null pointer. Default false.
@@ -61,9 +69,29 @@ impl QLOptions {
         self.timeout_millis
     }
 
-    /// 返回传递给自定义扩展的只读附件。对应 Java: `QLOptions#attachments`。
-    pub fn attachments(&self) -> &Attachments {
-        &self.attachments
+    /// 返回传递给自定义扩展的只读附件。对应 Java
+    /// `QLOptions#getAttachments()` 的读取用法。
+    pub fn attachments(&self) -> Ref<'_, Attachments> {
+        self.attachments.borrow()
+    }
+
+    /// 返回可修改的附件 Map。对应 Java
+    /// `QLOptions#getAttachments()` 返回可变 Map 后的写入用法。
+    ///
+    /// # 返回值
+    ///
+    /// 返回附件表的独占借用；该借用存续期间不能再次借用附件。
+    pub fn attachments_mut(&self) -> RefMut<'_, Attachments> {
+        self.attachments.borrow_mut()
+    }
+
+    /// 返回附件表的共享句柄，供运行时与已创建 Lambda 保留引用语义。
+    ///
+    /// # 返回值
+    ///
+    /// 返回指向同一附件表的引用计数句柄。
+    pub fn shared_attachments(&self) -> SharedAttachments {
+        Rc::clone(&self.attachments)
     }
 
     /// 返回是否缓存脚本编译结果。对应 Java: `QLOptions#isCache`。
@@ -117,7 +145,7 @@ pub struct QLOptionsBuilder {
     precise: bool,
     pollute_user_context: bool,
     timeout_millis: i64,
-    attachments: Attachments,
+    attachments: SharedAttachments,
     cache: bool,
     avoid_null_pointer: bool,
     max_arr_length: i32,
@@ -132,7 +160,7 @@ impl QLOptionsBuilder {
             precise: false,
             pollute_user_context: false,
             timeout_millis: -1,
-            attachments: HashMap::new(),
+            attachments: Rc::new(RefCell::new(HashMap::new())),
             cache: false,
             avoid_null_pointer: false,
             max_arr_length: -1,
@@ -161,6 +189,19 @@ impl QLOptionsBuilder {
 
     /// 设置传递给自定义扩展的附件并返回构建器。对应 Java: `QLOptions.Builder#attachments`。
     pub fn attachments(mut self, attachments: Attachments) -> Self {
+        self.attachments = Rc::new(RefCell::new(attachments));
+        self
+    }
+
+    /// 使用共享附件 Map 构建选项。
+    ///
+    /// 对应 Java `QLOptions.Builder#attachments(Map)` 保留调用方 Map 引用的
+    /// 行为；调用方后续通过同一句柄修改 Map 时，执行和既有 Lambda 均可见。
+    ///
+    /// # 参数
+    ///
+    /// - `attachments`：需要与选项和运行时共享的附件表。
+    pub fn shared_attachments(mut self, attachments: SharedAttachments) -> Self {
         self.attachments = attachments;
         self
     }
@@ -259,6 +300,20 @@ mod tests {
         assert_eq!(opts.max_arr_length(), 10);
         assert!(opts.is_trace_expression());
         assert!(opts.is_short_circuit_disable());
+    }
+
+    #[test]
+    fn cloned_options_share_the_java_attachment_map_identity() {
+        let opts = QLOptions::builder().build();
+        let cloned = opts.clone();
+
+        opts.attachments_mut()
+            .insert("late".to_string(), DataValue::Int(42));
+
+        assert_eq!(
+            cloned.attachments().get("late"),
+            Some(&DataValue::Int(42))
+        );
     }
 
     #[test]

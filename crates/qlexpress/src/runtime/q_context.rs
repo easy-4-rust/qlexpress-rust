@@ -1,8 +1,7 @@
 //! Execution context passed to every instruction, mirroring Java
 //! `com.alibaba.qlexpress4.runtime.QContext` (= `QScope` + `QRuntime`).
 
-use std::cell::RefCell;
-use std::collections::HashMap;
+use std::cell::{Ref, RefCell};
 use std::rc::Rc;
 use std::time::Instant;
 
@@ -14,7 +13,7 @@ use crate::runtime::left_value::LeftValue;
 use crate::runtime::member::NativeRegistry;
 use crate::runtime::parameters::Parameters;
 use crate::runtime::qvm_runtime::QvmRuntime;
-use crate::runtime::scope::ScopeRef;
+use crate::runtime::scope::{ScopeRef, SharedFunctionTable};
 use crate::runtime::trace::QTraces;
 use crate::runtime::value::{DataValue, QValue};
 use crate::security::CancellationToken;
@@ -37,10 +36,10 @@ pub trait QContext {
     fn script_start_time_stamp(&self) -> i64;
 
     /// 处理 attachment 对应的接口职责。
-    /// 无显式参数；返回：`&Attachments`。
+    /// 无显式参数；返回附件 Map 的共享借用。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/QContext.java`，方法 `attachment`。
     /// Java `attachment()`.
-    fn attachment(&self) -> &Attachments;
+    fn attachment(&self) -> Ref<'_, Attachments>;
 
     /// 处理 registry 对应的接口职责。
     /// 无显式参数；返回：`&Rc<NativeRegistry>`。
@@ -119,10 +118,10 @@ pub trait QContext {
     fn get_function(&self, function_name: &str) -> Option<Rc<dyn CustomFunction>>;
 
     /// 处理 function table 对应的接口职责。
-    /// 无显式参数；返回：`HashMap<String, Rc<dyn CustomFunction>>`。
+    /// 无显式参数；返回当前作用域函数表的共享句柄。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/QContext.java`，方法 `functionTable`。
-    /// Java `getFunctionTable` (current scope's own table).
-    fn function_table(&self) -> HashMap<String, Rc<dyn CustomFunction>>;
+    /// Java `getFunctionTable` (current scope's own mutable table).
+    fn function_table(&self) -> SharedFunctionTable;
 
     /// 处理 push 对应的接口职责。
     /// 参数：`value`；返回：无。

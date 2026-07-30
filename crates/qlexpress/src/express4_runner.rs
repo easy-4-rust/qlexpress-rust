@@ -642,7 +642,7 @@ impl Express4Runner {
         let global_scope = QvmGlobalScope::with_shared_context(
             context,
             Rc::clone(&self.user_define_functions),
-            ql_options.attachments().clone(),
+            ql_options.shared_attachments(),
             ql_options.is_pollute_user_context(),
         );
         let traces = if self.init_options.is_trace_expression()
@@ -655,7 +655,7 @@ impl Express4Runner {
         };
         let runtime = Rc::new(QvmRuntime::new(
             traces,
-            ql_options.attachments().clone(),
+            ql_options.shared_attachments(),
             Rc::clone(self.reflect_loader.registry()),
             current_time_millis(),
         ));
@@ -682,7 +682,7 @@ impl Express4Runner {
         let global_scope = QvmGlobalScope::with_shared_context(
             context,
             Rc::clone(&self.user_define_functions),
-            ql_options.attachments().clone(),
+            ql_options.shared_attachments(),
             ql_options.is_pollute_user_context(),
         );
         let traces = if self.init_options.is_trace_expression()
@@ -695,7 +695,7 @@ impl Express4Runner {
         };
         let runtime = Rc::new(QvmRuntime::new_sandboxed(
             traces,
-            ql_options.attachments().clone(),
+            ql_options.shared_attachments(),
             Rc::clone(self.reflect_loader.registry()),
             current_time_millis(),
             sandbox_profile.limits.clone(),
@@ -974,14 +974,14 @@ impl Express4Runner {
         };
         let runtime = Rc::new(QvmRuntime::new(
             traces.clone(),
-            ql_options.attachments().clone(),
+            ql_options.shared_attachments(),
             Rc::clone(self.reflect_loader.registry()),
             current_time_millis(),
         ));
         let global_scope = QvmGlobalScope::with_shared_context(
             context,
             Rc::clone(&self.user_define_functions),
-            ql_options.attachments().clone(),
+            ql_options.shared_attachments(),
             ql_options.is_pollute_user_context(),
         );
         let mut root_context =
@@ -1312,12 +1312,12 @@ impl Express4Runner {
         let global_scope = QvmGlobalScope::with_shared_context(
             context,
             Rc::clone(&self.user_define_functions),
-            ql_options.attachments().clone(),
+            ql_options.shared_attachments(),
             ql_options.is_pollute_user_context(),
         );
         let runtime = Rc::new(QvmRuntime::new(
             QTraces::empty(),
-            ql_options.attachments().clone(),
+            ql_options.shared_attachments(),
             Rc::clone(self.reflect_loader.registry()),
             current_time_millis(),
         ));

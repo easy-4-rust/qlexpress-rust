@@ -107,7 +107,9 @@ impl QLambdaInner {
             )
         };
         self.call_inner(&mut new_runtime)?;
-        Ok(new_runtime.function_table())
+        let function_table = new_runtime.function_table();
+        let snapshot = function_table.borrow().clone();
+        Ok(snapshot)
     }
 
     /// 取指-执行循环。对应 Java 方法 `callInner`(见 [`run_instructions`])。

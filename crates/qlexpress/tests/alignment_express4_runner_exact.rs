@@ -17,7 +17,7 @@ use qlexpress::check_options::CheckOptions;
 use qlexpress::default_class_supplier::DefaultClassSupplier;
 use qlexpress::exception::{error_codes, QLException};
 use qlexpress::init_options::InitOptions;
-use qlexpress::ql_options::{Attachments, QLOptions};
+use qlexpress::ql_options::{Attachments, QLOptions, SharedAttachments};
 use qlexpress::runtime::class_ref::ClassRef;
 use qlexpress::runtime::context::{DynamicVariableContext, EmptyContext, ExpressContext};
 use qlexpress::runtime::data::index_map::IndexMap;
@@ -139,6 +139,87 @@ fn existing_lambda_observes_later_runner_function_registration() {
             .value(),
         DataValue::Int(42)
     );
+}
+
+/// SOURCE_PARITY: Java `QLOptions.Builder#attachments(Map)`、`QvmRuntime`
+/// 与 `QvmGlobalScope` 保存同一个 Map 引用；Lambda 创建后替换附件条目时，
+/// 自定义函数和外部变量上下文都必须读取到最新值。
+#[test]
+fn existing_lambda_observes_later_attachment_map_mutation() {
+    let runner = Express4Runner::new();
+    assert!(runner.add_function(
+        "attachmentValue",
+        |context: &mut dyn QContext, _parameters: &Parameters| {
+            Ok(context
+                .attachment()
+                .get("direct")
+                .cloned()
+                .unwrap_or(DataValue::Null))
+        },
+    ));
+    let shared_attachments: SharedAttachments =
+        Rc::new(std::cell::RefCell::new(HashMap::new()));
+    let options = QLOptions::builder()
+        .shared_attachments(Rc::clone(&shared_attachments))
+        .build();
+    let lambda = runner
+        .parse_to_lambda(
+            "attachmentValue() + ${/box/value}",
+            Rc::new(AttachmentPathContext),
+            &options,
+        )
+        .expect("compile lambda before mutating attachments");
+
+    shared_attachments
+        .borrow_mut()
+        .insert("direct".to_string(), DataValue::Int(40));
+    shared_attachments.borrow_mut().insert(
+        "box".to_string(),
+        DataValue::Map(Rc::new(std::cell::RefCell::new(IndexMap::from_entries(
+            vec![(DataValue::Str("value".to_string()), DataValue::Int(2))],
+        )))),
+    );
+
+    assert_integer(
+        &lambda
+            .q_lambda()
+            .call(&[])
+            .expect("existing lambda must observe attachment mutation")
+            .value(),
+        42,
+    );
+}
+
+/// SOURCE_PARITY: Java `QScope#getFunctionTable()` 返回当前作用域的实际可变
+/// Map；宿主函数通过 `QContext` 动态登记函数后，同一次脚本执行的后续调用
+/// 必须立即可见。
+#[test]
+fn custom_function_can_mutate_live_scope_function_table() {
+    let runner = Express4Runner::new();
+    assert!(runner.add_function(
+        "install",
+        |context: &mut dyn QContext, _parameters: &Parameters| {
+            let late_function: Rc<dyn CustomFunction> = Rc::new(
+                |_context: &mut dyn QContext, _parameters: &Parameters| {
+                    Ok(DataValue::Int(42))
+                },
+            );
+            let function_table = context.function_table();
+            function_table
+                .borrow_mut()
+                .insert("late".to_string(), late_function);
+            Ok(DataValue::Null)
+        },
+    ));
+
+    let result = runner
+        .execute(
+            "install(); late()",
+            HashMap::new(),
+            &QLOptions::default(),
+        )
+        .expect("newly installed function must be visible in the same execution");
+    assert_integer(result.result(), 42);
 }
 
 /// SOURCE_PARITY: Java `parseToLambda(LoadedParseCache, ...)` 与

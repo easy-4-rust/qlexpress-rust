@@ -16,6 +16,6 @@ pub mod q_scope;
 pub mod q_scope_kind;
 pub mod qvm_block_scope;
 
-pub use q_scope::{QScope, ScopeRef, SymbolTable};
+pub use q_scope::{FunctionTable, QScope, ScopeRef, SharedFunctionTable, SymbolTable};
 pub use q_scope_kind::QScopeKind;
 pub use qvm_block_scope::QvmBlockScope;

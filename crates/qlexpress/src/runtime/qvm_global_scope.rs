@@ -5,12 +5,13 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::exception::QLException;
-use crate::ql_options::Attachments;
+use crate::ql_options::{Attachments, SharedAttachments};
 use crate::runtime::context::{EmptyContext, ExpressContext, MapExpressContext};
 use crate::runtime::data::index_map::IndexMap;
 use crate::runtime::data::AssignableDataValue;
 use crate::runtime::function::CustomFunction;
 use crate::runtime::left_value::LeftValue;
+use crate::runtime::scope::SharedFunctionTable;
 use crate::runtime::value::{DataValue, QValue};
 
 /// 根作用域:持有外部变量/函数与脚本全局级新建的变量。
@@ -31,7 +32,7 @@ pub struct QvmGlobalScope {
     /// 创建的 Lambda 能观察后续宿主函数注册。
     external_functions: Rc<RefCell<HashMap<String, Rc<dyn CustomFunction>>>>,
     /// 用户附加数据(Java `qlOptions.getAttachments()`,每次查找时透传给上下文)。
-    attachments: Attachments,
+    attachments: SharedAttachments,
     /// Java `qlOptions.isPolluteUserContext()`,每次查找时判定。
     pollute_user_context: bool,
 }
@@ -65,7 +66,7 @@ impl QvmGlobalScope {
         Self::with_shared_context(
             external_variable,
             Rc::new(RefCell::new(external_functions)),
-            attachments,
+            Rc::new(RefCell::new(attachments)),
             pollute_user_context,
         )
     }
@@ -84,7 +85,7 @@ impl QvmGlobalScope {
     pub fn with_shared_context(
         external_variable: Rc<dyn ExpressContext>,
         external_functions: Rc<RefCell<HashMap<String, Rc<dyn CustomFunction>>>>,
-        attachments: Attachments,
+        attachments: SharedAttachments,
         pollute_user_context: bool,
     ) -> Self {
         QvmGlobalScope {
@@ -119,7 +120,9 @@ impl QvmGlobalScope {
             return Ok(Rc::clone(new_variable));
         }
         // Java: Value externalValue = externalVariable.get(qlOptions.getAttachments(), varName);
-        let external_value = self.external_variable.get(&self.attachments, var_name)?;
+        let attachments = self.attachments.borrow();
+        let external_value = self.external_variable.get(&attachments, var_name)?;
+        drop(attachments);
         if let Some(external) = external_value {
             if self.pollute_user_context {
                 // Java 直接返回外部 Value:左值(MapItemValue)写穿宿主 Map;
@@ -170,10 +173,9 @@ impl QvmGlobalScope {
 
     /// 对应 Java 方法 `getFunctionTable`。
     ///
-    /// Rust 返回当前快照，避免把内部 `RefCell` 借用泄漏到调用方；单个函数
-    /// 查找仍直接读取共享表，因此后续注册立即可见。
-    pub fn function_table(&self) -> HashMap<String, Rc<dyn CustomFunction>> {
-        self.external_functions.borrow().clone()
+    /// Rust 返回共享句柄，保留 Java 返回实际可变函数表的写穿语义。
+    pub fn function_table(&self) -> SharedFunctionTable {
+        Rc::clone(&self.external_functions)
     }
 
     /// 脚本自建变量表(Java `newVariables`)。

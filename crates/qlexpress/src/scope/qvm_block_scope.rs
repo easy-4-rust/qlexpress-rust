@@ -2,17 +2,17 @@
 //! 职责:持有块级符号表与函数表。
 //! 本文件由 `scope/mod.rs` 拆分而来(SPEC §5.5 一类一文件),仅移动代码与补充中文注释,行为完全一致。
 
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::runtime::function::CustomFunction;
-use crate::runtime::scope::SymbolTable;
+use crate::runtime::scope::{SharedFunctionTable, SymbolTable};
 
 /// 块作用域数据。对应 Java: com.alibaba.qlexpress4.runtime.scope.QvmBlockScope
 /// Block scope data, mirroring Java `QvmBlockScope`.
 pub struct QvmBlockScope {
     symbol_table: SymbolTable,
-    function_table: HashMap<String, Rc<dyn CustomFunction>>,
+    function_table: SharedFunctionTable,
 }
 
 impl QvmBlockScope {
@@ -20,7 +20,7 @@ impl QvmBlockScope {
     pub fn new(symbol_table: SymbolTable) -> Self {
         QvmBlockScope {
             symbol_table,
-            function_table: HashMap::new(),
+            function_table: Rc::new(RefCell::new(HashMap::new())),
         }
     }
 
@@ -30,7 +30,7 @@ impl QvmBlockScope {
     }
 
     /// 获取函数表。对应 Java 方法 `getFunctionTable`。
-    pub fn function_table(&self) -> &HashMap<String, Rc<dyn CustomFunction>> {
+    pub fn function_table(&self) -> &SharedFunctionTable {
         &self.function_table
     }
 
@@ -38,11 +38,5 @@ impl QvmBlockScope {
     /// define_local_symbol 等变更路径使用。
     pub(crate) fn symbol_table_mut(&mut self) -> &mut SymbolTable {
         &mut self.symbol_table
-    }
-
-    /// 可变函数表,供 `QScope::define_function` 使用。
-    /// 对应 Java: com.alibaba.qlexpress4.runtime.scope.QvmBlockScope#functionTableMut。
-    pub(crate) fn function_table_mut(&mut self) -> &mut HashMap<String, Rc<dyn CustomFunction>> {
-        &mut self.function_table
     }
 }

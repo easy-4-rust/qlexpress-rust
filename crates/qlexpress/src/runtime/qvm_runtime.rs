@@ -6,12 +6,13 @@
 //! `com.alibaba.qlexpress4.runtime.QvmRuntime` (context) and
 //! `QLambdaInner.callInner` (the instruction loop).
 
+use std::cell::Ref;
 use std::rc::Rc;
 use std::time::Instant;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::exception::QLException;
-use crate::ql_options::{Attachments, QLOptions};
+use crate::ql_options::{Attachments, QLOptions, SharedAttachments};
 use crate::runtime::delegate_qcontext::DelegateQContext;
 use crate::runtime::execution_budget::ExecutionBudget;
 use crate::runtime::instruction::Instruction;
@@ -47,7 +48,7 @@ pub fn current_time_millis() -> i64 {
 /// 对应 Java: com.alibaba.qlexpress4.runtime.QvmRuntime。
 pub struct QvmRuntime {
     traces: QTraces,
-    attachments: Attachments,
+    attachments: SharedAttachments,
     registry: Rc<NativeRegistry>,
     start_time: i64,
     execution_budget: Option<ExecutionBudget>,
@@ -62,7 +63,7 @@ impl QvmRuntime {
     /// 对应 Java: com.alibaba.qlexpress4.runtime.QvmRuntime#new。
     pub fn new(
         traces: QTraces,
-        attachments: Attachments,
+        attachments: SharedAttachments,
         registry: Rc<NativeRegistry>,
         start_time: i64,
     ) -> Self {
@@ -79,7 +80,7 @@ impl QvmRuntime {
     /// 创建带有限资源预算和取消令牌的安全运行时。
     pub fn new_sandboxed(
         traces: QTraces,
-        attachments: Attachments,
+        attachments: SharedAttachments,
         registry: Rc<NativeRegistry>,
         start_time: i64,
         limits: ResourceLimits,
@@ -144,7 +145,7 @@ impl QvmRuntime {
     pub fn for_test(registry: Rc<NativeRegistry>) -> Self {
         Self::new(
             QTraces::empty(),
-            Attachments::default(),
+            Rc::new(std::cell::RefCell::new(Attachments::default())),
             registry,
             current_time_millis(),
         )
@@ -199,8 +200,8 @@ impl QRuntime for QvmRuntime {
         self.start_time
     }
 
-    fn attachment(&self) -> &Attachments {
-        &self.attachments
+    fn attachment(&self) -> Ref<'_, Attachments> {
+        self.attachments.borrow()
     }
 
     fn registry(&self) -> &Rc<NativeRegistry> {

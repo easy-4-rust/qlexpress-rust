@@ -28,6 +28,15 @@ pub type ScopeRef = Rc<RefCell<QScope>>;
 /// Symbol table of a scope (Java `Map<String, Value> symbolTable`).
 pub type SymbolTable = HashMap<String, Rc<RefCell<dyn LeftValue>>>;
 
+/// 当前作用域自身的函数表。
+pub type FunctionTable = HashMap<String, Rc<dyn CustomFunction>>;
+
+/// Java `Map<String, CustomFunction>` 的共享可变引用。
+///
+/// `QScope#getFunctionTable()` 返回实际函数表而非副本；Rust 使用该句柄保留
+/// 宿主函数通过运行时上下文动态登记函数的写穿语义。
+pub type SharedFunctionTable = Rc<RefCell<FunctionTable>>;
+
 /// 作用域链上的一个节点。对应 Java: com.alibaba.qlexpress4.runtime.scope.QScope
 /// (Java 为接口体系,操作数栈 `FixedSizeStack` 在作用域与其 `newScope()` 子作用域间共享;
 /// Rust 以 `Rc<RefCell<FixedSizeStack>>` 复现该共享语义)
@@ -178,7 +187,8 @@ impl QScope {
             QScopeKind::Global(global) => global.define_function(function_name),
             QScopeKind::Block(block) => {
                 block
-                    .function_table_mut()
+                    .function_table()
+                    .borrow_mut()
                     .insert(function_name.to_string(), function);
             }
         }
@@ -194,7 +204,10 @@ impl QScope {
             let borrowed = this.borrow();
             let local = match &borrowed.kind {
                 QScopeKind::Global(global) => global.get_function(function_name),
-                QScopeKind::Block(block) => block.function_table().get(function_name).cloned(),
+                QScopeKind::Block(block) => {
+                    let function_table = block.function_table().borrow();
+                    function_table.get(function_name).cloned()
+                }
             };
             (local, borrowed.parent.as_ref().map(Rc::clone))
         };
@@ -205,17 +218,17 @@ impl QScope {
         }
     }
 
-    /// 汇总当前作用域链可见的函数定义。
-    /// 参数：`this`；返回：`HashMap<String, Rc<dyn CustomFunction>>`。
+    /// 返回当前作用域自身的函数表共享句柄。
+    /// 参数：`this`；返回：[`SharedFunctionTable`]。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/annotation/QLFunction.java`，方法 `functionTable`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `getFunctionTable`: the current scope's own table (not merged
-    /// with parents).
+    /// with parents), returned by reference rather than copied.
     /// 对应 Java: com.alibaba.qlexpress4.runtime.scope.QScope#functionTable。
-    pub fn function_table(this: &ScopeRef) -> HashMap<String, Rc<dyn CustomFunction>> {
+    pub fn function_table(this: &ScopeRef) -> SharedFunctionTable {
         let borrowed = this.borrow();
         match &borrowed.kind {
             QScopeKind::Global(global) => global.function_table(),
-            QScopeKind::Block(block) => block.function_table().clone(),
+            QScopeKind::Block(block) => Rc::clone(block.function_table()),
         }
     }
 

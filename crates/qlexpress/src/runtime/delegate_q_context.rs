@@ -2,8 +2,7 @@
 //! operations to a current scope, mirroring Java
 //! `com.alibaba.qlexpress4.runtime.DelegateQContext`.
 
-use std::cell::RefCell;
-use std::collections::HashMap;
+use std::cell::{Ref, RefCell};
 use std::rc::Rc;
 
 use crate::exception::QLException;
@@ -16,7 +15,7 @@ use crate::runtime::parameters::Parameters;
 use crate::runtime::q_runtime::QRuntime;
 use crate::runtime::qcontext::QContext;
 use crate::runtime::qvm_runtime::QvmRuntime;
-use crate::runtime::scope::{QScope, ScopeRef};
+use crate::runtime::scope::{QScope, ScopeRef, SharedFunctionTable};
 use crate::runtime::trace::QTraces;
 use crate::runtime::value::{DataValue, QValue};
 
@@ -59,7 +58,7 @@ impl QContext for DelegateQContext {
         self.q_runtime.script_start_time_stamp()
     }
 
-    fn attachment(&self) -> &Attachments {
+    fn attachment(&self) -> Ref<'_, Attachments> {
         self.q_runtime.attachment()
     }
 
@@ -109,7 +108,7 @@ impl QContext for DelegateQContext {
         QScope::get_function(&self.q_scope, function_name)
     }
 
-    fn function_table(&self) -> HashMap<String, Rc<dyn CustomFunction>> {
+    fn function_table(&self) -> SharedFunctionTable {
         QScope::function_table(&self.q_scope)
     }
 
