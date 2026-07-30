@@ -86,7 +86,6 @@ impl NativeObject for SensitiveHost {
 }
 
 /// 对应 Java: 无（Rust 原生适配）。
-
 pub fn run(cases: usize) -> Result<(), String> {
     if cases == 0 {
         return Err("fuzz cases must be greater than zero".to_string());

@@ -1,4 +1,4 @@
-//! 对齐 Java `com.alibaba.qlexpress4.runtime.MemberResolverTest#resolveStreamTest`。
+//! 对齐 Java `com.alibaba.qlexpress4.runtime.MemberResolverTest`。
 
 use std::collections::HashMap;
 

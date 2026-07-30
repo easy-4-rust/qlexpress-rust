@@ -40,8 +40,9 @@ pub const CHAR: &str = "char";
 /// - `Double` ↔ Rust `f64`（`DataValue::Double`）
 /// - `Boolean` ↔ Rust `bool`（`DataValue::Bool`）
 /// - `Char` ↔ Rust `char`（`DataValue::Char`）
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+///
 /// 对应 Java: com.alibaba.qlexpress4.aparser.BuiltInTypesSet。
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum BuiltInType {
     /// Java `Byte` 类型或语义类别。
     Byte,

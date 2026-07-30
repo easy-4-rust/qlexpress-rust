@@ -15,9 +15,10 @@ use super::serializable_trace_point::SerializableTracePoint;
 /// - `scriptHash`(String):脚本 SHA-256(十六进制);
 /// - `main`(SerializableLambdaDefinition):主 Lambda 定义;
 /// - `tracePoints`(List&lt;SerializableTracePoint&gt;):表达式 trace 点(可选)。
+///
+/// 对应 Java: com.alibaba.qlexpress4.api.parsecache.SerializableParseCache。
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-/// 对应 Java: com.alibaba.qlexpress4.api.parsecache.SerializableParseCache。
 pub struct SerializableParseCache {
     /// 模型版本。对应 Java 字段 `modelVersion`。
     #[serde(default)]

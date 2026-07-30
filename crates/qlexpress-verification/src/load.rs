@@ -25,7 +25,6 @@ struct WorkerResult {
 }
 
 /// 对应 Java: 无（Rust 原生适配）。
-
 pub fn run(duration: Duration, threads: usize) -> Result<(), String> {
     if duration.is_zero() || threads == 0 {
         return Err("duration and threads must be greater than zero".to_string());

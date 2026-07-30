@@ -128,9 +128,9 @@ flowchart LR
 | 口径 | 覆盖/总数 | 覆盖率 | 结论 |
 |---|---:|---:|---|
 | `crates/qlexpress/src/**` 核心行 | 21,667 / 24,822 | **87.29%** | 高于 Java 行基线 |
-| `crates/qlexpress/src/**` 核心分支 | 2,347 / 3,118 | **75.27%** | nightly 显式分支口径 |
+| `crates/qlexpress/src/**` 核心分支 | 2,346 / 3,118 | **75.24%** | nightly 显式分支口径 |
 | workspace 行 | 21,948 / 25,843 | **84.93%** | 单独披露，不作为核心对标 |
-| workspace 分支 | 2,379 / 3,164 | **75.19%** | nightly 显式分支口径 |
+| workspace 分支 | 2,378 / 3,164 | **75.16%** | nightly 显式分支口径 |
 | workspace function | 2,642 / 3,083 | **85.70%** | 持续提升 |
 | workspace region | 33,288 / 39,660 | **83.93%** | 持续提升 |
 

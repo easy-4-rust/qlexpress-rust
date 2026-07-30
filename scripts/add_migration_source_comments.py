@@ -13,7 +13,7 @@ from pathlib import Path
 
 
 PUBLIC_ITEM = re.compile(
-    r"^(?P<indent>\s*)pub(?:\([^)]*\))?\s+(?:async\s+)?"
+    r"^(?P<indent>[ \t]*)pub(?:\([^)]*\))?\s+(?:async\s+)?"
     r"(?:unsafe\s+)?(?P<kind>fn|struct|enum|trait|union)\s+"
     r"(?P<name>[A-Za-z_][A-Za-z0-9_]*)",
     re.MULTILINE,
@@ -97,6 +97,7 @@ def update_file(path: Path, classes: dict[str, list[str]], check: bool) -> int:
         insertions.append(
             (
                 match.start(),
+                f"{match.group('indent')}///\n"
                 f"{match.group('indent')}/// 对应 Java: {source}。\n",
             )
         )

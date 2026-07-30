@@ -38,8 +38,9 @@ mod native_type;
 /// - Generic structs / generic methods are rejected with a clear error.
 /// - Rust derive 宏看不到独立的 `impl` 块，因此不会自动注册方法或构造器；
 ///   宿主必须通过 `NativeRegistry` 显式注册这些成员。
-#[proc_macro_derive(QLExpressType, attributes(qlexpress))]
+///
 /// 对应 Java: 无（Rust 原生适配）。
+#[proc_macro_derive(QLExpressType, attributes(qlexpress))]
 pub fn derive_ql_express_type(input: TokenStream) -> TokenStream {
     let ast = syn::parse_macro_input!(input as syn::DeriveInput);
     match expand(&ast) {

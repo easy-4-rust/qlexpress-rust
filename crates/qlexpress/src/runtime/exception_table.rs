@@ -21,8 +21,9 @@ use crate::runtime::value::DataValue;
 /// - `handler_pc`: jump target on match.
 /// - `catch_type`: type-name filter (Java FQN, e.g. `java.lang.Exception`);
 ///   `None` matches any exception (`finally`-style handlers).
-#[derive(Clone, Debug)]
+///
 /// 对应 Java: com.alibaba.qlexpress4.runtime.ExceptionTable。
+#[derive(Clone, Debug)]
 pub struct ExceptionTableEntry {
     /// 异常处理区间的起始指令位置（包含）。
     pub start_pc: usize,

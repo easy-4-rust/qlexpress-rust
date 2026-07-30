@@ -10,7 +10,6 @@ use qlexpress::ql_options::{QLOptions, QLOptionsBuilder};
 mod alignment_util;
 
 /// 对应 Java: 无（Rust 原生适配）。
-
 pub fn run(java_repo: &Path) -> Result<(), String> {
     let root = java_repo.join("src/test/resources/testsuite/independent");
     if !root.is_dir() {

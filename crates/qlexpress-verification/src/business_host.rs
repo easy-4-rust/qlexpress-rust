@@ -20,7 +20,6 @@ struct Order {
 }
 
 /// 对应 Java: 无（Rust 原生适配）。
-
 pub fn run() -> Result<(), String> {
     let mut runner = Express4Runner::with_init_options(
         InitOptions::builder()

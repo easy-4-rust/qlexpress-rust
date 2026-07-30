@@ -72,19 +72,16 @@ pub trait HasChildren {
 // ---------------------------------------------------------------------------
 
 /// 对应 Java: com.alibaba.qlexpress4.aparser.RuleContext#n。
-
 pub(crate) fn n(node: &Node) -> ChildRef<'_> {
     ChildRef::Node(node)
 }
 
 /// 对应 Java: com.alibaba.qlexpress4.aparser.RuleContext#t。
-
 pub(crate) fn t(term: &TerminalNode) -> ChildRef<'_> {
     ChildRef::Term(term)
 }
 
 /// 对应 Java: com.alibaba.qlexpress4.aparser.RuleContext#pushOpt。
-
 pub(crate) fn push_opt<'a>(out: &mut Vec<ChildRef<'a>>, opt: &'a Option<Box<Node>>) {
     if let Some(node) = opt {
         out.push(n(node));
@@ -92,7 +89,6 @@ pub(crate) fn push_opt<'a>(out: &mut Vec<ChildRef<'a>>, opt: &'a Option<Box<Node
 }
 
 /// 对应 Java: com.alibaba.qlexpress4.aparser.RuleContext#pushOptTerm。
-
 pub(crate) fn push_opt_term<'a>(out: &mut Vec<ChildRef<'a>>, opt: &'a Option<TerminalNode>) {
     if let Some(term) = opt {
         out.push(t(term));
@@ -100,7 +96,6 @@ pub(crate) fn push_opt_term<'a>(out: &mut Vec<ChildRef<'a>>, opt: &'a Option<Ter
 }
 
 /// 对应 Java: com.alibaba.qlexpress4.aparser.RuleContext#pushAll。
-
 pub(crate) fn push_all<'a>(out: &mut Vec<ChildRef<'a>>, list: &'a [Node]) {
     for node in list {
         out.push(n(node));
