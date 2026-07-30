@@ -71,7 +71,7 @@ pub use left_value::LeftValue;
 pub use match_priority::MatchPriority;
 pub use param::Param;
 pub use parameters::Parameters;
-pub use q_result::QResult;
+pub use q_result::{QResult, ResultType};
 pub use q_runtime::QRuntime;
 pub use qcontext::QContext;
 pub use qlambda::QLambda;

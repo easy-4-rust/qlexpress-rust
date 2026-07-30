@@ -332,12 +332,32 @@ impl Token {
         self.token_type
     }
 
+    /// 返回当前 Token 的词法类别编号。
+    ///
+    /// 对应 Java：`Token#getType()`。
+    ///
+    /// # 返回值
+    /// 返回词法类别常量；EOF 与 EPSILON 使用负数哨兵。
+    pub fn get_type(&self) -> i32 {
+        self.token_type
+    }
+
     /// 更新 token type。
     /// 参数：`token_type`；返回：无。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/Token.java`，方法 `setTokenType`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `setType` — the parser may re-tag tokens (e.g. OPID aliases).
     /// 对应 Java: com.alibaba.qlexpress4.aparser.Token#setTokenType。
     pub fn set_token_type(&mut self, token_type: i32) {
+        self.token_type = token_type;
+    }
+
+    /// 更新当前 Token 的词法类别编号。
+    ///
+    /// 对应 Java：`Token#setType(int)`。
+    ///
+    /// # 参数
+    /// - `token_type`：新的词法类别常量。
+    pub fn set_type(&mut self, token_type: i32) {
         self.token_type = token_type;
     }
 
@@ -463,6 +483,7 @@ mod tests {
     fn token_accessors_and_display() {
         let mut tok = Token::new(ID as i32, "abc", 3, 5, 2, 1);
         assert_eq!(tok.token_type(), ID as i32);
+        assert_eq!(tok.get_type(), ID as i32);
         assert_eq!(tok.text(), "abc");
         assert_eq!(tok.start_index(), 3);
         assert_eq!(tok.stop_index(), 5);
@@ -471,5 +492,7 @@ mod tests {
         assert_eq!(tok.to_string(), "abc");
         tok.set_token_type(OPID as i32);
         assert_eq!(tok.token_type(), OPID as i32);
+        tok.set_type(ID as i32);
+        assert_eq!(tok.get_type(), ID as i32);
     }
 }

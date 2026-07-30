@@ -41,6 +41,16 @@ impl UserDefineException {
         self.exception_type
     }
 
+    /// 返回脚本声明的用户异常类型。
+    ///
+    /// 对应 Java：`UserDefineException#getType()`。
+    ///
+    /// # 返回值
+    /// 返回构造异常时指定的 [`ExceptionType`]。
+    pub fn get_type(&self) -> ExceptionType {
+        self.exception_type
+    }
+
     /// 返回用户异常消息。
     /// 对应 Java: `UserDefineException#getMessage`。
     pub fn message(&self) -> &str {
@@ -55,3 +65,22 @@ impl fmt::Display for UserDefineException {
 }
 
 impl std::error::Error for UserDefineException {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// `SOURCE_PARITY`：Java 单参数构造器默认使用 `BIZ_EXCEPTION`，显式
+    /// 构造器与 `getType()` 保留指定类别。
+    #[test]
+    fn get_type_preserves_java_constructor_contract() {
+        assert_eq!(
+            UserDefineException::new("business").get_type(),
+            ExceptionType::BizException
+        );
+        assert_eq!(
+            UserDefineException::with_type(ExceptionType::InvalidArgument, "argument").get_type(),
+            ExceptionType::InvalidArgument
+        );
+    }
+}
