@@ -9,12 +9,12 @@ use std::time::Instant;
 use crate::{WorkerLimits, WorkerRequest, WorkerResponse};
 
 /// 启动一次性隔离进程并在超时后强制回收。
-pub struct SandboxWorker {
+pub struct ProcessWorker {
     program: PathBuf,
     limits: WorkerLimits,
 }
 
-impl SandboxWorker {
+impl ProcessWorker {
     /// 使用指定 Worker 二进制和限制创建监督器。
     pub fn new(program: impl Into<PathBuf>, limits: WorkerLimits) -> Self {
         Self {
@@ -46,7 +46,7 @@ impl SandboxWorker {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()
-            .map_err(|error| format!("failed to spawn sandbox worker: {error}"))?;
+            .map_err(|error| format!("failed to spawn qlexpress process worker: {error}"))?;
 
         let request_bytes =
             serde_json::to_vec(request).map_err(|error| format!("invalid request: {error}"))?;
@@ -85,7 +85,7 @@ impl SandboxWorker {
                 let _ = stderr_reader.join();
                 return Ok(WorkerResponse::failure(
                     "WORKER_WALL_TIMEOUT",
-                    "sandbox worker exceeded wall-clock timeout and was killed",
+                    "qlexpress process worker exceeded wall-clock timeout and was killed",
                 ));
             }
             thread::sleep(std::time::Duration::from_millis(2));

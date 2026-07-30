@@ -1,10 +1,10 @@
-//! 一次性 QlExpress Rust 安全 Worker。
+//! 一次性 QlExpress Rust 隔离进程执行器。
 
 use std::collections::HashMap;
 use std::io::Read;
 
 use qlexpress::{DataValue, Express4Runner, QLOptions, SandboxProfile};
-use qlexpress_sandbox_worker::{os_limits, WorkerRequest, WorkerResponse};
+use qlexpress_process::{os_limits, WorkerRequest, WorkerResponse};
 use serde_json::{Map, Number, Value};
 
 fn main() {

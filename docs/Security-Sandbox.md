@@ -87,15 +87,16 @@ clients, and check cancellation between blocking operations.
 The QVM cannot preempt synchronous Rust code that ignores this contract. It detects expiry after
 the call returns. Hostile inputs therefore require the worker boundary.
 
-## Isolated worker
+## Isolated process executor
 
-The unpublished `qlexpress-sandbox-worker` crate provides a one-request-per-process JSON worker and
-a `SandboxWorker` supervisor.
+The unpublished `qlexpress-process` crate provides a one-request-per-process JSON executor and a
+`ProcessWorker` supervisor. The name deliberately describes the process boundary rather than
+claiming to be a complete operating-system sandbox.
 
 ```mermaid
 sequenceDiagram
     participant Host
-    participant Supervisor as SandboxWorker
+    participant Supervisor as ProcessWorker
     participant Child as one-shot worker
     Host->>Supervisor: WorkerRequest
     Supervisor->>Child: spawn + OS limits + JSON stdin

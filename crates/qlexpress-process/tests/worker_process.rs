@@ -2,11 +2,11 @@
 
 use std::time::Duration;
 
-use qlexpress_sandbox_worker::{SandboxWorker, WorkerLimits, WorkerRequest};
+use qlexpress_process::{ProcessWorker, WorkerLimits, WorkerRequest};
 use serde_json::{Map, Value};
 
 fn worker_binary() -> &'static str {
-    env!("CARGO_BIN_EXE_qlexpress-sandbox-worker")
+    env!("CARGO_BIN_EXE_qlexpress-process")
 }
 
 #[test]
@@ -19,7 +19,7 @@ fn executes_in_fresh_restricted_process() {
         tenant_id: "tenant-a".into(),
         resource_limits: None,
     };
-    let response = SandboxWorker::new(worker_binary(), WorkerLimits::default())
+    let response = ProcessWorker::new(worker_binary(), WorkerLimits::default())
         .execute(&request)
         .unwrap();
     assert!(response.ok, "{response:?}");
@@ -38,7 +38,7 @@ fn supervisor_kills_worker_at_wall_clock_deadline() {
         wall_timeout: Duration::from_millis(1),
         ..WorkerLimits::default()
     };
-    let response = SandboxWorker::new(worker_binary(), limits)
+    let response = ProcessWorker::new(worker_binary(), limits)
         .execute(&request)
         .unwrap();
     assert!(!response.ok);

@@ -4,7 +4,7 @@ members = [
     "crates/qlexpress",
     "crates/qlexpress-derive",
     "crates/qlexpress-verification",
-    "crates/qlexpress-sandbox-worker",
+    "crates/qlexpress-process",
 ]
 
 [workspace.package]

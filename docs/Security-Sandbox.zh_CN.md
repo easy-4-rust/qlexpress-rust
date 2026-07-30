@@ -83,15 +83,15 @@ let result = runner.execute_checked(
 QVM 无法抢占忽略该约定的同步 Rust 代码，只能在函数返回后发现超时。敌对输入必须经过独立
 Worker。
 
-## 独立 Worker
+## 隔离进程执行器
 
-不发布到 crates.io 的 `qlexpress-sandbox-worker` 提供每进程单请求 JSON Worker 和
-`SandboxWorker` 父进程监督器。
+不发布到 crates.io 的 `qlexpress-process` 提供每进程单请求 JSON 执行器和
+`ProcessWorker` 父进程监督器。名称只描述进程边界，不宣称它是完整的操作系统沙箱。
 
 ```mermaid
 sequenceDiagram
     participant Host as 业务宿主
-    participant Supervisor as SandboxWorker
+    participant Supervisor as ProcessWorker
     participant Child as 一次性 Worker
     Host->>Supervisor: WorkerRequest
     Supervisor->>Child: 启动 + OS 限制 + JSON stdin
