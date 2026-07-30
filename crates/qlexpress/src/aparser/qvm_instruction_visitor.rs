@@ -18,6 +18,7 @@ use super::import_manager::ImportManager;
 use super::interpolation_mode::InterpolationMode;
 use super::macro_define::MacroDefine;
 use super::operator_factory::OperatorFactory;
+use super::qlexer::java_digit_value;
 use super::qlparser_base_visitor::Visitor;
 use super::syntax_tree_factory::{
     BlockExprContext, BlockStatementsContext, BreakContinueStatementContext, CastExprContext,
@@ -872,7 +873,7 @@ fn default_value_for_target(target: Option<TargetType>) -> DataValue {
         Some(TargetType::Float) | Some(TargetType::Double) => DataValue::Double(0.0),
         Some(TargetType::BigInteger) => DataValue::big_int(0),
         Some(TargetType::BigDecimal) => DataValue::BigDec("0".to_string()),
-        Some(TargetType::Character) => DataValue::Char('\0'),
+        Some(TargetType::Character) => DataValue::Char(0),
         Some(TargetType::Any) => DataValue::NULL_VALUE,
     }
 }
@@ -3340,42 +3341,59 @@ fn parse_base_integer(int_text: &str) -> Option<BigInt> {
     if int_text.is_empty() {
         return None;
     }
-    let prefix_len = int_text.len().min(2);
-    let radix_prefix = &int_text[..prefix_len];
-    match radix_prefix {
-        "0x" | "0X" => BigInt::parse_bytes(&int_text.as_bytes()[2..], 16),
-        "0b" | "0B" => BigInt::parse_bytes(&int_text.as_bytes()[2..], 2),
-        _ => {
-            if radix_prefix.starts_with('0') && int_text.len() > 1 {
-                // radix 8
-                BigInt::parse_bytes(int_text.as_bytes(), 8)
-            } else {
-                // radix 10
-                BigInt::parse_bytes(int_text.as_bytes(), 10)
-            }
-        }
-    }
+    let (digits, radix) = if int_text.starts_with("0x") || int_text.starts_with("0X") {
+        (&int_text[2..], 16)
+    } else if int_text.starts_with("0b") || int_text.starts_with("0B") {
+        (&int_text[2..], 2)
+    } else if int_text.starts_with('0') && int_text.chars().count() > 1 {
+        (int_text, 8)
+    } else {
+        (int_text, 10)
+    };
+    let normalized = normalize_java_digits(digits, radix)?;
+    BigInt::parse_bytes(normalized.as_bytes(), radix)
 }
 
 /// Java `parseFloating` (f/F/d/D suffixes, Double/BigDecimal by exact
 /// representability).
 fn parse_floating_literal(floating_text: &str) -> Option<DataValue> {
-    let (base_text, flag) = floating_text.split_at(floating_text.len().saturating_sub(1));
+    let last = floating_text.chars().next_back()?;
+    let (base_text, flag) = match last {
+        'f' | 'F' | 'd' | 'D' => (
+            &floating_text[..floating_text.len() - last.len_utf8()],
+            Some(last),
+        ),
+        _ => (floating_text, None),
+    };
+    let normalized = normalize_java_digits(base_text, 10)?;
     match flag {
-        "f" | "F" => base_text.parse::<f32>().ok().map(DataValue::Float),
-        "d" | "D" => base_text.parse::<f64>().ok().map(DataValue::Double),
+        Some('f' | 'F') => normalized.parse::<f32>().ok().map(DataValue::Float),
+        Some('d' | 'D') => normalized.parse::<f64>().ok().map(DataValue::Double),
         _ => {
             // Java: baseDecimal.compareTo(MAX_DOUBLE) <= 0 ?
             // maybePresentWithDouble : baseDecimal
-            match cmp_decimal(floating_text, MAX_DOUBLE_TEXT) {
+            match cmp_decimal(&normalized, MAX_DOUBLE_TEXT) {
                 Some(std::cmp::Ordering::Greater) => {
-                    Some(DataValue::BigDec(floating_text.to_string()))
+                    Some(DataValue::BigDec(normalized))
                 }
-                Some(_) => Some(maybe_present_with_double(floating_text)?),
+                Some(_) => Some(maybe_present_with_double(&normalized)?),
                 None => None,
             }
         }
     }
+}
+
+/// 把 Java `Character.digit(char, radix)` 可识别的字符规范化为 ASCII。
+fn normalize_java_digits(text: &str, radix: u32) -> Option<String> {
+    let mut normalized = String::with_capacity(text.len());
+    for character in text.chars() {
+        if let Some(value) = java_digit_value(character, radix) {
+            normalized.push(char::from_digit(value, radix)?);
+        } else {
+            normalized.push(character);
+        }
+    }
+    Some(normalized)
 }
 
 /// Java `maybePresentWithDouble`: present with a double when the double's
@@ -3571,4 +3589,27 @@ pub fn compile_script<'a>(
         init_options,
     );
     visitor.compile(tree)
+}
+
+#[cfg(test)]
+mod literal_parity_tests {
+    use super::*;
+
+    /// SOURCE_PARITY: Java `BigInteger(String,radix)` 通过
+    /// `Character.digit` 接受 Unicode 数字和全角十六进制字母。
+    #[test]
+    fn parses_java_unicode_integer_digits() {
+        assert_eq!(parse_integer_literal("١٢"), Some(DataValue::Int(12)));
+        assert_eq!(parse_integer_literal("0xＦＦ"), Some(DataValue::Int(255)));
+    }
+
+    /// SOURCE_PARITY: Java `BigDecimal(String)` 接受 Unicode 十进制数字，
+    /// 结果格式化为规范 ASCII 数字。
+    #[test]
+    fn parses_java_unicode_floating_digits() {
+        assert_eq!(
+            parse_floating_literal("١٢.٥"),
+            Some(DataValue::Double(12.5))
+        );
+    }
 }

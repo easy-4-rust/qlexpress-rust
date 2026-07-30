@@ -9,12 +9,9 @@
 //! table with longest-match first, custom operators (OPID), line/block
 //! comments, and NEWLINE tokens under `strictNewLines`.
 //!
-//! Deviations from Java, by necessity:
-//! * Java indexes the script by UTF-16 code unit; this scanner works on a
-//!   `Vec<char>`, so token `start_index`/`stop_index` are char offsets.
-//!   Line/col semantics are identical.
-//! * Java's `Character.isDigit`/`Character.digit` accept some non-ASCII
-//!   digits; here only ASCII digits are accepted in number literals.
+//! Java indexes the script by UTF-16 code unit. The scanner keeps Unicode
+//! scalar values for safe Rust slicing, but converts every token offset and
+//! column back to UTF-16 units, matching `String.charAt` positions.
 //!
 //! Scanner errors are reported with
 //! [`QLException::report_scanner_err`] (`SYNTAX_ERROR` code), mirroring
@@ -86,7 +83,7 @@ pub fn tokenize_with_limit(
     if lexer.token_limit_exceeded {
         return Err(QLException::report_scanner_err(
             script,
-            lexer.p as i32,
+            lexer.utf16_index(lexer.p),
             lexer.line,
             lexer.col + 1,
             "",
@@ -107,6 +104,9 @@ struct QLexer<'a> {
     script: &'a str,
     /// Script as chars; `p` indexes this vector (Java indexes the String).
     chars: Vec<char>,
+    /// `utf16_offsets[i]` 是 `chars[i]` 在 Java `String` 中的起始下标；
+    /// 末尾额外保存脚本 UTF-16 长度。
+    utf16_offsets: Vec<i32>,
     operator_manager: Option<&'a dyn ParserOperatorManager>,
     interpolation_mode: InterpolationMode,
     selector_start: Vec<char>,
@@ -130,9 +130,18 @@ impl<'a> QLexer<'a> {
         strict_new_lines: bool,
         max_tokens: Option<usize>,
     ) -> Self {
+        let chars: Vec<char> = script.chars().collect();
+        let mut utf16_offsets = Vec::with_capacity(chars.len() + 1);
+        let mut utf16_offset = 0_i32;
+        for character in &chars {
+            utf16_offsets.push(utf16_offset);
+            utf16_offset += character.len_utf16() as i32;
+        }
+        utf16_offsets.push(utf16_offset);
         QLexer {
             script,
-            chars: script.chars().collect(),
+            chars,
+            utf16_offsets,
             operator_manager,
             interpolation_mode,
             selector_start: selector_start.chars().collect(),
@@ -202,10 +211,10 @@ impl<'a> QLexer<'a> {
                 self.read_double_quote_string()?;
                 continue;
             }
-            if c.is_ascii_digit()
+            if is_java_digit(c)
                 || (c == '.'
                     && self.p + 1 < self.chars.len()
-                    && self.chars[self.p + 1].is_ascii_digit())
+                    && is_java_digit(self.chars[self.p + 1]))
             {
                 self.read_number();
                 continue;
@@ -357,8 +366,8 @@ impl<'a> QLexer<'a> {
         let tok = Token::new(
             token::QUOTE_STRING_LITERAL as i32,
             text,
-            start as i32,
-            self.p as i32 - 1,
+            self.utf16_index(start),
+            self.utf16_stop_index(self.p.saturating_sub(1)),
             start_line,
             start_col,
         );
@@ -617,14 +626,14 @@ impl<'a> QLexer<'a> {
 
     /// Java `readDigits`: decimal digits and `_` separators.
     fn read_digits(&mut self) {
-        while !self.eof() && (self.ch().is_ascii_digit() || self.ch() == '_') {
+        while !self.eof() && (is_java_digit(self.ch()) || self.ch() == '_') {
             self.advance();
         }
     }
 
     /// Java `readDigitsForRadix`: digits valid in `radix` plus `_`.
     fn read_digits_for_radix(&mut self, radix: u32) {
-        while !self.eof() && (self.ch().is_digit(radix) || self.ch() == '_') {
+        while !self.eof() && (java_digit_value(self.ch(), radix).is_some() || self.ch() == '_') {
             self.advance();
         }
     }
@@ -640,7 +649,7 @@ impl<'a> QLexer<'a> {
         if !self.eof() && (self.ch() == '+' || self.ch() == '-') {
             self.advance();
         }
-        if self.eof() || !self.ch().is_ascii_digit() {
+        if self.eof() || !is_java_digit(self.ch()) {
             self.p = save;
             return false;
         }
@@ -859,6 +868,17 @@ impl<'a> QLexer<'a> {
             '%' => token::MOD,
             _ => token::CATCH_ALL,
         };
+        if ty == token::CATCH_ALL && self.ch().len_utf16() == 2 {
+            // Java `charAt` 会把非 BMP 标量拆成两个 surrogate `char`，
+            // 因而产生两个 CATCH_ALL Token。Rust `String` 不能保存未配对
+            // surrogate，文本以 U+FFFD 表示，但 token 数、UTF-16 范围和列
+            // 与 Java 保持一致。
+            let start_utf16 = self.utf16_index(start);
+            self.add_utf16_unit_token(start_utf16, start_line, start_col);
+            self.add_utf16_unit_token(start_utf16 + 1, start_line, start_col + 1);
+            self.advance();
+            return;
+        }
         self.fixed(ty, 1, start, start_line, start_col);
     }
 
@@ -895,11 +915,41 @@ impl<'a> QLexer<'a> {
             self.token_limit_exceeded = true;
             return;
         }
+        let start_char_index = start_index.max(0) as usize;
+        let start_utf16_index = self.utf16_index(start_char_index);
+        let stop_utf16_index = if stop_index < 0 || stop_index < start_index {
+            start_utf16_index
+        } else {
+            self.utf16_stop_index(stop_index as usize)
+                .max(start_utf16_index)
+        };
         self.tokens.push(Token::new(
             ty,
             text,
-            start_index,
-            stop_index.max(start_index),
+            start_utf16_index,
+            stop_utf16_index,
+            line,
+            col,
+        ));
+    }
+
+    /// 添加一个 Java UTF-16 `char` 对应的 token。
+    ///
+    /// 只用于 Rust 无法直接表示的未配对 surrogate；U+FFFD 是 UTF-8
+    /// 输出适配，位置和 token 计数仍按 Java 原值。
+    fn add_utf16_unit_token(&mut self, utf16_index: i32, line: i32, col: i32) {
+        if self
+            .max_tokens
+            .is_some_and(|max_tokens| self.tokens.len() >= max_tokens)
+        {
+            self.token_limit_exceeded = true;
+            return;
+        }
+        self.tokens.push(Token::new(
+            token::CATCH_ALL as i32,
+            "\u{FFFD}",
+            utf16_index,
+            utf16_index,
             line,
             col,
         ));
@@ -943,18 +993,32 @@ impl<'a> QLexer<'a> {
             self.line += 1;
             self.col = 0;
         } else {
-            self.col += 1;
+            self.col += c.len_utf16() as i32;
         }
+    }
+
+    /// 把 Rust 字符下标转换为 Java `String` UTF-16 code-unit 下标。
+    fn utf16_index(&self, char_index: usize) -> i32 {
+        self.utf16_offsets
+            .get(char_index)
+            .copied()
+            .unwrap_or_else(|| *self.utf16_offsets.last().unwrap_or(&0))
+    }
+
+    /// 把包含式 Rust 字符结束下标转换为 Java 包含式 UTF-16 结束下标。
+    fn utf16_stop_index(&self, char_stop_index: usize) -> i32 {
+        self.utf16_index(char_stop_index.saturating_add(1))
+            .saturating_sub(1)
     }
 
     /// Java `currentToken`: a CATCH_ALL token describing the error site.
     fn current_token(&self, text: &str) -> Token {
-        let p = self.p as i32;
+        let p = self.utf16_index(self.p);
         Token::new(
             token::CATCH_ALL as i32,
             text,
             p,
-            p.max(p + text.chars().count() as i32 - 1),
+            p.max(p + text.encode_utf16().count() as i32 - 1),
             self.line,
             self.col,
         )
@@ -978,13 +1042,13 @@ impl<'a> QLexer<'a> {
 
 /// Java `isIdStart`: `#`, `@`, `$`, `_`, or a Unicode letter.
 fn is_id_start(c: char) -> bool {
-    c == '#' || c == '@' || c == '$' || c == '_' || c.is_alphabetic()
+    c == '#' || c == '@' || c == '$' || c == '_' || (c.len_utf16() == 1 && c.is_alphabetic())
 }
 
 /// Java `isIdPart`: id start, digits, and the CJK punctuation `、（）【】`.
 fn is_id_part(c: char) -> bool {
     is_id_start(c)
-        || c.is_ascii_digit()
+        || is_java_digit(c)
         || c == '\u{3001}'
         || c == '\u{FF08}'
         || c == '\u{FF09}'
@@ -1013,6 +1077,40 @@ fn is_custom_operator_start(c: char) -> bool {
 /// Java `isCustomOperatorPart`.
 fn is_custom_operator_part(c: char) -> bool {
     is_custom_operator_start(c) || c == '<' || c == '>' || c == ':'
+}
+
+/// Java `Character.isDigit(char)`：只接受 BMP 的 Unicode `Nd`。
+pub(crate) fn is_java_digit(c: char) -> bool {
+    java_decimal_digit_value(c).is_some()
+}
+
+/// Java `Character.digit(char, radix)` 的 QLexer 所需子集。
+///
+/// 除 Unicode 十进制数字外，Java 还接受 ASCII 与全角拉丁字母作为
+/// 10..35。返回值大于等于 `radix` 时视为非法。
+pub(crate) fn java_digit_value(c: char, radix: u32) -> Option<u32> {
+    let value = java_decimal_digit_value(c).or_else(|| match c {
+        'a'..='z' => Some(c as u32 - 'a' as u32 + 10),
+        'A'..='Z' => Some(c as u32 - 'A' as u32 + 10),
+        '\u{FF41}'..='\u{FF5A}' => Some(c as u32 - '\u{FF41}' as u32 + 10),
+        '\u{FF21}'..='\u{FF3A}' => Some(c as u32 - '\u{FF21}' as u32 + 10),
+        _ => None,
+    })?;
+    (value < radix).then_some(value)
+}
+
+fn java_decimal_digit_value(c: char) -> Option<u32> {
+    const STARTS: &[u32] = &[
+        0x0030, 0x0660, 0x06F0, 0x07C0, 0x0966, 0x09E6, 0x0A66, 0x0AE6, 0x0B66,
+        0x0BE6, 0x0C66, 0x0CE6, 0x0D66, 0x0DE6, 0x0E50, 0x0ED0, 0x0F20, 0x1040,
+        0x1090, 0x17E0, 0x1810, 0x1946, 0x19D0, 0x1A80, 0x1A90, 0x1B50, 0x1BB0,
+        0x1C40, 0x1C50, 0xA620, 0xA8D0, 0xA900, 0xA9D0, 0xA9F0, 0xAA50, 0xABF0,
+        0xFF10,
+    ];
+    let code = c as u32;
+    STARTS
+        .iter()
+        .find_map(|start| (code >= *start && code < *start + 10).then_some(code - *start))
 }
 
 #[cfg(test)]
@@ -1577,5 +1675,54 @@ mod tests {
         let tokens = lex("'a\r\nb' c");
         assert_eq!(tokens[0].text(), "'a\r\nb'");
         assert_eq!(tokens[1].line(), 2);
+    }
+
+    /// SOURCE_PARITY: Java `String` 与 LSP 均使用 UTF-16 code-unit
+    /// 位置；非 BMP 字符占两个 offset/column。
+    #[test]
+    fn token_positions_use_java_utf16_units() {
+        let tokens = lex("\"😀\" x");
+        assert_eq!(tokens[0].text(), "\"");
+        assert_eq!(
+            (tokens[1].start_index(), tokens[1].stop_index()),
+            (1, 2)
+        );
+        assert_eq!(
+            (tokens[2].start_index(), tokens[2].char_position_in_line()),
+            (3, 3)
+        );
+        assert_eq!(
+            (tokens[3].start_index(), tokens[3].char_position_in_line()),
+            (5, 5)
+        );
+    }
+
+    /// SOURCE_PARITY: Java `Character.isLetter(char)` 不会把 surrogate pair
+    /// 组合成补充平面字母；两个 UTF-16 单元分别成为 CATCH_ALL。
+    #[test]
+    fn supplementary_letter_is_not_a_java_identifier() {
+        let tokens = lex("𐐀");
+        assert_eq!(
+            types(&tokens),
+            vec![
+                token::CATCH_ALL as i32,
+                token::CATCH_ALL as i32,
+                token::EOF
+            ]
+        );
+        assert_eq!((tokens[0].start_index(), tokens[0].stop_index()), (0, 0));
+        assert_eq!((tokens[1].start_index(), tokens[1].stop_index()), (1, 1));
+        assert_eq!(tokens[2].start_index(), 2);
+    }
+
+    /// SOURCE_PARITY: Java `Character.isDigit` 与 `Character.digit` 接受
+    /// BMP Unicode 十进制数字及全角十六进制字母。
+    #[test]
+    fn unicode_java_digits_are_scanned_as_numbers() {
+        let tokens = lex("١٢ 0xＦＦ");
+        assert_eq!(tokens[0].token_type(), token::INTEGER_OR_FLOATING_LITERAL as i32);
+        assert_eq!(tokens[0].text(), "١٢");
+        assert_eq!(tokens[1].token_type(), token::INTEGER_LITERAL as i32);
+        assert_eq!(tokens[1].text(), "0xＦＦ");
     }
 }

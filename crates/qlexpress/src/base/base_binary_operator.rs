@@ -755,7 +755,7 @@ mod tests {
         assert_eq!(
             BaseBinaryOperator::plus(
                 "+",
-                &v(DataValue::Char('a')),
+                &v(DataValue::Char('a' as u16)),
                 &v(DataValue::Int(1)),
                 &opts(),
                 &PureErrReporter::INSTANCE
@@ -772,7 +772,7 @@ mod tests {
             (DataValue::Int(1), DataValue::Long(1)),
             (DataValue::Int(1), DataValue::Double(1.0)),
             (DataValue::Long(1), DataValue::BigDec("1.00".into())),
-            (DataValue::Char('a'), DataValue::Int(97)),
+            (DataValue::Char('a' as u16), DataValue::Int(97)),
         ] {
             assert!(
                 BaseBinaryOperator::equals("==", &v(l), &v(r), &PureErrReporter::INSTANCE).unwrap()

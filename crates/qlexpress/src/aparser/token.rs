@@ -276,10 +276,9 @@ pub fn keyword_type(text: &str) -> Option<u16> {
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/Token.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// A lexical token, mirroring Java `Token`.
 ///
-/// `start_index`/`stop_index` are character offsets into the script
-/// (Java uses UTF-16 code-unit offsets; for non-BMP characters the indexes
-/// can differ — positions in line/col are unaffected). `line` is 1-based and
-/// `char_position_in_line` is 0-based, exactly like the Java version.
+/// `start_index`/`stop_index` and `char_position_in_line` use Java UTF-16
+/// code-unit offsets. `line` is 1-based and the column is 0-based, exactly
+/// like the Java version.
 #[derive(Clone, Debug, PartialEq, Eq)]
 /// 对应 Java: com.alibaba.qlexpress4.aparser.Token。
 pub struct Token {

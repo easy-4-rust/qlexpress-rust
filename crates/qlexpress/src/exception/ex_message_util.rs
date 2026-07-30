@@ -41,8 +41,9 @@ impl ExMessageUtil {
     /// (1-based `token_line` / `token_col`), mirroring Java
     /// `ExMessageUtil.format`.
     ///
-    /// Positions are in characters (Java `String.charAt` semantics); this
-    /// port operates on `Vec<char>` to stay correct for non-ASCII scripts.
+    /// Positions use Java `String` UTF-16 code-unit offsets. Rust temporarily
+    /// operates on `Vec<u16>` so snippet extension and caret width remain
+    /// identical even when non-BMP characters occur before the error.
     /// 对应 Java: com.alibaba.qlexpress4.exception.ExMessageUtil#format。
     pub fn format(
         script: &str,
@@ -53,22 +54,28 @@ impl ExMessageUtil {
         error_code: &str,
         reason: &str,
     ) -> ExMessage {
-        let chars: Vec<char> = script.chars().collect();
-        let lexeme_len = lexeme.chars().count();
+        let mut units: Vec<u16> = script.encode_utf16().collect();
+        let lexeme_len = lexeme.encode_utf16().count();
         let token_start = token_start_pos.max(0) as usize;
 
         let start_report_pos = token_start.saturating_sub(SNIPPET_EXTENSION_LEN);
-        let end_report_pos = (token_start + lexeme_len + SNIPPET_EXTENSION_LEN).min(chars.len());
+        let end_report_pos =
+            (token_start + lexeme_len + SNIPPET_EXTENSION_LEN).min(units.len());
 
         let mut snippet_builder = String::new();
         if start_report_pos > 0 {
             snippet_builder.push_str("...");
         }
-        for &code_char in &chars[start_report_pos..end_report_pos] {
+        for code_unit in &mut units[start_report_pos..end_report_pos] {
             // Java: chars < ' ' (control chars) are rendered as a space.
-            snippet_builder.push(if code_char < ' ' { ' ' } else { code_char });
+            if *code_unit < u16::from(b' ') {
+                *code_unit = u16::from(b' ');
+            }
         }
-        if end_report_pos < chars.len() {
+        snippet_builder.push_str(&String::from_utf16_lossy(
+            &units[start_report_pos..end_report_pos],
+        ));
+        if end_report_pos < units.len() {
             snippet_builder.push_str("...");
         }
 
@@ -129,5 +136,15 @@ mod tests {
             .chars()
             .take(caret_line.len() - 1)
             .all(|c| c == ' '));
+    }
+
+    /// SOURCE_PARITY: snippet 扩展和 caret 宽度按 Java UTF-16 单元计算。
+    #[test]
+    fn non_bmp_prefix_uses_utf16_caret_offset() {
+        let ex = ExMessageUtil::format("😀 @", 3, 1, 4, "@", "SYNTAX_ERROR", "bad char");
+        assert_eq!(ex.snippet(), "😀 @");
+        let caret_line = ex.message().lines().nth(2).unwrap();
+        assert_eq!(caret_line.len(), 7 + 3 + 1);
+        assert!(caret_line.ends_with('^'));
     }
 }

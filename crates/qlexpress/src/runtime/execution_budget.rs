@@ -167,7 +167,24 @@ impl ExecutionBudget {
                     ));
                 }
             }
-            DataValue::List(values) | DataValue::Array(values) => {
+            DataValue::List(values) => {
+                let identity = Rc::as_ptr(values) as usize;
+                if !visited.insert(identity) {
+                    return Ok(());
+                }
+                let values = values.borrow();
+                if values.len() > self.limits.max_collection_items {
+                    return Err(budget_error(
+                        QLExceptionKind::Runtime,
+                        "SANDBOX_COLLECTION_ITEMS_EXCEEDED",
+                        "individual collection exceeds sandbox item limit",
+                    ));
+                }
+                for value in values.iter() {
+                    self.validate_value_inner(value, visited)?;
+                }
+            }
+            DataValue::Array(values) => {
                 let identity = Rc::as_ptr(values) as usize;
                 if !visited.insert(identity) {
                     return Ok(());
@@ -236,7 +253,17 @@ impl ExecutionBudget {
 
 fn collection_item_count(value: &DataValue, visited: &mut HashSet<usize>) -> usize {
     match value {
-        DataValue::List(values) | DataValue::Array(values) => {
+        DataValue::List(values) => {
+            let identity = Rc::as_ptr(values) as usize;
+            if !visited.insert(identity) {
+                return 0;
+            }
+            let values = values.borrow();
+            values.iter().fold(values.len(), |total, value| {
+                total.saturating_add(collection_item_count(value, visited))
+            })
+        }
+        DataValue::Array(values) => {
             let identity = Rc::as_ptr(values) as usize;
             if !visited.insert(identity) {
                 return 0;
@@ -277,9 +304,23 @@ fn estimated_size(
         DataValue::Long(_) | DataValue::Float(_) | DataValue::Double(_) => 32,
         DataValue::BigInt(value) => value.to_string().len(),
         DataValue::BigDec(value) | DataValue::Str(value) => value.len(),
-        DataValue::Char(value) => value.len_utf8(),
+        DataValue::Char(_) => 2,
         DataValue::Lambda(_) | DataValue::Object(_) => 64,
-        DataValue::List(values) | DataValue::Array(values) => {
+        DataValue::List(values) => {
+            let identity = Rc::as_ptr(values) as usize;
+            if !visited.insert(identity) {
+                return Ok(0);
+            }
+            let mut total = 2usize;
+            for item in values.borrow().iter() {
+                total = total.saturating_add(estimated_size(item, visited, stop_after)? + 1);
+                if total > stop_after {
+                    break;
+                }
+            }
+            total
+        }
+        DataValue::Array(values) => {
             let identity = Rc::as_ptr(values) as usize;
             if !visited.insert(identity) {
                 return Ok(0);

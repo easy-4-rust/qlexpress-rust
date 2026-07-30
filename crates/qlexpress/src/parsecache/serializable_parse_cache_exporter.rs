@@ -511,7 +511,9 @@ impl<'a> SerializableParseCacheExporter<'a> {
             },
             DataValue::Bool(v) => typed_constant("BOOLEAN", Value::from(*v)),
             DataValue::Str(v) => typed_constant("STRING", Value::from(v.clone())),
-            DataValue::Char(v) => typed_constant("CHAR", Value::from(v.to_string())),
+            DataValue::Char(v) => {
+                typed_constant("CHAR", Value::from(String::from_utf16_lossy(&[*v])))
+            }
             DataValue::Byte(v) => typed_constant("INT", Value::from(*v)),
             DataValue::Short(v) => typed_constant("INT", Value::from(*v)),
             DataValue::Int(v) => typed_constant("INT", Value::from(*v)),

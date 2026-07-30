@@ -524,12 +524,12 @@ impl<'a> SerializableParseCacheImporter<'a> {
             )?)),
             "CHAR" => {
                 let char_value = self.as_string(&value, owner, "constant.value")?;
-                let mut chars = char_value.chars();
-                match (chars.next(), chars.next()) {
-                    (Some(c), None) => Ok(DataValue::Char(c)),
+                let mut units = char_value.encode_utf16();
+                match (units.next(), units.next()) {
+                    (Some(unit), None) => Ok(DataValue::Char(unit)),
                     _ => Err(self.invalid(
                         owner,
-                        "CHAR constant value must contain exactly one character",
+                        "CHAR constant value must contain exactly one UTF-16 code unit",
                     )),
                 }
             }

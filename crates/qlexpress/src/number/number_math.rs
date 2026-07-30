@@ -443,7 +443,7 @@ pub(crate) fn java_value_string(value: &DataValue) -> String {
         DataValue::BigDec(v) => v.clone(),
         DataValue::Float(v) => java_f64_to_string(*v as f64),
         DataValue::Double(v) => java_f64_to_string(*v),
-        DataValue::Char(v) => v.to_string(),
+        DataValue::Char(v) => String::from_utf16_lossy(&[*v]),
         DataValue::Str(v) => v.clone(),
         other => format!("{other:?}"),
     }

@@ -869,6 +869,36 @@ for (int ele : l) {
     expect_ok(SCRIPT);
 }
 
+/// SOURCE_PARITY: Java `ArrayList.Itr` 对结构修改 fail-fast；旧 Rust
+/// 实现错误地克隆列表并继续遍历快照。
+#[test]
+fn for_each_list_structural_modification_is_fail_fast() {
+    let error = alignment_util::suite_runner()
+        .execute(
+            "l = [1,2]; for (x : l) { l.add(3); }",
+            std::collections::HashMap::new(),
+            &QLOptions::default(),
+        )
+        .expect_err("ArrayList structural modification must invalidate iterator");
+    assert_eq!(
+        error.error_code(),
+        "java.util.ConcurrentModificationException"
+    );
+}
+
+/// SOURCE_PARITY: `ArrayList#set` 不是结构修改，既有迭代器继续读取替换值。
+#[test]
+fn for_each_list_set_keeps_iterator_valid() {
+    let result = alignment_util::suite_runner()
+        .execute(
+            "l = [1,2]; sum = 0; for (x : l) { if (x == 1) l.set(1,20); sum += x; } sum",
+            std::collections::HashMap::new(),
+            &QLOptions::default(),
+        )
+        .expect("ArrayList.set must not invalidate iterator");
+    assert_eq!(result.result(), &DataValue::Int(21));
+}
+
 /// 对应 Java testsuite 脚本 `testsuite/independent/for/for_each_break_continue.ql`。
 #[test]
 fn for_for_each_break_continue() {

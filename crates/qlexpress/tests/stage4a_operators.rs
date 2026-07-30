@@ -128,7 +128,7 @@ fn minus_multiply_basic() {
     assert_eq!(
         bin(
             &MinusOperator::get_instance(),
-            DataValue::Char('a'),
+            DataValue::Char('a' as u16),
             DataValue::Int(1)
         ),
         DataValue::Int(96)
@@ -501,7 +501,7 @@ fn equal_unequal_across_numeric_types() {
     );
     // 'a' == 97(字符按码点)。
     assert_eq!(
-        bin(&eq, DataValue::Char('a'), DataValue::Int(97)),
+        bin(&eq, DataValue::Char('a' as u16), DataValue::Int(97)),
         DataValue::Bool(true)
     );
     assert_eq!(

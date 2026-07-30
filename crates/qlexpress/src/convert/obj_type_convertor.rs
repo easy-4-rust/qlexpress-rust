@@ -148,16 +148,12 @@ impl ObjTypeConvertor {
             DataValue::Char(_) => QConverted::converted(value.clone()),
             v if v.is_number() => {
                 // Java `(char) number.intValue()`: low 16 bits as UTF-16 unit.
-                let code = to_i64(v) as i32 as u32 & 0xFFFF;
-                match char::from_u32(code) {
-                    Some(c) => QConverted::converted(DataValue::Char(c)),
-                    None => QConverted::un_convertible(),
-                }
+                QConverted::converted(DataValue::Char(to_i64(v) as i32 as u16))
             }
             DataValue::Str(s) => {
-                let mut chars = s.chars();
-                match (chars.next(), chars.next()) {
-                    (Some(c), None) => QConverted::converted(DataValue::Char(c)),
+                let mut units = s.encode_utf16();
+                match (units.next(), units.next()) {
+                    (Some(unit), None) => QConverted::converted(DataValue::Char(unit)),
                     _ => QConverted::un_convertible(),
                 }
             }
@@ -240,7 +236,7 @@ mod tests {
         assert_eq!(
             ObjTypeConvertor::cast(&DataValue::Str("a".into()), TargetType::Character)
                 .get_converted(),
-            &DataValue::Char('a')
+            &DataValue::Char('a' as u16)
         );
         assert!(
             !ObjTypeConvertor::cast(&DataValue::Str("ab".into()), TargetType::Character)
@@ -248,7 +244,7 @@ mod tests {
         );
         assert_eq!(
             ObjTypeConvertor::cast(&DataValue::Int(97), TargetType::Character).get_converted(),
-            &DataValue::Char('a')
+            &DataValue::Char('a' as u16)
         );
     }
 

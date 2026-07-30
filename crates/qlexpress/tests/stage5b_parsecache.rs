@@ -151,7 +151,7 @@ fn constant_round_trip_all_types() {
         (DataValue::Null, "NULL"),
         (DataValue::Bool(true), "BOOLEAN"),
         (DataValue::Str("hello".to_string()), "STRING"),
-        (DataValue::Char('x'), "CHAR"),
+        (DataValue::Char('x' as u16), "CHAR"),
         (DataValue::Int(-7), "INT"),
         (DataValue::Long(9_000_000_000), "LONG"),
         (

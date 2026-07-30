@@ -8,6 +8,7 @@ use std::rc::Rc;
 use num_bigint::BigInt;
 
 use crate::runtime::data::index_map::IndexMap;
+use crate::runtime::data::java_array_list::JavaArrayList;
 use crate::runtime::native_object::NativeObject;
 use crate::runtime::qlambda::QLambda;
 use crate::runtime::value::Value;
@@ -39,12 +40,12 @@ pub enum DataValue {
     BigInt(BigInt),
     /// Java `BigDecimal` 的十进制文本表示。
     BigDec(String),
-    /// Java `Character`。
-    Char(char),
+    /// Java `Character`（单个 UTF-16 code unit，可表示 surrogate）。
+    Char(u16),
     /// Java `String`。
     Str(String),
     /// Java `ArrayList` 引用。
-    List(Rc<RefCell<Vec<DataValue>>>),
+    List(Rc<RefCell<JavaArrayList>>),
     /// Java `LinkedHashMap` 引用。
     Map(Rc<RefCell<IndexMap>>),
     /// Java 数组引用。
@@ -125,7 +126,7 @@ impl DataValue {
     /// 创建 Java `ArrayList` 值。Rust 便捷构造方法。
     /// 对应 Java: com.alibaba.qlexpress4.runtime.data.DataValue#list。
     pub fn list(items: Vec<DataValue>) -> DataValue {
-        DataValue::List(Rc::new(RefCell::new(items)))
+        DataValue::List(Rc::new(RefCell::new(JavaArrayList::new(items))))
     }
 
     /// 创建 Java 数组值。Rust 便捷构造方法。
@@ -197,7 +198,7 @@ impl DataValue {
             }
             DataValue::BigInt(value) => value.to_string(),
             DataValue::BigDec(value) => value.clone(),
-            DataValue::Char(value) => value.to_string(),
+            DataValue::Char(value) => String::from_utf16_lossy(&[*value]),
             DataValue::Str(value) => value.clone(),
             DataValue::List(value) => format!(
                 "[{}]",
@@ -331,8 +332,11 @@ mod tests {
         );
         assert_eq!(DataValue::Null, DataValue::Null);
         assert_ne!(DataValue::Null, DataValue::Int(0));
-        assert_eq!(DataValue::Char('a'), DataValue::Char('a'));
-        assert_ne!(DataValue::Char('a'), DataValue::Str("a".into()));
+        assert_eq!(
+            DataValue::Char('a' as u16),
+            DataValue::Char('a' as u16)
+        );
+        assert_ne!(DataValue::Char('a' as u16), DataValue::Str("a".into()));
     }
 
     #[test]

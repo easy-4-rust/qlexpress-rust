@@ -81,7 +81,7 @@ impl QLInstruction for ForEachInstruction {
         for item in items.borrow().iter().cloned() {
             values.push(lambda.call(&[item])?.value());
         }
-        q_context.push(QValue::Data(DataValue::List(Rc::new(RefCell::new(values)))));
+        q_context.push(QValue::Data(DataValue::list(values)));
         Ok(QResult::NEXT_INSTRUCTION)
     }
 
@@ -124,7 +124,7 @@ fn java_for_each_compile_function_test() {
         panic!("FOREACH must return a list");
     };
     assert_eq!(
-        &*values.borrow(),
+        values.borrow().as_slice(),
         &[
             DataValue::Int(2),
             DataValue::Int(3),

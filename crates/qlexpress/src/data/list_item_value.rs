@@ -4,6 +4,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use crate::runtime::data::convert::obj_type_convertor::TargetType;
+use crate::runtime::data::JavaArrayList;
 use crate::runtime::left_value::LeftValue;
 use crate::runtime::value::{DataValue, Value};
 
@@ -12,13 +13,13 @@ use crate::runtime::value::{DataValue, Value};
 /// Mirrors Java `ListItemValue`: an l-value view of `list[index]`.
 /// 对应 Java: com.alibaba.qlexpress4.runtime.data.ListItemValue。
 pub struct ListItemValue {
-    list: Rc<RefCell<Vec<DataValue>>>,
+    list: Rc<RefCell<JavaArrayList>>,
     index: usize,
 }
 
 impl ListItemValue {
     /// 构造实例。对应 Java 源码 `com/alibaba/qlexpress4/runtime/data/ListItemValue.java:16` 的 `ListItemValue::<init>`。
-    pub fn new(list: Rc<RefCell<Vec<DataValue>>>, index: usize) -> Self {
+    pub fn new(list: Rc<RefCell<JavaArrayList>>, index: usize) -> Self {
         ListItemValue { list, index }
     }
 }
@@ -42,7 +43,7 @@ impl LeftValue for ListItemValue {
 
     /// Java `list.set(index, newValue)`.
     fn set_inner(&mut self, new_value: DataValue) {
-        self.list.borrow_mut()[self.index] = new_value;
+        self.list.borrow_mut().set(self.index, new_value);
     }
 
     /// Java returns `null`.
@@ -66,7 +67,7 @@ mod tests {
 
     #[test]
     fn set_accepts_any_type_like_java_object_component() {
-        let list = Rc::new(RefCell::new(vec![DataValue::Int(1)]));
+        let list = Rc::new(RefCell::new(JavaArrayList::new(vec![DataValue::Int(1)])));
         let mut item = ListItemValue::new(Rc::clone(&list), 0);
         item.set(
             DataValue::Str("anything".into()),

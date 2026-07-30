@@ -283,7 +283,7 @@ fn to_diagnostic(
 ) -> Diagnostic {
     let zero_based_line = line - 1;
     let zero_based_col = col - 1;
-    let lexeme_len = lexeme.chars().count() as i32;
+    let lexeme_len = lexeme.encode_utf16().count() as i32;
     let start = Position::new(zero_based_line, zero_based_col);
     let end = Position::new(zero_based_line, zero_based_col + lexeme_len);
     Diagnostic::new(

@@ -200,11 +200,19 @@ fn builtin_string_method_contract_matrix() {
     let cases = [
         ("'qlexpress'.length()", DataValue::Int(9)),
         ("''.isEmpty()", DataValue::Bool(true)),
-        ("'qlexpress'.charAt(2)", DataValue::Char('e')),
+        ("'qlexpress'.charAt(2)", DataValue::Char('e' as u16)),
         ("'qlexpress'.contains('expr')", DataValue::Bool(true)),
         ("'qlexpress'.startsWith('ql')", DataValue::Bool(true)),
         ("'qlexpress'.endsWith('ss')", DataValue::Bool(true)),
         ("'qlexpress'.indexOf('express')", DataValue::Int(2)),
+        ("'😀'.length()", DataValue::Int(2)),
+        ("'😀'.charAt(0)", DataValue::Char(0xD83D)),
+        ("'😀'.charAt(1)", DataValue::Char(0xDE00)),
+        ("'a😀b'.indexOf('b')", DataValue::Int(3)),
+        (
+            "'a😀b'.substring(1, 3)",
+            DataValue::Str("😀".to_string()),
+        ),
         (
             "'QlExpress'.toUpperCase()",
             DataValue::Str("QLEXPRESS".to_string()),
@@ -214,6 +222,10 @@ fn builtin_string_method_contract_matrix() {
             DataValue::Str("qlexpress".to_string()),
         ),
         ("'  ql  '.trim()", DataValue::Str("ql".to_string())),
+        (
+            "'\u{00a0}ql\u{00a0}'.trim()",
+            DataValue::Str("\u{00a0}ql\u{00a0}".to_string()),
+        ),
         (
             "'qlexpress'.substring(2, 7)",
             DataValue::Str("expre".to_string()),

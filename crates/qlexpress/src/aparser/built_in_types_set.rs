@@ -39,7 +39,7 @@ pub const CHAR: &str = "char";
 /// - `Float` ↔ Rust `f32`
 /// - `Double` ↔ Rust `f64`（`DataValue::Double`）
 /// - `Boolean` ↔ Rust `bool`（`DataValue::Bool`）
-/// - `Char` ↔ Rust `char`（`DataValue::Char`）
+/// - `Char` ↔ Java UTF-16 code unit `u16`（`DataValue::Char`）
 ///
 /// 对应 Java: com.alibaba.qlexpress4.aparser.BuiltInTypesSet。
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]

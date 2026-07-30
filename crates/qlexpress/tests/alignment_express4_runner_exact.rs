@@ -978,7 +978,7 @@ fn java_ql_alias_test() {
     ];
     for (script, expected) in cases {
         let result = runner
-            .execute_with_alias_values(
+            .execute_with_alias_objects(
                 script,
                 &QLOptions::default(),
                 &[(&["患者"], patient.clone())],
@@ -1022,7 +1022,7 @@ fn java_ql_alias_doc_test() {
         ],
     );
     let result = runner
-        .execute_with_alias_values(
+        .execute_with_alias_objects(
             "用户.是vip? 订单.金额 * 0.8 : 订单.金额",
             &QLOptions::default(),
             &[(&["订单"], order), (&["用户"], user)],

@@ -4,9 +4,10 @@
 
 use crate::exception::error_codes;
 use crate::exception::error_reporter::ErrorReporter;
-use crate::exception::QLException;
+use crate::exception::{QLException, QLExceptionKind};
 use crate::ql_options::QLOptions;
 use crate::runtime::instruction::QLInstruction;
+use crate::runtime::data::JavaArrayList;
 use crate::runtime::member::ClassRef;
 use crate::runtime::q_result::QResult;
 use crate::runtime::qcontext::QContext;
@@ -80,6 +81,83 @@ impl Iterator for ReflectArrayIterator {
     }
 }
 
+/// Java `ArrayList.Itr` 的 fail-fast 迭代器适配。
+///
+/// Java 的 `ForEachInstruction` 对普通 `Iterable` 直接使用其迭代器；列表
+/// 不能克隆为快照，否则循环体中的结构修改不会产生
+/// `ConcurrentModificationException`。
+struct JavaArrayListIterator {
+    list: Rc<RefCell<JavaArrayList>>,
+    cursor: usize,
+    expected_mod_count: u64,
+}
+
+impl JavaArrayListIterator {
+    /// 从列表当前结构版本创建迭代器。
+    fn new(list: Rc<RefCell<JavaArrayList>>) -> Self {
+        let expected_mod_count = list.borrow().mod_count();
+        Self {
+            list,
+            cursor: 0,
+            expected_mod_count,
+        }
+    }
+
+    /// 对应 Java `ArrayList.Itr#hasNext()` 的 `cursor != size`。
+    fn has_next(&self) -> bool {
+        self.cursor != self.list.borrow().len()
+    }
+
+    /// 对应 Java `ArrayList.Itr#next()`：先检查 `modCount`，再读取元素。
+    fn next_item(&mut self) -> Result<DataValue, QLException> {
+        let list = self.list.borrow();
+        if list.mod_count() != self.expected_mod_count {
+            return Err(QLException::host_error(
+                QLExceptionKind::Runtime,
+                "java.util.ConcurrentModificationException",
+                "java.util.ConcurrentModificationException",
+            ));
+        }
+        let Some(item) = list.get(self.cursor).cloned() else {
+            return Err(QLException::host_error(
+                QLExceptionKind::Runtime,
+                "java.util.NoSuchElementException",
+                "java.util.NoSuchElementException",
+            ));
+        };
+        self.cursor += 1;
+        Ok(item)
+    }
+}
+
+/// 数组与列表共用的 Java foreach 迭代协议。
+enum ForEachIterator {
+    Array(ReflectArrayIterator),
+    List(JavaArrayListIterator),
+}
+
+impl ForEachIterator {
+    fn has_next(&self) -> bool {
+        match self {
+            Self::Array(iterator) => iterator.has_next(),
+            Self::List(iterator) => iterator.has_next(),
+        }
+    }
+
+    fn next_item(&mut self) -> Result<DataValue, QLException> {
+        match self {
+            Self::Array(iterator) => iterator.next().ok_or_else(|| {
+                QLException::host_error(
+                    QLExceptionKind::Runtime,
+                    "java.util.NoSuchElementException",
+                    "java.util.NoSuchElementException",
+                )
+            }),
+            Self::List(iterator) => iterator.next_item(),
+        }
+    }
+}
+
 /// for-each 循环指令。对应 Java: com.alibaba.qlexpress4.runtime.instruction.ForEachInstruction(职责:遍历集合/数组的循环执行体)
 /// Operation: process each element in iterable object on top of stack,
 /// Input: 1
@@ -146,11 +224,13 @@ impl QLInstruction for ForEachInstruction {
     ) -> Result<QResult, QLException> {
         let may_be_iterable = q_context.pop().get();
         // Java: array → ReflectArrayIterable; Iterable → as-is; else error.
-        let items: Box<dyn Iterator<Item = DataValue>> = match &may_be_iterable {
-            DataValue::Array(arr) => {
-                Box::new(ReflectArrayIterable::new(Rc::clone(arr)).iterator())
+        let mut items = match &may_be_iterable {
+            DataValue::Array(arr) => ForEachIterator::Array(
+                ReflectArrayIterable::new(Rc::clone(arr)).iterator(),
+            ),
+            DataValue::List(list) => {
+                ForEachIterator::List(JavaArrayListIterator::new(Rc::clone(list)))
             }
-            DataValue::List(list) => Box::new(list.borrow().clone().into_iter()),
             _ => {
                 return Err(self.target_error_reporter.report(
                     error_codes::FOR_EACH_ITERABLE_REQUIRED,
@@ -160,7 +240,10 @@ impl QLInstruction for ForEachInstruction {
         };
         let body_lambda = Rc::clone(&self.body).to_lambda(q_context, ql_options, true);
         // forEachBody:
-        for item in items {
+        while items.has_next() {
+            // Java 增强 for 在进入循环体的 try/catch 之前调用
+            // Iterator.next()，因此 fail-fast 异常不应被循环体异常映射吞掉。
+            let item = items.next_item()?;
             match body_lambda.call(std::slice::from_ref(&item)) {
                 Ok(body_result) => match body_result {
                     QResult::Return(_) => return Ok(body_result),
@@ -234,5 +317,40 @@ mod tests {
         assert_eq!(iterator.next(), Some(DataValue::Int(2)));
         assert!(!iterator.has_next());
         assert_eq!(iterator.next(), None);
+    }
+
+    /// SOURCE_PARITY: Java `ArrayList.Itr#next` 在列表结构修改后抛出
+    /// `ConcurrentModificationException`。
+    #[test]
+    fn java_list_iterator_rejects_structural_modification() {
+        let list = Rc::new(RefCell::new(JavaArrayList::new(vec![
+            DataValue::Int(1),
+            DataValue::Int(2),
+        ])));
+        let mut iterator = JavaArrayListIterator::new(Rc::clone(&list));
+        assert_eq!(iterator.next_item().unwrap(), DataValue::Int(1));
+        list.borrow_mut().push(DataValue::Int(3));
+
+        let error = iterator.next_item().unwrap_err();
+        assert_eq!(
+            error.error_code(),
+            "java.util.ConcurrentModificationException"
+        );
+    }
+
+    /// SOURCE_PARITY: Java `ArrayList#set` 不改变 `modCount`，已有迭代器
+    /// 继续运行并读取替换后的元素。
+    #[test]
+    fn java_list_iterator_allows_non_structural_set() {
+        let list = Rc::new(RefCell::new(JavaArrayList::new(vec![
+            DataValue::Int(1),
+            DataValue::Int(2),
+        ])));
+        let mut iterator = JavaArrayListIterator::new(Rc::clone(&list));
+        assert_eq!(iterator.next_item().unwrap(), DataValue::Int(1));
+        list.borrow_mut().set(1, DataValue::Int(20));
+
+        assert_eq!(iterator.next_item().unwrap(), DataValue::Int(20));
+        assert!(!iterator.has_next());
     }
 }

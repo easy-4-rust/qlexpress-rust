@@ -194,7 +194,7 @@ mod tests {
     fn in_list_matches_char_against_number() {
         // Java:isNumberCharacter 分支,'A' == 65
         let list = DataValue::list(vec![DataValue::Int(65)]);
-        assert!(run(DataValue::Char('A'), list).unwrap());
+        assert!(run(DataValue::Char('A' as u16), list).unwrap());
     }
 
     #[test]

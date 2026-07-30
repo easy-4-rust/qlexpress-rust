@@ -473,20 +473,44 @@ impl Express4Runner {
         )
     }
 
-    /// 以显式别名对象作为外部变量执行脚本。对应 Java
-    /// `executeWithAliasObjects`；Rust 无运行时注解扫描，调用方传入
-    /// `(别名列表, 对象值)`，其余上下文与执行语义完全一致。
+    /// 以显式别名对象作为外部变量执行脚本。
+    ///
+    /// 对应 Java:
+    /// `Express4Runner#executeWithAliasObjects(String,QLOptions,Object...)`。
+    /// Rust 无运行时注解扫描，参数 `aliased_objects` 显式携带每个对象的
+    /// `@QLAlias.value()` 等价元数据；对象顺序、别名覆盖及上下文写回语义
+    /// 与 Java `QLAliasContext` 一致。
+    ///
+    /// 参数：
+    /// - `script`：待执行脚本；
+    /// - `ql_options`：本次执行选项；
+    /// - `aliased_objects`：按 Java 可变参数顺序排列的别名对象。
+    ///
+    /// 返回：脚本执行结果；解析或运行失败时返回 [`QLException`]。
+    pub fn execute_with_alias_objects(
+        &self,
+        script: &str,
+        ql_options: &QLOptions,
+        aliased_objects: &[(&[&str], DataValue)],
+    ) -> Result<QLResult, QLException> {
+        self.execute_with_context(
+            script,
+            Rc::new(QLAliasContext::new(aliased_objects)),
+            ql_options,
+        )
+    }
+
+    /// 兼容早期 Rust API 的名称。
+    ///
+    /// 新代码应使用 [`Self::execute_with_alias_objects`]，以保持与 Java
+    /// `executeWithAliasObjects` 的对象名称一致性。
     pub fn execute_with_alias_values(
         &self,
         script: &str,
         ql_options: &QLOptions,
         aliased_values: &[(&[&str], DataValue)],
     ) -> Result<QLResult, QLException> {
-        self.execute_with_context(
-            script,
-            Rc::new(QLAliasContext::new(aliased_values)),
-            ql_options,
-        )
+        self.execute_with_alias_objects(script, ql_options, aliased_values)
     }
 
     /// 执行已加载的 parse cache。对应 Java 方法
