@@ -21,7 +21,7 @@ use crate::utils::ql_string_utils::QLStringUtils;
 
 /// Java `parseFieldId`.
 fn parse_field_id(ctx: &FieldIdContext) -> String {
-    if let Some(quote) = &ctx.quote {
+    if let Some(quote) = ctx.quote_string_literal() {
         return QLStringUtils::parse_string_escape(quote.text());
     }
     ctx.token

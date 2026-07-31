@@ -30,6 +30,8 @@ where
 mod tests {
     use super::*;
 
+    /// SOURCE_PARITY: Java `QLFunctionalVarargs#call(Object...)` 接收任意
+    /// 数量参数，闭包实现能观察空参数与完整参数序列。
     #[test]
     fn closure_as_varargs_function() {
         // Java: (params) -> params.length

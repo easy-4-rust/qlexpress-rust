@@ -39,10 +39,11 @@ pub type SharedOperators = Rc<RefCell<HashSet<String>>>;
 /// - `Blacklist(set)` ↔ `OperatorCheckStrategy.blacklist(set)`
 ///
 /// 下游消费者（`CheckOptions` 等）直接持有该枚举做 `Clone`/`PartialEq`。
-#[derive(Clone)]
+#[derive(Clone, Default)]
 /// 对应 Java: com.alibaba.qlexpress4.operator.OperatorCheckStrategy。
 pub enum OperatorCheckStrategy {
     /// Java `OperatorCheckStrategy.allowAll()`。
+    #[default]
     AllowAll,
     /// Java `OperatorCheckStrategy.whitelist(Set<String>)`：仅这些操作符被允许。
     Whitelist(HashSet<String>),
@@ -59,12 +60,6 @@ pub enum OperatorCheckStrategy {
         /// 策略公开的操作符集合快照。
         operators: HashSet<String>,
     },
-}
-
-impl Default for OperatorCheckStrategy {
-    fn default() -> Self {
-        Self::AllowAll
-    }
 }
 
 impl fmt::Debug for OperatorCheckStrategy {

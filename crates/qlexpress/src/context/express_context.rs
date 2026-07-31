@@ -26,3 +26,48 @@ pub trait ExpressContext {
         variable_name: &str,
     ) -> Result<Option<QValue>, QLException>;
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::runtime::value::DataValue;
+
+    struct RecordingContext;
+
+    impl ExpressContext for RecordingContext {
+        fn get(
+            &self,
+            attachments: &Attachments,
+            variable_name: &str,
+        ) -> Result<Option<QValue>, QLException> {
+            if variable_name == "attachment" {
+                return Ok(attachments.get("value").cloned().map(QValue::Data));
+            }
+            if variable_name == "explicit_null" {
+                return Ok(Some(QValue::Data(DataValue::NULL_VALUE)));
+            }
+            Ok(None)
+        }
+    }
+
+    /// SOURCE_PARITY: Java `ExpressContext#get` 同时接收 attachments 与变量名；
+    /// Java null（未命中）和 `Value.NULL_VALUE`（命中但值为 null）必须可区分。
+    #[test]
+    fn contract_preserves_attachments_missing_and_explicit_null() {
+        let mut attachments = Attachments::new();
+        attachments.insert("value".to_string(), DataValue::Int(42));
+        let context = RecordingContext;
+
+        let attachment = context
+            .get(&attachments, "attachment")
+            .unwrap()
+            .expect("attachment must exist");
+        assert!(matches!(attachment.get(), DataValue::Int(42)));
+        assert!(context.get(&attachments, "missing").unwrap().is_none());
+        let explicit_null = context
+            .get(&attachments, "explicit_null")
+            .unwrap()
+            .expect("explicit null is still a present Value");
+        assert!(explicit_null.get().is_null());
+    }
+}

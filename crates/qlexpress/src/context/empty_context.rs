@@ -36,3 +36,21 @@ impl ExpressContext for EmptyContext {
         Ok(Some(QValue::Data(DataValue::NULL_VALUE)))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// SOURCE_PARITY: Java `EmptyContext#get` 忽略 attachments 和变量名，
+    /// 恒返回 `Value.NULL_VALUE`，而不是表示缺失变量的 Java null。
+    #[test]
+    fn get_always_returns_explicit_null_value() {
+        let mut attachments = Attachments::new();
+        attachments.insert("tenant".to_string(), DataValue::string("t1"));
+
+        let value = EmptyContext::new()
+            .get(&attachments, "anything")
+            .expect("empty context cannot fail");
+        assert!(matches!(value, Some(QValue::Data(DataValue::Null))));
+    }
+}

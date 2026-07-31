@@ -27,13 +27,14 @@ pub const NOTHING_TYPE_NAME: &str = "com.alibaba.qlexpress4.runtime.Nothing";
 
 /// 占位类型，对应 Java `com.alibaba.qlexpress4.runtime.Nothing`。
 ///
-/// 与 Java 一致，构造器为 `private`（Rust 以未构造的单元结构体表达），
-/// 外部不应实例化；该类型仅用于"类身份存在"的对照。
+/// 与 Java 一致，构造器为 `private`：私有零尺寸字段阻止 crate 外直接
+/// 构造，同时不提供 `Default` 等公开替代构造入口。该类型仅用于“类身份
+/// 存在”的对照。
 ///
 /// 注：null 字面量在 Rust 运行时由 `DataValue::Null` 表达，
 /// 类型信息以字符串 [`NOTHING_TYPE_NAME`] 流通，无需构造本结构体实例。
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct Nothing;
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Nothing(());
 
 #[cfg(test)]
 mod tests {

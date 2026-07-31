@@ -2,9 +2,1022 @@
   "schema_version": 1,
   "java_baseline": "9065b9ac5d985dcd02e627239aa9cdb78fb2f7f3",
   "rust_baseline": "982f449b470fdd2f949555015ab13d7aa82ec45d",
-  "rust_source_fingerprint": "sha256:c8e5bf8f4608618fbee31e5142df8a7c236841f1d252133f43a44169bfd4a27a",
-  "objects": [],
-  "nested_java_types": [],
+  "rust_source_fingerprint": "sha256:c0e60bba9d72f016928067aa7505bbe9626892c3c0912008031ebff40f44ebd5",
+  "objects": [
+    {
+      "java_key": "com.alibaba.qlexpress4.aparser::SyntaxTreeFactory|",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Java 静态语法树工厂在 Rust 中由 ql_parser::build_tree 门面承担，完整保留扫描、解析、插值配置、严格换行、错误上报及可选调试输出职责。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/ql_parser.rs",
+          "symbol": "pub fn build_tree("
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/ql_parser.rs",
+          "test": "build_tree_prints_token_stream_and_java_tree_shape",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "对象仅含 buildTree，一个方法已逐语义核对并验证 Java 树形输出。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.aparser::Token|",
+      "state": "IMPLEMENTED",
+      "classification": "EXACT",
+      "semantic_evidence": [
+        "Rust Token 保存与 Java 相同的类型、原文、UTF-16 起止偏移、一基行号和零基列号；构造、读写 type、其余只读访问器及字符串化均有直接契约测试。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/token.rs",
+          "symbol": "pub struct Token"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/token.rs",
+          "test": "token_accessors_and_display",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "Token 的全部九个 Java 方法均已覆盖，未以字段存在替代行为验证。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.proxy::QLambdaInvocationHandler|",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Rust 以显式 trait/闭包适配替代 JVM 动态代理，保留处理器持有同一 QLambda、抽象调用转发、固定 toString 以及默认方法不进入处理器的三条分派语义。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/proxy/q_lambda_invocation_handler.rs",
+          "symbol": "pub struct QLambdaInvocationHandler"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/proxy/q_lambda_invocation_handler.rs",
+          "test": "abstract_dispatch_forwards_arguments_and_result",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/src/proxy/q_lambda_invocation_handler.rs",
+          "test": "rust_trait_adapter_keeps_default_methods_outside_handler",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "JVM Proxy 机制适配为 Rust 显式接口适配器，但对象全部可观察职责已覆盖。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.runtime::MetaClass|",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Rust MetaClass 持有 ClassRef 代替 JVM Class<?>，构造、类引用读取、相等和哈希全部仅依赖该字段，并作为 DataValue 宿主对象参与静态成员分派。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/runtime/meta_class.rs",
+          "symbol": "pub struct MetaClass"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/runtime/meta_class.rs",
+          "test": "equality_and_hash_code_are_class_based",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "Class<?> 平台类型替换为 ClassRef；对象值语义未简化。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.runtime::QvmGlobalScope|",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Rust 全局作用域保存外部 ExpressContext、共享函数表、attachments 与污染选项；变量读取/复制/写穿、函数表实时共享以及全局不支持的块操作均与 Java 对齐。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/runtime/qvm_global_scope.rs",
+          "symbol": "pub struct QvmGlobalScope"
+        },
+        {
+          "file": "crates/qlexpress/src/scope/q_scope.rs",
+          "symbol": "pub fn global(global: QvmGlobalScope)"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/scope/q_scope.rs",
+          "test": "global_scope_autocreates_variables",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/src/scope/q_scope.rs",
+          "test": "global_scope_preserves_live_external_function_table",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/tests/stage5a_function_context.rs",
+          "test": "map_express_context_pollute_writes_through",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "构造参数被 Rust 拆为显式字段，但引用共享和上下文副作用按 Java 验证。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.runtime::ReflectLoader|",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Rust ReflectLoader 用显式 NativeRegistry 替代 JVM 反射发现，仍完整承担安全策略、扩展函数、构造器/字段/方法重载解析和调用异常三分支包装；JVM 私有反射缓存对象单独按平台排除。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/runtime/reflect_loader.rs",
+          "symbol": "pub struct ReflectLoader"
+        },
+        {
+          "file": "crates/qlexpress/src/runtime/native_registry.rs",
+          "symbol": "pub struct NativeRegistry"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/runtime/reflect_loader.rs",
+          "test": "constructor_loading_uses_runtime_argument_types",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/src/runtime/reflect_loader.rs",
+          "test": "method_loading_uses_runtime_argument_types",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/src/runtime/reflect_loader.rs",
+          "test": "unwrap_method_errors_preserves_all_three_java_branches",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "审计中修复了门面曾丢失实参类型、skipSecurity 和 UNKNOWN_ERROR 分支的真实偏差。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.runtime.scope::QvmBlockScope|",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Rust 将块自身表数据放在 QvmBlockScope，将父链和 FixedSizeStack 所有权放在 QScope；新栈构造、复用栈构造、符号/函数作用域、栈操作和子作用域行为组合后与 Java 对象一致。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/scope/qvm_block_scope.rs",
+          "symbol": "pub struct QvmBlockScope"
+        },
+        {
+          "file": "crates/qlexpress/src/scope/q_scope.rs",
+          "symbol": "pub fn block_fresh_stack("
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/scope/q_scope.rs",
+          "test": "fresh_stack_child_does_not_share",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/src/scope/q_scope.rs",
+          "test": "new_scope_shares_operand_stack_like_java",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/src/scope/q_scope.rs",
+          "test": "block_scope_functions_and_parent_chain_match_java",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "对象职责跨两个 Rust 类型适配，但每个 Java 方法都有明确落点和测试。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.utils::BasicUtil|",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Rust BasicUtil 以 ClassRef、PrimitiveType 和 NumKind 代替 JVM Class/Member，保留包装类原语映射、数值提升级别、JavaBean 名称、null/Nothing 类型推断；JVM Modifier 查询单独按平台排除。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/utils/basic_util.rs",
+          "symbol": "pub struct BasicUtil"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/utils/basic_util.rs",
+          "test": "primitive_mapping_covers_all_java_wrapper_pairs",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/src/utils/basic_util.rs",
+          "test": "getter_setter_names_reject_empty_property",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/src/utils/basic_util.rs",
+          "test": "type_of_object_preserves_null_scalar_and_array_types",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "审计修复了空属性名和 Unicode 多字符大写展开与 Java Character.toUpperCase(char) 不一致的问题。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.annotation::QLAlias|",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Rust 无运行时注解，QLAlias 适配为显式元数据结构并保留 String[] value 的顺序、重复项和空列表；类型/字段/方法目标在 derive/NativeType 注册时消费，等价于 Java RUNTIME 注解扫描。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/annotation/ql_alias.rs",
+          "symbol": "pub struct QLAlias"
+        },
+        {
+          "file": "crates/qlexpress/src/runtime/native_type.rs",
+          "symbol": "pub field_aliases: HashMap<String, Vec<String>>"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/annotation/ql_alias.rs",
+          "test": "holds_aliases",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/tests/alignment_ql4alias.rs",
+          "test": "alias_field_access_via_runner",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "注解平台机制改为显式注册，value 元数据和脚本别名效果都有直接证据。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.annotation::QLFunction|",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Rust 将 METHOD/RUNTIME 注解适配为 QLFunction 元数据和显式函数注册；value 中函数名的顺序与文本保持不变，宿主注册后按这些名称暴露。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/annotation/ql_function.rs",
+          "symbol": "pub struct QLFunction"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/annotation/ql_function.rs",
+          "test": "holds_function_names",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/tests/alignment_express4_runner_exact.rs",
+          "test": "custom_function_can_mutate_live_scope_function_table",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "Java 注解反射由 Rust 宿主显式登记代替，不把缺少 JVM 注解系统误判为缺失函数能力。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.aparser::InterpolationMode|",
+      "state": "IMPLEMENTED",
+      "classification": "EXACT",
+      "semantic_evidence": [
+        "Rust 枚举完整保留 SCRIPT、VARIABLE、DISABLE 的声明顺序/ordinal，默认值为 SCRIPT；词法器对三种模式分别执行脚本插值、变量选择和原文禁用。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/interpolation_mode.rs",
+          "symbol": "pub enum InterpolationMode"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/interpolation_mode.rs",
+          "test": "variants_and_default_match_java_declaration_order",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/src/aparser/q_lexer.rs",
+          "test": "double_quote_string_script_interpolation",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/src/aparser/q_lexer.rs",
+          "test": "double_quote_string_variable_interpolation",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "不只验证枚举存在，还验证三种运行模式的词法分支。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.enums::AccessMode|",
+      "state": "IMPLEMENTED",
+      "classification": "EXACT",
+      "semantic_evidence": [
+        "Rust AccessMode 仅含 WRITE/READ 两项并显式固定 Java ordinal 为 0/1，Copy/Eq/Hash 提供与 Java 枚举身份等价的值语义。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/enums/access_mode.rs",
+          "symbol": "pub enum AccessMode"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/enums/access_mode.rs",
+          "test": "enum_order_matches_java",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "本轮将隐式 Rust 判别值改为显式 Java ordinal 并逐项断言。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.member::FieldHandler|",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Java FieldHandler 本身只是公开命名空间，全部行为位于静态内部类 Preferred；Rust 保留独立 FieldHandler 对象文件，并把 Preferred 作为独立内部类型适配，字段别名/真名解析通过显式 NativeType 元数据执行。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/member/field_handler.rs",
+          "symbol": "pub struct FieldHandler"
+        },
+        {
+          "file": "crates/qlexpress/src/member/preferred.rs",
+          "symbol": "pub struct Preferred"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/tests/alignment_ql4alias.rs",
+          "test": "java_alias_static_field",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/tests/alignment_get_field.rs",
+          "test": "java_case6_instance_property_is_writable_left_value",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "主对象无自有方法；内部 Preferred 的两个方法仍由单独内部类型/方法审计处理。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.runtime.trace::TraceType|",
+      "state": "IMPLEMENTED",
+      "classification": "EXACT",
+      "semantic_evidence": [
+        "Rust TraceType 完整保留 16 个 Java 枚举值、声明顺序/ordinal 和大写 name；TraceExpressionVisitor 与缓存序列化共用同一枚举。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/trace/trace_type.rs",
+          "symbol": "pub enum TraceType"
+        },
+        {
+          "file": "crates/qlexpress/src/trace/trace_type.rs",
+          "symbol": "pub fn java_name("
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/trace/trace_type.rs",
+          "test": "all_variants_keep_java_name_and_ordinal",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/tests/alignment_expression_trace.rs",
+          "test": "static_trace_covers_java_visitor_statement_and_expression_shapes",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "16 项全部枚举验证，且追踪访问器覆盖父/子/复合节点类别。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.runtime::Nothing|",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Rust 以零尺寸私有构造类型保留 Nothing 类身份，并由唯一 FQN 常量/ClassRef 表示 null 实参类型；DataValue::Null 是值层表示。私有字段且无 Default 防止外部实例化，对齐 Java private 构造器。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/runtime/nothing.rs",
+          "symbol": "pub struct Nothing(())"
+        },
+        {
+          "file": "crates/qlexpress/src/runtime/nothing.rs",
+          "symbol": "pub const NOTHING_TYPE_NAME"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/runtime/nothing.rs",
+          "test": "type_name_matches_java_fqn",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/src/utils/basic_util.rs",
+          "test": "type_of_object_preserves_null_scalar_and_array_types",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "审计修复此前 pub 单元结构体可直接构造、违反 Java 私有构造器的偏差。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4::QLPrecedences|",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Java 仅以类承载 16 个 public static final int；Rust 用同名模块常量表达，ASSIGN=0 到 GROUP=15 逐级连续且操作符管理器实际使用这些优先级。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/ql_precedences.rs",
+          "symbol": "pub const ASSIGN: i32 = 0"
+        },
+        {
+          "file": "crates/qlexpress/src/ql_precedences.rs",
+          "symbol": "pub const GROUP: i32 = 15"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/ql_precedences.rs",
+          "test": "precedence_order_is_strictly_increasing",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/tests/alignment_syntax_tree_factory.rs",
+          "test": "java_operator_precedences_test",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "类形态 Rust 化为常量模块，数值与解析可观察效果均验证。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.aparser::BuiltInTypesSet|",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "八个 Java 原始类型字面量逐项映射到 Rust BuiltInType，未知值以 None 等价表达 Java null；每项同时保留 Java 包装类全限定名。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/built_in_types_set.rs",
+          "symbol": "pub fn get_cls("
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/built_in_types_set.rs",
+          "test": "get_cls_matches_all_eight_java_types",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "Class<?> 平台身份改为封闭枚举；八项、未知分支、字面量和包装类名均有直接测试。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.aparser::QLexer|",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Rust 手写扫描器逐方法覆盖 Java QLexer 的完整扫描流程，并用 UTF-16 offset 表达 Java String 下标；Rust Result 只替代 Java 抛出 QLSyntaxException 的控制流。",
+        "18 组真实 Java/Rust 现场差分逐 Token 比较 type、text、start、stop、line、column，并比较所有扫描失败的 errorCode、line、column、reason，结果 18/18 一致。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/q_lexer.rs",
+          "symbol": "pub fn tokenize("
+        },
+        {
+          "file": "crates/qlexpress-verification/src/lexer_differential.rs",
+          "symbol": "pub(crate) fn run("
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "verification/run_lexer_differential.py",
+          "test": "lexer-differential-report.json",
+          "level": "V4_LIVE_DIFF"
+        },
+        {
+          "file": "crates/qlexpress/src/aparser/q_lexer.rs",
+          "test": "word_operator_alias_via_manager",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/src/aparser/q_lexer.rs",
+          "test": "token_positions_use_java_utf16_units",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "本轮新增独立 JavaLexerDifferentialRunner、Rust 对端、18 组语料和自动比较脚本，现场差分零不一致。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.exception::PureErrReporter|",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Rust 报告器忽略 catchObj、按 Java String.format 子集格式化并保留错误码；统一 QLException 的 Runtime kind 等价于 Java 直接创建 QLRuntimeException。",
+        "已修复 SCRIPT_TIME_OUT 被错误特判为 Timeout 的偏差；Java PureErrReporter 对该错误码仍创建普通 QLRuntimeException。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/exception/pure_err_reporter.rs",
+          "symbol": "fn report_format_with_catch("
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/exception/pure_err_reporter.rs",
+          "test": "pure_reporter_formats_and_keeps_code",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/src/exception/pure_err_reporter.rs",
+          "test": "timeout_code_still_creates_plain_runtime_exception",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "本轮按 Java 构造器真实分派修正 timeout 类型偏差，并验证 catchObj 不传播。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.exception::QLErrorCodes|",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Java 63 个枚举名在 Rust 中作为同名错误码常量，getErrorMsg 改为 error_msg 查表；63 个消息模板逐字一致。",
+        "Rust 额外 STACK_OVERFLOW 是固定栈安全诊断，不改变任何 Java 错误码或模板。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/exception/ql_error_codes.rs",
+          "symbol": "pub fn error_msg("
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/exception/ql_error_codes.rs",
+          "test": "all_java_error_codes_and_templates_match",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "本轮将抽样模板测试扩为 Java 63 项完整独立 oracle，并用脚本再次解析两端源文件确认无缺项或错文。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.exception::QLSyntaxException|",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Java 继承 QLException 的语法异常在 Rust 中用强类型包装器表达；构造入口仅接受 Syntax kind，Deref 和 into_exception 保留基类全部诊断状态。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/exception/ql_syntax_exception.rs",
+          "symbol": "pub struct QLSyntaxException"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/exception/ql_syntax_exception.rs",
+          "test": "wrapper_preserves_java_superclass_state",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "继承关系按 Rust 组合适配，测试覆盖 kind、reason、errorCode、行列及消费转换。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.runtime.context::EmptyContext|",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "对任何 attachments 与 variableName 均返回显式 DataValue::Null；外层 Some 保留 Java Value.NULL_VALUE 与 Java null 未命中的关键区别。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/context/empty_context.rs",
+          "symbol": "pub struct EmptyContext"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/context/empty_context.rs",
+          "test": "get_always_returns_explicit_null_value",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "直接测试非空 attachments 和任意变量名，确认不是 Ok(None)。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.runtime.context::ExpressContext|",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Rust trait 保留 attachments 与 variableName 两个输入；Result 适配 Java 非受检异常，Option 适配可返回 Java null，并与显式 Value.NULL_VALUE 分离。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/context/express_context.rs",
+          "symbol": "pub trait ExpressContext"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/context/express_context.rs",
+          "test": "contract_preserves_attachments_missing_and_explicit_null",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "接口契约测试同时覆盖 attachments 透传、未命中和显式 null 三条分支。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.utils::CacheUtil|",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Java Class<?> 反射判定改为 NativeType 显式 is_interface/abstract_methods 元数据；缓存键包含完整元数据，恰有一个抽象方法且为接口时才返回 true。",
+        "缓存归属 NativeRegistry，而不是 JVM 全局静态 Class 缓存；这与 Rust 显式宿主注册边界一致，并已接入方法/构造器重载和 Lambda 可赋值判断。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/utils/cache_util.rs",
+          "symbol": "pub fn is_function_interface("
+        },
+        {
+          "file": "crates/qlexpress/src/runtime/native_registry.rs",
+          "symbol": "function_interface_cache: CacheUtil"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/utils/cache_util.rs",
+          "test": "detects_and_caches_single_abstract_method_interface",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/src/runtime/member_resolver.rs",
+          "test": "lambda_arg_matches_function_interface",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "CodeGraph 初始摘要遗漏生产调用；进一步调用链审计确认 NativeRegistry 已实际接入，非孤立占位。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4::ClassSupplier|",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Rust trait 保留按全限定名加载类的单抽象方法契约；Option<String> 以规范类型名和 None 分别表达 Java Class<?> 与 null，闭包可直接实现 Java FunctionalInterface。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/class_supplier.rs",
+          "symbol": "pub trait ClassSupplier"
+        },
+        {
+          "file": "crates/qlexpress/src/class_supplier.rs",
+          "symbol": "impl<F> ClassSupplier for F"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/class_supplier.rs",
+          "test": "closure_preserves_functional_interface_contract",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/src/default_class_supplier.rs",
+          "test": "registered_names_load",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "本轮补齐闭包 SAM 适配并验证命中/未命中。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.aparser.compiletimefunction::CompileTimeFunction|",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Rust trait 保留函数名、参数 AST 列表、OperatorFactory 和可变 CodeGenerator 四项输入；QvmInstructionVisitor 在编译调用点动态分派并允许生成 lambda/instruction。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/compiletimefunction/compile_time_function.rs",
+          "symbol": "pub trait CompileTimeFunction"
+        },
+        {
+          "file": "crates/qlexpress/src/aparser/qvm_instruction_visitor.rs",
+          "symbol": "compile_time_function.create_function_instruction("
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/tests/alignment_compile_time_function.rs",
+          "test": "java_gen_instruction_num_test",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/tests/stage3b_compile.rs",
+          "test": "compile_time_function_mechanism",
+          "level": "V1_RUST_LOCAL"
+        }
+      ],
+      "review_note": "真实编译器路径验证生成器回调和最终指令执行，不是仅测试 mock trait。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.api::QLFunctionalVarargs|",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Rust 切片保留 Object... 的任意参数数量和顺序，DataValue 保留动态值域，Result 适配运行期异常；闭包自动实现该函数式接口。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/api/ql_functional_varargs.rs",
+          "symbol": "pub trait QLFunctionalVarargs"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/api/ql_functional_varargs.rs",
+          "test": "closure_as_varargs_function",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "测试覆盖空参数与异构多参数。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.api.parsecache::SerializableParseCacheException|",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Rust newtype 替代 Java 继承，构造器按同一规则归一 script/source 并生成等价 ExMessage 与 Diagnostic。",
+        "本轮修复 start 截断和 lexeme range 使用 Unicode 标量数的偏差，改为 Java String.length 的 UTF-16 code unit。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/parsecache/serializable_parse_cache_exception.rs",
+          "symbol": "pub struct SerializableParseCacheException"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/parsecache/serializable_parse_cache_exception.rs",
+          "test": "constructor_normalizes_source_with_java_utf16_lengths",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/src/parsecache/serializable_parse_cache_exception.rs",
+          "test": "constructor_normalizes_absent_script_and_source",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "JDK 21 现场探针确认 a😀 的 script length=3、词素 range length=2。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.exception::ExMessageUtil|",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "源码片段、控制字符替换、省略号、caret 和行列模板均按 Java UTF-16 下标生成。",
+        "本轮修复参数占位符被连续 replace 二次展开以及负/越界 tokenStart 先截断或切片 panic 的差异。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/exception/ex_message_util.rs",
+          "symbol": "pub struct ExMessageUtil"
+        },
+        {
+          "file": "crates/qlexpress/src/exception/ex_message_util.rs",
+          "symbol": "pub fn format("
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/exception/ex_message_util.rs",
+          "test": "non_bmp_prefix_uses_utf16_caret_offset",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/src/exception/ex_message_util.rs",
+          "test": "argument_placeholders_are_not_reexpanded",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/src/exception/ex_message_util.rs",
+          "test": "negative_token_start_keeps_java_loop_boundaries",
+          "level": "V4_LIVE_DIFF"
+        }
+      ],
+      "review_note": "JDK 21 现场探针逐字确认负 start、参数含 {2}/{4} 和 Unicode 输出。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.exception::ExceptionFactory|",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "泛型 trait 保留 message、lineNo、colNo、errLexeme、errorCode、reason、snippet 七参数及 T 返回；闭包实现补齐 Java SAM 使用方式。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/exception/exception_factory.rs",
+          "symbol": "pub trait ExceptionFactory<T>"
+        },
+        {
+          "file": "crates/qlexpress/src/exception/exception_factory.rs",
+          "symbol": "impl<T, F> ExceptionFactory<T> for F"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/exception/exception_factory.rs",
+          "test": "closure_receives_all_java_arguments_in_order",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "Java/Rust 生产代码当前均无调用者；作为公开契约仍逐参数验证，而非删除。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.runtime::QLambdaEmpty|",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Rust 单例忽略全部动态参数并恒返回 QResult::NEXT_INSTRUCTION，Result 的 Ok 仅适配 Rust 异常通道。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/runtime/q_lambda_empty.rs",
+          "symbol": "pub struct QLambdaEmpty"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/runtime/q_lambda_empty.rs",
+          "test": "call_ignores_arguments_and_returns_next_instruction",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "使用非空异构参数验证忽略语义和返回值。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.utils::QLAliasUtils|",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Rust 显式别名组替代 QLAlias[] 反射注解，保持双层遍历的任一精确字符串命中语义；空注解数组和空 value 组返回 false。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/utils/ql_alias_utils.rs",
+          "symbol": "pub fn match_ql_alias("
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/utils/ql_alias_utils.rs",
+          "test": "matches_any_alias_group",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/tests/alignment_ql4alias.rs",
+          "test": "java_alias_member_method",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "显式注册是 Rust 无运行时注解反射的平台适配，成员解析生产路径另有别名集成测试。"
+    }
+  ],
+  "nested_java_types": [
+    {
+      "java_key": "com.alibaba.qlexpress4.runtime::ReflectLoader::FieldReflectCache|",
+      "state": "PLATFORM_NA",
+      "classification": "PLATFORM_NA",
+      "semantic_evidence": [
+        "FieldReflectCache 是 JVM 反射 getter/setter/Field 与声明 Class 的私有缓存载体；Rust NativeType 直接保存已注册字段闭包和可选 setter，不存在可复用的 java.lang.reflect 成员对象。"
+      ],
+      "platform_evidence": [
+        "该私有类字段类型包含 Method/Field 派生的 Supplier、Consumer 与 Class<?>，全部依赖 JVM 反射发现和 setAccessible。",
+        "Rust 替代结构 NativeType.fields、field_setters、static_fields 与 static_field_cells 保留字段读写和共享静态值语义，而非删除字段能力。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/runtime/native_type.rs",
+          "symbol": "pub fields: HashMap<String, NativeFieldGetter>"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/tests/alignment_get_field.rs",
+          "test": "java_case6_instance_property_is_writable_left_value",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "仅排除 JVM 私有缓存载体；字段 getter/setter 的可观察行为由显式注册表实现并验证。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.runtime::ReflectLoader::ExtensionMapKey|",
+      "state": "PLATFORM_NA",
+      "classification": "PLATFORM_NA",
+      "semantic_evidence": [
+        "ExtensionMapKey 是未被当前 Java ReflectLoader 实例化的私有 JVM Class/String 键；Rust 扩展候选直接保存 ClassRef、名称与签名并保留注册顺序。"
+      ],
+      "platform_evidence": [
+        "类型核心身份是 java.lang.Class<?>，Rust 没有 JVM Class 对象。",
+        "Java 当前实现实际使用 CopyOnWriteArrayList<ExtensionFunction>，该内部键属于未使用遗留。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/runtime/native_registry.rs",
+          "symbol": "extension_method_candidates: RefCell<Vec<(ClassRef, String, NativeMethodCandidate)>>"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/tests/alignment_express4_runner_exact.rs",
+          "test": "extension_function_overloads_do_not_overwrite_each_other",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "平台排除与其五个方法使用同一证据边界。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.runtime::ReflectLoader::MethodCacheKey|",
+      "state": "PLATFORM_NA",
+      "classification": "PLATFORM_NA",
+      "semantic_evidence": [
+        "MethodCacheKey 只缓存 JVM Class、方法名和 Class[] 到反射 IMethod 的解析结果；Rust 显式 NativeType 候选以 ClassRef 值语义直接执行重载选择。"
+      ],
+      "platform_evidence": [
+        "键和值分别依赖 java.lang.Class<?>[] 与 java.lang.reflect.Method，安全 Rust 无对应运行时身份。",
+        "Rust 并未省略重载解析，NativeRegistry 仍按实参、静态/实例、varargs 和安全策略选择候选。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/runtime/native_registry.rs",
+          "symbol": "pub fn resolve_method_for_args("
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/tests/alignment_member_overloads.rs",
+          "test": "java_method_var_arg_test",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "平台排除与其六个方法使用同一证据边界。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.aparser::QLParser::QLParseBacktrack|",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Java 私有无状态异常只用于试探局部变量声明失败后的非本地回溯；Rust ParseFail::Backtrack 以无分配枚举分支表达同一内部控制流，调用者恢复 token 位置后继续按表达式解析。",
+        "QLSyntaxException 仍是独立致命分支，不会被误当作回溯吞掉。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/parse_fail.rs",
+          "symbol": "Backtrack,"
+        },
+        {
+          "file": "crates/qlexpress/src/aparser/ql_parser.rs",
+          "symbol": "Err(ParseFail::Backtrack) =>"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/ql_parser.rs",
+          "test": "var_declaration_without_type_is_assign_or_ref",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/src/aparser/ql_parser.rs",
+          "test": "parses_local_variable_declaration_with_type",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "严格生成器刷新 CodeGraph 后暴露同名类型缺失；按控制流等价物显式处置，未伪造无用途同名 struct。"
+    }
+  ],
   "methods": [
     {
       "java_key": "com.alibaba.qlexpress4.aparser::RuleContext::addChild|void (ParseTree child)",
@@ -898,6 +1911,1348 @@
         }
       ],
       "review_note": "Java numberTest 的带下划线 long 字面量编译为精确 Long(1000) 常量。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.aparser::QLParser::FieldIdContext::QuoteStringLiteral|TerminalNode ()",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Rust quote_string_literal 以惯用 snake_case 返回原始单引号 Token；普通标识符返回 None，编译器与外部变量分析器再按 Java QLStringUtils 规则反转义。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/field_id_context.rs",
+          "symbol": "pub fn quote_string_literal(&self)"
+        },
+        {
+          "file": "crates/qlexpress/src/aparser/qvm_instruction_visitor.rs",
+          "symbol": "ctx.quote_string_literal()"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/ql_parser.rs",
+          "test": "parses_method_field_and_chaining_paths",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "覆盖普通、optional、spread 与带转义单引号字段名；没有机械保留 Java 大写访问器名称。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.aparser::SyntaxTreeFactory::buildTree|QLParser.ProgramContext (String script, ParserOperatorManager operatorManager, boolean printTree, Consumer<String> printer, InterpolationMode interpolationMode, String selectorStart, String selectorEnd, boolean strictNewLines)",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Rust build_tree 保留八个输入契约，词法化后构建 Program 节点；debug 模式严格按 Java 顺序输出 Token 文本流和 RuleContext.toStringTree 树形文本，解析错误通过 QLSyntaxException 返回。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/ql_parser.rs",
+          "symbol": "pub fn build_tree("
+        },
+        {
+          "file": "crates/qlexpress/src/aparser/parse_tree.rs",
+          "symbol": "pub fn to_string_tree(&self)"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/ql_parser.rs",
+          "test": "build_tree_prints_token_stream_and_java_tree_shape",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/tests/alignment_syntax_tree_factory.rs",
+          "test": "java_visit_path_expr_test_when_mix",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "核对时发现并修复 Rust 曾错误输出扁平 text() 而非 toStringTree() 的真实偏差。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.aparser::Token::toString|String ()",
+      "state": "IMPLEMENTED",
+      "classification": "EXACT",
+      "semantic_evidence": [
+        "Rust Display 直接写出 Token 原始 text，和 Java toString 返回 text 完全一致，不追加类型或位置信息。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/token.rs",
+          "symbol": "impl std::fmt::Display for Token"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/token.rs",
+          "test": "token_accessors_and_display",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "断言 to_string() 精确等于 abc。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.proxy::QLambdaInvocationHandler::invoke|Object (Object proxy, Method method, Object[] args)",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Rust 无 JVM Proxy/Method，显式 trait 适配器把抽象方法参数原序交给 invoke_abstract；toString 分支返回固定 QLambdaProxy；trait 默认方法由宿主默认实现执行，不进入处理器，与 Java 非抽象分支职责一致。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/proxy/q_lambda_invocation_handler.rs",
+          "symbol": "pub fn invoke_abstract(&self"
+        },
+        {
+          "file": "crates/qlexpress/src/proxy/q_lambda_invocation_handler.rs",
+          "symbol": "pub fn invoke_to_string(&self)"
+        },
+        {
+          "file": "crates/qlexpress/src/proxy/q_lambda_invocation_handler.rs",
+          "symbol": "pub fn into_fn(self)"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/proxy/q_lambda_invocation_handler.rs",
+          "test": "abstract_dispatch_forwards_arguments_and_result",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/src/proxy/q_lambda_invocation_handler.rs",
+          "test": "to_string_is_fixed_proxy_name",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/src/proxy/q_lambda_invocation_handler.rs",
+          "test": "rust_trait_adapter_keeps_default_methods_outside_handler",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "动态代理机制改为显式 Rust trait 适配，但三条可观察分派路径均保留。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.runtime::MetaClass::equals|boolean (Object o)",
+        "com.alibaba.qlexpress4.runtime::MetaClass::hashCode|int ()"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "EXACT",
+      "semantic_evidence": [
+        "MetaClass 的 PartialEq/Eq/Hash 派生只包含 clz 字段，因此相同 ClassRef 相等且产生相同哈希，不同类不相等，对齐 Java Objects.hash(clz)。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/runtime/meta_class.rs",
+          "symbol": "#[derive(Clone, Debug, PartialEq, Eq, Hash)]"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/runtime/meta_class.rs",
+          "test": "equality_and_hash_code_are_class_based",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "同时验证相等、非相等与相等对象哈希一致性。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.runtime::QvmGlobalScope::getSymbolValue|Object (String varName)",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Rust QScope::get_symbol_value 调用全局 get_symbol 后读取 LeftValue，缺失外部变量会按 Java 规则创建可赋值 null 槽位，并保留后续写入值。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/scope/q_scope.rs",
+          "symbol": "pub fn get_symbol_value("
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/scope/q_scope.rs",
+          "test": "global_scope_autocreates_variables",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "测试直接读取 get_symbol_value，并确认同一全局槽位写入后的值。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.runtime::QvmGlobalScope::push|void (Value value)",
+        "com.alibaba.qlexpress4.runtime::QvmGlobalScope::pop|Parameters (int number)",
+        "com.alibaba.qlexpress4.runtime::QvmGlobalScope::pop|Value ()",
+        "com.alibaba.qlexpress4.runtime::QvmGlobalScope::peek|Value ()",
+        "com.alibaba.qlexpress4.runtime::QvmGlobalScope::getParent|QScope ()",
+        "com.alibaba.qlexpress4.runtime::QvmGlobalScope::newScope|QScope ()"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "全局作用域不拥有操作数栈，push/pop/peek/new_scope 在 Rust 中通过缺失 stack 触发 panic，对应 Java UnsupportedOperationException；父作用域用 Option::None 表示不存在，替代 Java getParent 的不支持异常。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/scope/q_scope.rs",
+          "symbol": "expect(\"QvmGlobalScope operand stack operation is unsupported\")"
+        },
+        {
+          "file": "crates/qlexpress/src/scope/q_scope.rs",
+          "symbol": "expect(\"QvmGlobalScope.newScope is unsupported\")"
+        },
+        {
+          "file": "crates/qlexpress/src/scope/q_scope.rs",
+          "symbol": "pub fn parent(this: &ScopeRef)"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/scope/q_scope.rs",
+          "test": "global_scope_rejects_block_only_operations",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "五个不支持操作逐项捕获 panic；getParent 的 Rust 公共契约为 Option，因此以 None 作为明确适配。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.runtime::ReflectLoader::ExtensionMapKey::getCls|Class<?> ()",
+        "com.alibaba.qlexpress4.runtime::ReflectLoader::ExtensionMapKey::getMethodName|String ()",
+        "com.alibaba.qlexpress4.runtime::ReflectLoader::ExtensionMapKey::equals|boolean (Object o)",
+        "com.alibaba.qlexpress4.runtime::ReflectLoader::ExtensionMapKey::hashCode|int ()"
+      ],
+      "state": "PLATFORM_NA",
+      "classification": "PLATFORM_NA",
+      "semantic_evidence": [
+        "ExtensionMapKey 是 ReflectLoader 私有的 JVM Class/String 身份键；当前 Java 源甚至未实例化该类型。Rust 不存在 java.lang.Class 反射身份，兼容旧注册项直接使用 (String, String) HashMap 键，带签名候选使用 (ClassRef, String, NativeMethodCandidate) 列表并保留注册顺序。"
+      ],
+      "platform_evidence": [
+        "Java 类型的核心字段为 java.lang.Class<?>，仅服务 JVM 反射身份、Objects.equals 与 Objects.hash；Rust 显式注册表没有可对应的 JVM Class 对象。",
+        "Java 当前 ReflectLoader 的扩展函数实际存于 CopyOnWriteArrayList<ExtensionFunction>，ExtensionMapKey 是未使用的私有实现遗留。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/runtime/native_registry.rs",
+          "symbol": "extension_methods: RefCell<HashMap<(String, String), NativeMethod>>"
+        },
+        {
+          "file": "crates/qlexpress/src/runtime/native_registry.rs",
+          "symbol": "extension_method_candidates: RefCell<Vec<(ClassRef, String, NativeMethodCandidate)>>"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/tests/alignment_express4_runner_exact.rs",
+          "test": "extension_function_overloads_do_not_overwrite_each_other",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "排除的只是未使用 JVM 私有键对象；扩展函数的查找、重载和顺序语义仍由 Rust 注册表验证。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.runtime::ReflectLoader::MethodCacheKey::getCls|Class<?> ()",
+        "com.alibaba.qlexpress4.runtime::ReflectLoader::MethodCacheKey::getMethodName|String ()",
+        "com.alibaba.qlexpress4.runtime::ReflectLoader::MethodCacheKey::getArgTypes|Class<?>[] ()",
+        "com.alibaba.qlexpress4.runtime::ReflectLoader::MethodCacheKey::equals|boolean (Object o)",
+        "com.alibaba.qlexpress4.runtime::ReflectLoader::MethodCacheKey::hashCode|int ()"
+      ],
+      "state": "PLATFORM_NA",
+      "classification": "PLATFORM_NA",
+      "semantic_evidence": [
+        "MethodCacheKey 只为 JVM 反射解析结果缓存 Class、方法名和 Class[] 实参类型。Rust 原生成员必须显式登记，实例/静态方法及同名候选分别存入 NativeType 的类型化 HashMap，调用时从 DataValue 计算 ClassRef 并执行同一重载优先级，不缓存 java.lang.reflect.Method。"
+      ],
+      "platform_evidence": [
+        "该私有键的 cls/argTypes 均为 java.lang.Class，值为 JVM IMethod；Rust 没有运行时 Class<?>、Method 或类加载器发现，因此不能也无需保留该缓存对象。",
+        "Rust 替代边界是显式 NativeType 注册表和 ClassRef 值语义，而不是省略方法重载、静态/实例区分或参数匹配。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/runtime/native_type.rs",
+          "symbol": "pub method_candidates: HashMap<String, Vec<NativeMethodCandidate>>"
+        },
+        {
+          "file": "crates/qlexpress/src/runtime/native_type.rs",
+          "symbol": "pub static_method_candidates: HashMap<String, Vec<NativeMethodCandidate>>"
+        },
+        {
+          "file": "crates/qlexpress/src/runtime/native_registry.rs",
+          "symbol": "pub fn resolve_method_for_args("
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/tests/alignment_member_overloads.rs",
+          "test": "java_method_equal_type_test",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/tests/alignment_member_overloads.rs",
+          "test": "java_method_var_arg_test",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "JVM 缓存键平台排除；被缓存行为本身仍以注册表重载测试作为替代证据。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.runtime.scope::QvmBlockScope::getSymbol|Value (String varName)",
+        "com.alibaba.qlexpress4.runtime.scope::QvmBlockScope::defineLocalSymbol|void (String varName, Class<?> varClz, Object value)",
+        "com.alibaba.qlexpress4.runtime.scope::QvmBlockScope::defineFunction|void (String functionName, CustomFunction function)",
+        "com.alibaba.qlexpress4.runtime.scope::QvmBlockScope::getFunction|CustomFunction (String functionName)",
+        "com.alibaba.qlexpress4.runtime.scope::QvmBlockScope::push|void (Value value)",
+        "com.alibaba.qlexpress4.runtime.scope::QvmBlockScope::pop|Parameters (int number)",
+        "com.alibaba.qlexpress4.runtime.scope::QvmBlockScope::pop|Value ()",
+        "com.alibaba.qlexpress4.runtime.scope::QvmBlockScope::peek|Value ()",
+        "com.alibaba.qlexpress4.runtime.scope::QvmBlockScope::getParent|QScope ()",
+        "com.alibaba.qlexpress4.runtime.scope::QvmBlockScope::newScope|QScope ()"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Rust 将 Java QvmBlockScope 的作用域链和共享栈操作集中在 QScope：符号/函数均本地优先再回退父级，定义只写当前表；new_scope 创建以当前节点为父且共享同一 FixedSizeStack 的子块；pop_n 保持从深到浅的参数顺序。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/scope/q_scope.rs",
+          "symbol": "pub fn get_symbol("
+        },
+        {
+          "file": "crates/qlexpress/src/scope/q_scope.rs",
+          "symbol": "pub fn define_local_symbol("
+        },
+        {
+          "file": "crates/qlexpress/src/scope/q_scope.rs",
+          "symbol": "pub fn define_function("
+        },
+        {
+          "file": "crates/qlexpress/src/scope/q_scope.rs",
+          "symbol": "pub fn get_function("
+        },
+        {
+          "file": "crates/qlexpress/src/scope/q_scope.rs",
+          "symbol": "pub fn new_scope(this: &ScopeRef)"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/scope/q_scope.rs",
+          "test": "symbol_defined_in_child_is_invisible_in_parent",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/src/scope/q_scope.rs",
+          "test": "block_scope_functions_and_parent_chain_match_java",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/src/scope/q_scope.rs",
+          "test": "new_scope_shares_operand_stack_like_java",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/src/scope/q_scope.rs",
+          "test": "pop_n_preserves_stack_order",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "十个方法按共享机制统一核对，不以空的 qvm_block_scope.rs 外形文件冒充实现。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.aparser::Token::Token|(int type, String text, int startIndex, int stopIndex, int line, int charPositionInLine)",
+        "com.alibaba.qlexpress4.aparser::Token::getType|int ()",
+        "com.alibaba.qlexpress4.aparser::Token::setType|void (int type)",
+        "com.alibaba.qlexpress4.aparser::Token::getText|String ()",
+        "com.alibaba.qlexpress4.aparser::Token::getStartIndex|int ()",
+        "com.alibaba.qlexpress4.aparser::Token::getStopIndex|int ()",
+        "com.alibaba.qlexpress4.aparser::Token::getLine|int ()",
+        "com.alibaba.qlexpress4.aparser::Token::getCharPositionInLine|int ()"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "EXACT",
+      "semantic_evidence": [
+        "Token::new 保存六个 Java 构造参数；get_type/set_type 与其余只读访问器逐字段返回或更新同一值，偏移和行列均使用与 Java 相同的 i32/UTF-16 坐标契约。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/token.rs",
+          "symbol": "pub fn new("
+        },
+        {
+          "file": "crates/qlexpress/src/aparser/token.rs",
+          "symbol": "pub fn get_type(&self)"
+        },
+        {
+          "file": "crates/qlexpress/src/aparser/token.rs",
+          "symbol": "pub fn set_type(&mut self"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/token.rs",
+          "test": "token_accessors_and_display",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "一个测试先验证全部构造/读取字段，再验证两种 type 写入口均写回同一字段。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.proxy::QLambdaInvocationHandler::QLambdaInvocationHandler|(QLambda qLambda)",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Rust 构造器持有调用方传入的同一 Rc<QLambda>，后续抽象方法与 toString 分派均使用该处理器状态。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/proxy/q_lambda_invocation_handler.rs",
+          "symbol": "pub fn new(q_lambda: Rc<QLambda>)"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/proxy/q_lambda_invocation_handler.rs",
+          "test": "abstract_dispatch_forwards_arguments_and_result",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/src/proxy/q_lambda_invocation_handler.rs",
+          "test": "to_string_is_fixed_proxy_name",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "构造器通过两类不同 QLambda 实例的后续行为直接验证。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.runtime::MetaClass::MetaClass|(Class<?> clz)",
+        "com.alibaba.qlexpress4.runtime::MetaClass::getClz|Class<?> ()"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Rust 用 ClassRef 代替 JVM Class<?>；MetaClass::new 原样保存，clz() 返回同一规范类引用，不执行名称重写或重新解析。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/runtime/meta_class.rs",
+          "symbol": "pub fn new(clz: ClassRef)"
+        },
+        {
+          "file": "crates/qlexpress/src/runtime/meta_class.rs",
+          "symbol": "pub fn clz(&self)"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/runtime/meta_class.rs",
+          "test": "equality_and_hash_code_are_class_based",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "测试直接断言 getClz 对等访问器，并继续用该字段验证 equals/hashCode。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.runtime::QvmGlobalScope::QvmGlobalScope|(ExpressContext externalVariable, Map<String, CustomFunction> externalFunction, QLOptions qlOptions)",
+        "com.alibaba.qlexpress4.runtime::QvmGlobalScope::getSymbol|Value (String varName)"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "with_context 将 Java QLOptions 展开为 attachments 与 polluteUserContext，并保存外部上下文及函数表；get_symbol 优先新变量，随后按污染选项返回外部左值或复制当前值，缺失时创建 null 槽位。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/runtime/qvm_global_scope.rs",
+          "symbol": "pub fn with_context("
+        },
+        {
+          "file": "crates/qlexpress/src/runtime/qvm_global_scope.rs",
+          "symbol": "pub fn get_symbol("
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/tests/stage5a_function_context.rs",
+          "test": "map_express_context_read_and_isolated_write",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/tests/stage5a_function_context.rs",
+          "test": "map_express_context_pollute_writes_through",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/src/scope/q_scope.rs",
+          "test": "global_scope_autocreates_variables",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "覆盖外部已有、外部缺失、隔离复制与污染写穿四种状态。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.runtime::QvmGlobalScope::defineLocalSymbol|void (String varName, Class<?> varClz, Object value)",
+        "com.alibaba.qlexpress4.runtime::QvmGlobalScope::defineFunction|void (String functionName, CustomFunction function)"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "EXACT",
+      "semantic_evidence": [
+        "Java 全局作用域两个定义方法均抛 UnsupportedOperationException；Rust 全局分支明确 panic 并携带对应操作名，不会误写全局表。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/runtime/qvm_global_scope.rs",
+          "symbol": "UnsupportedOperationException: defineLocalSymbol on QvmGlobalScope"
+        },
+        {
+          "file": "crates/qlexpress/src/runtime/qvm_global_scope.rs",
+          "symbol": "UnsupportedOperationException: defineFunction on QvmGlobalScope"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/scope/q_scope.rs",
+          "test": "global_scope_rejects_block_only_operations",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "本轮新增两个此前未覆盖的不支持分支。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.runtime::QvmGlobalScope::getFunction|CustomFunction (String functionName)",
+        "com.alibaba.qlexpress4.runtime::QvmGlobalScope::getFunctionTable|Map<String, CustomFunction> ()"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Rust 返回 Rc<RefCell<HashMap>> 共享句柄代替 Java 实际 Map 引用；经该句柄后续插入的函数会被 get_function 立即观察到。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/runtime/qvm_global_scope.rs",
+          "symbol": "pub fn get_function(&self"
+        },
+        {
+          "file": "crates/qlexpress/src/runtime/qvm_global_scope.rs",
+          "symbol": "pub fn function_table(&self)"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/scope/q_scope.rs",
+          "test": "global_scope_preserves_live_external_function_table",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/tests/alignment_express4_runner_exact.rs",
+          "test": "custom_function_can_mutate_live_scope_function_table",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "验证的是同一可变函数表的写穿，不是内容相等的副本。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.runtime::ReflectLoader::ReflectLoader|(QLSecurityStrategy securityStrategy, boolean allowPrivateAccess)",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Rust 构造器创建内建 NativeRegistry，原样安装安全策略并保留 allowPrivateAccess 注册元数据；后续字段/方法/构造器解析均共享该注册表。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/runtime/reflect_loader.rs",
+          "symbol": "pub fn new(security_strategy: QLSecurityStrategy"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/runtime/reflect_loader.rs",
+          "test": "delegates_builtin_member_loading",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/src/runtime/reflect_loader.rs",
+          "test": "field_loading_preserves_skip_security_branch",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "开放与隔离策略及 allowPrivateAccess=false 均由构造后行为验证。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.runtime::ReflectLoader::addExtendFunction|void (ExtensionFunction extensionFunction)",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "add_extend_function 提取声明类、名称、形参、varargs 与调用实现，向候选列表追加而非覆盖；解析顺序仍早于安全策略。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/runtime/reflect_loader.rs",
+          "symbol": "pub fn add_extend_function"
+        },
+        {
+          "file": "crates/qlexpress/src/runtime/native_registry.rs",
+          "symbol": "pub fn register_extension_candidate("
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/tests/alignment_express4_runner_exact.rs",
+          "test": "extension_function_overloads_do_not_overwrite_each_other",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "同名不同签名扩展都能保留并按实参选中。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.runtime::ReflectLoader::loadConstructor|Constructor<?> (Class<?> cls, Class<?>[] paramTypes)",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Rust load_constructor 接收运行时 DataValue 实参并计算 ClassRef，按 Java 重载优先级选出最佳构造器并预装必要转换；隔离或无匹配返回 None。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/runtime/reflect_loader.rs",
+          "symbol": "pub fn load_constructor("
+        },
+        {
+          "file": "crates/qlexpress/src/runtime/native_registry.rs",
+          "symbol": "pub fn load_constructor_for_args("
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/runtime/reflect_loader.rs",
+          "test": "constructor_loading_uses_runtime_argument_types",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/tests/alignment_member_overloads.rs",
+          "test": "java_constructor_var_arg_test",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "审计时修复门面忽略 paramTypes、固定返回单构造器的偏差。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.runtime::ReflectLoader::loadField|Value (Object bean, String fieldName, boolean skipSecurity, ErrorReporter errorReporter)",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Rust 保留数组/List length、Map 左值、MetaClass 静态字段、实例 getter/setter 与 skipSecurity 分支；原生闭包直接产生 QLException，因而解析签名无需携带 ErrorReporter。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/runtime/reflect_loader.rs",
+          "symbol": "pub fn load_field("
+        },
+        {
+          "file": "crates/qlexpress/src/runtime/native_registry.rs",
+          "symbol": "pub fn load_field_with_security("
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/runtime/reflect_loader.rs",
+          "test": "field_loading_preserves_skip_security_branch",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/tests/alignment_get_field.rs",
+          "test": "java_case6_instance_property_is_writable_left_value",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "审计时修复 ReflectLoader 门面此前固定 skipSecurity=true 的偏差。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.runtime::ReflectLoader::loadMethod|IMethod (Object bean, String methodName, Class<?>[] argTypes)",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Rust 由运行时 DataValue 推断 Java 类型，扩展函数优先，随后区分静态/实例、别名、安全策略、精确/拆箱/数值/varargs 优先级并返回已适配参数的调用闭包。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/runtime/reflect_loader.rs",
+          "symbol": "pub fn load_method("
+        },
+        {
+          "file": "crates/qlexpress/src/runtime/native_registry.rs",
+          "symbol": "pub fn resolve_method_for_args("
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/runtime/reflect_loader.rs",
+          "test": "method_loading_uses_runtime_argument_types",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/tests/alignment_member_overloads.rs",
+          "test": "java_method_var_arg_test",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "审计时修复 ReflectLoader 门面此前完全丢失 argTypes 的偏差。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.runtime::ReflectLoader::unwrapMethodInvokeEx|QLRuntimeException (ErrorReporter errorReporter, String methodName, Exception ex)",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Rust 以错误码识别 IllegalArgumentException 等价分支，以 host_origin 识别 InvocationTargetException 目标异常，其余进入 UNKNOWN_ERROR；后两支均保留 cause。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/runtime/reflect_loader.rs",
+          "symbol": "pub fn unwrap_method_invoke_ex("
+        },
+        {
+          "file": "crates/qlexpress/src/exception/ql_exception.rs",
+          "symbol": "pub(crate) fn is_host_origin(&self)"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/runtime/reflect_loader.rs",
+          "test": "unwrap_method_errors_preserves_all_three_java_branches",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/tests/alignment_express4_runner_exact.rs",
+          "test": "java_method_invoke_cause_test",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "审计时补回此前被错误归入 INNER_ERROR 的 Java UNKNOWN_ERROR 分支。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.runtime::ReflectLoader::ExtensionMapKey::ExtensionMapKey|(Class<?> cls, String methodName)",
+        "com.alibaba.qlexpress4.runtime::ReflectLoader::MethodCacheKey::MethodCacheKey|(Class<?> cls, String methodName, Class<?>[] argTypes)"
+      ],
+      "state": "PLATFORM_NA",
+      "classification": "PLATFORM_NA",
+      "semantic_evidence": [
+        "两个构造器只创建私有 JVM 反射缓存键；Rust 没有 Class<?>/Method 身份，使用 ClassRef 与显式候选表直接表达相同解析维度。"
+      ],
+      "platform_evidence": [
+        "构造参数核心类型为 java.lang.Class<?> 和 Class<?>[]，属于 JVM 反射平台对象。",
+        "ExtensionMapKey 在当前 Java 源未使用；MethodCacheKey 的行为由 NativeRegistry 的类型化表和调用现场选择取代。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/runtime/native_registry.rs",
+          "symbol": "extension_method_candidates: RefCell<Vec<(ClassRef, String, NativeMethodCandidate)>>"
+        },
+        {
+          "file": "crates/qlexpress/src/runtime/native_type.rs",
+          "symbol": "pub method_candidates: HashMap<String, Vec<NativeMethodCandidate>>"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/tests/alignment_member_overloads.rs",
+          "test": "java_method_equal_type_test",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "仅 JVM 私有键构造器平台排除，所承载的查找维度仍有行为测试。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.runtime.scope::QvmBlockScope::QvmBlockScope|(QScope parent, Map<String, Value> symbolTable, int maxStackSize, ExceptionTable exceptionTable)",
+        "com.alibaba.qlexpress4.runtime.scope::QvmBlockScope::QvmBlockScope|(QScope parent, Map<String, Value> symbolTable, FixedSizeStack reuseStack, ExceptionTable exceptionTable)"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Java 两个构造器在 Rust 分别映射为 block_fresh_stack 与 new_scope：前者按 maxStackSize 创建独立 FixedSizeStack，后者复用父栈；两者都保存父引用并创建当前块表。ExceptionTable 在 Rust 编译产物/指令作用域中独立持有。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/scope/q_scope.rs",
+          "symbol": "pub fn block_fresh_stack("
+        },
+        {
+          "file": "crates/qlexpress/src/scope/q_scope.rs",
+          "symbol": "pub fn new_scope(this: &ScopeRef)"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/scope/q_scope.rs",
+          "test": "fresh_stack_child_does_not_share",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/src/scope/q_scope.rs",
+          "test": "new_scope_shares_operand_stack_like_java",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "两个重载按栈所有权差异分别验证，未合并成单一简化构造。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.runtime.scope::QvmBlockScope::getFunctionTable|Map<String, CustomFunction> ()",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "QvmBlockScope 保存 Rc<RefCell<HashMap>> 并由 QScope::function_table 返回同一共享句柄；对返回表的写入会立即影响当前块查找且不污染父块。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/scope/qvm_block_scope.rs",
+          "symbol": "pub fn function_table(&self)"
+        },
+        {
+          "file": "crates/qlexpress/src/scope/q_scope.rs",
+          "symbol": "pub fn function_table(this: &ScopeRef)"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/scope/q_scope.rs",
+          "test": "block_scope_functions_and_parent_chain_match_java",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "测试直接通过返回表插入 tableOnly，验证实际 Map 引用语义。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.utils::BasicUtil::transToPrimitive|Class<?> (Class<?> clazz)",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Rust PrimitiveType 只表示 Java primitiveMap 的八个包装/原语对，因此 trans_to_primitive 是类型安全的类别恒等映射；非包装 Class<?> 无法构造为该输入，替代 Java null 分支。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/utils/basic_util.rs",
+          "symbol": "pub fn trans_to_primitive("
+        },
+        {
+          "file": "crates/qlexpress/src/utils/primitive_type.rs",
+          "symbol": "pub enum PrimitiveType"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/utils/basic_util.rs",
+          "test": "primitive_mapping_covers_all_java_wrapper_pairs",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "八个 Java primitiveMap 条目逐项枚举验证。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.utils::BasicUtil::numberPromoteLevel|Integer (Class<?> numCls)",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Rust NumKind 只表示 Java 可提升数值类并返回完全相同的 byte=0 到 BigDecimal=7 顺序；非数值 Class<?> 不能构造为 NumKind，替代 Java null。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/utils/basic_util.rs",
+          "symbol": "pub fn promote_level(self)"
+        },
+        {
+          "file": "crates/qlexpress/src/utils/num_kind.rs",
+          "symbol": "pub enum NumKind"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/utils/basic_util.rs",
+          "test": "promote_levels_match_java",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "八级顺序逐项断言，非数值分支以类型系统排除。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.utils::BasicUtil::getGetter|String (String s)",
+        "com.alibaba.qlexpress4.utils::BasicUtil::getSetter|String (String s)",
+        "com.alibaba.qlexpress4.utils::BasicUtil::getIsGetter|String (String s)"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Rust 分别拼接 get/set/is，并精确模拟 Character.toUpperCase(char)：BMP 单字符映射、无法装入 char 的多字符展开保持原值、supplementary 首代理保持原值；空输入与 Java charAt(0) 一样失败。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/utils/basic_util.rs",
+          "symbol": "fn java_char_to_uppercase("
+        },
+        {
+          "file": "crates/qlexpress/src/utils/basic_util.rs",
+          "symbol": "fn capitalize_prefixed("
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/utils/basic_util.rs",
+          "test": "getter_setter_names",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/src/utils/basic_util.rs",
+          "test": "getter_setter_names_reject_empty_property",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "使用 JDK 21 探针对 ß、ﬃ、é 与 supplementary 字符确认边界后修复。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.utils::BasicUtil::getTypeOfObject|Class<?>[] (Object[] objects)",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Rust 对每个 DataValue 返回 ClassRef：Null 映射 Nothing、标量映射包装类、宿主对象返回注册规范名、Lambda 返回 QLambda、数组保留组件类或退化 Object[]，输出长度和顺序不变。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/utils/basic_util.rs",
+          "symbol": "pub fn get_type_of_object("
+        },
+        {
+          "file": "crates/qlexpress/src/utils/basic_util.rs",
+          "symbol": "pub fn type_of_value("
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/utils/basic_util.rs",
+          "test": "type_of_object_preserves_null_scalar_and_array_types",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "测试覆盖 null、标量、同组件数组与混合数组；宿主/Lambda 类型另由成员重载测试覆盖。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.utils::BasicUtil::isPublic|boolean (Member member)",
+        "com.alibaba.qlexpress4.utils::BasicUtil::isStatic|boolean (Member member)"
+      ],
+      "state": "PLATFORM_NA",
+      "classification": "PLATFORM_NA",
+      "semantic_evidence": [
+        "两个方法只读取 java.lang.reflect.Member 的 JVM Modifier 位。Rust 可见性由编译器强制，宿主仅能显式登记可访问成员；静态与实例字段/方法进入 NativeType 的独立表，因此没有可接收反射 Member 的等价工具函数。"
+      ],
+      "platform_evidence": [
+        "输入类型 java.lang.reflect.Member 与 Modifier.isPublic/isStatic 都是 JVM 反射 API，安全 Rust 无运行时绕过私有可见性的反射 Member。",
+        "显式注册决定 public 能力边界，NativeType 的 static_fields/static_methods 与 fields/methods 分表决定静态分派；平台排除不改变脚本层行为。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/runtime/native_type.rs",
+          "symbol": "pub static_methods: HashMap<String, NativeMethod>"
+        },
+        {
+          "file": "crates/qlexpress/src/runtime/native_type.rs",
+          "symbol": "pub methods: HashMap<String, NativeMethod>"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/tests/alignment_get_field.rs",
+          "test": "java_case3_private_static_field_is_not_found",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/tests/alignment_get_field.rs",
+          "test": "java_case4_private_static_field_with_explicit_access",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/tests/alignment_get_field.rs",
+          "test": "java_case2_public_static_field_is_writable_left_value",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "仅 JVM Modifier 查询函数本身无 Rust 对象；public/private 与 static/instance 的可观察访问语义有显式测试。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.aparser::BuiltInTypesSet::getCls|Class<?> (String lexeme)",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "get_cls 对八个字面量返回封闭 BuiltInType，对未知值返回 None，逐项等价于 Java 包装 Class 与 null。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/built_in_types_set.rs",
+          "symbol": "pub fn get_cls("
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/built_in_types_set.rs",
+          "test": "get_cls_matches_all_eight_java_types",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "Rust 无 JVM Class<?>，使用类型安全枚举保留所有可观察分支。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.aparser::QLexer::tokenize|List<Token> (String script, ParserOperatorManager operatorManager, InterpolationMode interpolationMode, String selectorStart, String selectorEnd, boolean strictNewLines)",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "所有六个参数均参与扫描；成功追加完全一致的 EOF，失败以 Result 返回等价 QLSyntaxException。",
+        "18 组固定语料对真实 Java 基线执行逐 Token 现场差分，全部一致。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/q_lexer.rs",
+          "symbol": "pub fn tokenize("
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "verification/run_lexer_differential.py",
+          "test": "lexer-differential-report.json",
+          "level": "V4_LIVE_DIFF"
+        }
+      ],
+      "review_note": "Rust &str 排除 Java null 输入；其余扫描结果和异常逐字段实时对照。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.exception::PureErrReporter::reportFormatWithCatch|QLRuntimeException (Object catchObj, String errorCode, String format, Object... args)",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "忽略 catchObj、格式化消息、保留 errorCode，并始终生成 Runtime kind；包括 SCRIPT_TIME_OUT 也不走 Timeout 分支。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/exception/pure_err_reporter.rs",
+          "symbol": "fn report_format_with_catch("
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/exception/pure_err_reporter.rs",
+          "test": "timeout_code_still_creates_plain_runtime_exception",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "本轮修复 timeout 错误类型偏差。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.exception::QLErrorCodes::getErrorMsg|String ()",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "error_msg(code) 将 Java enum 实例 getter 改为错误码查表，63 个稳定消息模板逐项等价。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/exception/ql_error_codes.rs",
+          "symbol": "pub fn error_msg("
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/exception/ql_error_codes.rs",
+          "test": "all_java_error_codes_and_templates_match",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "完整表替代原有抽样断言。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.exception::QLSyntaxException::QLSyntaxException|(String message, Diagnostic diagnostic)",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "from_exception 是 Java protected 构造器的 crate 内等价入口，强制 Syntax kind 并保留 message/Diagnostic 的全部公开状态。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/exception/ql_syntax_exception.rs",
+          "symbol": "pub(crate) fn from_exception("
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/exception/ql_syntax_exception.rs",
+          "test": "wrapper_preserves_java_superclass_state",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "Rust 组合替代 Java 继承，构造可见性仍限制在引擎内部。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.runtime.context::EmptyContext::get|Value (Map<String, Object> attachments, String variableName)",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "忽略两个参数并恒返回 Some(DataValue::Null)，精确保留 Value.NULL_VALUE 而非 Java null。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/context/empty_context.rs",
+          "symbol": "fn get("
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/context/empty_context.rs",
+          "test": "get_always_returns_explicit_null_value",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "显式验证 present-null 分支。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.runtime.context::ExpressContext::get|Value (Map<String, Object> attachments, String variableName)",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "trait 方法保留 attachments 与 variableName；Result 传播宿主异常，Option 区分未命中和显式 null。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/context/express_context.rs",
+          "symbol": "pub trait ExpressContext"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/context/express_context.rs",
+          "test": "contract_preserves_attachments_missing_and_explicit_null",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "三条可观察分支均直接调用 trait 契约验证。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.utils::CacheUtil::isFunctionInterface|boolean (Class<?> clazz)",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "NativeType 显式元数据替代 Class 反射，接口且恰一抽象方法时返回 true；完整元数据键缓存结果并由 NativeRegistry 生产调用。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/utils/cache_util.rs",
+          "symbol": "pub fn is_function_interface("
+        },
+        {
+          "file": "crates/qlexpress/src/runtime/native_registry.rs",
+          "symbol": ".is_function_interface(&native_type)"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/utils/cache_util.rs",
+          "test": "detects_and_caches_single_abstract_method_interface",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/src/runtime/member_resolver.rs",
+          "test": "lambda_arg_matches_function_interface",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "Rust 注册表边界替代 JVM 全局 Class 缓存边界。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4::ClassSupplier::loadCls|Class<?> (String clsQualifiedName)",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "load_cls 接收完整规范名，命中返回相同规范名，未命中 None 对应 Java null；闭包和默认供应器均实现同一 trait。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/class_supplier.rs",
+          "symbol": "fn load_cls("
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/class_supplier.rs",
+          "test": "closure_preserves_functional_interface_contract",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "Class<?> 平台值适配为规范名。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.aparser.compiletimefunction::CompileTimeFunction::createFunctionInstruction|void (String functionName, List<QLParser.ExpressionContext> arguments, OperatorFactory operatorFactory, CodeGenerator codeGenerator)",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "四项输入和 void 副作用契约完整保留，真实 QvmInstructionVisitor 调用并由测试在编译期读取生成 lambda 指令数。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/compiletimefunction/compile_time_function.rs",
+          "symbol": "fn create_function_instruction("
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/tests/alignment_compile_time_function.rs",
+          "test": "java_gen_instruction_num_test",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "AST 参数从 ExpressionContext 适配为 Node 引用，行为经真实编译路径验证。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.api::QLFunctionalVarargs::call|Object (Object... params)",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "DataValue 切片保留异构 varargs 的长度、顺序和值，DataValue 返回域包含 Java null，Result 传播引擎异常。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/api/ql_functional_varargs.rs",
+          "symbol": "fn call("
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/api/ql_functional_varargs.rs",
+          "test": "closure_as_varargs_function",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "空与多参数分支均验证。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.api.parsecache::SerializableParseCacheException::SerializableParseCacheException|(String script, SerializableSource source, String errorCode, String reason)",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "构造器对 null、越界 start、非法 line/col、null lexeme 完成相同归一，并以 UTF-16 构造消息和 Diagnostic range。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/parsecache/serializable_parse_cache_exception.rs",
+          "symbol": "pub fn new("
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/parsecache/serializable_parse_cache_exception.rs",
+          "test": "constructor_normalizes_source_with_java_utf16_lengths",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/src/parsecache/serializable_parse_cache_exception.rs",
+          "test": "constructor_normalizes_absent_script_and_source",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "本轮修正两个 UTF-16 长度偏差并用 Java 探针核验。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.exception::ExMessageUtil::format|ExMessage (String script, int tokenStartPos, int tokenLine, int tokenCol, String lexeme, String errorCode, String reason)",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "七参数逐项用于消息；UTF-16 snippet/caret、控制字符替换、前后省略号和 MessageFormat 非递归参数语义完整保留。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/exception/ex_message_util.rs",
+          "symbol": "pub fn format("
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/exception/ex_message_util.rs",
+          "test": "argument_placeholders_are_not_reexpanded",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/src/exception/ex_message_util.rs",
+          "test": "negative_token_start_keeps_java_loop_boundaries",
+          "level": "V4_LIVE_DIFF"
+        }
+      ],
+      "review_note": "现场 Java 输出与 Rust 断言逐字一致。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.exception::ExceptionFactory::newException|T (String message, int lineNo, int colNo, String errLexeme, String errorCode, String reason, String snippet)",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "泛型返回和七参数顺序完整保留，闭包 blanket impl 对应 Java SAM 实现。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/exception/exception_factory.rs",
+          "symbol": "fn new_exception("
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/exception/exception_factory.rs",
+          "test": "closure_receives_all_java_arguments_in_order",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "七项用带分隔输出独立验证无重排/丢失。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.runtime::QLambdaEmpty::call|QResult (Object... params)",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "任意参数均被忽略且返回 NextInstruction/Null，与 Java QResult.NEXT_INSTRUCTION 单例的可观察状态一致。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/runtime/q_lambda_empty.rs",
+          "symbol": "pub fn call("
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/runtime/q_lambda_empty.rs",
+          "test": "call_ignores_arguments_and_returns_next_instruction",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "Result 仅为 Rust 错误通道适配。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.utils::QLAliasUtils::matchQLAlias|boolean (String matchName, QLAlias[] qlAliases)",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "显式别名切片替代注解反射，双层 any 与 Java 双层循环完全一致；精确大小写字符串比较，空输入返回 false。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/utils/ql_alias_utils.rs",
+          "symbol": "pub fn match_ql_alias("
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/utils/ql_alias_utils.rs",
+          "test": "matches_any_alias_group",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "Rust 引用类型排除 Java null 数组和 null 名称，其余可观察分支对齐。"
     }
   ]
 }

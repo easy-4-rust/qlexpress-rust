@@ -2,7 +2,6 @@
 
 #![allow(clippy::result_large_err)]
 
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 

@@ -288,16 +288,196 @@ fn utf8_len(first_byte: u8) -> usize {
 mod tests {
     use super::*;
 
+    /// SOURCE_PARITY: Java `QLErrorCodes#getErrorMsg` 的 63 个枚举项与消息模板
+    /// 必须逐项一致；这张表有意作为 Java 枚举的独立测试 oracle 保留。
     #[test]
-    fn all_templates_match_codes() {
-        // Spot-check verbatim Java templates.
-        assert_eq!(error_msg(FUNCTION_NOT_FOUND), "function '%s' not found");
-        assert_eq!(
-            error_msg(SCRIPT_TIME_OUT),
-            "script exceeds timeout milliseconds, which is %d ms"
-        );
-        assert_eq!(error_msg(SYNTAX_ERROR), "");
-        assert_eq!(error_msg(QL_THROW), "qlexpress throw statement");
+    fn all_java_error_codes_and_templates_match() {
+        let expected = [
+            (SYNTAX_ERROR, ""),
+            (MISSING_INDEX, "missing index expression"),
+            (INVALID_NUMBER, "invalid number"),
+            (CLASS_NOT_FOUND, "can not find class: %s"),
+            (INVALID_INDEX, "index can only be number"),
+            (INDEX_OUT_BOUND, "index out of bound"),
+            (NONINDEXABLE_OBJECT, "object of class %s is not indexable"),
+            (
+                NONTRAVERSABLE_OBJECT,
+                "object of class %s is not traversable",
+            ),
+            (NULL_FIELD_ACCESS, "can not access field from null"),
+            (NULL_METHOD_ACCESS, "can not access method from null"),
+            (FIELD_NOT_FOUND, "'%s' field not found"),
+            (
+                SET_FIELD_UNKNOWN_ERROR,
+                "unknown error when setting field '%s' value",
+            ),
+            (
+                GET_FIELD_UNKNOWN_ERROR,
+                "unknown error when getting field '%s' value",
+            ),
+            (
+                INVOKE_METHOD_WITH_WRONG_ARGUMENTS,
+                "invoke method '%s' with wrong arguments",
+            ),
+            (
+                INVOKE_METHOD_INNER_ERROR,
+                "exception from inner when invoking method '%s'",
+            ),
+            (
+                INVOKE_METHOD_UNKNOWN_ERROR,
+                "unknown error when invoking method '%s'",
+            ),
+            (
+                INVOKE_FUNCTION_INNER_ERROR,
+                "exception from inner when invoking function '%s', error message: %s",
+            ),
+            (FUNCTION_NOT_FOUND, "function '%s' not found"),
+            (
+                FUNCTION_TYPE_MISMATCH,
+                "symbol '%s' is not a function type",
+            ),
+            (INVOKE_LAMBDA_ERROR, "error when invoking lambda"),
+            (NULL_CALL, "can not call null"),
+            (OBJECT_NOT_CALLABLE, "type '%s' is not callable"),
+            (
+                METHOD_NOT_FOUND,
+                "no suitable method '%s' found for args %s",
+            ),
+            (
+                INVOKE_CONSTRUCTOR_UNKNOWN_ERROR,
+                "unknown error when invoking constructor",
+            ),
+            (
+                INVOKE_CONSTRUCTOR_INNER_ERROR,
+                "exception from inner when invoking constructor",
+            ),
+            (
+                NO_SUITABLE_CONSTRUCTOR,
+                "no suitable constructor for types %s",
+            ),
+            (EXECUTE_BLOCK_ERROR, "error when executing block"),
+            (
+                INCOMPATIBLE_TYPE_CAST,
+                "incompatible cast from type: %s to type: %s",
+            ),
+            (
+                INVALID_CAST_TARGET,
+                "target for type cast must be a class, but accept %s",
+            ),
+            (
+                SCRIPT_TIME_OUT,
+                "script exceeds timeout milliseconds, which is %d ms",
+            ),
+            (
+                INCOMPATIBLE_ASSIGNMENT_TYPE,
+                "variable declared type %s, assigned with incompatible value type %s",
+            ),
+            (
+                FOR_EACH_ITERABLE_REQUIRED,
+                "for-each can only be applied to iterable",
+            ),
+            (
+                FOR_EACH_TYPE_MISMATCH,
+                "for-each type mismatch, required %s, but %s provided",
+            ),
+            (
+                FOR_EACH_UNKNOWN_ERROR,
+                "unknown error when executing for-each",
+            ),
+            (FOR_INIT_ERROR, "error when executing for init"),
+            (FOR_BODY_ERROR, "error when executing for body"),
+            (FOR_UPDATE_ERROR, "error when executing for update"),
+            (
+                FOR_CONDITION_ERROR,
+                "error when executing for condition",
+            ),
+            (
+                FOR_CONDITION_BOOL_REQUIRED,
+                "result of for condition must be bool",
+            ),
+            (
+                WHILE_CONDITION_BOOL_REQUIRED,
+                "result of while condition must be bool",
+            ),
+            (
+                WHILE_CONDITION_ERROR,
+                "error when executing while condition",
+            ),
+            (
+                CONDITION_BOOL_REQUIRED,
+                "result of condition expression must be bool",
+            ),
+            (ARRAY_SIZE_NUM_REQUIRED, "size of array must be number"),
+            (
+                EXCEED_MAX_ARR_LENGTH,
+                "array length %d, exceed max allowed length %d",
+            ),
+            (
+                INCOMPATIBLE_ARRAY_ITEM_TYPE,
+                "item %d with type %s incompatible with array type %s",
+            ),
+            (INVALID_ASSIGNMENT, "value %s is not assignable"),
+            (
+                EXECUTE_OPERATOR_EXCEPTION,
+                "exception when executing '%s %s %s'",
+            ),
+            (INVALID_ARITHMETIC, ""),
+            (
+                INVALID_BINARY_OPERAND,
+                "the '%s' operator can not be applied to leftType:%s with leftValue:%s and rightType:%s with rightValue:%s",
+            ),
+            (
+                INVALID_UNARY_OPERAND,
+                "the '%s' operator can not be applied to type %s with value %s",
+            ),
+            (
+                EXECUTE_FINAL_BLOCK_ERROR,
+                "error when executing final block in try...catch...final...",
+            ),
+            (
+                EXECUTE_TRY_BLOCK_ERROR,
+                "error when executing try... block",
+            ),
+            (
+                EXECUTE_CATCH_HANDLER_ERROR,
+                "error when executing handler of '%s'",
+            ),
+            (
+                OPERATOR_NOT_ALLOWED,
+                "Script uses disallowed operator: %s",
+            ),
+            (
+                SERIALIZABLE_PARSE_CACHE_UNSUPPORTED_VERSION,
+                "unsupported serializable parse cache model version: %s",
+            ),
+            (
+                SERIALIZABLE_PARSE_CACHE_INVALID_MODEL,
+                "invalid serializable parse cache model: %s",
+            ),
+            (
+                SERIALIZABLE_PARSE_CACHE_UNSUPPORTED_INSTRUCTION,
+                "unsupported serializable parse cache instruction: %s",
+            ),
+            (
+                SERIALIZABLE_PARSE_CACHE_UNSUPPORTED_CONSTANT,
+                "unsupported serializable parse cache constant: %s",
+            ),
+            (
+                SERIALIZABLE_PARSE_CACHE_CLASS_NOT_FOUND,
+                "class not found when loading serializable parse cache: %s",
+            ),
+            (
+                SERIALIZABLE_PARSE_CACHE_OPERATOR_NOT_FOUND,
+                "operator not found when loading serializable parse cache: %s",
+            ),
+            (INVALID_ARGUMENT, ""),
+            (BIZ_EXCEPTION, ""),
+            (QL_THROW, "qlexpress throw statement"),
+        ];
+        assert_eq!(expected.len(), 63);
+        for (code, template) in expected {
+            assert_eq!(error_msg(code), template, "error code {code}");
+        }
         assert_eq!(error_msg("NO_SUCH_CODE"), "");
     }
 

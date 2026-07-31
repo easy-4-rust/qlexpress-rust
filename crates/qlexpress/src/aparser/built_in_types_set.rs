@@ -115,6 +115,8 @@ pub fn get_cls(lexeme: &str) -> Option<BuiltInType> {
 mod tests {
     use super::*;
 
+    /// SOURCE_PARITY: Java `BuiltInTypesSet#getCls` 对八个原始类型名分别
+    /// 返回对应包装类，未知名称返回 null。
     #[test]
     fn get_cls_matches_all_eight_java_types() {
         assert_eq!(get_cls("byte"), Some(BuiltInType::Byte));

@@ -693,11 +693,8 @@ impl NativeRegistry {
             .extension_method_candidates
             .borrow()
             .iter()
-            .filter_map(|(declaring_class, registered_name, candidate)| {
-                (registered_name == method_name
-                    && self.is_assignable(declaring_class, &argument_type))
-                .then(|| candidate.clone())
-            })
+            .filter(|entry| entry.1 == method_name && self.is_assignable(&entry.0, &argument_type))
+            .map(|entry| entry.2.clone())
             .collect::<Vec<_>>();
         if let Some(candidate) = self.select_method_candidate(&signed_candidates, args) {
             return Some(wrap_method_candidate(candidate));

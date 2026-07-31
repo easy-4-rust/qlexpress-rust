@@ -2611,7 +2611,7 @@ impl<'a> QvmInstructionVisitor<'a> {
     /// Java `parseFieldId`.
     fn parse_field_id(field_id: &Node) -> String {
         if let Node::FieldId(ctx) = field_id {
-            if let Some(quote) = &ctx.quote {
+            if let Some(quote) = ctx.quote_string_literal() {
                 return QLStringUtils::parse_string_escape(quote.text());
             }
         }

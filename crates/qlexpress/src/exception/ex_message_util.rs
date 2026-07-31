@@ -4,8 +4,6 @@
 //! Template (Java `MessageFormat`, reproduced literally):
 //! `[Error {0}: {1}]\n[Near: {2}]\n{3}\n[Line: {4}, Column: {5}]`
 
-const REPORT_TEMPLATE: &str = "[Error {0}: {1}]\n[Near: {2}]\n{3}\n[Line: {4}, Column: {5}]";
-
 const SNIPPET_EXTENSION_LEN: usize = 20;
 
 pub use super::ex_message::ExMessage;
@@ -55,26 +53,32 @@ impl ExMessageUtil {
         reason: &str,
     ) -> ExMessage {
         let mut units: Vec<u16> = script.encode_utf16().collect();
-        let lexeme_len = lexeme.encode_utf16().count();
-        let token_start = token_start_pos.max(0) as usize;
+        let script_len = units.len() as i64;
+        let lexeme_len = lexeme.encode_utf16().count() as i64;
+        let token_start = i64::from(token_start_pos);
+        let extension_len = SNIPPET_EXTENSION_LEN as i64;
 
-        let start_report_pos = token_start.saturating_sub(SNIPPET_EXTENSION_LEN);
-        let end_report_pos = (token_start + lexeme_len + SNIPPET_EXTENSION_LEN).min(units.len());
+        // 保留 Java 对任意 int 下标的循环边界行为：负 tokenStartPos 不先
+        // 截断为 0，超出脚本末尾也不会切片 panic。
+        let start_report_pos = (token_start - extension_len).max(0);
+        let end_report_pos = (token_start + lexeme_len + extension_len).min(script_len);
 
         let mut snippet_builder = String::new();
         if start_report_pos > 0 {
             snippet_builder.push_str("...");
         }
-        for code_unit in &mut units[start_report_pos..end_report_pos] {
-            // Java: chars < ' ' (control chars) are rendered as a space.
-            if *code_unit < u16::from(b' ') {
-                *code_unit = u16::from(b' ');
+        if end_report_pos > start_report_pos {
+            for code_unit in &mut units[start_report_pos as usize..end_report_pos as usize] {
+                // Java: chars < ' ' (control chars) are rendered as a space.
+                if *code_unit < u16::from(b' ') {
+                    *code_unit = u16::from(b' ');
+                }
             }
+            snippet_builder.push_str(&String::from_utf16_lossy(
+                &units[start_report_pos as usize..end_report_pos as usize],
+            ));
         }
-        snippet_builder.push_str(&String::from_utf16_lossy(
-            &units[start_report_pos..end_report_pos],
-        ));
-        if end_report_pos < units.len() {
+        if end_report_pos < script_len {
             snippet_builder.push_str("...");
         }
 
@@ -90,13 +94,11 @@ impl ExMessageUtil {
         }
 
         let snippet = snippet_builder;
-        let message = REPORT_TEMPLATE
-            .replace("{0}", error_code)
-            .replace("{1}", reason)
-            .replace("{2}", &snippet)
-            .replace("{3}", &caret_builder)
-            .replace("{4}", &token_line.to_string())
-            .replace("{5}", &token_col.to_string());
+        // 直接插值，避免连续 replace 对参数文本中的 `{2}` 等内容二次展开；
+        // Java MessageFormat 只解释模板，不递归解释参数。
+        let message = format!(
+            "[Error {error_code}: {reason}]\n[Near: {snippet}]\n{caret_builder}\n[Line: {token_line}, Column: {token_col}]"
+        );
         ExMessage::new(message, snippet)
     }
 }
@@ -145,5 +147,21 @@ mod tests {
         let caret_line = ex.message().lines().nth(2).unwrap();
         assert_eq!(caret_line.len(), 7 + 3 + 1);
         assert!(caret_line.ends_with('^'));
+    }
+
+    /// SOURCE_PARITY: Java MessageFormat 不会递归解释参数字符串中的占位符。
+    #[test]
+    fn argument_placeholders_are_not_reexpanded() {
+        let ex = ExMessageUtil::format("x", 0, 1, 1, "x", "E{4}", "bad {2}");
+        assert!(ex.message().starts_with("[Error E{4}: bad {2}]"));
+        assert_eq!(ex.snippet(), "x");
+    }
+
+    /// SOURCE_PARITY: Java 循环直接使用负 tokenStartPos，不会先截断为 0。
+    #[test]
+    fn negative_token_start_keeps_java_loop_boundaries() {
+        let ex = ExMessageUtil::format("abcdefghijklmnopqrstuvwxyz", -5, 1, -4, "x", "E", "bad");
+        assert_eq!(ex.snippet(), "abcdefghijklmnop...");
+        assert_eq!(ex.message().lines().nth(2), Some("       ^"));
     }
 }

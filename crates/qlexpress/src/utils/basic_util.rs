@@ -122,20 +122,39 @@ impl BasicUtil {
 }
 
 /// Java `Character.toUpperCase(s.charAt(0)) + s.substring(1)` behind a
-/// prefix. ASCII/Unicode-aware uppercasing of the first char.
+/// prefix.
+///
+/// 空字符串必须与 Java `String#charAt(0)` 一样失败，不能静默退化为仅返回
+/// 前缀；这类工具方法虽然通常只接收合法属性名，异常边界仍属于可观察语义。
 fn capitalize_prefixed(prefix: &str, s: &str) -> String {
     let mut chars = s.chars();
     match chars.next() {
         Some(first) => {
             let mut result = String::with_capacity(prefix.len() + s.len());
             result.push_str(prefix);
-            result.extend(first.to_uppercase());
+            result.push(java_char_to_uppercase(first));
             result.extend(chars);
             result
         }
-        // Java would throw StringIndexOutOfBoundsException on empty input;
-        // returning the prefix keeps this total and panic-free.
-        None => prefix.to_string(),
+        None => panic!("StringIndexOutOfBoundsException: index 0, length 0"),
+    }
+}
+
+/// 复现 Java `Character.toUpperCase(char)`，而不是 Rust/Unicode 的完整大写
+/// 展开：
+///
+/// - Java 接收单个 UTF-16 code unit，首字符为 supplementary code point 时
+///   `charAt(0)` 只看到 high surrogate，因而保持原字符；
+/// - `ß -> SS`、`ﬃ -> FFI` 等多字符展开无法装入 Java `char`，Java 保留
+///   原 code unit。
+fn java_char_to_uppercase(character: char) -> char {
+    if u32::from(character) > u32::from(u16::MAX) {
+        return character;
+    }
+    let mut uppercase = character.to_uppercase();
+    match (uppercase.next(), uppercase.next()) {
+        (Some(single), None) if u32::from(single) <= u32::from(u16::MAX) => single,
+        _ => character,
     }
 }
 
@@ -160,6 +179,42 @@ mod tests {
         assert_eq!(BasicUtil::get_getter("name"), "getName");
         assert_eq!(BasicUtil::get_setter("name"), "setName");
         assert_eq!(BasicUtil::get_is_getter("empty"), "isEmpty");
+        assert_eq!(BasicUtil::get_getter("éclair"), "getÉclair");
+        assert_eq!(BasicUtil::get_getter("ßeta"), "getßeta");
+        assert_eq!(BasicUtil::get_getter("ﬃeld"), "getﬃeld");
+        assert_eq!(BasicUtil::get_getter("😀name"), "get😀name");
+    }
+
+    /// SOURCE_PARITY: Java 三个方法都会先执行 `s.charAt(0)`，空字符串抛
+    /// `StringIndexOutOfBoundsException`。
+    #[test]
+    fn getter_setter_names_reject_empty_property() {
+        for operation in [
+            BasicUtil::get_getter as fn(&str) -> String,
+            BasicUtil::get_setter,
+            BasicUtil::get_is_getter,
+        ] {
+            let panic = std::panic::catch_unwind(|| operation(""));
+            assert!(panic.is_err());
+        }
+    }
+
+    /// SOURCE_PARITY: Rust 将 Java 包装类/原语类的成对映射收敛为
+    /// `PrimitiveType`，每个可表示项都映射到自身的原语类别。
+    #[test]
+    fn primitive_mapping_covers_all_java_wrapper_pairs() {
+        for primitive in [
+            PrimitiveType::Boolean,
+            PrimitiveType::Character,
+            PrimitiveType::Double,
+            PrimitiveType::Float,
+            PrimitiveType::Int,
+            PrimitiveType::Long,
+            PrimitiveType::Byte,
+            PrimitiveType::Short,
+        ] {
+            assert_eq!(trans_to_primitive(primitive), primitive);
+        }
     }
 
     /// SOURCE_PARITY: BasicUtil#getTypeOfObject(Object[])。

@@ -352,13 +352,13 @@ fn divide_exact(l: &Decimal, r: &Decimal) -> Option<Decimal> {
     }
     // 结果 scale 从 preferred scale(s1 - s2) 起步,逐步放大直到整除。
     let preferred_scale = l.scale - r.scale;
-    let mut scale = preferred_scale;
     // 十进制 n 位整数若约分后只含 2/5，终止 scale 最多约 3.322n
     // (`2^k` 是最坏情形)；四倍总位数是严格安全的有限搜索上界。
     let max_extra_digits = (r.digits.len() + l.digits.len())
         .saturating_mul(4)
         .saturating_add(2);
-    for _ in 0..=max_extra_digits {
+    for extra_digits in 0..=max_extra_digits {
+        let scale = preferred_scale + extra_digits as i64;
         // 被除数幅值乘 10^(scale + s2 - s1)。
         let exp = (scale - preferred_scale) as usize;
         let num = mul_pow10(&l.digits, exp);
@@ -373,7 +373,6 @@ fn divide_exact(l: &Decimal, r: &Decimal) -> Option<Decimal> {
                 .normalized(),
             );
         }
-        scale += 1;
     }
     None
 }

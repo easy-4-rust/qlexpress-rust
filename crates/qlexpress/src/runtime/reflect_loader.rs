@@ -96,20 +96,71 @@ impl ReflectLoader {
         self.allow_private_access
     }
 
-    /// 加载注册构造器。对应 Java 方法 `loadConstructor`。
-    pub fn load_constructor(&self, class_ref: &ClassRef) -> Option<NativeConstructor> {
-        self.registry.load_constructor(class_ref)
-    }
-
-    /// 加载对象字段。对应 Java 方法 `loadField`。
-    pub fn load_field(&self, bean: &DataValue, field_name: &str) -> Option<QValue> {
+    /// 按运行时实参加载最佳注册构造器。
+    ///
+    /// 对应 Java 方法 `loadConstructor(Class<?>, Class<?>[])`。Rust 直接接收
+    /// 运行时值，由 [`NativeRegistry`] 计算与 Java `MemberResolver` 相同的
+    /// 参数类型、重载优先级及必要转换。
+    ///
+    /// # 参数
+    ///
+    /// - `class_ref`：待实例化的 Java 规范类型。
+    /// - `arguments`：本次构造调用的运行时实参。
+    ///
+    /// # 返回值
+    ///
+    /// 返回完成参数适配的最佳构造器；隔离策略拒绝或无匹配项时返回 `None`。
+    pub fn load_constructor(
+        &self,
+        class_ref: &ClassRef,
+        arguments: &[DataValue],
+    ) -> Option<NativeConstructor> {
         self.registry
-            .load_field_with_security(bean, field_name, true)
+            .load_constructor_for_args(class_ref, arguments)
     }
 
-    /// 加载对象方法。对应 Java 方法 `loadMethod`。
-    pub fn load_method(&self, bean: &DataValue, method_name: &str) -> Option<NativeMethod> {
-        self.registry.resolve_method(bean, method_name)
+    /// 加载对象字段。
+    ///
+    /// 对应 Java 方法
+    /// `loadField(Object, String, boolean, ErrorReporter)`。Rust 原生成员闭包
+    /// 直接返回结构化 [`QLException`]，因此无需把 `ErrorReporter` 作为解析
+    /// 参数传递；`skip_security` 的可观察分支完整保留。
+    ///
+    /// # 参数
+    ///
+    /// - `bean`：字段接收者。
+    /// - `field_name`：字段、属性或 Map 键名称。
+    /// - `skip_security`：是否跳过成员安全策略；宿主门面使用 `true`，脚本
+    ///   指令使用 `false`。
+    pub fn load_field(
+        &self,
+        bean: &DataValue,
+        field_name: &str,
+        skip_security: bool,
+    ) -> Option<QValue> {
+        self.registry
+            .load_field_with_security(bean, field_name, skip_security)
+    }
+
+    /// 按运行时实参加载对象方法。
+    ///
+    /// 对应 Java 方法 `loadMethod(Object, String, Class<?>[])`。扩展函数仍在
+    /// 成员安全策略之前解析；注册方法随后按静态/实例、别名、重载优先级和
+    /// 安全策略选择。
+    ///
+    /// # 参数
+    ///
+    /// - `bean`：实例接收者或 [`crate::runtime::meta_class::MetaClass`]。
+    /// - `method_name`：脚本方法名或别名。
+    /// - `arguments`：本次调用的运行时实参。
+    pub fn load_method(
+        &self,
+        bean: &DataValue,
+        method_name: &str,
+        arguments: &[DataValue],
+    ) -> Option<NativeMethod> {
+        self.registry
+            .resolve_method_for_args(bean, method_name, arguments)
     }
 
     /// 获取当前成员安全策略。对应 Java `securityStrategy` 字段。
@@ -121,10 +172,12 @@ impl ReflectLoader {
     ///
     /// 对应 Java 静态方法
     /// `ReflectLoader#unwrapMethodInvokeEx(ErrorReporter, String, Exception)`。
-    /// Rust 原生闭包不会产生 JVM `InvocationTargetException` 包装：
-    /// `INVOKE_METHOD_WITH_WRONG_ARGUMENTS` 对应 `IllegalArgumentException`，
-    /// 其余由调用目标返回的错误对应 `InvocationTargetException#getTargetException`。
-    /// JVM 反射访问层的“未知异常”在安全 Rust 闭包调用模型中不可产生。
+    /// Rust 原生闭包不会产生 JVM `InvocationTargetException` 对象，但
+    /// [`QLException`] 保留了等价来源标记：
+    ///
+    /// - 参数转换/分派错误码对应 Java `IllegalArgumentException`；
+    /// - `host_origin` 对应被 `InvocationTargetException` 包装的调用目标错误；
+    /// - 其余引擎/适配层错误对应 Java 未知反射错误。
     pub fn unwrap_method_invoke_ex(
         error_reporter: &dyn ErrorReporter,
         method_name: &str,
@@ -137,10 +190,15 @@ impl ReflectLoader {
                 &[method_name.to_string()],
             );
         }
+        let error_code = if error.is_host_origin() {
+            error_codes::INVOKE_METHOD_INNER_ERROR
+        } else {
+            error_codes::INVOKE_METHOD_UNKNOWN_ERROR
+        };
         error_reporter
             .report_format(
-                error_codes::INVOKE_METHOD_INNER_ERROR,
-                error_codes::error_msg(error_codes::INVOKE_METHOD_INNER_ERROR),
+                error_code,
+                error_codes::error_msg(error_code),
                 &[method_name.to_string()],
             )
             .with_cause(error)
@@ -150,14 +208,149 @@ impl ReflectLoader {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::exception::pure_err_reporter::PureErrReporter;
+    use crate::exception::QLExceptionKind;
+    use crate::runtime::meta_class::MetaClass;
+    use crate::runtime::native_type::{NativeConstructorCandidate, NativeType};
     use crate::security::ql_security_strategy::QLSecurityStrategy;
 
     #[test]
     fn delegates_builtin_member_loading() {
         let loader = ReflectLoader::new(QLSecurityStrategy::open(), false);
         assert!(loader
-            .load_method(&DataValue::string("abc"), "length")
+            .load_method(&DataValue::string("abc"), "length", &[])
             .is_some());
         assert!(!loader.allow_private_access());
+    }
+
+    /// SOURCE_PARITY: `ReflectLoader#loadConstructor` 必须把调用现场类型交给
+    /// `MemberResolver`，不能固定返回无签名构造器。
+    #[test]
+    fn constructor_loading_uses_runtime_argument_types() {
+        let loader = ReflectLoader::new(QLSecurityStrategy::open(), false);
+        let class_ref = ClassRef::from_name("test.OverloadedConstructor");
+        let mut native_type = NativeType::named(class_ref.java_name());
+        native_type.add_constructor_candidate(NativeConstructorCandidate::new(
+            vec![ClassRef::from_name("java.lang.Integer")],
+            false,
+            Rc::new(|_| Ok(DataValue::string("integer"))),
+        ));
+        native_type.add_constructor_candidate(NativeConstructorCandidate::new(
+            vec![ClassRef::from_name("java.lang.Long")],
+            false,
+            Rc::new(|_| Ok(DataValue::string("long"))),
+        ));
+        loader.registry().register_type(native_type);
+
+        let arguments = [DataValue::Int(1)];
+        let constructor = loader
+            .load_constructor(&class_ref, &arguments)
+            .expect("Integer exact-match constructor");
+        assert_eq!(
+            constructor(&arguments).expect("constructor invocation"),
+            DataValue::string("integer")
+        );
+    }
+
+    /// SOURCE_PARITY: `ReflectLoader#loadMethod` 以实参类型选择同名重载。
+    #[test]
+    fn method_loading_uses_runtime_argument_types() {
+        let loader = ReflectLoader::new(QLSecurityStrategy::open(), false);
+        let class_ref = ClassRef::from_name("test.OverloadedStatic");
+        let mut native_type = NativeType::named(class_ref.java_name());
+        native_type.add_static_method_candidate(
+            "choose",
+            NativeMethodCandidate::new(
+                vec![ClassRef::from_name("java.lang.Integer")],
+                false,
+                Rc::new(|_, _| Ok(DataValue::string("integer"))),
+            ),
+        );
+        native_type.add_static_method_candidate(
+            "choose",
+            NativeMethodCandidate::new(
+                vec![ClassRef::from_name("java.lang.Long")],
+                false,
+                Rc::new(|_, _| Ok(DataValue::string("long"))),
+            ),
+        );
+        loader.registry().register_type(native_type);
+        let bean = MetaClass::new(class_ref).into_data_value();
+        let arguments = [DataValue::Int(1)];
+
+        let method = loader
+            .load_method(&bean, "choose", &arguments)
+            .expect("Integer exact-match method");
+        assert_eq!(
+            method(&bean, &arguments).expect("method invocation"),
+            DataValue::string("integer")
+        );
+    }
+
+    /// SOURCE_PARITY: Java 宿主 `Express4Runner#loadField` 传
+    /// `skipSecurity=true`，而脚本访问传 `false`。
+    #[test]
+    fn field_loading_preserves_skip_security_branch() {
+        let loader = ReflectLoader::new(QLSecurityStrategy::isolation(), false);
+        let class_ref = ClassRef::from_name("test.Fields");
+        let mut native_type = NativeType::named(class_ref.java_name());
+        native_type
+            .static_fields
+            .insert("answer".to_string(), DataValue::Int(42));
+        loader.registry().register_type(native_type);
+        let bean = MetaClass::new(class_ref).into_data_value();
+
+        assert!(loader.load_field(&bean, "answer", false).is_none());
+        assert_eq!(
+            loader
+                .load_field(&bean, "answer", true)
+                .expect("host field access bypasses script security")
+                .get(),
+            DataValue::Int(42)
+        );
+    }
+
+    /// SOURCE_PARITY: Java `unwrapMethodInvokeEx` 对
+    /// `IllegalArgumentException`、`InvocationTargetException` 和其他异常
+    /// 使用三个不同错误码，并在后两支保留 cause。
+    #[test]
+    fn unwrap_method_errors_preserves_all_three_java_branches() {
+        let reporter = PureErrReporter::INSTANCE;
+        let wrong = ReflectLoader::unwrap_method_invoke_ex(
+            &reporter,
+            "run",
+            QLException::for_test(
+                QLExceptionKind::Runtime,
+                "wrong",
+                error_codes::INVOKE_METHOD_WITH_WRONG_ARGUMENTS,
+            ),
+        );
+        assert_eq!(
+            wrong.error_code(),
+            error_codes::INVOKE_METHOD_WITH_WRONG_ARGUMENTS
+        );
+        assert!(wrong.cause().is_none());
+
+        let inner = ReflectLoader::unwrap_method_invoke_ex(
+            &reporter,
+            "run",
+            QLException::host_error(QLExceptionKind::Runtime, "target", "TARGET"),
+        );
+        assert_eq!(inner.error_code(), error_codes::INVOKE_METHOD_INNER_ERROR);
+        assert_eq!(inner.cause().expect("target cause").error_code(), "TARGET");
+
+        let unknown = ReflectLoader::unwrap_method_invoke_ex(
+            &reporter,
+            "run",
+            QLException::for_test(QLExceptionKind::Runtime, "adapter", "ADAPTER"),
+        );
+        assert_eq!(
+            unknown.error_code(),
+            error_codes::INVOKE_METHOD_UNKNOWN_ERROR
+        );
+        assert_eq!(
+            unknown.cause().expect("adapter cause").error_code(),
+            "ADAPTER"
+        );
     }
 }

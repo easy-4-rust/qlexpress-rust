@@ -1233,6 +1233,8 @@ mod tests {
         assert_eq!(texts(&tokens)[..2], ["func（1）", "<EOF>"]);
     }
 
+    /// SOURCE_PARITY: Java `QLexer#tokenize` 必须使用传入的操作符别名管理器，
+    /// 并在完整扫描后追加 EOF。
     #[test]
     fn word_operator_alias_via_manager() {
         let manager = AliasManager;

@@ -379,7 +379,7 @@ fn switch_statement_and_expression() {
 
 #[test]
 fn new_native_instance() {
-    let mut registry = NativeRegistry::with_builtins();
+    let registry = NativeRegistry::with_builtins();
     let mut point_type = NativeType::named("com.example.Point");
     point_type.constructor = Some(Rc::new(|args: &[DataValue]| {
         let mut map = IndexMap::new();

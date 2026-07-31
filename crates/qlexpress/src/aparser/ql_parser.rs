@@ -185,9 +185,9 @@ type PResult<T> = Result<T, ParseFail>;
 ///
 /// Tokenizes `script` with [`qlexer::tokenize`] and parses it into a
 /// [`Node::Program`] syntax tree. When `print_tree` is set, `printer`
-/// receives the token stream and the tree text (Java debug feature).
+/// receives the token stream and Java `RuleContext#toStringTree()` output.
 #[allow(clippy::too_many_arguments)]
-/// 对应 Java: com.alibaba.qlexpress4.aparser.QLParser#buildTree。
+/// 对应 Java：`com.alibaba.qlexpress4.aparser.SyntaxTreeFactory#buildTree`。
 pub fn build_tree(
     script: &str,
     operator_manager: Option<&dyn ParserOperatorManager>,
@@ -217,7 +217,7 @@ pub fn build_tree(
 }
 
 /// 使用已经过预算限制的 Token 流构建 AST，避免安全入口再次无界词法分配。
-/// 对应 Java：`QLParser#buildTree`（Rust 安全增强的预词法 Token 入口）。
+/// 对应 Java：`SyntaxTreeFactory#buildTree`（Rust 安全增强的预词法 Token 入口）。
 pub fn build_tree_from_tokens(
     script: &str,
     tokens: &[Token],
@@ -231,7 +231,7 @@ pub fn build_tree_from_tokens(
     if print_tree {
         let token_texts: Vec<&str> = tokens.iter().map(Token::text).collect();
         printer(token_texts.join(" | "));
-        printer(program.text());
+        printer(program.to_string_tree());
     }
     Ok(program)
 }
@@ -3515,6 +3515,50 @@ mod tests {
             Node::FieldAccess(f) => assert_eq!(f.chain, ChainKind::Spread),
             other => panic!("expected spread field, got {other:?}"),
         }
+
+        let tree = parse(r"x = a.'display\'name';");
+        let expr = expr_statement(&statements(&tree)[0]);
+        let rhs = match expr.expression.as_deref() {
+            Some(Node::Expression(expression)) => expression,
+            other => panic!("expected expression, got {other:?}"),
+        };
+        let primary = primary_of(base_expr(rhs));
+        let field_id = match &primary.path_parts[0] {
+            Node::FieldAccess(field) => match field.field_id.as_ref() {
+                Node::FieldId(field_id) => field_id,
+                other => panic!("expected field id, got {other:?}"),
+            },
+            other => panic!("expected quoted field access, got {other:?}"),
+        };
+        assert!(field_id.token.is_none());
+        assert_eq!(
+            field_id.quote_string_literal().map(TerminalNode::text),
+            Some(r"'display\'name'")
+        );
+    }
+
+    /// `SOURCE_PARITY`：Java `SyntaxTreeFactory#buildTree` 在 debug 模式下
+    /// 依次输出 Token 流与 `RuleContext#toStringTree()`，而不是扁平文本。
+    #[test]
+    fn build_tree_prints_token_stream_and_java_tree_shape() {
+        let mut printed = Vec::new();
+        let tree = build_tree(
+            "a + b;",
+            Some(&DefaultOps),
+            true,
+            |line| printed.push(line),
+            InterpolationMode::Script,
+            "${",
+            "}",
+            true,
+        )
+        .expect("debug parse");
+
+        assert_eq!(printed.len(), 2);
+        assert_eq!(printed[0], "a | + | b | ; | <EOF>");
+        assert_eq!(printed[1], tree.to_string_tree());
+        assert!(printed[1].starts_with("(Program "));
+        assert_ne!(printed[1], tree.text());
     }
 
     #[test]

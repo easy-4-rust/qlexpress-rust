@@ -225,6 +225,7 @@ impl InitOptionsBuilder {
     /// # 参数
     ///
     /// - `default_import`：需要由选项和 runner 持续观察的导入列表。
+    ///
     /// 对应 Java：`InitOptions#getDefaultImport()` 的共享 List 引用语义。
     pub fn shared_default_imports(mut self, default_import: SharedDefaultImports) -> Self {
         self.default_import = default_import;

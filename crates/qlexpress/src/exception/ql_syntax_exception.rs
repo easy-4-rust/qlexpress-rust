@@ -42,3 +42,33 @@ impl std::ops::Deref for QLSyntaxException {
         &self.inner
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::exception::error_codes;
+
+    /// SOURCE_PARITY: Java 受保护构造器把 message 与 Diagnostic 原样交给
+    /// `QLException`；Rust 包装必须保留相同的基类可观察状态与 Syntax 类型。
+    #[test]
+    fn wrapper_preserves_java_superclass_state() {
+        let syntax = QLException::report_scanner_err(
+            "a +",
+            2,
+            1,
+            3,
+            "<EOF>",
+            error_codes::SYNTAX_ERROR,
+            "unexpected eof",
+        );
+        assert_eq!(syntax.kind(), QLExceptionKind::Syntax);
+        assert_eq!(syntax.inner().reason(), "unexpected eof");
+        assert_eq!(syntax.error_code(), error_codes::SYNTAX_ERROR);
+        assert_eq!(syntax.line_no(), 1);
+        assert_eq!(syntax.col_no(), 3);
+
+        let inner = syntax.into_exception();
+        assert_eq!(inner.kind(), QLExceptionKind::Syntax);
+        assert_eq!(inner.reason(), "unexpected eof");
+    }
+}

@@ -25,11 +25,15 @@ impl QLAliasUtils {
 mod tests {
     use super::*;
 
+    /// SOURCE_PARITY: Java `QLAliasUtils#matchQLAlias` 按注解数组和每个
+    /// value 数组逐项扫描，任一相等即返回 true。
     #[test]
     fn matches_any_alias_group() {
         let groups: [&[&str]; 2] = [&["size", "len"], &["count"]];
         assert!(QLAliasUtils::match_ql_alias("len", &groups));
         assert!(QLAliasUtils::match_ql_alias("count", &groups));
         assert!(!QLAliasUtils::match_ql_alias("other", &groups));
+        assert!(!QLAliasUtils::match_ql_alias("size", &[]));
+        assert!(!QLAliasUtils::match_ql_alias("size", &[&[]]));
     }
 }

@@ -1,0 +1,18 @@
+{"id":"empty","script":""}
+{"id":"keywords","script":"for if else while break continue return function macro import static new switch case default byte short int long float double char boolean null true false extends super try catch finally throw then class this"}
+{"id":"unicode-identifiers","script":"#a @b $c _d 变量x ef01 func（1）"}
+{"id":"numbers","script":"1 1L 0x1F 0X2a 0b101 0B11L 1.5 .5 1. 1e3 1E-3 2e+2f 3d 4F 1_000 0xff_ff 1.toString 1e+"}
+{"id":"strings","script":"'abc' 'it\\'s' '' \"plain\"","interpolation_mode":"DISABLE"}
+{"id":"script-interpolation","script":"\"a ${x + {1}} b\"","interpolation_mode":"SCRIPT"}
+{"id":"variable-interpolation","script":"\"hello ${name}!\"","interpolation_mode":"VARIABLE"}
+{"id":"custom-selector","script":"$[user.name] + 1","selector_start":"$[","selector_end":"]"}
+{"id":"operators","script":">>>= >>> >>= <<= -> :: <> >> << >= <= ?. *. .* += -= &= |= *= %= /= ^= ++ -- + - * / & | % ! ~ ? : . , ; ( ) [ ] { }"}
+{"id":"word-alias","script":"a and b or c","aliases":["and","or"]}
+{"id":"strict-newlines","script":"a\nb\r\nc\rd","strict_new_lines":true}
+{"id":"relaxed-newlines","script":"a\nb\r\nc\rd","strict_new_lines":false}
+{"id":"comments","script":"a // line\n b /* block\ncomment */ c"}
+{"id":"utf16-position","script":"😀 + 变量"}
+{"id":"unterminated-string","script":"a = 'abc"}
+{"id":"unterminated-interpolation","script":"\"a ${x + 1"}
+{"id":"unterminated-comment","script":"1\n/* oops\n2"}
+{"id":"unterminated-selector","script":"${abc\n"}

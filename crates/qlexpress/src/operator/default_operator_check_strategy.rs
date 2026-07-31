@@ -43,13 +43,6 @@ impl DefaultOperatorCheckStrategy {
     pub fn operators(&self) -> &'static HashSet<String> {
         empty_set()
     }
-
-    /// 供 [`crate::operator::operator_check_strategy::OperatorCheckStrategy::operators`]
-    /// 在 `AllowAll` 分支共享同一空集。
-    /// 对应 Java: com.alibaba.qlexpress4.operator.DefaultOperatorCheckStrategy#emptySet。
-    pub(crate) fn empty_set() -> &'static HashSet<String> {
-        empty_set()
-    }
 }
 
 fn empty_set() -> &'static HashSet<String> {

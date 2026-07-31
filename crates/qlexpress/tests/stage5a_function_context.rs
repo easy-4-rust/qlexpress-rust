@@ -263,7 +263,7 @@ fn dynamic_variable_context_runs_script_lazily_per_get() {
 /// `Express4Runner` 注册 `MapExtensionFunction.INSTANCE`/
 /// `FilterExtensionFunction.INSTANCE` 的效果)。
 fn registry_with_extensions() -> NativeRegistry {
-    let mut registry = NativeRegistry::with_builtins();
+    let registry = NativeRegistry::with_builtins();
     let mut list_type = NativeType::named("java.util.ArrayList");
     list_type.methods.insert(
         "map".to_string(),

@@ -19,3 +19,30 @@ pub trait ClassSupplier {
     /// Java `loadCls(String)`:类型已知时返回规范名,否则 `None`。
     fn load_cls(&self, qualified_name: &str) -> Option<String>;
 }
+
+/// 让 Rust 闭包直接实现 Java `@FunctionalInterface ClassSupplier`。
+impl<F> ClassSupplier for F
+where
+    F: Fn(&str) -> Option<String>,
+{
+    fn load_cls(&self, qualified_name: &str) -> Option<String> {
+        (self)(qualified_name)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// SOURCE_PARITY: Java `ClassSupplier#loadCls` 是单抽象方法契约；
+    /// Rust 闭包必须收到完整类名，并能以 None 表达 Java null。
+    #[test]
+    fn closure_preserves_functional_interface_contract() {
+        let supplier = |name: &str| (name == "example.Host").then(|| name.to_string());
+        assert_eq!(
+            supplier.load_cls("example.Host"),
+            Some("example.Host".to_string())
+        );
+        assert_eq!(supplier.load_cls("example.Missing"), None);
+    }
+}

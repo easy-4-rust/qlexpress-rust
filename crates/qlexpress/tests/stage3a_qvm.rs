@@ -6,6 +6,7 @@
 
 use std::rc::Rc;
 
+use qlexpress::exception::default_err_reporter::DefaultErrReporter;
 use qlexpress::exception::error_codes;
 use qlexpress::exception::error_reporter::ErrorReporter;
 use qlexpress::exception::pure_err_reporter::PureErrReporter;
@@ -489,7 +490,21 @@ fn timeout_instruction_fires_and_is_disabled_by_zero() {
     let timeout_opts = QLOptions::builder().timeout_millis(1).build();
     let err = run_instructions(&mut ctx, &instructions, &timeout_opts).expect_err("timeout");
     assert_eq!(err.error_code(), error_codes::SCRIPT_TIME_OUT);
-    assert!(err.is_timeout());
+    // Java PureErrReporter 直接构造 QLRuntimeException，不按错误码选择
+    // QLTimeoutException；指令必须保留传入 reporter 的分派语义。
+    assert!(!err.is_timeout());
+
+    // 生产编译路径通常继承带源码位置的 DefaultErrReporter；该 reporter
+    // 通过 QLException.reportRuntimeErrWithAttach 生成 QLTimeoutException。
+    let positioned_instructions: Vec<Instruction> = vec![Box::new(CheckTimeOutInstruction::new(
+        Rc::new(DefaultErrReporter::new("while(true){}", 0, 1, 1, "while")),
+    ))];
+    let mut positioned_ctx =
+        DelegateQContext::new(Rc::clone(&rt), QScope::global(QvmGlobalScope::empty()));
+    let positioned_err =
+        run_instructions(&mut positioned_ctx, &positioned_instructions, &timeout_opts)
+            .expect_err("positioned timeout");
+    assert!(positioned_err.is_timeout());
 
     // timeoutMillis <= 0 disables the check
     let mut ctx2 = DelegateQContext::new(Rc::clone(&rt), QScope::global(QvmGlobalScope::empty()));

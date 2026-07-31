@@ -41,7 +41,7 @@ impl SerializableParseCacheException {
         );
         // Java buildDiagnostic:行为 0 基(line - 1),列保持 0 基
         let lexeme = normalized.lexeme.clone().unwrap_or_default();
-        let lexeme_len = lexeme.chars().count() as i32;
+        let lexeme_len = lexeme.encode_utf16().count() as i32;
         let start = Position::new(normalized.line - 1, normalized.col);
         let end = Position::new(normalized.line - 1, normalized.col + lexeme_len);
         let diagnostic = Diagnostic::new(
@@ -76,7 +76,7 @@ fn normalize_source(
     script: Option<&str>,
     source: Option<&SerializableSource>,
 ) -> SerializableSource {
-    let script_length = script.map(|s| s.chars().count() as i32).unwrap_or(0);
+    let script_length = script.map(|s| s.encode_utf16().count() as i32).unwrap_or(0);
     let start = source.map(|s| s.start).unwrap_or(0);
     SerializableSource {
         start: start.clamp(0, script_length),
@@ -106,3 +106,43 @@ impl std::fmt::Display for SerializableParseCacheException {
 }
 
 impl std::error::Error for SerializableParseCacheException {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// SOURCE_PARITY: Java String.length 与 Diagnostic range 均按 UTF-16
+    /// code unit；start 需截断到脚本 UTF-16 长度，词素范围同样如此。
+    #[test]
+    fn constructor_normalizes_source_with_java_utf16_lengths() {
+        let source = SerializableSource {
+            start: 99,
+            line: 0,
+            col: -3,
+            lexeme: Some("😀".to_string()),
+        };
+        let error = SerializableParseCacheException::new(
+            Some("a😀"),
+            Some(&source),
+            "CACHE_ERROR",
+            "bad cache",
+        );
+
+        assert_eq!(error.pos(), 3);
+        assert_eq!(error.line_no(), 1);
+        assert_eq!(error.col_no(), 1);
+        assert_eq!(error.err_lexeme(), "😀");
+        assert_eq!(error.diagnostic().range().end().character(), 2);
+    }
+
+    /// SOURCE_PARITY: Java null script/source 分别归一为空脚本和默认位置。
+    #[test]
+    fn constructor_normalizes_absent_script_and_source() {
+        let error = SerializableParseCacheException::new(None, None, "CACHE_ERROR", "bad cache");
+        assert_eq!(error.pos(), 0);
+        assert_eq!(error.line_no(), 1);
+        assert_eq!(error.col_no(), 1);
+        assert_eq!(error.err_lexeme(), "");
+        assert_eq!(error.reason(), "bad cache");
+    }
+}

@@ -1485,7 +1485,9 @@ impl Express4Runner {
 
     /// 读取对象字段。对应 Java 方法 `loadField(Object, String)`。
     pub fn load_field(&self, object: &DataValue, field_name: &str) -> Option<QValue> {
-        self.reflect_loader.load_field(object, field_name)
+        // Java `Express4Runner#loadField` 是宿主 API，固定传
+        // `skipSecurity=true`；脚本内部字段访问仍由 QVM 传 false。
+        self.reflect_loader.load_field(object, field_name, true)
     }
 
     // ------------------------------------------------------------------

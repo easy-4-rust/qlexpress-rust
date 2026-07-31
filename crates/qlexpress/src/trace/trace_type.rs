@@ -2,43 +2,44 @@
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/trace/TraceType.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Trace point kinds, mirroring Java `TraceType`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[repr(u8)]
 /// 对应 Java: com.alibaba.qlexpress4.runtime.trace.TraceType。
 pub enum TraceType {
     // parent
     /// 操作符求值节点。
-    Operator,
+    Operator = 0,
     /// 函数调用节点。
-    Function,
+    Function = 1,
     /// 实例或静态方法调用节点。
-    Method,
+    Method = 2,
     /// 字段读取节点。
-    Field,
+    Field = 3,
     /// 列表字面量节点。
-    List,
+    List = 4,
     /// 映射字面量节点。
-    Map,
+    Map = 5,
     /// 条件分支节点。
-    If,
+    If = 6,
     /// 多分支选择节点。
-    Switch,
+    Switch = 7,
     /// 返回语句节点。
-    Return,
+    Return = 8,
     /// 语句块节点。
-    Block,
+    Block = 9,
     // children
     /// 变量读取或写入节点。
-    Variable,
+    Variable = 10,
     /// 常量值节点。
-    Value,
+    Value = 11,
     /// 函数定义节点。
-    DefineFunction,
+    DefineFunction = 12,
     /// 宏定义节点。
-    DefineMacro,
+    DefineMacro = 13,
     // other composite children
     /// 基础表达式节点。
-    Primary,
+    Primary = 14,
     /// 通用语句节点。
-    Statement,
+    Statement = 15,
 }
 
 /// 返回与 Java 语义一致的规范名称。
@@ -64,5 +65,37 @@ pub fn java_name(trace_type: TraceType) -> &'static str {
         TraceType::DefineMacro => "DEFINE_MACRO",
         TraceType::Primary => "PRIMARY",
         TraceType::Statement => "STATEMENT",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// SOURCE_PARITY: Java `TraceType` 的声明顺序和 `name()`。
+    #[test]
+    fn all_variants_keep_java_name_and_ordinal() {
+        let variants = [
+            (TraceType::Operator, "OPERATOR"),
+            (TraceType::Function, "FUNCTION"),
+            (TraceType::Method, "METHOD"),
+            (TraceType::Field, "FIELD"),
+            (TraceType::List, "LIST"),
+            (TraceType::Map, "MAP"),
+            (TraceType::If, "IF"),
+            (TraceType::Switch, "SWITCH"),
+            (TraceType::Return, "RETURN"),
+            (TraceType::Block, "BLOCK"),
+            (TraceType::Variable, "VARIABLE"),
+            (TraceType::Value, "VALUE"),
+            (TraceType::DefineFunction, "DEFINE_FUNCTION"),
+            (TraceType::DefineMacro, "DEFINE_MACRO"),
+            (TraceType::Primary, "PRIMARY"),
+            (TraceType::Statement, "STATEMENT"),
+        ];
+        for (ordinal, (trace_type, name)) in variants.into_iter().enumerate() {
+            assert_eq!(trace_type as usize, ordinal);
+            assert_eq!(java_name(trace_type), name);
+        }
     }
 }

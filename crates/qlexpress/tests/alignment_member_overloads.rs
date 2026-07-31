@@ -137,7 +137,7 @@ fn instantiate(
 }
 
 fn method_registry() -> Rc<NativeRegistry> {
-    let mut registry = NativeRegistry::new();
+    let registry = NativeRegistry::new();
 
     let mut parent = NativeType::named("test.Parent");
     parent.add_method_candidate(
@@ -594,7 +594,7 @@ fn java_method_var_arg_not_match_test2() {
 }
 
 fn constructor_registry() -> Rc<NativeRegistry> {
-    let mut registry = NativeRegistry::new();
+    let registry = NativeRegistry::new();
 
     let mut parent = NativeType::named("test.Parent");
     parent.add_constructor_candidate(constructor(Vec::new(), false, |_| {

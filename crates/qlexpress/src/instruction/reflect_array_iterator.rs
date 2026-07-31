@@ -24,6 +24,7 @@ impl ReflectArrayIterator {
     /// # 参数
     ///
     /// - `arr_obj`：迭代期间保持共享引用语义的数组。
+    ///
     /// 对应 Java：`ReflectArrayIterator#ReflectArrayIterator()`。
     pub(crate) fn new(arr_obj: Rc<RefCell<JavaArray>>) -> Self {
         Self { arr_obj, cursor: 0 }

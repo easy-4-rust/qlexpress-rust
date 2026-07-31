@@ -166,6 +166,7 @@ impl DataValue {
     /// # 参数
     ///
     /// - `units`：需要原样保存的 Java 字符串内容。
+    ///
     /// 对应 Java：`com.alibaba.qlexpress4.runtime.data.DataValue` 包装 Java UTF-16 字符串的语义。
     pub fn string_from_utf16(units: Vec<u16>) -> DataValue {
         DataValue::Str(JavaString::from_utf16_units(units))

@@ -92,6 +92,7 @@ mod tests {
         let first = MetaClass::new(ClassRef::from_name("java.lang.String"));
         let same = MetaClass::new(ClassRef::from_name("java.lang.String"));
         let different = MetaClass::new(ClassRef::from_name("java.lang.Integer"));
+        assert_eq!(first.clz(), &ClassRef::from_name("java.lang.String"));
         assert_eq!(first, same);
         assert_ne!(first, different);
 

@@ -29,12 +29,13 @@ impl NativeMember {
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/security/QLSecurityStrategy.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Mirroring Java `QLSecurityStrategy`: decides whether a native member may
 /// be accessed from a script.
-#[derive(Clone)]
+#[derive(Clone, Default)]
 /// 对应 Java: com.alibaba.qlexpress4.security.QLSecurityStrategy。
 pub enum QLSecurityStrategy {
     /// Java `QLSecurityStrategy.open()`: allow everything.
     Open,
     /// Java `QLSecurityStrategy.isolation()`: allow nothing. (Java default.)
+    #[default]
     Isolation,
     /// Java `QLSecurityStrategy.blackList(Set<Member>)`.
     BlackList(HashSet<NativeMember>),
@@ -46,12 +47,6 @@ pub enum QLSecurityStrategy {
     SharedWhiteList(SharedNativeMembers),
     /// 业务宿主实现 Java `QLSecurityStrategy#check(Member)` 的 Rust 闭包适配。
     Custom(Rc<dyn Fn(&NativeMember) -> bool>),
-}
-
-impl Default for QLSecurityStrategy {
-    fn default() -> Self {
-        Self::Isolation
-    }
 }
 
 impl fmt::Debug for QLSecurityStrategy {

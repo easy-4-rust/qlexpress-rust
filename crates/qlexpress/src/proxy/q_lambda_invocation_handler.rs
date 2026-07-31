@@ -62,11 +62,74 @@ impl QLambdaInvocationHandler {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::runtime::data::lambda::QLambdaMethod;
+    use crate::runtime::native_registry::NativeRegistry;
     use crate::runtime::qlambda_empty::QLambdaEmpty;
+
+    fn method_handler(method_name: &str, bean: DataValue) -> QLambdaInvocationHandler {
+        QLambdaInvocationHandler::new(Rc::new(QLambda::Method(QLambdaMethod::new(
+            method_name,
+            Rc::new(NativeRegistry::with_builtins()),
+            bean,
+        ))))
+    }
 
     #[test]
     fn to_string_is_fixed_proxy_name() {
         let handler = QLambdaInvocationHandler::new(Rc::new(QLambda::Empty(QLambdaEmpty)));
         assert_eq!(handler.invoke_to_string(), "QLambdaProxy");
+    }
+
+    /// `SOURCE_PARITY`：Java `invoke` 的抽象方法分支把全部参数原序转发给
+    /// `QLambda.call(args)`，并返回 `QResult` 中的值。
+    #[test]
+    fn abstract_dispatch_forwards_arguments_and_result() {
+        let handler = method_handler("equals", DataValue::string("same"));
+        assert_eq!(
+            handler
+                .invoke_abstract(&[DataValue::string("same")])
+                .expect("abstract dispatch"),
+            DataValue::Bool(true)
+        );
+
+        let callable = method_handler("substring", DataValue::string("value")).into_fn();
+        assert_eq!(
+            callable(&[DataValue::Int(1)]).expect("closure adapter"),
+            DataValue::string("alue")
+        );
+    }
+
+    /// `SOURCE_PARITY`：Java 非抽象接口默认方法不转发到脚本 Lambda；
+    /// Rust trait 的默认实现同样在适配器自身执行，只有抽象方法调用处理器。
+    #[test]
+    fn rust_trait_adapter_keeps_default_methods_outside_handler() {
+        trait HostFunction {
+            fn apply(&self, argument: DataValue) -> Result<DataValue, QLException>;
+
+            fn description(&self) -> &'static str {
+                "host-default"
+            }
+        }
+
+        struct Adapter {
+            handler: QLambdaInvocationHandler,
+        }
+
+        impl HostFunction for Adapter {
+            fn apply(&self, argument: DataValue) -> Result<DataValue, QLException> {
+                self.handler.invoke_abstract(&[argument])
+            }
+        }
+
+        let adapter = Adapter {
+            handler: method_handler("equals", DataValue::string("same")),
+        };
+        assert_eq!(adapter.description(), "host-default");
+        assert_eq!(
+            adapter
+                .apply(DataValue::string("same"))
+                .expect("abstract method"),
+            DataValue::Bool(true)
+        );
     }
 }

@@ -5,6 +5,7 @@ mod business_host;
 mod canary;
 mod concurrency;
 mod differential;
+mod lexer_differential;
 mod load;
 mod normalization;
 mod replay;
@@ -48,6 +49,11 @@ fn run() -> Result<(), String> {
             let threads = optional_usize(args.next(), 8, "threads")?;
             load::run(Duration::from_secs(seconds), threads)
         }
+        "lexer-differential" => {
+            let corpus = required_path(&mut args, "lexer corpus")?;
+            let output = required_path(&mut args, "lexer output")?;
+            lexer_differential::run(&corpus, &output)
+        }
         "security-fuzz" => {
             let cases = optional_usize(args.next(), 25_000, "cases")?;
             security_fuzz::run(cases)
@@ -86,6 +92,7 @@ fn usage() -> String {
     [
         "usage:",
         "  qlexpress-verification differential <corpus.jsonl> <output.jsonl>",
+        "  qlexpress-verification lexer-differential <corpus.jsonl> <output.jsonl>",
         "  qlexpress-verification replay <java-repository>",
         "  qlexpress-verification concurrency [threads] [iterations]",
         "  qlexpress-verification load [duration-seconds] [threads]",

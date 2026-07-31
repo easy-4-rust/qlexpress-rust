@@ -410,6 +410,22 @@ mod tests {
             &QScope::get_function(&parent, "f").expect("parent unchanged"),
             &parent_function
         ));
+
+        // Java `getFunctionTable()` 返回当前块的实际 Map，不是副本。
+        let child_table = QScope::function_table(&child);
+        let table_function: Rc<dyn CustomFunction> = Rc::new(
+            |_context: &mut dyn crate::runtime::qcontext::QContext, _parameters: &Parameters| {
+                Ok(DataValue::Int(3))
+            },
+        );
+        child_table
+            .borrow_mut()
+            .insert("tableOnly".to_string(), Rc::clone(&table_function));
+        assert!(Rc::ptr_eq(
+            &QScope::get_function(&child, "tableOnly").expect("live function table"),
+            &table_function
+        ));
+        assert!(QScope::get_function(&parent, "tableOnly").is_none());
     }
 
     /// `SOURCE_PARITY`：Java `QvmGlobalScope` 不支持操作数栈与
@@ -427,5 +443,44 @@ mod tests {
         assert!(catch_unwind(AssertUnwindSafe(|| QScope::pop(&global))).is_err());
         assert!(catch_unwind(AssertUnwindSafe(|| QScope::peek(&global))).is_err());
         assert!(catch_unwind(AssertUnwindSafe(|| QScope::new_scope(&global))).is_err());
+        assert!(catch_unwind(AssertUnwindSafe(|| {
+            QScope::define_local_symbol(
+                &global,
+                "x",
+                None,
+                DataValue::Null,
+                Rc::new(NativeRegistry::new()),
+            );
+        }))
+        .is_err());
+        let unsupported_function: Rc<dyn CustomFunction> = Rc::new(
+            |_context: &mut dyn crate::runtime::qcontext::QContext, _parameters: &Parameters| {
+                Ok(DataValue::Null)
+            },
+        );
+        assert!(catch_unwind(AssertUnwindSafe(|| {
+            QScope::define_function(&global, "f", unsupported_function);
+        }))
+        .is_err());
+    }
+
+    /// `SOURCE_PARITY`：Java `QvmGlobalScope#getFunctionTable` 返回构造时传入
+    /// 的外部函数 Map，同一 Map 的后续修改必须立即影响 `getFunction`。
+    #[test]
+    fn global_scope_preserves_live_external_function_table() {
+        let global = root();
+        let table = QScope::function_table(&global);
+        let function: Rc<dyn CustomFunction> = Rc::new(
+            |_context: &mut dyn crate::runtime::qcontext::QContext, _parameters: &Parameters| {
+                Ok(DataValue::Int(7))
+            },
+        );
+        table
+            .borrow_mut()
+            .insert("late".to_string(), Rc::clone(&function));
+        assert!(Rc::ptr_eq(
+            &QScope::get_function(&global, "late").expect("shared global function"),
+            &function
+        ));
     }
 }

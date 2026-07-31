@@ -31,14 +31,13 @@ impl ErrorReporter for PureErrReporter {
         format: &str,
         args: &[String],
     ) -> QLException {
-        // Java maps a SCRIPT_TIME_OUT code to QLTimeOutException
-        // (`QLException.reportRuntimeErr*`); mirror the kind selection.
-        let kind = if error_code == super::error_codes::SCRIPT_TIME_OUT {
-            QLExceptionKind::Timeout
-        } else {
-            QLExceptionKind::Runtime
-        };
-        QLException::for_test(kind, format_msg(format, args), error_code)
+        // Java 直接 `new QLRuntimeException(null, ..., errorCode)`，不会像
+        // `QLException.reportRuntimeErr*` 那样按 SCRIPT_TIME_OUT 改成超时子类。
+        QLException::for_test(
+            QLExceptionKind::Runtime,
+            format_msg(format, args),
+            error_code,
+        )
     }
 }
 
@@ -48,6 +47,8 @@ mod tests {
     use crate::exception::error_codes;
     use crate::exception::error_reporter::ErrorReporter;
 
+    /// SOURCE_PARITY: Java `PureErrReporter#reportFormatWithCatch` 忽略
+    /// catchObj，格式化消息并保留错误码。
     #[test]
     fn pure_reporter_formats_and_keeps_code() {
         let reporter = PureErrReporter::INSTANCE;
@@ -66,5 +67,24 @@ mod tests {
         let reporter = PureErrReporter::INSTANCE;
         let err = reporter.report(error_codes::SYNTAX_ERROR, "100% bad");
         assert_eq!(err.reason(), "100% bad");
+    }
+
+    /// SOURCE_PARITY: 此报告器总是直接创建 `QLRuntimeException`；
+    /// 即使错误码为 SCRIPT_TIME_OUT，也不能变成 QLTimeoutException。
+    #[test]
+    fn timeout_code_still_creates_plain_runtime_exception() {
+        let err = PureErrReporter::INSTANCE.report_format_with_catch(
+            Some(DataValue::Int(7)),
+            error_codes::SCRIPT_TIME_OUT,
+            error_codes::error_msg(error_codes::SCRIPT_TIME_OUT),
+            &["25".to_string()],
+        );
+        assert_eq!(err.kind(), QLExceptionKind::Runtime);
+        assert_eq!(err.error_code(), error_codes::SCRIPT_TIME_OUT);
+        assert_eq!(
+            err.reason(),
+            "script exceeds timeout milliseconds, which is 25 ms"
+        );
+        assert_eq!(err.catch_obj(), None);
     }
 }
