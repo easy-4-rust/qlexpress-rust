@@ -173,9 +173,7 @@ mod tests {
             types,
             vec![
                 ClassRef::Named("com.alibaba.qlexpress4.runtime.Nothing".into()),
-                ClassRef::Boxed(
-                    crate::runtime::data::convert::obj_type_convertor::TargetType::Int,
-                ),
+                ClassRef::Boxed(crate::runtime::data::convert::obj_type_convertor::TargetType::Int,),
                 ClassRef::from_name("java.lang.String[]"),
                 ClassRef::from_name("java.lang.Object[]"),
             ]

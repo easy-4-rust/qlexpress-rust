@@ -6,8 +6,8 @@ use crate::exception::error_codes;
 use crate::exception::error_reporter::ErrorReporter;
 use crate::exception::{QLException, QLExceptionKind};
 use crate::ql_options::QLOptions;
+use crate::runtime::data::JavaArrayList;
 use crate::runtime::instruction::QLInstruction;
-use crate::runtime::data::{JavaArray, JavaArrayList};
 use crate::runtime::member::ClassRef;
 use crate::runtime::q_result::QResult;
 use crate::runtime::qcontext::QContext;
@@ -17,69 +17,8 @@ use crate::utils::println_utils::PrintlnUtils;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-/// 反射数组的可迭代适配器。
-///
-/// 对应 Java：
-/// `ForEachInstruction.ReflectArrayIterable`。Java 持有任意反射数组对象；
-/// Rust 数组统一为共享 `Vec<DataValue>`。
-#[derive(Clone)]
-pub(crate) struct ReflectArrayIterable {
-    arr_obj: Rc<RefCell<JavaArray>>,
-}
-
-impl ReflectArrayIterable {
-    /// 创建数组可迭代适配器。
-    ///
-    /// 对应 Java 私有构造器 `ReflectArrayIterable(Object)`。
-    pub(crate) fn new(arr_obj: Rc<RefCell<JavaArray>>) -> Self {
-        Self { arr_obj }
-    }
-
-    /// 创建一个游标从零开始的数组迭代器。
-    ///
-    /// 对应 Java：`ReflectArrayIterable#iterator()`。
-    pub fn iterator(&self) -> ReflectArrayIterator {
-        ReflectArrayIterator {
-            arr_obj: Rc::clone(&self.arr_obj),
-            cursor: 0,
-        }
-    }
-}
-
-/// 反射数组迭代器。
-///
-/// 对应 Java：
-/// `ForEachInstruction.ReflectArrayIterable.ReflectArrayIterator`。
-pub(crate) struct ReflectArrayIterator {
-    arr_obj: Rc<RefCell<JavaArray>>,
-    cursor: usize,
-}
-
-impl ReflectArrayIterator {
-    /// 判断游标是否仍小于数组长度。
-    ///
-    /// 对应 Java：`ReflectArrayIterator#hasNext()`。
-    pub fn has_next(&self) -> bool {
-        self.cursor < self.arr_obj.borrow().len()
-    }
-}
-
-impl Iterator for ReflectArrayIterator {
-    type Item = DataValue;
-
-    /// 返回当前元素并将游标加一。
-    ///
-    /// 对应 Java：`ReflectArrayIterator#next()`。通过 Rust `Iterator`
-    /// 契约在越界时返回 `None`，循环调用点与 Java 增强 for 的行为一致。
-    fn next(&mut self) -> Option<Self::Item> {
-        if !self.has_next() {
-            return None;
-        }
-        let item = self.arr_obj.borrow().get(self.cursor).cloned();
-        self.cursor += 1;
-        item
-    }
-}
+use super::reflect_array_iterable::ReflectArrayIterable;
+use super::reflect_array_iterator::ReflectArrayIterator;
 
 /// Java `ArrayList.Itr` 的 fail-fast 迭代器适配。
 ///
@@ -225,9 +164,9 @@ impl QLInstruction for ForEachInstruction {
         let may_be_iterable = q_context.pop().get();
         // Java: array → ReflectArrayIterable; Iterable → as-is; else error.
         let mut items = match &may_be_iterable {
-            DataValue::Array(arr) => ForEachIterator::Array(
-                ReflectArrayIterable::new(Rc::clone(arr)).iterator(),
-            ),
+            DataValue::Array(arr) => {
+                ForEachIterator::Array(ReflectArrayIterable::new(Rc::clone(arr)).iterator())
+            }
             DataValue::List(list) => {
                 ForEachIterator::List(JavaArrayListIterator::new(Rc::clone(list)))
             }
@@ -235,7 +174,7 @@ impl QLInstruction for ForEachInstruction {
                 return Err(self.target_error_reporter.report(
                     error_codes::FOR_EACH_ITERABLE_REQUIRED,
                     error_codes::error_msg(error_codes::FOR_EACH_ITERABLE_REQUIRED),
-                ))
+                ));
             }
         };
         let body_lambda = Rc::clone(&self.body).to_lambda(q_context, ql_options, true);
@@ -300,6 +239,7 @@ impl QLInstruction for ForEachInstruction {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::runtime::data::JavaArray;
 
     /// SOURCE_PARITY: ReflectArrayIterable#iterator 与
     /// ReflectArrayIterator#hasNext/next。

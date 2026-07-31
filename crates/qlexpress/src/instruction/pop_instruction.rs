@@ -2,8 +2,8 @@
 //! 职责:弹出并丢弃栈顶元素。
 //! 本文件由 `flow.rs` 拆分而来(SPEC §5.5 一类一文件),仅移动代码与补充中文注释,行为完全一致。
 
-use crate::exception::error_reporter::ErrorReporter;
 use crate::exception::QLException;
+use crate::exception::error_reporter::ErrorReporter;
 use crate::ql_options::QLOptions;
 use crate::runtime::instruction::QLInstruction;
 use crate::runtime::q_result::QResult;

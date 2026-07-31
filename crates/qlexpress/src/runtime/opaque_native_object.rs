@@ -3,9 +3,9 @@
 //! Rust 无 JVM 对象模型；对无需暴露字段或方法、但必须保留运行时类型
 //! 身份的 JDK 对象（例如异常、`HashSet`）使用本适配器。
 
+use crate::exception::QLException;
 use crate::exception::error_codes;
 use crate::exception::ql_exception::QLExceptionKind;
-use crate::exception::QLException;
 use crate::runtime::native_object::NativeObject;
 use crate::runtime::value::DataValue;
 

@@ -5,14 +5,14 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 
+use crate::exception::QLException;
 use crate::exception::error_codes;
 use crate::exception::error_reporter::ErrorReporter;
 use crate::exception::pure_err_reporter::PureErrReporter;
-use crate::exception::QLException;
 use crate::ql_options::QLOptions;
 use crate::runtime::class_ref::ClassRef;
-use crate::runtime::data::convert::obj_type_convertor::ObjTypeConvertor;
 use crate::runtime::data::AssignableDataValue;
+use crate::runtime::data::convert::obj_type_convertor::ObjTypeConvertor;
 use crate::runtime::delegate_qcontext::DelegateQContext;
 use crate::runtime::function::CustomFunction;
 use crate::runtime::left_value::LeftValue;

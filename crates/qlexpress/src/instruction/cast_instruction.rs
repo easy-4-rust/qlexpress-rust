@@ -2,13 +2,13 @@
 //! 职责:将栈顶值转换为目标类型。
 //! 本文件由 `cast.rs` 拆分而来(SPEC §5.5 一类一文件),仅移动代码与补充中文注释,行为完全一致。
 
+use crate::exception::QLException;
 use crate::exception::error_codes;
 use crate::exception::error_reporter::ErrorReporter;
-use crate::exception::QLException;
 use crate::ql_options::QLOptions;
 use crate::runtime::data::convert::obj_type_convertor::ObjTypeConvertor;
 use crate::runtime::instruction::QLInstruction;
-use crate::runtime::member::{as_meta_class, ClassRef};
+use crate::runtime::member::{ClassRef, as_meta_class};
 use crate::runtime::q_result::QResult;
 use crate::runtime::qcontext::QContext;
 use crate::runtime::value::{DataValue, QValue};

@@ -5,8 +5,8 @@ use std::collections::HashSet;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
 
-use crate::exception::ql_exception::QLExceptionKind;
 use crate::exception::QLException;
+use crate::exception::ql_exception::QLExceptionKind;
 use crate::runtime::value::DataValue;
 use crate::security::{CancellationToken, ResourceLimits};
 

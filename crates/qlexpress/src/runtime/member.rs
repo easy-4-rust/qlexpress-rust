@@ -16,7 +16,7 @@
 //! 路径兼容,不含任何实现。
 
 pub use crate::runtime::class_ref::ClassRef;
-pub use crate::runtime::meta_class::{as_meta_class, MetaClass};
+pub use crate::runtime::meta_class::{MetaClass, as_meta_class};
 pub use crate::runtime::native_registry::NativeRegistry;
 pub use crate::runtime::native_type::{
     NativeConstructor, NativeConstructorCandidate, NativeFieldGetter, NativeFieldSetter,

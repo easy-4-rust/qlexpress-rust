@@ -148,14 +148,10 @@ impl ClassRef {
                 "J" => Some(ClassRef::Primitive(TargetType::Long)),
                 "F" => Some(ClassRef::Primitive(TargetType::Float)),
                 "D" => Some(ClassRef::Primitive(TargetType::Double)),
-                nested if nested.starts_with('[') => {
-                    Some(ClassRef::Named(nested.to_string()))
-                }
-                reference if reference.starts_with('L') && reference.ends_with(';') => {
-                    Some(ClassRef::from_name(
-                        &reference[1..reference.len().saturating_sub(1)],
-                    ))
-                }
+                nested if nested.starts_with('[') => Some(ClassRef::Named(nested.to_string())),
+                reference if reference.starts_with('L') && reference.ends_with(';') => Some(
+                    ClassRef::from_name(&reference[1..reference.len().saturating_sub(1)]),
+                ),
                 _ => None,
             };
         }

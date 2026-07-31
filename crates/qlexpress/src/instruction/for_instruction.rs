@@ -2,9 +2,9 @@
 //! 职责:经典 for 循环执行体。
 //! 本文件由 `flow.rs` 拆分而来(SPEC §5.5 一类一文件),仅移动代码与补充中文注释,行为完全一致。
 
+use crate::exception::QLException;
 use crate::exception::error_codes;
 use crate::exception::error_reporter::ErrorReporter;
-use crate::exception::QLException;
 use crate::ql_options::QLOptions;
 use crate::runtime::delegate_qcontext::DelegateQContext;
 use crate::runtime::instruction::QLInstruction;
@@ -193,7 +193,7 @@ impl QLInstruction for ForInstruction {
                         error_codes::FOR_BODY_ERROR,
                         error_codes::error_msg(error_codes::FOR_BODY_ERROR),
                         &[],
-                    ))
+                    ));
                 }
             }
             if let Some(update) = &update_lambda {

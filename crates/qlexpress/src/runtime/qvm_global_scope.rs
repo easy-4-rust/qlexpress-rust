@@ -7,8 +7,8 @@ use std::rc::Rc;
 use crate::exception::QLException;
 use crate::ql_options::{Attachments, SharedAttachments};
 use crate::runtime::context::{EmptyContext, ExpressContext, MapExpressContext};
-use crate::runtime::data::index_map::IndexMap;
 use crate::runtime::data::AssignableDataValue;
+use crate::runtime::data::index_map::IndexMap;
 use crate::runtime::function::CustomFunction;
 use crate::runtime::left_value::LeftValue;
 use crate::runtime::scope::SharedFunctionTable;
@@ -165,10 +165,7 @@ impl QvmGlobalScope {
 
     /// 对应 Java 方法 `getFunction`:此处仅外部函数可见。
     pub fn get_function(&self, function_name: &str) -> Option<Rc<dyn CustomFunction>> {
-        self.external_functions
-            .borrow()
-            .get(function_name)
-            .cloned()
+        self.external_functions.borrow().get(function_name).cloned()
     }
 
     /// 对应 Java 方法 `getFunctionTable`。

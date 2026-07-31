@@ -98,12 +98,7 @@ pub trait QContext {
     /// 参数：`var_name`、`var_clz`、`value`；返回：无。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/QContext.java`，方法 `defineLocalSymbol`。
     /// Java `defineLocalSymbol`.
-    fn define_local_symbol(
-        &mut self,
-        var_name: &str,
-        var_clz: Option<ClassRef>,
-        value: DataValue,
-    );
+    fn define_local_symbol(&mut self, var_name: &str, var_clz: Option<ClassRef>, value: DataValue);
 
     /// 添加或注册 function。
     /// 参数：`function_name`、`function`；返回：无。

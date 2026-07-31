@@ -1,8 +1,8 @@
 //! Assignable values, mirroring Java `LeftValue`.
 
+use crate::exception::QLException;
 use crate::exception::error_codes;
 use crate::exception::error_reporter::ErrorReporter;
-use crate::exception::QLException;
 use crate::runtime::class_ref::ClassRef;
 use crate::runtime::data::convert::obj_type_convertor::ObjTypeConvertor;
 use crate::runtime::native_registry::NativeRegistry;

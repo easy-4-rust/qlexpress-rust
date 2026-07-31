@@ -1,8 +1,8 @@
 //! Java `java.util.stream.Collector` 的 `toList` 标记对象。
 
+use crate::exception::QLException;
 use crate::exception::error_codes;
 use crate::exception::ql_exception::QLExceptionKind;
-use crate::exception::QLException;
 use crate::runtime::native_object::NativeObject;
 use crate::runtime::value::DataValue;
 

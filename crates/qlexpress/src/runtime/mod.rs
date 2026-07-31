@@ -60,6 +60,7 @@ pub use q_lambda_trace as qlambda_trace;
 pub mod qvm_global_scope;
 pub mod qvm_runtime;
 pub mod reflect_loader;
+pub mod result_type;
 pub use crate::scope;
 pub use crate::trace;
 pub use crate::util;

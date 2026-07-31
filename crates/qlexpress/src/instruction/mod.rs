@@ -39,6 +39,8 @@ pub mod new_scope_instruction;
 pub mod operator_instruction;
 pub mod pop_instruction;
 pub mod ql_instruction;
+pub(crate) mod reflect_array_iterable;
+pub(crate) mod reflect_array_iterator;
 pub mod return_instruction;
 pub mod return_result_type;
 pub mod slice_instruction;

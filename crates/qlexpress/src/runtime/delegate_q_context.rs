@@ -85,12 +85,7 @@ impl QContext for DelegateQContext {
         QScope::get_symbol_value(&self.q_scope, var_name)
     }
 
-    fn define_local_symbol(
-        &mut self,
-        var_name: &str,
-        var_clz: Option<ClassRef>,
-        value: DataValue,
-    ) {
+    fn define_local_symbol(&mut self, var_name: &str, var_clz: Option<ClassRef>, value: DataValue) {
         QScope::define_local_symbol(
             &self.q_scope,
             var_name,

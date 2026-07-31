@@ -4,6 +4,7 @@
 
 pub mod access;
 pub mod field_handler;
+pub mod getter_candidate_method;
 pub mod method_handler;
 pub mod preferred;
 

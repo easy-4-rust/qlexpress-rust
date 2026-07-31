@@ -7,10 +7,11 @@
 
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::hash::Hash;
 
 use crate::member::method_handler::MethodHandler;
 use crate::runtime::native_type::NativeType;
+
+pub use super::memo_cache::MemoCache;
 
 /// Java `CacheUtil` 的 Rust 对应对象。
 ///
@@ -64,44 +65,6 @@ impl CacheUtil {
             .borrow_mut()
             .insert(key, value);
         value
-    }
-}
-
-/// 通用的按键一次性计算缓存。
-///
-/// Java `CacheUtil` 只负责函数式接口；此类型保留早期 Rust API 的通用
-/// `computeIfAbsent` 能力，属于 `RUST_EXTENSION`。
-pub struct MemoCache<K, V> {
-    cache: RefCell<HashMap<K, V>>,
-}
-
-impl<K: Eq + Hash, V: Clone> MemoCache<K, V> {
-    /// 创建空缓存。
-    pub fn new() -> Self {
-        Self {
-            cache: RefCell::new(HashMap::new()),
-        }
-    }
-
-    /// 缺少键时计算、缓存并返回新值。
-    ///
-    /// # 参数
-    ///
-    /// - `key`：缓存键。
-    /// - `compute`：仅在首次缺少键时执行的计算。
-    pub fn compute_if_absent(&self, key: K, compute: impl FnOnce(&K) -> V) -> V {
-        if let Some(value) = self.cache.borrow().get(&key) {
-            return value.clone();
-        }
-        let value = compute(&key);
-        self.cache.borrow_mut().insert(key, value.clone());
-        value
-    }
-}
-
-impl<K: Eq + Hash, V: Clone> Default for MemoCache<K, V> {
-    fn default() -> Self {
-        Self::new()
     }
 }
 

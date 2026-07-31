@@ -96,9 +96,7 @@ impl ExceptionTable {
             return self.handler_pos_map.first().map(|(_, position)| *position);
         }
         let thrown_type = match throw_obj {
-            DataValue::Object(object) => {
-                ClassRef::from_name(object.borrow().native_type_name())
-            }
+            DataValue::Object(object) => ClassRef::from_name(object.borrow().native_type_name()),
             _ => ClassRef::from_name(throw_obj.data_type_name()),
         };
         self.handler_pos_map
