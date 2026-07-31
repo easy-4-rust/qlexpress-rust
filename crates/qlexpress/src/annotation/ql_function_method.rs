@@ -50,11 +50,13 @@ impl QLFunctionMethod {
     /// 返回 `@QLFunction` 声明的脚本函数名。
     ///
     /// `None` 表示方法未标注；`Some(empty)` 表示存在空值注解。
+    /// 对应 Java：`QLFunction#value()` 与 `Method#getAnnotation(QLFunction.class)`。
     pub fn function_names(&self) -> Option<&[String]> {
         self.function_names.as_deref()
     }
 
     /// 返回已绑定的函数调用实现。
+    /// 对应 Java：`Method#invoke(Object,Object...)` 的显式注册适配。
     pub fn function(&self) -> Rc<dyn CustomFunction> {
         Rc::clone(&self.function)
     }

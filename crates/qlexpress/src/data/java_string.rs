@@ -27,6 +27,7 @@ impl JavaString {
     /// # 返回值
     ///
     /// 返回可表示未配对代理项的 Java 字符串。
+    /// 对应 Java：`java.lang.String` 的 UTF-16 code unit 存储语义。
     pub fn from_utf16_units(units: Vec<u16>) -> Self {
         let utf8 = String::from_utf16(&units).ok();
         Self { units, utf8 }
@@ -37,6 +38,7 @@ impl JavaString {
     /// # 返回值
     ///
     /// 返回与 Java `String#charAt` 所观察到的 code unit 序列一致的切片。
+    /// 对应 Java：`java.lang.String#charAt(int)` 可观察到的 UTF-16 序列。
     pub fn utf16_units(&self) -> &[u16] {
         &self.units
     }
@@ -46,6 +48,7 @@ impl JavaString {
     /// # 返回值
     ///
     /// 返回与 Rust `str::encode_utf16` 形态一致、但不会丢失未配对代理项的迭代器。
+    /// 对应 Java：无（Rust 对 Java UTF-16 存储的迭代适配）。
     pub fn encode_utf16(&self) -> impl Iterator<Item = u16> + '_ {
         self.units.iter().copied()
     }
@@ -65,6 +68,7 @@ impl JavaString {
     /// # 返回值
     ///
     /// 合法 Unicode 字符串返回 `Some`；包含未配对代理项时返回 `None`。
+    /// 对应 Java：无（Rust UTF-8 宿主边界适配）。
     pub fn as_str(&self) -> Option<&str> {
         self.utf8.as_deref()
     }
@@ -74,6 +78,7 @@ impl JavaString {
     /// # 返回值
     ///
     /// 合法 Unicode 字符串返回 `Some`；包含未配对代理项时返回 `None`。
+    /// 对应 Java：无（Rust UTF-8 宿主边界适配）。
     pub fn to_rust_string(&self) -> Option<String> {
         self.utf8.clone()
     }
@@ -81,6 +86,7 @@ impl JavaString {
     /// 为日志或 UTF-8 宿主边界生成替换非法代理项后的文本。
     ///
     /// 该方法不得用于引擎内部相等、比较或索引语义。
+    /// 对应 Java：无（Rust 日志与 UTF-8 宿主边界的有损适配）。
     pub fn to_string_lossy(&self) -> String {
         self.utf8
             .clone()
@@ -156,6 +162,7 @@ impl JavaString {
     }
 
     /// 连接两个 Java 字符串，保留未配对代理项。
+    /// 对应 Java：`java.lang.String#concat(String)`。
     pub fn concat(&self, other: &Self) -> Self {
         let mut units = Vec::with_capacity(self.units.len().saturating_add(other.units.len()));
         units.extend_from_slice(&self.units);
@@ -212,6 +219,7 @@ impl JavaString {
     /// 使用当前 Unicode 映射转换大写并保留未配对代理项。
     ///
     /// 合法 Unicode 输入沿用既有 Rust 映射；未配对代理项原样保留。
+    /// 对应 Java：`java.lang.String#toUpperCase()`。
     pub fn to_uppercase(&self) -> Self {
         self.map_case(char::to_uppercase)
     }
@@ -219,6 +227,7 @@ impl JavaString {
     /// 使用当前 Unicode 映射转换小写并保留未配对代理项。
     ///
     /// 合法 Unicode 输入沿用既有 Rust 映射；未配对代理项原样保留。
+    /// 对应 Java：`java.lang.String#toLowerCase()`。
     pub fn to_lowercase(&self) -> Self {
         self.map_case(char::to_lowercase)
     }
@@ -248,6 +257,7 @@ impl JavaString {
     }
 
     /// 计算 Java `String#hashCode()`。
+    /// 对应 Java：`java.lang.String#hashCode()`。
     pub fn java_hash_code(&self) -> i32 {
         self.units.iter().fold(0i32, |hash, unit| {
             hash.wrapping_mul(31).wrapping_add(i32::from(*unit))

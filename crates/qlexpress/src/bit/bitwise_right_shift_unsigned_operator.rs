@@ -20,6 +20,7 @@ pub struct BitwiseRightShiftUnsignedOperator;
 
 impl BitwiseRightShiftUnsignedOperator {
     /// Java `getInstance()` 单例获取(无状态,直接构造)。
+    /// 对应 Java：`BitwiseRightShiftUnsignedOperator#getInstance()`。
     pub fn get_instance() -> Self {
         BitwiseRightShiftUnsignedOperator
     }

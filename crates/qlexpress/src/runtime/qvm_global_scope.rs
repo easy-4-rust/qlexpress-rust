@@ -176,6 +176,7 @@ impl QvmGlobalScope {
     }
 
     /// 脚本自建变量表(Java `newVariables`)。
+    /// 对应 Java：`QvmGlobalScope#newVariables` 字段。
     pub fn new_variables(&self) -> &HashMap<String, Rc<RefCell<dyn LeftValue>>> {
         &self.new_variables
     }

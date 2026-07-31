@@ -351,6 +351,7 @@ impl Express4Runner {
     ///
     /// 配置无界、静态检查失败、能力未授权、任一资源预算耗尽、取消、超时、
     /// 编译或 QVM 执行失败时返回带稳定错误码的 [`QLException`]。
+    /// 对应 Java：无（Rust 安全增强的不可绕过检查入口）。
     pub fn execute_checked(
         &self,
         script: &str,
@@ -392,6 +393,7 @@ impl Express4Runner {
     ///
     /// 与 [`Express4Runner::execute_checked`] 相同；此外，无界表达式追踪配置会
     /// 以 `SANDBOX_TRACE_DISABLED` 被拒绝。
+    /// 对应 Java：无（Rust 安全增强的动态上下文检查入口）。
     pub fn execute_checked_with_context(
         &self,
         script: &str,
@@ -554,6 +556,7 @@ impl Express4Runner {
     ///
     /// 新代码应使用 [`Self::execute_with_alias_objects`]，以保持与 Java
     /// `executeWithAliasObjects` 的对象名称一致性。
+    /// 对应 Java：`Express4Runner#executeWithAliasObjects`（Rust 早期兼容别名）。
     pub fn execute_with_alias_values(
         &self,
         script: &str,
@@ -995,6 +998,7 @@ impl Express4Runner {
 
     /// 返回 Runner 编译缓存统计。该快照汇总互相隔离的 Java 兼容缓存与
     /// 安全租户缓存。
+    /// 对应 Java：无（Rust 安全增强的缓存可观测性）。
     pub fn compile_cache_stats(&self) -> crate::security::CacheStats {
         let compatible = self.compile_cache.borrow().stats();
         let secure = self.secure_compile_cache.borrow().stats();

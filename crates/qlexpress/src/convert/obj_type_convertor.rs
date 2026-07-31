@@ -47,6 +47,7 @@ impl QConverted {
     }
 
     /// 创建不可转换结果，转换值按 Java `null` 语义置为 `DataValue::Null`。
+    /// 对应 Java：`QConverted#unConvertable()`。
     pub fn un_convertible() -> Self {
         QConverted {
             convertible: false,
@@ -65,6 +66,7 @@ impl QConverted {
     }
 
     /// 消费结果并取得转换后的值；不可转换时得到 `DataValue::Null`。
+    /// 对应 Java：`QConverted#getConverted()`（Rust 所有权便捷接口）。
     pub fn into_converted(self) -> DataValue {
         self.converted
     }
@@ -79,6 +81,7 @@ impl ObjTypeConvertor {
     /// 参数：`value`、`target`；返回：`QConverted`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/data/convert/ObjTypeConvertor.java`，方法 `cast`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `ObjTypeConvertor.cast(Object, Class<?>)`.
+    /// 对应 Java：`ObjTypeConvertor#cast(Object,Class<?>)`。
     pub fn cast(value: &DataValue, target: TargetType) -> QConverted {
         if no_need_convert(value, target) {
             return QConverted::converted(value.clone());

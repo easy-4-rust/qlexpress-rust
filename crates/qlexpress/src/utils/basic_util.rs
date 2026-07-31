@@ -73,6 +73,7 @@ impl BasicUtil {
     ///
     /// 这是 `getTypeOfObject` 单元素分派的 Rust 形态，并由成员/构造器
     /// 重载解析共用。
+    /// 对应 Java：`BasicUtil#getTypeOfObject(Object[])` 的单元素分派。
     pub fn type_of_value(value: &DataValue) -> ClassRef {
         match value {
             DataValue::Null => {
@@ -96,6 +97,7 @@ impl BasicUtil {
     /// 参数：`s`；返回：`String`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/utils/BasicUtil.java`，方法 `getGetter`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `BasicUtil.getGetter`: `"get" + Capitalized(s)`.
+    /// 对应 Java：`BasicUtil#getGetter(String)`。
     pub fn get_getter(s: &str) -> String {
         capitalize_prefixed("get", s)
     }

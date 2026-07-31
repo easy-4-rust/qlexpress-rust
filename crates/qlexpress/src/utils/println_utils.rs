@@ -9,6 +9,7 @@ impl PrintlnUtils {
     /// 参数：`depth`、`s`、`debug`；返回：无。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/utils/PrintlnUtils.java`，方法 `printlnByCurDepth`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `printlnByCurDepth`: send the indented string to `debug`.
+    /// 对应 Java：`PrintlnUtils#printlnByCurDepth(int,String,Consumer<String>)`。
     pub fn println_by_cur_depth(depth: i32, s: &str, debug: &mut dyn FnMut(String)) {
         debug(Self::build_indent_string(depth, s));
     }

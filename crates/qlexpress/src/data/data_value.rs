@@ -147,6 +147,7 @@ impl DataValue {
     /// # 返回值
     ///
     /// 返回能够无损访问 UTF-16 code unit 的 Java 字符串引用。
+    /// 对应 Java：无（Rust 对 `DataValue#get()` 字符串分支的无损借用接口）。
     pub fn as_java_string(&self) -> Option<&JavaString> {
         match self {
             DataValue::Str(value) => Some(value),
@@ -155,6 +156,7 @@ impl DataValue {
     }
 
     /// 从 Rust 字符串创建 Java `String` 值。
+    /// 对应 Java：`com.alibaba.qlexpress4.runtime.data.DataValue` 包装 `String` 值的构造语义。
     pub fn string(value: impl Into<JavaString>) -> DataValue {
         DataValue::Str(value.into())
     }
@@ -164,6 +166,7 @@ impl DataValue {
     /// # 参数
     ///
     /// - `units`：需要原样保存的 Java 字符串内容。
+    /// 对应 Java：`com.alibaba.qlexpress4.runtime.data.DataValue` 包装 Java UTF-16 字符串的语义。
     pub fn string_from_utf16(units: Vec<u16>) -> DataValue {
         DataValue::Str(JavaString::from_utf16_units(units))
     }
@@ -192,6 +195,7 @@ impl DataValue {
     }
 
     /// 创建无需宿主继承查询的声明组件类型数组。
+    /// 对应 Java：`java.lang.reflect.Array#newInstance(Class,int)` 的 QLExpress 值包装。
     pub fn array_with_component(items: Vec<DataValue>, component_type: ClassRef) -> DataValue {
         DataValue::Array(Rc::new(RefCell::new(JavaArray::typed_without_registry(
             items,
@@ -200,6 +204,7 @@ impl DataValue {
     }
 
     /// 创建携带完整 Java 声明组件类型的数组值。
+    /// 对应 Java：`java.lang.reflect.Array#newInstance(Class,int)` 与 `ReflectLoader` 类型判断。
     pub fn array_with_type(
         items: Vec<DataValue>,
         component_type: ClassRef,
@@ -259,6 +264,7 @@ impl DataValue {
     ///
     /// 与 [`Self::string_value_of`] 不同，本方法在字符串连接和集合
     /// `toString` 中保留未配对代理项。
+    /// 对应 Java：`java.lang.String#valueOf(Object)`。
     pub fn java_string_value_of(&self) -> JavaString {
         match self {
             DataValue::Null => "null".into(),

@@ -19,6 +19,7 @@ impl JavaArrayList {
     /// 使用给定元素创建列表。
     ///
     /// 参数：`values` 为初始元素；返回：修改计数为零的新列表。
+    /// 对应 Java：`java.util.ArrayList#ArrayList(Collection)`。
     pub fn new(values: Vec<DataValue>) -> Self {
         Self {
             values,
@@ -29,6 +30,7 @@ impl JavaArrayList {
     /// 创建具有指定预分配容量的空列表。
     ///
     /// 参数：`capacity` 为预分配容量；返回：空列表。
+    /// 对应 Java：`java.util.ArrayList#ArrayList(int)`。
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
             values: Vec::with_capacity(capacity),
@@ -37,11 +39,13 @@ impl JavaArrayList {
     }
 
     /// 返回元素数量。
+    /// 对应 Java：`java.util.ArrayList#size()`。
     pub fn len(&self) -> usize {
         self.values.len()
     }
 
     /// 判断列表是否为空。
+    /// 对应 Java：`java.util.ArrayList#isEmpty()`。
     pub fn is_empty(&self) -> bool {
         self.values.is_empty()
     }
@@ -49,26 +53,31 @@ impl JavaArrayList {
     /// 返回指定位置的元素引用。
     ///
     /// 参数：`index` 为零基下标；返回：存在时的元素引用。
+    /// 对应 Java：`java.util.ArrayList#get(int)`。
     pub fn get(&self, index: usize) -> Option<&DataValue> {
         self.values.get(index)
     }
 
     /// 按顺序遍历所有元素。
+    /// 对应 Java：`java.util.ArrayList#iterator()` 的 encounter order。
     pub fn iter(&self) -> std::slice::Iter<'_, DataValue> {
         self.values.iter()
     }
 
     /// 返回底层元素切片。
+    /// 对应 Java：无（Rust 对 Java 列表存储的借用接口）。
     pub fn as_slice(&self) -> &[DataValue] {
         &self.values
     }
 
     /// 克隆当前元素，不复制列表身份。
+    /// 对应 Java：`java.util.ArrayList#toArray()` 的元素快照语义。
     pub fn to_vec(&self) -> Vec<DataValue> {
         self.values.clone()
     }
 
     /// 返回结构修改计数，供 fail-fast 迭代器校验。
+    /// 对应 Java：`java.util.AbstractList#modCount`。
     pub fn mod_count(&self) -> u64 {
         self.mod_count
     }

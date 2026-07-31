@@ -97,6 +97,7 @@ impl QLOptions {
     /// # 返回值
     ///
     /// 返回指向同一附件表的引用计数句柄。
+    /// 对应 Java：`QLOptions#getAttachments()` 的 Map 引用语义。
     pub fn shared_attachments(&self) -> SharedAttachments {
         Rc::clone(&self.attachments)
     }
@@ -121,6 +122,7 @@ impl QLOptions {
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/QLOptions.java`，方法 `checkArrLen`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `checkArrLen`: true when `new_arr_len` is within the limit
     /// (unlimited when `max_arr_length == -1`).
+    /// 对应 Java：`QLOptions#checkArrLen(int)`。
     pub fn check_arr_len(&self, new_arr_len: i32) -> bool {
         self.max_arr_length == -1 || new_arr_len <= self.max_arr_length
     }

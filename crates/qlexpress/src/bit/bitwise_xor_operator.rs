@@ -20,6 +20,7 @@ pub struct BitwiseXorOperator;
 
 impl BitwiseXorOperator {
     /// Java `getInstance()` 单例获取(无状态,直接构造)。
+    /// 对应 Java：`BitwiseXorOperator#getInstance()`。
     pub fn get_instance() -> Self {
         BitwiseXorOperator
     }

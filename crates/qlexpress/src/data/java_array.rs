@@ -20,6 +20,7 @@ pub struct JavaArray {
 
 impl JavaArray {
     /// 创建 Java `Object[]` 适配值。
+    /// 对应 Java：`java.lang.Object[]` 数组实例。
     pub fn object(values: Vec<DataValue>) -> Self {
         Self {
             values,
@@ -29,6 +30,7 @@ impl JavaArray {
     }
 
     /// 创建携带完整声明组件类型的数组。
+    /// 对应 Java：`java.lang.reflect.Array#newInstance(Class,int)` 的声明组件类型语义。
     pub fn typed(
         values: Vec<DataValue>,
         component_type: ClassRef,
@@ -44,6 +46,7 @@ impl JavaArray {
     /// 创建无需宿主继承查询的声明类型数组。
     ///
     /// 用于原语数组、内建数组和宿主直接传入的已类型化数组。
+    /// 对应 Java：`java.lang.reflect.Array#newInstance(Class,int)` 的内建类型路径。
     pub fn typed_without_registry(values: Vec<DataValue>, component_type: ClassRef) -> Self {
         Self {
             values,
@@ -53,31 +56,37 @@ impl JavaArray {
     }
 
     /// 返回数组长度。
+    /// 对应 Java：`java.lang.reflect.Array#getLength(Object)`。
     pub fn len(&self) -> usize {
         self.values.len()
     }
 
     /// 判断数组是否为空。
+    /// 对应 Java：`java.lang.reflect.Array#getLength(Object) == 0`。
     pub fn is_empty(&self) -> bool {
         self.values.is_empty()
     }
 
     /// 返回指定元素引用。
+    /// 对应 Java：`java.lang.reflect.Array#get(Object,int)`。
     pub fn get(&self, index: usize) -> Option<&DataValue> {
         self.values.get(index)
     }
 
     /// 顺序遍历元素。
+    /// 对应 Java：无（Rust 对 Java 数组下标遍历的内部适配）。
     pub fn iter(&self) -> std::slice::Iter<'_, DataValue> {
         self.values.iter()
     }
 
     /// 返回底层切片。
+    /// 对应 Java：无（Rust 对 Java 数组存储的借用接口）。
     pub fn as_slice(&self) -> &[DataValue] {
         &self.values
     }
 
     /// 克隆元素列表，不复制数组身份。
+    /// 对应 Java：`java.util.Arrays#copyOf(Object[],int)` 的元素复制语义。
     pub fn to_vec(&self) -> Vec<DataValue> {
         self.values.clone()
     }
@@ -94,16 +103,19 @@ impl JavaArray {
     }
 
     /// 返回 Java 声明组件类型。
+    /// 对应 Java：`Object#getClass().getComponentType()`。
     pub fn component_type(&self) -> &ClassRef {
         &self.component_type
     }
 
     /// 返回定义现场类型注册表。
+    /// 对应 Java：无（Rust 显式注册替代 JVM 运行时反射）。
     pub fn type_registry(&self) -> Option<&Rc<NativeRegistry>> {
         self.type_registry.as_ref()
     }
 
     /// 替换指定元素；调用者须先完成组件类型转换。
+    /// 对应 Java：`java.lang.reflect.Array#set(Object,int,Object)`。
     pub fn set(&mut self, index: usize, value: DataValue) {
         self.values[index] = value;
     }

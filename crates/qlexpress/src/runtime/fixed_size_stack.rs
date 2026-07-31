@@ -27,6 +27,7 @@ impl FixedSizeStack {
     }
 
     /// 返回固定容量。Rust 侧诊断方法，用于验证 Java `elements.length` 语义。
+    /// 对应 Java：`FixedSizeStack#elements.length`。
     pub fn capacity(&self) -> usize {
         self.capacity
     }

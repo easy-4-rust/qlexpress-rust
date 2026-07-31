@@ -16,6 +16,7 @@ pub struct CapabilityPolicy {
 
 impl CapabilityPolicy {
     /// 创建默认拒绝全部宿主能力的策略。
+    /// 对应 Java：无（Rust 安全增强的统一 capability 白名单）。
     pub fn deny_all() -> Self {
         Self::default()
     }
@@ -29,6 +30,7 @@ impl CapabilityPolicy {
     /// # Returns
     ///
     /// 返回默认拒绝集合之外所有能力的白名单策略。
+    /// 对应 Java：无（Rust 安全增强的统一 capability 白名单）。
     pub fn allow_only(capabilities: impl IntoIterator<Item = Capability>) -> Self {
         Self {
             allowed: capabilities.into_iter().collect(),
@@ -44,6 +46,7 @@ impl CapabilityPolicy {
     /// # Returns
     ///
     /// 返回包含新能力的策略，便于链式构造。
+    /// 对应 Java：无（Rust 安全增强的显式能力授权）。
     pub fn allow(mut self, capability: Capability) -> Self {
         self.allowed.insert(capability);
         self
@@ -58,6 +61,7 @@ impl CapabilityPolicy {
     /// # Returns
     ///
     /// 仅当能力出现在白名单中时返回 `true`。
+    /// 对应 Java：无（Rust 安全增强的统一 capability 校验）。
     pub fn is_allowed(&self, capability: &Capability) -> bool {
         self.allowed.contains(capability)
     }
@@ -67,6 +71,7 @@ impl CapabilityPolicy {
     /// # Returns
     ///
     /// 返回当前显式授权能力集合，不包含任何隐式权限。
+    /// 对应 Java：无（Rust 安全增强的能力策略可观测性）。
     pub fn allowed(&self) -> &HashSet<Capability> {
         &self.allowed
     }
@@ -85,6 +90,7 @@ impl CapabilityPolicy {
     /// # Returns
     ///
     /// Native 成员或扩展方法获得明确授权时返回 `true`。
+    /// 对应 Java：`QLSecurityStrategy#check(Member)`（Rust 扩展到 Native 与扩展方法能力）。
     pub fn is_method_allowed(&self, runtime_type: &str, method_name: &str) -> bool {
         self.allowed.iter().any(|capability| match capability {
             Capability::NativeMember {

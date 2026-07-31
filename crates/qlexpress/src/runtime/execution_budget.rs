@@ -25,6 +25,7 @@ pub struct ExecutionBudget {
 
 impl ExecutionBudget {
     /// 根据安全预算和外部取消令牌创建状态。
+    /// 对应 Java：无（Rust 安全增强的单次执行资源预算）。
     pub fn new(limits: ResourceLimits, cancellation_token: CancellationToken) -> Self {
         let deadline = Instant::now() + Duration::from_millis(limits.timeout_millis);
         Self {
@@ -38,16 +39,19 @@ impl ExecutionBudget {
     }
 
     /// 返回本次执行的绝对截止时间，供宿主函数设置下游超时。
+    /// 对应 Java：无（Rust 安全增强的宿主调用截止时间）。
     pub fn deadline(&self) -> Instant {
         self.deadline
     }
 
     /// 返回共享取消令牌。
+    /// 对应 Java：无（Rust 安全增强的协作式取消能力）。
     pub fn cancellation_token(&self) -> &CancellationToken {
         &self.cancellation_token
     }
 
     /// 在一个可抢占检查点校验取消和截止时间。
+    /// 对应 Java：无（Rust 安全增强的统一预算检查点）。
     pub fn checkpoint(&self) -> Result<(), QLException> {
         if self.cancellation_token.is_cancelled() {
             return Err(budget_error(
@@ -67,6 +71,7 @@ impl ExecutionBudget {
     }
 
     /// 消耗 QVM fuel；每次实际取指至少消耗一个单位。
+    /// 对应 Java：无（Rust 安全增强的指令 fuel 预算）。
     pub fn consume_fuel(&self, amount: u64) -> Result<(), QLException> {
         self.checkpoint()?;
         let next = self.fuel_used.get().saturating_add(amount);
@@ -85,6 +90,7 @@ impl ExecutionBudget {
     }
 
     /// 进入脚本 Lambda、宿主函数或原生方法调用。
+    /// 对应 Java：无（Rust 安全增强的调用深度预算）。
     pub fn enter_call(&self) -> Result<(), QLException> {
         self.checkpoint()?;
         let next = self.call_depth.get().saturating_add(1);
@@ -103,11 +109,13 @@ impl ExecutionBudget {
     }
 
     /// 离开一次调用。所有进入路径都必须在返回前配对调用。
+    /// 对应 Java：无（Rust 安全增强的调用深度预算）。
     pub fn exit_call(&self) {
         self.call_depth.set(self.call_depth.get().saturating_sub(1));
     }
 
     /// 记录本次创建或从宿主接收的集合元素。
+    /// 对应 Java：无（Rust 安全增强的集合元素预算）。
     pub fn charge_collection_items(&self, amount: usize) -> Result<(), QLException> {
         self.checkpoint()?;
         let next = self.collection_items.get().saturating_add(amount);
@@ -126,6 +134,7 @@ impl ExecutionBudget {
     }
 
     /// 在字符串扩容前校验目标 UTF-8 字节数。
+    /// 对应 Java：无（Rust 安全增强的字符串空间预算）。
     pub fn check_string_bytes(&self, bytes: usize) -> Result<(), QLException> {
         self.checkpoint()?;
         if bytes > self.limits.max_string_bytes {
@@ -142,6 +151,7 @@ impl ExecutionBudget {
     }
 
     /// 校验新产生的值中字符串、单集合大小和嵌套值规模。
+    /// 对应 Java：无（Rust 安全增强的递归值预算校验）。
     pub fn validate_value(&self, value: &DataValue) -> Result<(), QLException> {
         self.checkpoint()?;
         let mut visited = HashSet::new();
@@ -238,6 +248,7 @@ impl ExecutionBudget {
     }
 
     /// 校验最终结果的估算输出大小。
+    /// 对应 Java：无（Rust 安全增强的输出大小预算）。
     pub fn validate_output(&self, value: &DataValue) -> Result<(), QLException> {
         self.validate_value(value)?;
         let mut visited = HashSet::new();
@@ -256,6 +267,7 @@ impl ExecutionBudget {
     }
 
     /// 对宿主函数、扩展函数或 Native 方法返回的新值计入集合预算。
+    /// 对应 Java：无（Rust 安全增强的外部值预算）。
     pub fn charge_external_value(&self, value: &DataValue) -> Result<(), QLException> {
         self.validate_value(value)?;
         let mut visited = HashSet::new();
@@ -373,6 +385,7 @@ fn estimated_size(
 }
 
 /// 构造统一的沙箱错误。
+/// 对应 Java：无（Rust 安全增强的预算错误构造器）。
 pub(crate) fn budget_error(
     kind: QLExceptionKind,
     code: &'static str,

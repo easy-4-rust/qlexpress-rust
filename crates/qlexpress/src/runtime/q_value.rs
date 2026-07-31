@@ -46,6 +46,7 @@ impl QValue {
     }
 
     /// 返回内部左值；不可赋值数据返回 `None`。Rust 便捷方法。
+    /// 对应 Java：`value instanceof LeftValue` 后的强制类型转换。
     pub fn as_left(&self) -> Option<&Rc<RefCell<dyn LeftValue>>> {
         match self {
             QValue::Left(left_value) => Some(left_value),

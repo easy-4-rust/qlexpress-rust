@@ -20,6 +20,7 @@ pub struct PlusOperator;
 
 impl PlusOperator {
     /// Java `getInstance()` 单例获取(无状态,直接构造)。
+    /// 对应 Java：`PlusOperator#getInstance()`。
     pub fn get_instance() -> Self {
         PlusOperator
     }

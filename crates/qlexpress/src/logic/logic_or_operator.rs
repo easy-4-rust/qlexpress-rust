@@ -25,6 +25,7 @@ pub struct LogicOrOperator {
 impl LogicOrOperator {
     /// Java `getInstance(String operator)`(Java 从 INSTANCE_CACHE 取,
     /// 未注册词素返回 null;Rust 返回 Option)。
+    /// 对应 Java：`LogicOrOperator#getInstance(String)`。
     pub fn get_instance(operator: &'static str) -> Option<Self> {
         match operator {
             "||" => Some(LogicOrOperator { operator: "||" }),

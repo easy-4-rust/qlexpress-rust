@@ -143,6 +143,7 @@ impl NativeRegistry {
     /// 候选存在但实参不匹配时，Java 反射会直接报告“方法不存在”，不能再
     /// 回退到 Rust [`NativeObject`](crate::runtime::native_object::NativeObject)
     /// 的动态分派入口。
+    /// 对应 Java：`ReflectLoader#loadMethod` 在已发现同名方法后的重载解析语义。
     pub(crate) fn has_registered_method_candidates(
         &self,
         type_name: &str,

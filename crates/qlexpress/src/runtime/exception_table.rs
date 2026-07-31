@@ -20,6 +20,7 @@ impl ExceptionTableEntry {
 /// 按声明顺序保存并查找 try/catch 异常处理分支。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/ExceptionTable.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// The full exception table attached to a `try/catch` instruction.
+/// 对应 Java：`com.alibaba.qlexpress4.runtime.ExceptionTable`。
 #[derive(Clone, Debug, Default)]
 pub struct ExceptionTable {
     /// 按声明顺序保存的异常类型与相对处理位置。
@@ -87,6 +88,7 @@ impl ExceptionTable {
     ///
     /// # 返回值
     /// 返回首个匹配的相对位置；没有匹配项时返回 `None`。
+    /// 对应 Java：`ExceptionTable#getRelativePos(Object)` 与 `Class#isAssignableFrom(Class)`。
     pub fn get_relative_pos_with(
         &self,
         throw_obj: &DataValue,

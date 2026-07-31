@@ -20,6 +20,7 @@ pub struct LessEqualOperator;
 
 impl LessEqualOperator {
     /// Java `getInstance()` 单例获取(无状态,直接构造)。
+    /// 对应 Java：`LessEqualOperator#getInstance()`。
     pub fn get_instance() -> Self {
         LessEqualOperator
     }

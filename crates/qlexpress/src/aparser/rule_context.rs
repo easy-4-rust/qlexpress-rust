@@ -99,6 +99,7 @@ pub(crate) fn push_all<'a>(out: &mut Vec<ChildRef<'a>>, list: &'a [Node]) {
 ///
 /// `separators` 可以与 `nodes` 等长，用于保留 Java 允许的尾随逗号；
 /// 也可以比 `nodes` 少一个，用于普通分隔列表。
+/// 对应 Java：ANTLR `RuleContext#children` 的源码顺序。
 pub(crate) fn push_interleaved<'a>(
     out: &mut Vec<ChildRef<'a>>,
     nodes: &'a [Node],

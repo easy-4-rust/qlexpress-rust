@@ -19,6 +19,7 @@ pub struct LogicNotOperator;
 
 impl LogicNotOperator {
     /// Java `getInstance()` 单例获取(无状态,直接构造)。
+    /// 对应 Java：`LogicNotOperator#getInstance()`。
     pub fn get_instance() -> Self {
         LogicNotOperator
     }

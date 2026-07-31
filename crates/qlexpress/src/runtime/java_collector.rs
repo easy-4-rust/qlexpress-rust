@@ -12,6 +12,7 @@ pub struct JavaCollector;
 
 impl JavaCollector {
     /// 转换为脚本宿主对象。
+    /// 对应 Java：`java.util.stream.Collectors#toList()` 返回的 `Collector` 对象。
     pub fn into_data_value(self) -> DataValue {
         DataValue::Object(std::rc::Rc::new(std::cell::RefCell::new(self)))
     }

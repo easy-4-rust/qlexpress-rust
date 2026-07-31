@@ -100,6 +100,7 @@ impl ExpressionTrace {
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/trace/ExpressionTrace.java`，方法 `childrenMut`；Rust 侧按所有权与 `Result` 语义适配。
     /// Mutable children access, used by instructions that mark child trace
     /// points evaluated (Java `getChildren().get(i).valueEvaluated(...)`).
+    /// 对应 Java：`ExpressionTrace#getChildren()` 返回的可变 List。
     pub fn children_mut(&mut self) -> &mut [ExpressionTrace] {
         &mut self.children
     }
@@ -126,6 +127,7 @@ impl ExpressionTrace {
     /// 参数：`value`；返回：无。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/Value.java`，方法 `valueEvaluated`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `valueEvaluated`: record the evaluated value.
+    /// 对应 Java：`ExpressionTrace#valueEvaluated(Object)`。
     pub fn value_evaluated(&mut self, value: DataValue) {
         self.value = Some(value);
         self.evaluated = true;

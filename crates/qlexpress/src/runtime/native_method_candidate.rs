@@ -4,6 +4,7 @@ use crate::runtime::class_ref::ClassRef;
 use crate::runtime::native_type::NativeMethod;
 
 /// 供 `MemberResolver` 按 Java 重载规则选择的方法候选。
+/// 对应 Java：`java.lang.reflect.Method` 的参数类型、变参标记和调用体。
 #[derive(Clone)]
 pub struct NativeMethodCandidate {
     /// Java `Method#getParameterTypes()`。

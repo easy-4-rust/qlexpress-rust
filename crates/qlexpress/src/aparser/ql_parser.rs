@@ -217,6 +217,7 @@ pub fn build_tree(
 }
 
 /// 使用已经过预算限制的 Token 流构建 AST，避免安全入口再次无界词法分配。
+/// 对应 Java：`QLParser#buildTree`（Rust 安全增强的预词法 Token 入口）。
 pub fn build_tree_from_tokens(
     script: &str,
     tokens: &[Token],

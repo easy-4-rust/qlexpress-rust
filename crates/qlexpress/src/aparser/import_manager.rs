@@ -125,6 +125,7 @@ impl LoadPartQualifiedResult {
     /// 无显式参数；返回：`Option<&str>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/ImportManager.java`，方法 `cls`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `getCls`.
+    /// 对应 Java：`ImportManager.LoadPartQualifiedResult#getCls()`。
     pub fn cls(&self) -> Option<&str> {
         self.cls.as_deref()
     }

@@ -9,6 +9,7 @@ use crate::runtime::native_type::NativeType;
 /// 声明宿主 Rust 类型如何构建可供脚本访问的 `NativeType`。
 ///
 /// Rust 原生扩展，承接 Java 运行时反射注册职责。
+/// 对应 Java：无（Rust 显式注册替代 `Class` 运行时反射）。
 pub trait QLExpressNativeType: NativeObject + 'static {
     /// Java 风格规范类型名。
     const QL_TYPE_NAME: &'static str;

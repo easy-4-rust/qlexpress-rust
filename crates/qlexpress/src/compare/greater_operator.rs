@@ -20,6 +20,7 @@ pub struct GreaterOperator;
 
 impl GreaterOperator {
     /// Java `getInstance()` 单例获取(无状态,直接构造)。
+    /// 对应 Java：`GreaterOperator#getInstance()`。
     pub fn get_instance() -> Self {
         GreaterOperator
     }

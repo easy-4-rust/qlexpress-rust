@@ -66,6 +66,7 @@ impl ClassRef {
     /// 按 Java 风格类型名解析(编译期类字面量使用)。
     /// 原语名与包装类名保持不同 `Class` 身份，供 Java 重载解析准确执行
     /// `EQUAL`、`UNBOX` 与数值提升优先级。
+    /// 对应 Java：`ClassSupplier#loadCls(String)` 返回的 `Class<?>` 身份。
     pub fn from_name(name: &str) -> ClassRef {
         if name.starts_with('[') {
             return ClassRef::Named(name.to_string());
@@ -113,6 +114,7 @@ impl ClassRef {
     }
 
     /// 创建 Java 数组类引用，对应 `Array.newInstance(component, 0).getClass()`。
+    /// 对应 Java：`java.lang.reflect.Array#newInstance(Class,int)`。
     pub fn array_of(component: ClassRef) -> ClassRef {
         let component_name = component.java_name();
         let array_name = if component_name.starts_with('[') {
@@ -136,6 +138,7 @@ impl ClassRef {
     /// 返回 Java 数组组件类型，对应 `Class#getComponentType()`。
     ///
     /// 非数组类型返回 `None`；多维数组每次只剥离一层。
+    /// 对应 Java：`java.lang.Class#getComponentType()`。
     pub fn component_type(&self) -> Option<ClassRef> {
         let name = self.java_name();
         if let Some(descriptor) = name.strip_prefix('[') {

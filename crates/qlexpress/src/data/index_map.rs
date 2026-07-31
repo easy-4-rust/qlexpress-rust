@@ -94,6 +94,7 @@ impl IndexMap {
     /// 无显式参数；返回：`&[(DataValue, DataValue)]`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/QRuntime.java`，方法 `entries`；Rust 侧按所有权与 `Result` 语义适配。
     /// Entries in insertion order.
+    /// 对应 Java：`java.util.LinkedHashMap#entrySet()` 的插入顺序。
     pub fn entries(&self) -> &[(DataValue, DataValue)] {
         &self.entries
     }

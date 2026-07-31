@@ -24,6 +24,7 @@ pub struct BaseBinaryOperator;
 
 impl BaseBinaryOperator {
     /// Java `isSameType(left, right)`:两边类型名相同。
+    /// 对应 Java：`BaseBinaryOperator#isSameType(Value,Value)`。
     pub(crate) fn is_same_type(left: &QValue, right: &QValue) -> bool {
         let left_value = left.get();
         let right_value = right.get();

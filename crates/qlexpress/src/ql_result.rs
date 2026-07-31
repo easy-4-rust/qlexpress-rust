@@ -35,6 +35,7 @@ impl QLResult {
 
     /// 便捷方法:消耗自身并仅返回结果值(Java 无同名方法,Rust 便捷方法)。
     /// Convenience: consume and return just the result value.
+    /// 对应 Java：`QLResult#getResult()`（Rust 所有权便捷接口）。
     pub fn into_result(self) -> DataValue {
         self.result
     }

@@ -21,6 +21,7 @@ pub struct MinusAssignOperator;
 
 impl MinusAssignOperator {
     /// Java `getInstance()` 单例获取(无状态,直接构造)。
+    /// 对应 Java：`MinusAssignOperator#getInstance()`。
     pub fn get_instance() -> Self {
         MinusAssignOperator
     }

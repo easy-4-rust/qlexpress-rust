@@ -8,6 +8,7 @@ use std::hash::Hash;
 ///
 /// Java `CacheUtil` 只负责函数式接口；此类型保留早期 Rust API 的通用
 /// `computeIfAbsent` 能力，属于 `RUST_EXTENSION`。
+/// 对应 Java：无（Rust 原生通用缓存扩展）。
 pub struct MemoCache<K, V> {
     cache: RefCell<HashMap<K, V>>,
 }
@@ -18,6 +19,7 @@ impl<K: Eq + Hash, V: Clone> MemoCache<K, V> {
     /// # 返回值
     ///
     /// 返回不含任何条目的缓存。
+    /// 对应 Java：无（Rust 原生通用缓存扩展）。
     pub fn new() -> Self {
         Self {
             cache: RefCell::new(HashMap::new()),
@@ -34,6 +36,7 @@ impl<K: Eq + Hash, V: Clone> MemoCache<K, V> {
     /// # 返回值
     ///
     /// 返回已有缓存值或首次计算并写入的值。
+    /// 对应 Java：`java.util.Map#computeIfAbsent`（Rust 原生通用缓存扩展）。
     pub fn compute_if_absent(&self, key: K, compute: impl FnOnce(&K) -> V) -> V {
         if let Some(value) = self.cache.borrow().get(&key) {
             return value.clone();

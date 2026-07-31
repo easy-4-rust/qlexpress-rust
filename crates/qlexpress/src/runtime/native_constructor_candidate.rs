@@ -4,6 +4,7 @@ use crate::runtime::class_ref::ClassRef;
 use crate::runtime::native_type::NativeConstructor;
 
 /// 供 `MemberResolver` 按 Java 重载规则选择的构造器候选。
+/// 对应 Java：`java.lang.reflect.Constructor<?>` 的参数类型、变参标记和调用体。
 #[derive(Clone)]
 pub struct NativeConstructorCandidate {
     /// Java `Constructor#getParameterTypes()`。

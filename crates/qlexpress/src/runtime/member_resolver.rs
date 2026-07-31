@@ -76,6 +76,7 @@ impl MemberResolver {
     }
 
     /// 使用宿主注册表提供的继承关系选择最佳候选。
+    /// 对应 Java：`MemberResolver#resolveBestMatch(Class<?>[][],Class<?>[])`（显式传入可赋值判断）。
     pub fn resolve_best_match_with(
         candidates: &[Vec<ClassRef>],
         arg_types: &[ClassRef],
@@ -94,6 +95,7 @@ impl MemberResolver {
     /// Java 通过 `Class.isAssignableFrom` 与
     /// `CacheUtil.isFunctionInterface` 读取 JVM 元数据；Rust 注册表把两项
     /// 元数据以回调传入，从而支持宿主自定义 SAM 接口，而非仅识别固定名称。
+    /// 对应 Java：`MemberResolver#resolveBestMatch` 与 `CacheUtil#isFunctionInterface`。
     pub fn resolve_best_match_with_function_interface(
         candidates: &[Vec<ClassRef>],
         arg_types: &[ClassRef],
@@ -125,6 +127,7 @@ impl MemberResolver {
     }
 
     /// 使用显式类型继承判断计算方法优先级。
+    /// 对应 Java：`MemberResolver#resolvePriority(Class<?>[],Class<?>[])`。
     pub fn resolve_priority_with(
         param_types: &[ClassRef],
         arg_types: &[ClassRef],
@@ -139,6 +142,7 @@ impl MemberResolver {
     }
 
     /// 使用显式继承关系和函数式接口元数据计算方法优先级。
+    /// 对应 Java：`MemberResolver#resolvePriority` 与 `CacheUtil#isFunctionInterface`。
     pub fn resolve_priority_with_function_interface(
         param_types: &[ClassRef],
         arg_types: &[ClassRef],
@@ -234,6 +238,7 @@ impl MemberResolver {
 
     /// 在带 `varargs` 标记的签名列表中，使用宿主函数式接口元数据选择
     /// 最佳候选。
+    /// 对应 Java：`MemberResolver#resolveCandidateIndex` 的定参优先、变参回退语义。
     pub fn resolve_candidate_index_with_function_interface(
         candidates: &[(Vec<ClassRef>, bool)],
         arg_types: &[ClassRef],

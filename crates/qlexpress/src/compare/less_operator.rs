@@ -20,6 +20,7 @@ pub struct LessOperator;
 
 impl LessOperator {
     /// Java `getInstance()` 单例获取(无状态,直接构造)。
+    /// 对应 Java：`LessOperator#getInstance()`。
     pub fn get_instance() -> Self {
         LessOperator
     }

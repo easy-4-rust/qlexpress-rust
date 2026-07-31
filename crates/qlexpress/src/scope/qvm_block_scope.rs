@@ -36,6 +36,7 @@ impl QvmBlockScope {
 
     /// 可变符号表(Java 直接字段访问写穿的 Rust 对应),供 `QScope` 的
     /// define_local_symbol 等变更路径使用。
+    /// 对应 Java：`QvmBlockScope#symbolTable` 的内部可变访问。
     pub(crate) fn symbol_table_mut(&mut self) -> &mut SymbolTable {
         &mut self.symbol_table
     }

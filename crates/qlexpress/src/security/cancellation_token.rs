@@ -16,16 +16,19 @@ pub struct CancellationToken {
 
 impl CancellationToken {
     /// 创建未取消的令牌。
+    /// 对应 Java：无（Rust 安全增强的协作式取消令牌）。
     pub fn new() -> Self {
         Self::default()
     }
 
     /// 请求取消所有共享该令牌的执行与宿主调用。
+    /// 对应 Java：无（Rust 安全增强的协作式取消操作）。
     pub fn cancel(&self) {
         self.cancelled.store(true, Ordering::Release);
     }
 
     /// 返回是否已收到取消请求。
+    /// 对应 Java：无（Rust 安全增强的协作式取消状态）。
     pub fn is_cancelled(&self) -> bool {
         self.cancelled.load(Ordering::Acquire)
     }

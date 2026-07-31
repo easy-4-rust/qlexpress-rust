@@ -28,6 +28,7 @@ impl Parameters {
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/Parameters.java`，方法 `getValue`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java default `getValue(int)`: inner data at position `i`,
     /// [`DataValue::Null`] when out of range (Java `null`).
+    /// 对应 Java：`Parameters#getValue(int)`。
     pub fn get_value(&self, i: usize) -> DataValue {
         self.get(i).map(QValue::get).unwrap_or(DataValue::Null)
     }
@@ -61,6 +62,7 @@ impl Parameters {
     /// 无显式参数；返回：`Vec<DataValue>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/Parameters.java`，方法 `values`；Rust 侧按所有权与 `Result` 语义适配。
     /// Inner data of every parameter, in order.
+    /// 对应 Java：逐项调用 `Parameters#getValue(int)` 的 Rust 批量便捷接口。
     pub fn values(&self) -> Vec<DataValue> {
         self.values.iter().map(QValue::get).collect()
     }

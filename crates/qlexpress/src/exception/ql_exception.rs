@@ -36,6 +36,8 @@ pub struct QLException {
 }
 
 impl QLException {
+    /// 构造统一异常内部状态。
+    /// 对应 Java：`QLException` 及其运行时、语法和超时子类构造器。
     pub(crate) fn new(
         kind: QLExceptionKind,
         message: impl Into<String>,
@@ -80,6 +82,7 @@ impl QLException {
     }
 
     /// 判断该错误是否是尚未被引擎包装的宿主异常。
+    /// 对应 Java：`Throwable` 与 `QLRuntimeException` 的实际类型分派。
     pub(crate) fn is_host_origin(&self) -> bool {
         self.host_origin
     }
@@ -143,6 +146,7 @@ impl QLException {
     /// 无显式参数；返回：`&str`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/QLException.java`，方法 `reason`；Rust 侧按所有权与 `Result` 语义适配。
     /// The unformatted reason of this error.
+    /// 对应 Java：`QLException#getDiagnostic().getMessage()`。
     pub fn reason(&self) -> &str {
         self.diagnostic.message()
     }
@@ -181,6 +185,7 @@ impl QLException {
     /// 无显式参数；返回：`Option<&DataValue>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/exception/QLException.java`，方法 `catchObj`；Rust 侧按所有权与 `Result` 语义适配。
     /// Object catchable in a QLExpress catch clause (Java `getCatchObj`).
+    /// 对应 Java：`QLRuntimeException#getCatchObj()`。
     pub fn catch_obj(&self) -> Option<&DataValue> {
         self.catch_obj.as_ref()
     }

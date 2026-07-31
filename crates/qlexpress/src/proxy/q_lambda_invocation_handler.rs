@@ -53,6 +53,7 @@ impl QLambdaInvocationHandler {
 
     /// 便捷适配:把处理器转成可多次调用的闭包(Java 代理实例的 Rust
     /// 等价物——宿主把该闭包塞进自己的 trait 适配器)。
+    /// 对应 Java：`Proxy.newProxyInstance(..., QLambdaInvocationHandler)` 的调用适配。
     pub fn into_fn(self) -> impl Fn(&[DataValue]) -> Result<DataValue, QLException> {
         move |args| self.invoke_abstract(args)
     }

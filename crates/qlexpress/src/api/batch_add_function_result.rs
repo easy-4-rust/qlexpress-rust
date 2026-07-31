@@ -34,6 +34,7 @@ impl BatchAddFunctionResult {
     }
 
     /// 记录一个成功函数名(Java 侧由 Express4Runner 内部 `succ.add(name)`)。
+    /// 对应 Java：`BatchAddFunctionResult#getSucc().add(name)`。
     pub fn add_succ(&mut self, name: impl Into<String>) {
         self.succ.push(name.into());
     }

@@ -10,6 +10,7 @@ impl QLStringUtils {
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/utils/QLStringUtils.java`，方法 `parseStringEscape`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `parseStringEscape`: strip the first and last character (the
     /// surrounding quotes) and resolve escape sequences.
+    /// 对应 Java：`QLStringUtils#parseStringEscape(String)`。
     pub fn parse_string_escape(origin_str: &str) -> String {
         let chars: Vec<char> = origin_str.chars().collect();
         let end = chars.len().saturating_sub(1);

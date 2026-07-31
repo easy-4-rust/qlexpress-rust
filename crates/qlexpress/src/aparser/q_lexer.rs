@@ -61,6 +61,7 @@ pub fn tokenize(
 
 /// 带 Token 数量硬上限的词法入口；达到上限后不再向 Token 向量分配。
 #[allow(clippy::too_many_arguments)]
+/// 对应 Java：`QLexer` 词法流程（Rust 安全增强 Token 数量预算）。
 pub fn tokenize_with_limit(
     script: &str,
     operator_manager: Option<&dyn ParserOperatorManager>,
@@ -1080,6 +1081,7 @@ fn is_custom_operator_part(c: char) -> bool {
 }
 
 /// Java `Character.isDigit(char)`：只接受 BMP 的 Unicode `Nd`。
+/// 对应 Java：`java.lang.Character#isDigit(char)`。
 pub(crate) fn is_java_digit(c: char) -> bool {
     java_decimal_digit_value(c).is_some()
 }
@@ -1088,6 +1090,7 @@ pub(crate) fn is_java_digit(c: char) -> bool {
 ///
 /// 除 Unicode 十进制数字外，Java 还接受 ASCII 与全角拉丁字母作为
 /// 10..35。返回值大于等于 `radix` 时视为非法。
+/// 对应 Java：`java.lang.Character#digit(char,int)`。
 pub(crate) fn java_digit_value(c: char, radix: u32) -> Option<u32> {
     let value = java_decimal_digit_value(c).or_else(|| match c {
         'a'..='z' => Some(c as u32 - 'a' as u32 + 10),

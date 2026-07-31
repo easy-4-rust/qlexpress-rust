@@ -24,6 +24,7 @@ impl Default for CompileCachePolicy {
 
 impl CompileCachePolicy {
     /// 校验启用缓存时容量配置有效。
+    /// 对应 Java：无（Rust 安全增强的有界缓存配置校验）。
     pub fn validate(&self) -> Result<(), &'static str> {
         if self.enabled
             && (self.max_entries == 0

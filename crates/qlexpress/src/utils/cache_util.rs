@@ -17,6 +17,7 @@ pub use super::memo_cache::MemoCache;
 ///
 /// 每个 [`crate::runtime::member::NativeRegistry`] 拥有独立实例，等价于在
 /// 一个 ClassLoader/宿主模型边界内缓存 `Class -> isFunctionInterface`。
+/// 对应 Java：`com.alibaba.qlexpress4.utils.CacheUtil`。
 #[derive(Default)]
 pub struct CacheUtil {
     function_interface_cache: RefCell<HashMap<FunctionInterfaceKey, bool>>,

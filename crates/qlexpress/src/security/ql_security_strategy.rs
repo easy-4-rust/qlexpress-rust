@@ -141,6 +141,7 @@ impl QLSecurityStrategy {
     /// # 返回值
     ///
     /// 返回具有 Java 引用语义的黑名单策略。
+    /// 对应 Java：`QLSecurityStrategy#blackList(Set<Member>)` 的集合引用语义。
     pub fn shared_black_list(black_list: SharedNativeMembers) -> Self {
         Self::SharedBlackList(black_list)
     }
@@ -154,6 +155,7 @@ impl QLSecurityStrategy {
     /// # 返回值
     ///
     /// 返回具有 Java 引用语义的白名单策略。
+    /// 对应 Java：`QLSecurityStrategy#whiteList(Set<Member>)` 的集合引用语义。
     pub fn shared_white_list(white_list: SharedNativeMembers) -> Self {
         Self::SharedWhiteList(white_list)
     }
@@ -170,6 +172,7 @@ impl QLSecurityStrategy {
     /// # 返回值
     ///
     /// 返回可克隆且共享闭包状态的安全策略。
+    /// 对应 Java：业务实现 `QLSecurityStrategy#check(Member)`。
     pub fn custom<F>(check: F) -> Self
     where
         F: Fn(&NativeMember) -> bool + 'static,

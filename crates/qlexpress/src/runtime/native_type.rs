@@ -133,6 +133,7 @@ impl NativeType {
     }
 
     /// 注册一个同名实例方法候选。
+    /// 对应 Java：`Class#getMethods()` 中同名 `Method` 候选的收集。
     pub fn add_method_candidate(
         &mut self,
         name: impl Into<String>,

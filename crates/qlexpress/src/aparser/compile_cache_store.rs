@@ -16,6 +16,7 @@ struct CacheKey {
 ///
 /// Java `Express4Runner.compileCache` 是无界并发 Map；Rust 安全增强使用
 /// 此对象替代无界表。淘汰只影响性能，不改变脚本语义。
+/// 对应 Java：`Express4Runner#compileCache`（Rust 增加租户隔离、LRU 与统计）。
 pub struct CompileCacheStore {
     entries: HashMap<CacheKey, Rc<LoadedCompileCache>>,
     lru: VecDeque<CacheKey>,
@@ -26,6 +27,7 @@ pub struct CompileCacheStore {
 
 impl CompileCacheStore {
     /// 创建空缓存。
+    /// 对应 Java：`Express4Runner#compileCache` 的初始化（Rust 安全增强）。
     pub fn new() -> Self {
         Self {
             entries: HashMap::new(),
@@ -37,6 +39,7 @@ impl CompileCacheStore {
     }
 
     /// 查询并提升一个租户脚本为最近使用项。
+    /// 对应 Java：`Express4Runner#parseToDefinitionWithCache` 的缓存读取（Rust 增加租户 LRU）。
     pub fn get(&mut self, tenant_id: &str, script: &str) -> Option<Rc<LoadedCompileCache>> {
         let lookup = CacheKey {
             tenant_id: tenant_id.to_string(),
@@ -57,6 +60,7 @@ impl CompileCacheStore {
     }
 
     /// 插入编译产物，并同时执行单租户和全局 LRU 淘汰。
+    /// 对应 Java：`Express4Runner#parseToDefinitionWithCache` 的缓存写入（Rust 增加有界淘汰）。
     pub fn insert(
         &mut self,
         tenant_id: &str,
@@ -88,12 +92,14 @@ impl CompileCacheStore {
     }
 
     /// 清空所有租户缓存，不清零累计命中统计。
+    /// 对应 Java：`Express4Runner#clearCompileCache()`（Rust 保留累计统计）。
     pub fn clear(&mut self) {
         self.entries.clear();
         self.lru.clear();
     }
 
     /// 返回当前条目数及累计命中、未命中、淘汰统计。
+    /// 对应 Java：无（Rust 安全增强的缓存可观测性）。
     pub fn stats(&self) -> CacheStats {
         CacheStats {
             entries: self.entries.len(),

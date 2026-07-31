@@ -20,6 +20,7 @@ pub struct BitwiseLeftShiftOperator;
 
 impl BitwiseLeftShiftOperator {
     /// Java `getInstance()` 单例获取(无状态,直接构造)。
+    /// 对应 Java：`BitwiseLeftShiftOperator#getInstance()`。
     pub fn get_instance() -> Self {
         BitwiseLeftShiftOperator
     }

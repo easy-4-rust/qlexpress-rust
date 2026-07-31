@@ -13,6 +13,7 @@ impl QLAliasUtils {
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/annotation/QLAlias.java`，方法 `matchQlAlias`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `matchQLAlias`: true when `match_name` equals any alias value in
     /// any of the given alias groups.
+    /// 对应 Java：`QLAliasUtils#matchQLAlias(String,QLAlias[])`。
     pub fn match_ql_alias(match_name: &str, ql_aliases: &[&[&str]]) -> bool {
         ql_aliases
             .iter()

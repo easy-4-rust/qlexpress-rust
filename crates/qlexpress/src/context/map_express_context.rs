@@ -30,6 +30,7 @@ impl MapExpressContext {
     }
 
     /// 取底层来源 Map(测试与宿主回读用)。Java 无对应方法(Rust 便捷访问器)。
+    /// 对应 Java：无（Rust 宿主回读便捷接口）。
     pub fn source(&self) -> &Rc<RefCell<IndexMap>> {
         &self.source
     }

@@ -234,6 +234,7 @@ pub fn to_big_dec_string(value: &DataValue) -> String {
 ///
 /// 参数：`value` 为待格式化的 IEEE-754 单精度值。
 /// 返回：与 Java `Float.toString(float)` 一致的文本。
+/// 对应 Java：`java.lang.Float#toString(float)`。
 pub fn java_f32_to_string(value: f32) -> String {
     if let Some(special) = java_float_special_string(value as f64) {
         return special;
@@ -271,6 +272,7 @@ pub fn java_f32_to_string(value: f32) -> String {
 ///
 /// 参数：`value` 为待格式化的 IEEE-754 双精度值。
 /// 返回：与 Java `Double.toString(double)` 一致的文本。
+/// 对应 Java：`java.lang.Double#toString(double)`。
 pub fn java_f64_to_string(value: f64) -> String {
     if let Some(special) = java_float_special_string(value) {
         return special;
@@ -584,6 +586,7 @@ pub fn big_dec_compare(a: &str, b: &str) -> Ordering {
 ///
 /// 参数：`decimal` 为等价于 Java `BigDecimal` 的十进制/指数文本。
 /// 返回：保留 unscaled value 与 signed scale 的 Java 规范表示。
+/// 对应 Java：`java.math.BigDecimal#toString()`。
 pub fn java_big_decimal_to_string(decimal: &str) -> String {
     let (negative, digits, scale) = parse_decimal_parts(decimal);
     let digits = if digits.is_empty() {

@@ -28,6 +28,7 @@ impl<S: ExistStack> ScopeStack<S> {
     /// 无显式参数；返回：无。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/ScopeStackVisitor.java`，方法 `push`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `push()`.
+    /// 对应 Java：`ScopeStackVisitor#push()`。
     pub fn push(&mut self) {
         self.stack = self.stack.push();
     }

@@ -24,6 +24,7 @@ impl CheckOptions {
     /// 无显式参数；返回：`&OperatorCheckStrategy`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/CheckOptions.java`，方法 `checkStrategy`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `getCheckStrategy()`.
+    /// 对应 Java：`CheckOptions#getCheckStrategy()`。
     pub fn check_strategy(&self) -> &OperatorCheckStrategy {
         &self.operator_check_strategy
     }

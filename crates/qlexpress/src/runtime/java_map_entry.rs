@@ -20,6 +20,7 @@ impl JavaMapEntry {
     }
 
     /// 转换为脚本宿主对象。
+    /// 对应 Java：`java.util.Map.Entry` 作为脚本方法接收者。
     pub fn into_data_value(self) -> DataValue {
         DataValue::Object(std::rc::Rc::new(std::cell::RefCell::new(self)))
     }

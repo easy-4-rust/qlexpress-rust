@@ -20,6 +20,7 @@ pub struct BaseUnaryOperator;
 impl BaseUnaryOperator {
     /// Java `buildInvalidOperandTypeException(value, errorReporter)`
     /// —— INVALID_UNARY_OPERAND,参数顺序:操作符、类型名、值。
+    /// 对应 Java：`BaseUnaryOperator#buildInvalidOperandTypeException(Value,ErrorReporter)`。
     pub fn build_invalid_operand_type_exception(
         operator: &str,
         value: &QValue,

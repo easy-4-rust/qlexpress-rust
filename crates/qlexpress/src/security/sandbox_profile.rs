@@ -48,6 +48,7 @@ impl SandboxProfile {
     /// # Returns
     ///
     /// 返回有限资源预算、拒绝全部宿主能力并启用租户有界缓存的配置。
+    /// 对应 Java：无（Rust 安全增强的安全执行配置）。
     pub fn secure() -> Self {
         Self::default()
     }
@@ -61,6 +62,7 @@ impl SandboxProfile {
     /// # Errors
     ///
     /// 资源预算、缓存容量非法，或 `tenant_id` 为空时返回错误原因。
+    /// 对应 Java：无（Rust 安全增强的安全配置校验）。
     pub fn validate(&self) -> Result<(), &'static str> {
         self.limits.validate()?;
         self.compile_cache.validate()?;

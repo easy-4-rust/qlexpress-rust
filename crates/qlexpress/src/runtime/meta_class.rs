@@ -33,6 +33,7 @@ impl MetaClass {
     }
 
     /// 包成栈值(Java `new DataValue(new MetaClass(clz))`)。
+    /// 对应 Java：`new DataValue(new MetaClass(clz))`。
     pub fn into_data_value(self) -> DataValue {
         DataValue::Object(Rc::new(RefCell::new(self)))
     }

@@ -21,6 +21,7 @@ pub struct BitwiseLeftShiftAssignOperator;
 
 impl BitwiseLeftShiftAssignOperator {
     /// Java `getInstance()` 单例获取(无状态,直接构造)。
+    /// 对应 Java：`BitwiseLeftShiftAssignOperator#getInstance()`。
     pub fn get_instance() -> Self {
         BitwiseLeftShiftAssignOperator
     }

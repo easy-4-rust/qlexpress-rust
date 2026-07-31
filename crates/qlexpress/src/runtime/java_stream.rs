@@ -18,6 +18,7 @@ pub struct JavaStream {
 
 impl JavaStream {
     /// 从集合元素创建流。
+    /// 对应 Java：`java.util.Collection#stream()` / `parallelStream()`。
     pub fn new(items: Vec<DataValue>) -> Self {
         Self { items }
     }

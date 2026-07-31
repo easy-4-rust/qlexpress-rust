@@ -124,6 +124,7 @@ impl Node {
     }
 
     /// 以 Java `RuleContext#toStringTree()` 格式输出语法树。
+    /// 对应 Java：ANTLR `RuleContext#toStringTree()` 的 QLExpress AST 适配。
     pub fn to_string_tree(&self) -> String {
         let children = self.children();
         if children.is_empty() {

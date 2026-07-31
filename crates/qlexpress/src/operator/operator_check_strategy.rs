@@ -161,6 +161,7 @@ impl OperatorCheckStrategy {
     /// # 返回值
     ///
     /// 返回具有 Java backing-set 引用语义的白名单策略。
+    /// 对应 Java：`OperatorCheckStrategy#whitelist(Set<String>)` 的 backing-set 语义。
     pub fn shared_whitelist(allowed_operators: SharedOperators) -> Self {
         Self::SharedWhitelist(allowed_operators)
     }
@@ -174,6 +175,7 @@ impl OperatorCheckStrategy {
     /// # 返回值
     ///
     /// 返回具有 Java backing-set 引用语义的黑名单策略。
+    /// 对应 Java：`OperatorCheckStrategy#blacklist(Set<String>)` 的 backing-set 语义。
     pub fn shared_blacklist(forbidden_operators: SharedOperators) -> Self {
         Self::SharedBlacklist(forbidden_operators)
     }
@@ -192,6 +194,7 @@ impl OperatorCheckStrategy {
     /// # 返回值
     ///
     /// 返回共享自定义检查逻辑的策略。
+    /// 对应 Java：业务实现 `OperatorCheckStrategy#isAllowed(String)`。
     pub fn custom<F>(check: F, operators: HashSet<String>) -> Self
     where
         F: Fn(&str) -> bool + 'static,

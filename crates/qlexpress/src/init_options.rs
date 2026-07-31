@@ -77,6 +77,7 @@ impl InitOptions {
     /// # 返回值
     ///
     /// 返回共享默认导入列表的独占借用。
+    /// 对应 Java：`InitOptions#getDefaultImport()` 的可变 List 引用。
     pub fn default_import_mut(&self) -> RefMut<'_, Vec<QLImport>> {
         self.default_import.borrow_mut()
     }
@@ -86,6 +87,7 @@ impl InitOptions {
     /// # 返回值
     ///
     /// 返回指向同一默认导入列表的引用计数句柄。
+    /// 对应 Java：`InitOptions#getDefaultImport()` 的对象引用语义。
     pub fn shared_default_imports(&self) -> SharedDefaultImports {
         Rc::clone(&self.default_import)
     }
@@ -212,6 +214,7 @@ impl InitOptionsBuilder {
     /// 参数：`default_import`；返回：`Self`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/InitOptions.java`，方法 `addDefaultImport`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `addDefaultImport`: appends to the default import list.
+    /// 对应 Java：`InitOptions.Builder#addDefaultImport(List<QLImport>)`。
     pub fn add_default_import(self, default_import: Vec<QLImport>) -> Self {
         self.default_import.borrow_mut().extend(default_import);
         self
@@ -222,6 +225,7 @@ impl InitOptionsBuilder {
     /// # 参数
     ///
     /// - `default_import`：需要由选项和 runner 持续观察的导入列表。
+    /// 对应 Java：`InitOptions#getDefaultImport()` 的共享 List 引用语义。
     pub fn shared_default_imports(mut self, default_import: SharedDefaultImports) -> Self {
         self.default_import = default_import;
         self

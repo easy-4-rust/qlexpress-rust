@@ -78,6 +78,7 @@ impl QvmRuntime {
     }
 
     /// 创建带有限资源预算和取消令牌的安全运行时。
+    /// 对应 Java：无（Rust 安全增强；兼容运行时仍由 [`Self::new`] 创建）。
     pub fn new_sandboxed(
         traces: QTraces,
         attachments: SharedAttachments,
@@ -98,6 +99,7 @@ impl QvmRuntime {
     }
 
     /// 判断安全执行是否允许调用指定运行时方法；兼容路径不附加限制。
+    /// 对应 Java：`QLSecurityStrategy#check(Member)`（Rust 扩展为统一 capability 策略）。
     pub fn is_method_capability_allowed(&self, type_name: &str, method_name: &str) -> bool {
         self.capability_policy
             .as_ref()
@@ -105,11 +107,13 @@ impl QvmRuntime {
     }
 
     /// 返回安全运行时预算；普通 Java 兼容执行为 `None`。
+    /// 对应 Java：无（Rust 安全增强的运行时预算）。
     pub fn execution_budget(&self) -> Option<&ExecutionBudget> {
         self.execution_budget.as_ref()
     }
 
     /// 返回宿主调用应遵守的截止时间。
+    /// 对应 Java：无（Rust 安全增强的宿主调用截止时间）。
     pub fn deadline(&self) -> Option<Instant> {
         self.execution_budget
             .as_ref()
@@ -117,6 +121,7 @@ impl QvmRuntime {
     }
 
     /// 返回宿主调用可检查的取消令牌。
+    /// 对应 Java：无（Rust 安全增强的协作式取消能力）。
     pub fn cancellation_token(&self) -> Option<&CancellationToken> {
         self.execution_budget
             .as_ref()

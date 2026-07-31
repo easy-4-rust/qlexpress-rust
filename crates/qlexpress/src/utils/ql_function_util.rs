@@ -15,6 +15,7 @@ impl QLFunctionUtil {
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/annotation/QLFunction.java`，方法 `getQlFunctionValue`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `getQLFunctionValue`: the names declared for the method.
     /// Returns `None` when the method carries no `QLFunction` names.
+    /// 对应 Java：`QLFunctionUtil#getQLFunctionValue(Method)`。
     pub fn get_ql_function_value(ql_function_names: Option<&[String]>) -> Option<&[String]> {
         ql_function_names
     }

@@ -59,6 +59,7 @@ impl ResourceLimits {
     /// # Errors
     ///
     /// 任一限制为零时返回错误；安全入口不会把零解释为“不限制”。
+    /// 对应 Java：无（Rust 安全增强的有限资源预算校验）。
     pub fn validate(&self) -> Result<(), &'static str> {
         if self.max_source_bytes == 0
             || self.max_tokens == 0

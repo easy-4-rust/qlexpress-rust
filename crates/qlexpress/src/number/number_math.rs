@@ -43,6 +43,7 @@ impl NumberMath {
     /// 参数：`number`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/NumberMath.java`，方法 `abs`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `NumberMath.abs(Number)`。
+    /// 对应 Java：`NumberMath#abs(Number)`。
     pub fn abs(number: &DataValue) -> Result<DataValue, QLException> {
         match domain_of_one(number) {
             Some(MathDomain::Integer) => IntegerMath::abs_impl(number),
@@ -438,6 +439,7 @@ pub(crate) fn arithmetic_exception(message: impl Into<String>) -> QLException {
 
 /// Java `new BigDecimal(text)` 对 NaN/Infinity 抛出的
 /// `NumberFormatException`，保留 JDK 17 的 reason 与可识别类型码。
+/// 对应 Java：`java.math.BigDecimal#BigDecimal(String)` 的异常语义。
 pub(crate) fn number_format_exception(text: &str) -> QLException {
     let invalid = text.trim_start_matches('-').chars().next().unwrap_or('N');
     QLException::for_test(
