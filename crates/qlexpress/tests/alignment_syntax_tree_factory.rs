@@ -7,6 +7,7 @@ use std::rc::Rc;
 use qlexpress::aparser::interpolation_mode::InterpolationMode;
 use qlexpress::default_class_supplier::DefaultClassSupplier;
 use qlexpress::init_options::InitOptions;
+use qlexpress::runtime::class_ref::ClassRef;
 use qlexpress::runtime::data::convert::obj_type_convertor::TargetType;
 use qlexpress::runtime::instruction::{
     CastInstruction, ConstInstruction, GetFieldInstruction, IndexInstruction, Instruction,
@@ -159,7 +160,7 @@ fn java_string_escape_test() {
     let instructions = compile("\"\\r\\n\\p\"", InterpolationMode::Variable);
     assert_eq!(
         instruction::<ConstInstruction>(&instructions, 0).const_obj(),
-        &DataValue::Str("\r\n".to_string())
+        &DataValue::Str("\r\n".into())
     );
 }
 
@@ -399,7 +400,7 @@ fn java_double_quote_string_script_test() {
     let instructions = compile("\"a ${v-1}\"", InterpolationMode::Script);
     assert_eq!(
         instruction::<ConstInstruction>(&instructions, 0).const_obj(),
-        &DataValue::Str("a ".to_string())
+        &DataValue::Str("a ".into())
     );
     assert_eq!(instruction::<LoadInstruction>(&instructions, 1).name(), "v");
     assert_eq!(
@@ -430,7 +431,7 @@ fn java_double_quote_string_variable_test() {
     let instructions = compile("\"a ${ v-1 } b\"", InterpolationMode::Variable);
     assert_eq!(
         instruction::<ConstInstruction>(&instructions, 0).const_obj(),
-        &DataValue::Str("a ".to_string())
+        &DataValue::Str("a ".into())
     );
     assert_eq!(
         instruction::<LoadInstruction>(&instructions, 1).name(),
@@ -438,7 +439,7 @@ fn java_double_quote_string_variable_test() {
     );
     assert_eq!(
         instruction::<ConstInstruction>(&instructions, 2).const_obj(),
-        &DataValue::Str(" b".to_string())
+        &DataValue::Str(" b".into())
     );
     assert_eq!(
         instruction::<StringJoinInstruction>(&instructions, 3).n(),

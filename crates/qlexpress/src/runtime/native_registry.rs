@@ -20,6 +20,7 @@ use crate::runtime::data::convert::number_compare;
 use crate::runtime::data::convert::parameters_type_convertor::ParametersTypeConvertor;
 use crate::runtime::data::index_map::IndexMap;
 use crate::runtime::data::java_array_list::JavaArrayList;
+use crate::runtime::data::java_string::JavaString;
 use crate::runtime::data::{FieldValue, MapItemValue};
 use crate::runtime::function::ExtensionFunction;
 use crate::runtime::java_collector::JavaCollector;
@@ -66,8 +67,7 @@ pub struct NativeRegistry {
     /// 带 Java 形参签名的扩展函数候选，按注册顺序保存。对应 Java
     /// `CopyOnWriteArrayList<ExtensionFunction>`，允许同一声明类型和名称
     /// 注册多个重载并在调用现场交给 `MemberResolver` 选择。
-    extension_method_candidates:
-        RefCell<Vec<(ClassRef, String, NativeMethodCandidate)>>,
+    extension_method_candidates: RefCell<Vec<(ClassRef, String, NativeMethodCandidate)>>,
     /// 成员访问安全策略(Java `ReflectLoader.securityStrategy`)。
     /// `RefCell`:注册表经 `Rc` 共享给 QVM,策略需在 runner 层可改。
     security_strategy: RefCell<QLSecurityStrategy>,
@@ -136,6 +136,46 @@ impl NativeRegistry {
     /// 当前安全策略允许访问该成员时返回 `true`。
     pub fn is_member_allowed(&self, type_name: &str, member_name: &str) -> bool {
         self.check_member(type_name, member_name)
+    }
+
+    /// 判断类型层次中是否声明了指定名称的方法候选。
+    ///
+    /// 候选存在但实参不匹配时，Java 反射会直接报告“方法不存在”，不能再
+    /// 回退到 Rust [`NativeObject`](crate::runtime::native_object::NativeObject)
+    /// 的动态分派入口。
+    pub(crate) fn has_registered_method_candidates(
+        &self,
+        type_name: &str,
+        method_name: &str,
+    ) -> bool {
+        self.has_registered_method_candidates_inner(type_name, method_name, &mut Vec::new())
+    }
+
+    fn has_registered_method_candidates_inner(
+        &self,
+        type_name: &str,
+        method_name: &str,
+        visited: &mut Vec<String>,
+    ) -> bool {
+        if visited.iter().any(|name| name == type_name) {
+            return false;
+        }
+        visited.push(type_name.to_string());
+        let Some(native_type) = self.get_type(type_name) else {
+            return false;
+        };
+        let registered_name =
+            Self::resolve_registered_method_name(&native_type, method_name, false);
+        if native_type
+            .method_candidates
+            .get(registered_name)
+            .is_some_and(|candidates| !candidates.is_empty())
+        {
+            return true;
+        }
+        native_type.supertypes.iter().any(|supertype| {
+            self.has_registered_method_candidates_inner(supertype, method_name, visited)
+        })
     }
 }
 
@@ -380,7 +420,7 @@ impl NativeRegistry {
             // Java 特殊分支:Map 的字段访问即按 key 取条目(可写左值)。
             DataValue::Map(map) => Some(QValue::Left(Rc::new(RefCell::new(MapItemValue::new(
                 Rc::clone(map),
-                DataValue::Str(field_name.to_string()),
+                DataValue::string(field_name),
             ))))),
             DataValue::Object(obj) => {
                 // Java 的 MetaClass 分支:`.class` 与静态字段。
@@ -399,8 +439,10 @@ impl NativeRegistry {
                         }
                         let name = clz.java_name();
                         let native_type = self.get_type(name)?;
-                        let registered_name =
-                            PreferredFieldHandler::gather_field_recursive(&native_type, field_name)?;
+                        let registered_name = PreferredFieldHandler::gather_field_recursive(
+                            &native_type,
+                            field_name,
+                        )?;
                         // 安全策略接线点(Java ReflectLoader.check):
                         // 静态字段访问前过 QLSecurityStrategy。
                         if skip_security || self.check_member(name, &registered_name) {
@@ -524,7 +566,7 @@ impl NativeRegistry {
                 let class_name = meta.java_name().to_string();
                 return Some(Rc::new(move |_bean, args| {
                     if args.is_empty() {
-                        Ok(DataValue::Str(class_name.clone()))
+                        Ok(DataValue::string(class_name.clone()))
                     } else {
                         Err(wrong_args("Class.getName"))
                     }
@@ -597,7 +639,7 @@ impl NativeRegistry {
             if method_name == "getName" && args.is_empty() {
                 let class_name = meta.java_name().to_string();
                 return Some(Rc::new(move |_bean, _args| {
-                    Ok(DataValue::Str(class_name.clone()))
+                    Ok(DataValue::string(class_name.clone()))
                 }));
             }
             return self.resolve_registered_candidate(
@@ -787,11 +829,10 @@ impl NativeRegistry {
         if name.starts_with("java.util.function.") || name == "java.lang.Runnable" {
             return true;
         }
-        self.get_type(name)
-            .is_some_and(|native_type| {
-                self.function_interface_cache
-                    .is_function_interface(&native_type)
-            })
+        self.get_type(name).is_some_and(|native_type| {
+            self.function_interface_cache
+                .is_function_interface(&native_type)
+        })
     }
 
     fn is_assignable(&self, param: &ClassRef, arg: &ClassRef) -> bool {
@@ -804,10 +845,7 @@ impl NativeRegistry {
             return true;
         }
         if let Some(arg_item) = arg.component_type() {
-            if matches!(
-                param_name,
-                "java.lang.Cloneable" | "java.io.Serializable"
-            ) {
+            if matches!(param_name, "java.lang.Cloneable" | "java.io.Serializable") {
                 return true;
             }
             if let Some(param_item) = param.component_type() {
@@ -993,9 +1031,9 @@ impl NativeRegistry {
         big_integer.static_methods.insert(
             "valueOf".to_string(),
             Rc::new(|_bean, args| match args {
-                [value] if value.is_number() => Ok(DataValue::BigInt(
-                    num_bigint::BigInt::from(crate::runtime::data::convert::to_i64(value)),
-                )),
+                [value] if value.is_number() => Ok(DataValue::BigInt(num_bigint::BigInt::from(
+                    crate::runtime::data::convert::to_i64(value),
+                ))),
                 _ => Err(wrong_args("BigInteger.valueOf")),
             }),
         );
@@ -1077,9 +1115,7 @@ fn builtin_assignable(param_name: &str, arg_name: &str) -> bool {
     match param_name {
         "java.lang.Comparable" => boxed_scalar || arg_name == "java.lang.String",
         "java.io.Serializable" => {
-            boxed_scalar
-                || arg_name == "java.lang.String"
-                || arg_name.starts_with('[')
+            boxed_scalar || arg_name == "java.lang.String" || arg_name.starts_with('[')
         }
         "java.lang.CharSequence" => arg_name == "java.lang.String",
         "java.util.List" | "java.util.Collection" | "java.lang.Iterable" => matches!(
@@ -1133,7 +1169,7 @@ fn int_arg(args: &[DataValue], i: usize) -> Option<i64> {
 }
 
 /// 严格读取 Java `String` 实参；反射不会把任意对象隐式 `toString()`。
-fn string_arg(args: &[DataValue], index: usize) -> Option<&str> {
+fn string_arg(args: &[DataValue], index: usize) -> Option<&JavaString> {
     match args.get(index) {
         Some(DataValue::Str(value)) => Some(value),
         _ => None,
@@ -1141,45 +1177,35 @@ fn string_arg(args: &[DataValue], index: usize) -> Option<&str> {
 }
 
 /// Java `String.compareTo` 按 UTF-16 code unit 字典序比较并返回首个差值。
-fn java_string_compare_to(left: &str, right: &str) -> i32 {
-    let mut left_units = left.encode_utf16();
-    let mut right_units = right.encode_utf16();
-    loop {
-        match (left_units.next(), right_units.next()) {
-            (Some(left), Some(right)) if left != right => {
-                return i32::from(left) - i32::from(right);
-            }
-            (Some(_), Some(_)) => {}
-            (Some(_), None) => {
-                return left_units.count().saturating_add(1) as i32;
-            }
-            (None, Some(_)) => {
-                return -(right_units.count().saturating_add(1) as i32);
-            }
-            (None, None) => return 0,
-        }
-    }
+fn java_string_compare_to(left: &JavaString, right: &JavaString) -> i32 {
+    left.compare_to(right)
 }
 
 /// Java `String.indexOf(String, int)` 的 UTF-16 索引规则。
-fn java_string_index_of(value: &str, needle: &str, from_index: i64) -> i32 {
-    let value_units: Vec<u16> = value.encode_utf16().collect();
-    let needle_units: Vec<u16> = needle.encode_utf16().collect();
-    let start = usize::try_from(from_index.max(0))
-        .unwrap_or(usize::MAX)
-        .min(value_units.len());
-    if needle_units.is_empty() {
-        return start as i32;
-    }
-    value_units[start..]
-        .windows(needle_units.len())
-        .position(|candidate| candidate == needle_units.as_slice())
-        .map(|offset| (start + offset) as i32)
-        .unwrap_or(-1)
+fn java_string_index_of(value: &JavaString, needle: &JavaString, from_index: i64) -> i32 {
+    value.index_of(needle, from_index)
 }
 
 /// Java `String.split(regex, limit)`，包括零宽首匹配和尾空串规则。
-fn java_regex_split(value: &str, pattern: &str, limit: i32) -> Result<DataValue, QLException> {
+fn java_regex_split(
+    value: &JavaString,
+    pattern: &JavaString,
+    limit: i32,
+) -> Result<DataValue, QLException> {
+    let value = value.as_str().ok_or_else(|| {
+        QLException::host_error(
+            QLExceptionKind::Runtime,
+            "regex split cannot cross the UTF-8 host boundary with an unpaired UTF-16 surrogate",
+            "java.lang.IllegalArgumentException",
+        )
+    })?;
+    let pattern = pattern.as_str().ok_or_else(|| {
+        QLException::host_error(
+            QLExceptionKind::Runtime,
+            "regex pattern cannot cross the UTF-8 host boundary with an unpaired UTF-16 surrogate",
+            "java.util.regex.PatternSyntaxException",
+        )
+    })?;
     let regex = Regex::new(pattern).map_err(|error| {
         QLException::host_error(
             QLExceptionKind::Runtime,
@@ -1212,7 +1238,7 @@ fn java_regex_split(value: &str, pattern: &str, limit: i32) -> Result<DataValue,
         parts.push(String::new());
     }
     Ok(DataValue::array_with_component(
-        parts.into_iter().map(DataValue::Str).collect(),
+        parts.into_iter().map(DataValue::string).collect(),
         ClassRef::from_name("java.lang.String"),
     ))
 }
@@ -1257,16 +1283,14 @@ fn builtin_extension_method(bean: &DataValue, method_name: &str) -> Option<Nativ
 }
 
 /// Java `String.trim()`：只删除两端 code unit `<= U+0020` 的字符。
-fn java_string_trim(value: &str) -> String {
-    value
-        .trim_matches(|character| (character as u32) <= 0x20)
-        .to_string()
+fn java_string_trim(value: &JavaString) -> JavaString {
+    value.trim()
 }
 
 /// Java `String.equalsIgnoreCase` 的逐 UTF-16 字符比较。
-fn java_string_equals_ignore_case(left: &str, right: &str) -> bool {
-    let left_units: Vec<u16> = left.encode_utf16().collect();
-    let right_units: Vec<u16> = right.encode_utf16().collect();
+fn java_string_equals_ignore_case(left: &JavaString, right: &JavaString) -> bool {
+    let left_units = left.utf16_units();
+    let right_units = right.utf16_units();
     if left_units.len() != right_units.len() {
         return false;
     }
@@ -1288,8 +1312,7 @@ fn java_char_equals_ignore_case(left: u16, right: u16) -> bool {
     };
     let left_upper = simple_uppercase(left_char);
     let right_upper = simple_uppercase(right_char);
-    left_upper == right_upper
-        || simple_lowercase(left_upper) == simple_lowercase(right_upper)
+    left_upper == right_upper || simple_lowercase(left_upper) == simple_lowercase(right_upper)
 }
 
 fn simple_uppercase(value: char) -> char {
@@ -1312,7 +1335,7 @@ fn simple_lowercase(value: char) -> char {
 fn string_method(name: &str) -> Option<NativeMethod> {
     let f: NativeMethod = match name {
         "length" => Rc::new(|bean, _| match bean {
-            DataValue::Str(s) => Ok(DataValue::Int(s.encode_utf16().count() as i32)),
+            DataValue::Str(s) => Ok(DataValue::Int(s.len() as i32)),
             _ => Err(wrong_args("length")),
         }),
         "isEmpty" => Rc::new(|bean, _| match bean {
@@ -1321,8 +1344,7 @@ fn string_method(name: &str) -> Option<NativeMethod> {
         }),
         "charAt" => Rc::new(|bean, args| match (bean, int_arg(args, 0)) {
             (DataValue::Str(s), Some(i)) if i >= 0 => s
-                .encode_utf16()
-                .nth(i as usize)
+                .char_at(i as usize)
                 .map(DataValue::Char)
                 .ok_or_else(|| wrong_args("charAt")),
             _ => Err(wrong_args("charAt")),
@@ -1332,20 +1354,12 @@ fn string_method(name: &str) -> Option<NativeMethod> {
             _ => Err(wrong_args("contains")),
         }),
         "startsWith" => Rc::new(|bean, args| match (bean, string_arg(args, 0), args.len()) {
-            (DataValue::Str(s), Some(prefix), 1) => {
-                Ok(DataValue::Bool(s.starts_with(prefix)))
-            }
+            (DataValue::Str(s), Some(prefix), 1) => Ok(DataValue::Bool(s.starts_with(prefix))),
             (DataValue::Str(s), Some(prefix), 2) => {
                 let Some(offset) = int_arg(args, 1) else {
                     return Err(wrong_args("startsWith"));
                 };
-                let units: Vec<u16> = s.encode_utf16().collect();
-                let prefix_units: Vec<u16> = prefix.encode_utf16().collect();
-                let matches = usize::try_from(offset)
-                    .ok()
-                    .and_then(|offset| units.get(offset..offset.saturating_add(prefix_units.len())))
-                    .is_some_and(|candidate| candidate == prefix_units.as_slice());
-                Ok(DataValue::Bool(matches))
+                Ok(DataValue::Bool(s.starts_with_at(prefix, offset)))
             }
             _ => Err(wrong_args("startsWith")),
         }),
@@ -1361,11 +1375,7 @@ fn string_method(name: &str) -> Option<NativeMethod> {
                 let Some(from_index) = int_arg(args, 1) else {
                     return Err(wrong_args("indexOf"));
                 };
-                Ok(DataValue::Int(java_string_index_of(
-                    s,
-                    sub,
-                    from_index,
-                )))
+                Ok(DataValue::Int(java_string_index_of(s, sub, from_index)))
             }
             _ => Err(wrong_args("indexOf")),
         }),
@@ -1383,22 +1393,20 @@ fn string_method(name: &str) -> Option<NativeMethod> {
         }),
         "substring" => Rc::new(|bean, args| match bean {
             DataValue::Str(s) => {
-                let units: Vec<u16> = s.encode_utf16().collect();
                 let Some(begin) = int_arg(args, 0) else {
                     return Err(wrong_args("substring"));
                 };
                 if begin < 0 {
                     return Err(wrong_args("substring"));
                 }
-                let end = int_arg(args, 1).unwrap_or(units.len() as i64);
+                let end = int_arg(args, 1).unwrap_or(s.len() as i64);
                 if end < 0 {
                     return Err(wrong_args("substring"));
                 }
                 let (begin, end) = (begin as usize, end as usize);
-                if begin > units.len() || end > units.len() || begin > end {
-                    return Err(wrong_args("substring"));
-                }
-                Ok(DataValue::Str(String::from_utf16_lossy(&units[begin..end])))
+                s.substring(begin, end)
+                    .map(DataValue::Str)
+                    .ok_or_else(|| wrong_args("substring"))
             }
             _ => Err(wrong_args("substring")),
         }),
@@ -1419,7 +1427,9 @@ fn string_method(name: &str) -> Option<NativeMethod> {
             (DataValue::Str(s), Some(o)) => {
                 Ok(DataValue::Bool(java_string_equals_ignore_case(s, o)))
             }
-            (DataValue::Str(_), [DataValue::Null]) => Ok(DataValue::Bool(false)),
+            (DataValue::Str(_), None) if matches!(args, [DataValue::Null]) => {
+                Ok(DataValue::Bool(false))
+            }
             _ => Err(wrong_args("equalsIgnoreCase")),
         }),
         "compareTo" => Rc::new(|bean, args| match (bean, string_arg(args, 0)) {
@@ -1429,9 +1439,7 @@ fn string_method(name: &str) -> Option<NativeMethod> {
             _ => Err(wrong_args("compareTo")),
         }),
         "split" => Rc::new(|bean, args| match (bean, string_arg(args, 0), args.len()) {
-            (DataValue::Str(value), Some(pattern), 1) => {
-                java_regex_split(value, pattern, 0)
-            }
+            (DataValue::Str(value), Some(pattern), 1) => java_regex_split(value, pattern, 0),
             (DataValue::Str(value), Some(pattern), 2) => {
                 let Some(limit) = int_arg(args, 1) else {
                     return Err(wrong_args("split"));
@@ -1440,7 +1448,7 @@ fn string_method(name: &str) -> Option<NativeMethod> {
             }
             _ => Err(wrong_args("split")),
         }),
-        "toString" => Rc::new(|bean, _| Ok(DataValue::Str(bean.string_value_of()))),
+        "toString" => Rc::new(|bean, _| Ok(DataValue::Str(bean.java_string_value_of()))),
         _ => return None,
     };
     Some(f)
@@ -1562,7 +1570,7 @@ fn list_method(name: &str) -> Option<NativeMethod> {
                 _ => Err(wrong_args("subList")),
             },
         ),
-        "toString" => Rc::new(|bean, _| Ok(DataValue::Str(bean.string_value_of()))),
+        "toString" => Rc::new(|bean, _| Ok(DataValue::Str(bean.java_string_value_of()))),
         _ => return None,
     };
     Some(f)
@@ -1633,7 +1641,7 @@ fn map_method(name: &str) -> Option<NativeMethod> {
             }
             _ => Err(wrong_args("clear")),
         }),
-        "toString" => Rc::new(|bean, _| Ok(DataValue::Str(bean.string_value_of()))),
+        "toString" => Rc::new(|bean, _| Ok(DataValue::Str(bean.java_string_value_of()))),
         _ => return None,
     };
     Some(f)
@@ -1660,7 +1668,7 @@ fn number_method(name: &str) -> Option<NativeMethod> {
             }
             _ => Err(wrong_args("compareTo")),
         }),
-        "toString" => Rc::new(|bean, _| Ok(DataValue::Str(bean.string_value_of()))),
+        "toString" => Rc::new(|bean, _| Ok(DataValue::Str(bean.java_string_value_of()))),
         _ => return None,
     };
     Some(f)
@@ -1673,7 +1681,7 @@ fn bool_method(name: &str) -> Option<NativeMethod> {
             DataValue::Bool(b) => Ok(DataValue::Bool(*b)),
             _ => Err(wrong_args("booleanValue")),
         }),
-        "toString" => Rc::new(|bean, _| Ok(DataValue::Str(bean.string_value_of()))),
+        "toString" => Rc::new(|bean, _| Ok(DataValue::Str(bean.java_string_value_of()))),
         _ => return None,
     };
     Some(f)

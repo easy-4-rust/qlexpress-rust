@@ -49,7 +49,7 @@ fn new_instance_with_1arg_constructor() {
     let runner = runner_with(calc_with_constructor(|args| {
         // 接受 1 个 int 参数,返回 "Calc(x)" 字符串
         match args.first() {
-            Some(DataValue::Int(x)) => Ok(DataValue::Str(format!("Calc({x})"))),
+            Some(DataValue::Int(x)) => Ok(DataValue::string(format!("Calc({x})"))),
             _ => Ok(DataValue::Null),
         }
     }));
@@ -57,7 +57,7 @@ fn new_instance_with_1arg_constructor() {
         .execute("new Calc(7)", HashMap::new(), &opts())
         .expect("ok")
         .into_result();
-    assert_eq!(r, DataValue::Str("Calc(7)".to_string()));
+    assert_eq!(r, DataValue::string("Calc(7)"));
 }
 
 #[test]
@@ -86,16 +86,16 @@ fn new_instance_with_array_arg() {
     // 接受 list 参数
     let runner = runner_with(calc_with_constructor(|args| {
         if let Some(DataValue::List(_)) = args.first() {
-            Ok(DataValue::Str("ok".to_string()))
+            Ok(DataValue::Str("ok".into()))
         } else {
-            Ok(DataValue::Str("not-list".to_string()))
+            Ok(DataValue::Str("not-list".into()))
         }
     }));
     let r = runner
         .execute("new Calc([1, 2, 3])", HashMap::new(), &opts())
         .expect("ok")
         .into_result();
-    assert_eq!(r, DataValue::Str("ok".to_string()));
+    assert_eq!(r, DataValue::Str("ok".into()));
 }
 
 #[test]
@@ -111,14 +111,14 @@ fn new_instance_no_constructor_returns_error() {
 #[test]
 fn new_instance_with_string_arg() {
     let runner = runner_with(calc_with_constructor(|args| match args.first() {
-        Some(DataValue::Str(s)) => Ok(DataValue::Str(format!("Calc({s})"))),
+        Some(DataValue::Str(s)) => Ok(DataValue::string(format!("Calc({s})"))),
         _ => Ok(DataValue::Null),
     }));
     let r = runner
         .execute("new Calc(\"hello\")", HashMap::new(), &opts())
         .expect("ok")
         .into_result();
-    assert_eq!(r, DataValue::Str("Calc(hello)".to_string()));
+    assert_eq!(r, DataValue::string("Calc(hello)"));
 }
 
 #[test]

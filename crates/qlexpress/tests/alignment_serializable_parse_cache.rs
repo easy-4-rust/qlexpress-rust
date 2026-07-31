@@ -27,7 +27,7 @@ use qlexpress::Express4Runner;
 fn context(entries: &[(&str, DataValue)]) -> Rc<dyn ExpressContext> {
     let entries = entries
         .iter()
-        .map(|(key, value)| (DataValue::Str((*key).to_string()), value.clone()))
+        .map(|(key, value)| (DataValue::string(*key), value.clone()))
         .collect();
     Rc::new(MapExpressContext::new(Rc::new(RefCell::new(
         IndexMap::from_entries(entries),

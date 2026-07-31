@@ -157,10 +157,10 @@ public final class JavaDifferentialRunner {
             return "bigdec:" + ((BigDecimal)value).toPlainString();
         }
         if (value instanceof Character) {
-            return "char:" + escape(value.toString());
+            return "char:" + escapeUtf16(value.toString());
         }
         if (value instanceof String) {
-            return "string:" + escape((String)value);
+            return "string:" + escapeUtf16((String)value);
         }
         if (value instanceof List<?>) {
             List<String> values = new ArrayList<>();
@@ -211,5 +211,34 @@ public final class JavaDifferentialRunner {
             .replace("]", "\\]")
             .replace("{", "\\{")
             .replace("}", "\\}");
+    }
+
+    /**
+     * 将未配对 UTF-16 代理项规范化为稳定的十六进制文本。
+     *
+     * <p>合法代理项对保持原字符；未配对代理项不能无损写入 UTF-8，
+     * 因此显式写为“反斜杠-u-XXXX”，与 Rust 差分执行器一致。</p>
+     *
+     * @param value Java 字符串
+     * @return 可安全写入 UTF-8 差分结果的文本
+     */
+    private static String escapeUtf16(String value) {
+        StringBuilder result = new StringBuilder();
+        for (int index = 0; index < value.length(); index++) {
+            char current = value.charAt(index);
+            if (Character.isHighSurrogate(current)
+                && index + 1 < value.length()
+                && Character.isLowSurrogate(value.charAt(index + 1))) {
+                result.append(current);
+                result.append(value.charAt(++index));
+            }
+            else if (Character.isSurrogate(current)) {
+                result.append(String.format("\\u%04X", (int)current));
+            }
+            else {
+                result.append(current);
+            }
+        }
+        return escape(result.toString());
     }
 }

@@ -14,6 +14,7 @@ use crate::exception::error_codes;
 use crate::exception::error_reporter::ErrorReporter;
 use crate::exception::QLException;
 use crate::ql_options::QLOptions;
+use crate::runtime::data::java_string::JavaString;
 use crate::runtime::value::{DataValue, QValue};
 
 use crate::runtime::operator::number::number_math::{self, NumberMath};
@@ -134,16 +135,12 @@ impl BaseBinaryOperator {
 
         // Java: if (leftValue instanceof String) return (String)leftValue + rightValue;
         if let DataValue::Str(l) = &left_value {
-            return Ok(DataValue::Str(format!(
-                "{l}{}",
-                number_math::java_value_string(&right_value)
-            )));
+            return Ok(DataValue::Str(
+                l.concat(&right_value.java_string_value_of()),
+            ));
         }
         if let DataValue::Str(r) = &right_value {
-            return Ok(DataValue::Str(format!(
-                "{}{r}",
-                number_math::java_value_string(&left_value)
-            )));
+            return Ok(DataValue::Str(left_value.java_string_value_of().concat(r)));
         }
 
         if Self::is_both_number(left, right) {
@@ -597,7 +594,7 @@ impl BaseBinaryOperator {
                 }
                 Ok(false)
             }
-            DataValue::Str(s) => Ok(s.contains(&number_math::java_value_string(&left_operand))),
+            DataValue::Str(s) => Ok(s.contains(&left_operand.java_string_value_of())),
             _ => Err(Self::build_invalid_operand_type_exception(
                 operator,
                 left,
@@ -680,9 +677,9 @@ fn compare_ord(ord: std::cmp::Ordering) -> i32 {
 
 /// Java `BaseBinaryOperator.matchPattern`:`%` 通配符匹配(双指针 +
 /// 回溯),逐语句对齐 Java 原版算法。
-fn match_pattern(s: &str, pattern: &str) -> bool {
-    let s: Vec<char> = s.chars().collect();
-    let pattern: Vec<char> = pattern.chars().collect();
+fn match_pattern(s: &JavaString, pattern: &JavaString) -> bool {
+    let s = s.utf16_units();
+    let pattern = pattern.utf16_units();
     let (mut s_pointer, mut p_pointer) = (0usize, 0usize);
     let (s_len, p_len) = (s.len(), pattern.len());
     let (mut s_recall, mut p_recall) = (-1i64, -1i64);
@@ -690,7 +687,7 @@ fn match_pattern(s: &str, pattern: &str) -> bool {
         if p_pointer < p_len && s[s_pointer] == pattern[p_pointer] {
             s_pointer += 1;
             p_pointer += 1;
-        } else if p_pointer < p_len && pattern[p_pointer] == '%' {
+        } else if p_pointer < p_len && pattern[p_pointer] == u16::from(b'%') {
             s_recall = s_pointer as i64;
             p_recall = p_pointer as i64;
             p_pointer += 1;
@@ -702,7 +699,7 @@ fn match_pattern(s: &str, pattern: &str) -> bool {
             return false;
         }
     }
-    while p_pointer < p_len && pattern[p_pointer] == '%' {
+    while p_pointer < p_len && pattern[p_pointer] == u16::from(b'%') {
         p_pointer += 1;
     }
     p_pointer == p_len
@@ -733,7 +730,7 @@ mod tests {
                 &PureErrReporter::INSTANCE
             )
             .unwrap(),
-            DataValue::Str("a1".to_string())
+            DataValue::string("a1")
         );
         assert_eq!(
             BaseBinaryOperator::plus(
@@ -744,7 +741,7 @@ mod tests {
                 &PureErrReporter::INSTANCE
             )
             .unwrap(),
-            DataValue::Str("v=null".to_string())
+            DataValue::string("v=null")
         );
         // 'a' + 1 = 98(字符按码点转 int)。
         assert_eq!(
@@ -845,10 +842,10 @@ mod tests {
 
     #[test]
     fn like_pattern_matching() {
-        assert!(match_pattern("abc", "a%"));
-        assert!(match_pattern("abc", "%b%"));
-        assert!(!match_pattern("abc", "a%d"));
-        assert!(match_pattern("abc", "abc"));
-        assert!(match_pattern("abc", "%"));
+        assert!(match_pattern(&"abc".into(), &"a%".into()));
+        assert!(match_pattern(&"abc".into(), &"%b%".into()));
+        assert!(!match_pattern(&"abc".into(), &"a%d".into()));
+        assert!(match_pattern(&"abc".into(), &"abc".into()));
+        assert!(match_pattern(&"abc".into(), &"%".into()));
     }
 }

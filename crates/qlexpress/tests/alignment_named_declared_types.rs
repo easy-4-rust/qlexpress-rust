@@ -10,8 +10,8 @@ use qlexpress::exception::error_codes;
 use qlexpress::exception::QLException;
 use qlexpress::init_options::InitOptions;
 use qlexpress::ql_options::QLOptions;
-use qlexpress::runtime::context::{ExpressContext, MapExpressContext};
 use qlexpress::runtime::class_ref::ClassRef;
+use qlexpress::runtime::context::{ExpressContext, MapExpressContext};
 use qlexpress::runtime::data::index_map::IndexMap;
 use qlexpress::runtime::native_object::NativeObject;
 use qlexpress::runtime::native_type::NativeType;
@@ -28,11 +28,7 @@ impl NativeObject for TypedFixture {
         None
     }
 
-    fn call_method(
-        &mut self,
-        name: &str,
-        _args: &[DataValue],
-    ) -> Result<DataValue, QLException> {
+    fn call_method(&mut self, name: &str, _args: &[DataValue]) -> Result<DataValue, QLException> {
         Err(QLException::for_test(
             qlexpress::exception::ql_exception::QLExceptionKind::Runtime,
             format!("method not found: {name}"),
@@ -75,7 +71,7 @@ fn runner() -> Express4Runner {
 
 fn express_context(name: &str, value: DataValue) -> Rc<dyn ExpressContext> {
     Rc::new(MapExpressContext::new(Rc::new(RefCell::new(
-        IndexMap::from_entries(vec![(DataValue::Str(name.to_string()), value)]),
+        IndexMap::from_entries(vec![(DataValue::Str(name.into()), value)]),
     ))))
 }
 
@@ -94,10 +90,7 @@ fn named_function_parameter_accepts_registered_subclass_and_rejects_unrelated_va
     assert_eq!(result, DataValue::Bool(true));
 
     let mut rejected = HashMap::new();
-    rejected.insert(
-        "value".to_string(),
-        DataValue::Str("unrelated".to_string()),
-    );
+    rejected.insert("value".to_string(), DataValue::Str("unrelated".into()));
     let error = runner
         .execute(script, rejected, &QLOptions::default())
         .unwrap_err();
@@ -122,16 +115,9 @@ fn named_local_variable_enforces_type_on_initialization_and_reassignment() {
     assert_eq!(result, DataValue::Bool(true));
 
     let mut rejected = HashMap::new();
-    rejected.insert(
-        "value".to_string(),
-        DataValue::Str("unrelated".to_string()),
-    );
+    rejected.insert("value".to_string(), DataValue::Str("unrelated".into()));
     let error = runner
-        .execute(
-            "Parent p = value;",
-            rejected,
-            &QLOptions::default(),
-        )
+        .execute("Parent p = value;", rejected, &QLOptions::default())
         .unwrap_err();
     assert_eq!(
         error.error_code(),
@@ -147,20 +133,13 @@ fn named_cast_accepts_registered_subclass_and_rejects_unrelated_value() {
     let mut accepted = HashMap::new();
     accepted.insert("value".to_string(), child_value());
     let result = runner
-        .execute(
-            "(Parent) value != null;",
-            accepted,
-            &QLOptions::default(),
-        )
+        .execute("(Parent) value != null;", accepted, &QLOptions::default())
         .expect("registered child cast to parent")
         .into_result();
     assert_eq!(result, DataValue::Bool(true));
 
     let mut rejected = HashMap::new();
-    rejected.insert(
-        "value".to_string(),
-        DataValue::Str("unrelated".to_string()),
-    );
+    rejected.insert("value".to_string(), DataValue::Str("unrelated".into()));
     let error = runner
         .execute("(Parent) value;", rejected, &QLOptions::default())
         .unwrap_err();
@@ -175,11 +154,7 @@ fn named_instanceof_accepts_registered_subclass() {
     let mut context = HashMap::new();
     context.insert("value".to_string(), child_value());
     let result = runner
-        .execute(
-            "value instanceof Parent;",
-            context,
-            &QLOptions::default(),
-        )
+        .execute("value instanceof Parent;", context, &QLOptions::default())
         .expect("registered Child is an instanceof Parent")
         .into_result();
     assert_eq!(result, DataValue::Bool(true));

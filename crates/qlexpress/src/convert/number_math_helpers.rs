@@ -204,12 +204,8 @@ pub fn try_to_big_int(value: &DataValue) -> Option<BigInt> {
         DataValue::Short(v) => Some(BigInt::from(*v)),
         DataValue::Int(v) => Some(BigInt::from(*v)),
         DataValue::Long(v) => Some(BigInt::from(*v)),
-        DataValue::Float(v) if v.is_finite() => {
-            Some(big_dec_to_big_int(&java_f32_to_string(*v)))
-        }
-        DataValue::Double(v) if v.is_finite() => {
-            Some(big_dec_to_big_int(&java_f64_to_string(*v)))
-        }
+        DataValue::Float(v) if v.is_finite() => Some(big_dec_to_big_int(&java_f32_to_string(*v))),
+        DataValue::Double(v) if v.is_finite() => Some(big_dec_to_big_int(&java_f64_to_string(*v))),
         DataValue::BigInt(v) => Some(v.clone()),
         DataValue::BigDec(v) => Some(big_dec_to_big_int(v)),
         _ => None,
@@ -288,10 +284,7 @@ pub fn java_f64_to_string(value: f64) -> String {
     let (significand, binary_exponent) = if exponent_bits == 0 {
         (fraction, -1074)
     } else {
-        (
-            (1_u64 << 52) | fraction,
-            exponent_bits as i32 - 1023 - 52,
-        )
+        ((1_u64 << 52) | fraction, exponent_bits as i32 - 1023 - 52)
     };
 
     java_finite_float_to_string(
@@ -370,16 +363,13 @@ fn java_finite_float_to_string(
                 continue;
             }
 
-            let distance =
-                (&candidate * &scaled_denominator - &scaled_numerator).abs();
+            let distance = (&candidate * &scaled_denominator - &scaled_numerator).abs();
             let replace = match &best {
                 None => true,
                 Some((best_candidate, best_distance)) => match distance.cmp(best_distance) {
                     Ordering::Less => true,
                     Ordering::Greater => false,
-                    Ordering::Equal => {
-                        is_even(&candidate) && !is_even(best_candidate)
-                    }
+                    Ordering::Equal => is_even(&candidate) && !is_even(best_candidate),
                 },
             };
             if replace {
@@ -388,7 +378,16 @@ fn java_finite_float_to_string(
         }
 
         if let Some((candidate, _)) = best {
-            return format_java_decimal(negative, &candidate.to_string(), decimal_power);
+            // decade 边界附近的二进制值可能让精确 exponent 落在前一 decade，
+            // 例如 f32 0.0001 的候选为 100e-6。Java 输出最短等价值
+            // 1.0E-4，因此在渲染前移除候选整数的十进制尾零并同步指数。
+            let mut digits = candidate.to_string();
+            let mut normalized_power = decimal_power;
+            while digits.len() > 1 && digits.ends_with('0') {
+                digits.pop();
+                normalized_power += 1;
+            }
+            return format_java_decimal(negative, &digits, normalized_power);
         }
     }
 
@@ -413,17 +412,11 @@ fn exact_binary_rational(significand: u64, binary_exponent: i32) -> (BigInt, Big
 }
 
 /// 精确修正 `log10` 给出的 decade，保证 `10^k <= value < 10^(k+1)`。
-fn exact_decimal_exponent(
-    numerator: &BigInt,
-    denominator: &BigInt,
-    mut exponent: i32,
-) -> i32 {
+fn exact_decimal_exponent(numerator: &BigInt, denominator: &BigInt, mut exponent: i32) -> i32 {
     while compare_rational_to_power_of_ten(numerator, denominator, exponent) == Ordering::Less {
         exponent -= 1;
     }
-    while compare_rational_to_power_of_ten(numerator, denominator, exponent + 1)
-        != Ordering::Less
-    {
+    while compare_rational_to_power_of_ten(numerator, denominator, exponent + 1) != Ordering::Less {
         exponent += 1;
     }
     exponent
@@ -474,11 +467,7 @@ fn format_java_decimal(negative: bool, digits: &str, decimal_power: i32) -> Stri
     let sign = if negative { "-" } else { "" };
     let exponent = digits.len() as i32 - 1 + decimal_power;
     if !(-3..7).contains(&exponent) {
-        let tail = if digits.len() == 1 {
-            "0"
-        } else {
-            &digits[1..]
-        };
+        let tail = if digits.len() == 1 { "0" } else { &digits[1..] };
         return format!("{sign}{}.{}E{exponent}", &digits[..1], tail);
     }
 
@@ -690,8 +679,7 @@ fn parse_decimal_parts(dec: &str) -> (bool, String, i64) {
         .position(|digit| digit != b'0')
         .unwrap_or(digits.len());
     digits.drain(..first_non_zero);
-    let scale =
-        frac_part.chars().filter(|c| c.is_ascii_digit()).count() as i64 - exponent;
+    let scale = frac_part.chars().filter(|c| c.is_ascii_digit()).count() as i64 - exponent;
     (negative && !digits.is_empty(), digits, scale)
 }
 
@@ -774,7 +762,10 @@ mod tests {
             Some(Ordering::Equal)
         );
         assert_eq!(
-            number_compare(&DataValue::Double(negative_nan), &DataValue::Double(f64::MAX)),
+            number_compare(
+                &DataValue::Double(negative_nan),
+                &DataValue::Double(f64::MAX)
+            ),
             Some(Ordering::Greater)
         );
     }

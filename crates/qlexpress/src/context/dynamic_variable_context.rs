@@ -84,7 +84,7 @@ impl ExpressContext for DynamicVariableContext {
         let item: Rc<RefCell<dyn crate::runtime::left_value::LeftValue>> =
             Rc::new(RefCell::new(MapItemValue::new(
                 Rc::clone(&self.static_context),
-                DataValue::Str(variable_name.to_string()),
+                DataValue::string(variable_name),
             )));
         Ok(Some(QValue::Left(item)))
     }

@@ -19,6 +19,7 @@
 //! compare / logic / string / unary / root instanceof）在 Rust 侧由
 //! `runtime/operator/` 子包逐类落地。
 
+use std::cell::RefCell;
 use std::collections::HashSet;
 use std::fmt;
 use std::rc::Rc;
@@ -26,6 +27,9 @@ use std::rc::Rc;
 pub use super::black_operator_check_strategy::BlackOperatorCheckStrategy;
 pub use super::default_operator_check_strategy::DefaultOperatorCheckStrategy;
 pub use super::white_operator_check_strategy::WhiteOperatorCheckStrategy;
+
+/// 在宿主、检查选项和静态检查器之间共享的操作符集合。
+pub type SharedOperators = Rc<RefCell<HashSet<String>>>;
 
 /// 枚举形态的策略入口，对齐 Java `OperatorCheckStrategy` 接口的三个静态工厂。
 ///
@@ -39,15 +43,20 @@ pub use super::white_operator_check_strategy::WhiteOperatorCheckStrategy;
 /// 对应 Java: com.alibaba.qlexpress4.operator.OperatorCheckStrategy。
 pub enum OperatorCheckStrategy {
     /// Java `OperatorCheckStrategy.allowAll()`。
-    #[default]
     AllowAll,
     /// Java `OperatorCheckStrategy.whitelist(Set<String>)`：仅这些操作符被允许。
     Whitelist(HashSet<String>),
     /// Java `OperatorCheckStrategy.blacklist(Set<String>)`：这些操作符被禁止。
     Blacklist(HashSet<String>),
+    /// 保存调用方集合引用的 Java 白名单语义。
+    SharedWhitelist(SharedOperators),
+    /// 保存调用方集合引用的 Java 黑名单语义。
+    SharedBlacklist(SharedOperators),
     /// 业务宿主实现 Java `OperatorCheckStrategy` 的 Rust 闭包适配。
     Custom {
+        /// 判断指定操作符是否允许使用的宿主回调。
         check: Rc<dyn Fn(&str) -> bool>,
+        /// 策略公开的操作符集合快照。
         operators: HashSet<String>,
     },
 }
@@ -62,13 +71,19 @@ impl fmt::Debug for OperatorCheckStrategy {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::AllowAll => formatter.write_str("AllowAll"),
-            Self::Whitelist(operators) => formatter
-                .debug_tuple("Whitelist")
-                .field(operators)
+            Self::Whitelist(operators) => {
+                formatter.debug_tuple("Whitelist").field(operators).finish()
+            }
+            Self::Blacklist(operators) => {
+                formatter.debug_tuple("Blacklist").field(operators).finish()
+            }
+            Self::SharedWhitelist(operators) => formatter
+                .debug_tuple("SharedWhitelist")
+                .field(&operators.borrow())
                 .finish(),
-            Self::Blacklist(operators) => formatter
-                .debug_tuple("Blacklist")
-                .field(operators)
+            Self::SharedBlacklist(operators) => formatter
+                .debug_tuple("SharedBlacklist")
+                .field(&operators.borrow())
                 .finish(),
             Self::Custom { operators, .. } => formatter
                 .debug_struct("Custom")
@@ -84,6 +99,10 @@ impl PartialEq for OperatorCheckStrategy {
             (Self::AllowAll, Self::AllowAll) => true,
             (Self::Whitelist(left), Self::Whitelist(right))
             | (Self::Blacklist(left), Self::Blacklist(right)) => left == right,
+            (Self::SharedWhitelist(left), Self::SharedWhitelist(right))
+            | (Self::SharedBlacklist(left), Self::SharedBlacklist(right)) => {
+                Rc::ptr_eq(left, right) || *left.borrow() == *right.borrow()
+            }
             (
                 Self::Custom {
                     check: left_check,
@@ -129,6 +148,36 @@ impl OperatorCheckStrategy {
         OperatorCheckStrategy::Blacklist(forbidden_operators)
     }
 
+    /// 使用调用方保留的共享集合创建白名单策略。
+    ///
+    /// Java `WhiteOperatorCheckStrategy` 保存
+    /// `Collections.unmodifiableSet(allowedOperators)` 视图，因此调用方对
+    /// 原集合的后续修改仍然可见。
+    ///
+    /// # 参数
+    ///
+    /// - `allowed_operators`：宿主与检查策略共享的操作符集合。
+    ///
+    /// # 返回值
+    ///
+    /// 返回具有 Java backing-set 引用语义的白名单策略。
+    pub fn shared_whitelist(allowed_operators: SharedOperators) -> Self {
+        Self::SharedWhitelist(allowed_operators)
+    }
+
+    /// 使用调用方保留的共享集合创建黑名单策略。
+    ///
+    /// # 参数
+    ///
+    /// - `forbidden_operators`：宿主与检查策略共享的操作符集合。
+    ///
+    /// # 返回值
+    ///
+    /// 返回具有 Java backing-set 引用语义的黑名单策略。
+    pub fn shared_blacklist(forbidden_operators: SharedOperators) -> Self {
+        Self::SharedBlacklist(forbidden_operators)
+    }
+
     /// 使用宿主闭包创建自定义操作符检查策略。
     ///
     /// Java `OperatorCheckStrategy` 是公开接口，宿主可以从动态配置决定每个
@@ -160,18 +209,27 @@ impl OperatorCheckStrategy {
             OperatorCheckStrategy::AllowAll => true,
             OperatorCheckStrategy::Whitelist(allowed) => allowed.contains(operator),
             OperatorCheckStrategy::Blacklist(forbidden) => !forbidden.contains(operator),
+            OperatorCheckStrategy::SharedWhitelist(allowed) => allowed.borrow().contains(operator),
+            OperatorCheckStrategy::SharedBlacklist(forbidden) => {
+                !forbidden.borrow().contains(operator)
+            }
             OperatorCheckStrategy::Custom { check, .. } => check(operator),
         }
     }
 
     /// Java `getOperators()`：返回配置集合；`AllowAll` 返回空集。
+    ///
+    /// Rust 返回当前快照，避免把 `RefCell` 的动态借用暴露给调用方；
+    /// 每次调用仍会读取 Java backing set 的最新内容。
     /// 对应 Java: com.alibaba.qlexpress4.operator.OperatorCheckStrategy#operators。
-    pub fn operators(&self) -> &HashSet<String> {
+    pub fn operators(&self) -> HashSet<String> {
         match self {
-            OperatorCheckStrategy::AllowAll => DefaultOperatorCheckStrategy::empty_set(),
+            OperatorCheckStrategy::AllowAll => HashSet::new(),
             OperatorCheckStrategy::Whitelist(ops)
             | OperatorCheckStrategy::Blacklist(ops)
-            | OperatorCheckStrategy::Custom { operators: ops, .. } => ops,
+            | OperatorCheckStrategy::Custom { operators: ops, .. } => ops.clone(),
+            OperatorCheckStrategy::SharedWhitelist(ops)
+            | OperatorCheckStrategy::SharedBlacklist(ops) => ops.borrow().clone(),
         }
     }
 }
@@ -259,7 +317,19 @@ mod tests {
         assert!(!strategy.is_allowed("+"));
         allow_plus.set(true);
         assert!(strategy.is_allowed("+"));
-        assert_eq!(strategy.operators(), &set(&["+"]));
+        assert_eq!(strategy.operators(), set(&["+"]));
         assert_eq!(strategy.clone(), strategy);
+    }
+
+    #[test]
+    fn shared_strategy_observes_backing_set_mutation() {
+        let operators = Rc::new(RefCell::new(set(&["+"])));
+        let strategy = OperatorCheckStrategy::shared_whitelist(Rc::clone(&operators));
+
+        assert!(strategy.is_allowed("+"));
+        assert!(!strategy.is_allowed("*"));
+        operators.borrow_mut().insert("*".to_string());
+        assert!(strategy.is_allowed("*"));
+        assert_eq!(strategy.operators(), set(&["+", "*"]));
     }
 }

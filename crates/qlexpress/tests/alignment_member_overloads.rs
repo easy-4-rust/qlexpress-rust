@@ -19,6 +19,7 @@ use qlexpress::runtime::delegate_qcontext::DelegateQContext;
 use qlexpress::runtime::instruction::{
     MethodInvokeInstruction, NewInstanceInstruction, QLInstruction,
 };
+use qlexpress::runtime::left_value::LeftValue;
 use qlexpress::runtime::member::NativeRegistry;
 use qlexpress::runtime::native_object::NativeObject;
 use qlexpress::runtime::native_type::{
@@ -28,7 +29,7 @@ use qlexpress::runtime::qcontext::QContext;
 use qlexpress::runtime::qvm_global_scope::QvmGlobalScope;
 use qlexpress::runtime::qvm_runtime::QvmRuntime;
 use qlexpress::runtime::scope::QScope;
-use qlexpress::runtime::value::{DataValue, QValue};
+use qlexpress::runtime::value::{DataValue, QValue, Value};
 
 fn reporter() -> Rc<dyn ErrorReporter> {
     Rc::new(PureErrReporter::INSTANCE)
@@ -231,9 +232,11 @@ fn method_registry() -> Rc<NativeRegistry> {
     );
     child3.add_method_candidate(
         "getMethod6",
-        method(vec![ClassRef::array_of(named("java.lang.Object"))], false, |_, _| {
-            Ok(DataValue::Int(10))
-        }),
+        method(
+            vec![ClassRef::array_of(named("java.lang.Object"))],
+            false,
+            |_, _| Ok(DataValue::Int(10)),
+        ),
     );
     registry.register_type(child3);
 
@@ -289,14 +292,16 @@ fn method_registry() -> Rc<NativeRegistry> {
                 ClassRef::array_of(named("java.lang.String")),
             ],
             true,
-            |_, _| Ok(DataValue::Str("1".to_string())),
+            |_, _| Ok(DataValue::Str("1".into())),
         ),
     );
     child9.add_method_candidate(
         "addField1",
-        method(vec![ClassRef::array_of(named("java.lang.Object"))], true, |_, _| {
-            Ok(DataValue::Str("1".to_string()))
-        }),
+        method(
+            vec![ClassRef::array_of(named("java.lang.Object"))],
+            true,
+            |_, _| Ok(DataValue::Str("1".into())),
+        ),
     );
     child9.add_method_candidate(
         "addField2",
@@ -306,7 +311,7 @@ fn method_registry() -> Rc<NativeRegistry> {
                 ClassRef::array_of(named("java.lang.Object")),
             ],
             true,
-            |_, _| Ok(DataValue::Str("1".to_string())),
+            |_, _| Ok(DataValue::Str("1".into())),
         ),
     );
     child9.add_method_candidate(
@@ -317,7 +322,7 @@ fn method_registry() -> Rc<NativeRegistry> {
                 ClassRef::array_of(ClassRef::Boxed(TargetType::Int)),
             ],
             true,
-            |_, _| Ok(DataValue::Str("1".to_string())),
+            |_, _| Ok(DataValue::Str("1".into())),
         ),
     );
     registry.register_type(child9);
@@ -348,7 +353,7 @@ fn named_declared_type_preserves_registered_assignability() {
 
     let error = slot
         .set(
-            DataValue::Str("not a parent".to_string()),
+            DataValue::Str("not a parent".into()),
             &PureErrReporter::INSTANCE,
         )
         .unwrap_err();
@@ -531,12 +536,12 @@ fn assert_child9(method_name: &str) {
             method_name,
             vec![
                 DataValue::Int(5),
-                DataValue::Str("5.0".to_string()),
-                DataValue::Str("5.0".to_string()),
+                DataValue::Str("5.0".into()),
+                DataValue::Str("5.0".into()),
             ],
         )
         .unwrap(),
-        DataValue::Str("1".to_string())
+        DataValue::Str("1".into())
     );
 }
 
@@ -567,8 +572,8 @@ fn java_method_var_arg_not_match_test() {
         "addField3",
         vec![
             DataValue::Int(5),
-            DataValue::Str("asd".to_string()),
-            DataValue::Str("sss".to_string()),
+            DataValue::Str("asd".into()),
+            DataValue::Str("sss".into()),
         ],
     )
     .unwrap_err();
@@ -835,8 +840,8 @@ fn java_constructor_var_arg_test() {
         "test.Child9",
         vec![
             DataValue::Int(5),
-            DataValue::Str("5.0".to_string()),
-            DataValue::Str("5.0".to_string()),
+            DataValue::Str("5.0".into()),
+            DataValue::Str("5.0".into()),
         ],
     )
     .unwrap();

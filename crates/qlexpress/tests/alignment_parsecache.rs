@@ -107,7 +107,7 @@ fn collection_round_trip() {
 fn custom_operator_round_trip() {
     let mut runner = Express4Runner::new();
     runner.add_operator_bi("join", |a, b| {
-        DataValue::Str(format!("{}|{}", a.string_value_of(), b.string_value_of()))
+        DataValue::string(format!("{}|{}", a.string_value_of(), b.string_value_of()))
     });
     let script = "1 join 2";
     let cache = runner.export_parse_cache(script).expect("export");
@@ -117,7 +117,7 @@ fn custom_operator_round_trip() {
         .execute_with_cache(&cache2, empty_ctx(), &QLOptions::builder().build())
         .expect("exec")
         .into_result();
-    assert_eq!(result, DataValue::Str("1|2".to_string()));
+    assert_eq!(result, DataValue::Str("1|2".into()));
 }
 
 // ---------- Error on incompatible runner identity ----------

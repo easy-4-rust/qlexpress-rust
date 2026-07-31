@@ -25,10 +25,7 @@ use qlexpress::security::ql_security_strategy::QLSecurityStrategy;
 fn suite_runner_assert_contract() {
     let runner = alignment_util::suite_runner();
     let mut attachments = std::collections::HashMap::new();
-    attachments.insert(
-        "TEST_PATH".to_string(),
-        DataValue::Str("a/b.ql".to_string()),
-    );
+    attachments.insert("TEST_PATH".to_string(), DataValue::Str("a/b.ql".into()));
     let options = QLOptions::builder().attachments(attachments).build();
 
     runner
@@ -77,7 +74,7 @@ fn suite_test_reports_all_failures() {
         let options = QLOptions::builder()
             .attachments(std::collections::HashMap::from([(
                 "TEST_PATH".to_string(),
-                DataValue::Str(path.to_string()),
+                DataValue::Str(path.into()),
             )]))
             .build();
         match runner.execute(script, std::collections::HashMap::new(), &options) {
@@ -171,7 +168,7 @@ assert(stest(10) == "A");"#;
     let options = QLOptions::builder()
         .attachments(std::collections::HashMap::from([(
             "TEST_PATH".to_string(),
-            DataValue::Str("/independent/switch/switch_fallthrough.ql".to_string()),
+            DataValue::Str("/independent/switch/switch_fallthrough.ql".into()),
         )]))
         .build();
 

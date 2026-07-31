@@ -51,13 +51,13 @@ fn direct_field_access_no_getter_needed() {
         .execute("s.name", ctx.clone(), &opts())
         .expect("ok")
         .into_result();
-    assert_eq!(r, DataValue::Str("zhangsan".to_string()));
+    assert_eq!(r, DataValue::Str("zhangsan".into()));
 
     let r2 = runner
         .execute("s.alias", ctx, &opts())
         .expect("ok")
         .into_result();
-    assert_eq!(r2, DataValue::Str("zs".to_string()));
+    assert_eq!(r2, DataValue::Str("zs".into()));
 }
 
 #[test]

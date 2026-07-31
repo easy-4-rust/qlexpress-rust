@@ -214,7 +214,7 @@ fn variables_and_assignment() {
 #[test]
 fn context_variable() {
     let external = Rc::new(RefCell::new(IndexMap::from_entries(vec![(
-        DataValue::Str("x".to_string()),
+        DataValue::Str("x".into()),
         DataValue::Int(40),
     )])));
     let scope = QvmGlobalScope::new(external, HashMap::new(), false);
@@ -361,7 +361,7 @@ fn switch_statement_and_expression() {
     // traditional statement style (bodies are var declarations, keeping
     // the stack balanced per case)
     let external = Rc::new(RefCell::new(IndexMap::from_entries(vec![(
-        DataValue::Str("hit".to_string()),
+        DataValue::Str("hit".into()),
         DataValue::Int(0),
     )])));
     let scope = QvmGlobalScope::new(external, HashMap::new(), false);

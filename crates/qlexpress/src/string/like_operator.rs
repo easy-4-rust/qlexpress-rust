@@ -6,6 +6,7 @@ use crate::exception::error_reporter::ErrorReporter;
 use crate::exception::QLException;
 use crate::ql_options::QLOptions;
 use crate::ql_precedences;
+use crate::runtime::data::java_string::JavaString;
 use crate::runtime::operator::base::BinaryOperator;
 use crate::runtime::qcontext::QContext;
 use crate::runtime::value::{DataValue, QValue};
@@ -79,8 +80,8 @@ pub(crate) fn like(
         return Ok(false);
     }
 
-    let (target, pattern) = match (target.as_str(), pattern.as_str()) {
-        (Some(t), Some(p)) => (t.to_string(), p.to_string()),
+    let (target, pattern) = match (target.as_java_string(), pattern.as_java_string()) {
+        (Some(t), Some(p)) => (t, p),
         // Java:!(target instanceof String) || !(pattern instanceof String)
         _ => {
             return Err(build_invalid_operand_type_exception(
@@ -91,7 +92,7 @@ pub(crate) fn like(
             ))
         }
     };
-    Ok(match_pattern(&target, &pattern))
+    Ok(match_pattern(target, pattern))
 }
 
 /// 对应 Java `BaseBinaryOperator.matchPattern(String s, String pattern)`。
@@ -99,10 +100,9 @@ pub(crate) fn like(
 /// 带回溯的单通配符(`%`)匹配:`%` 匹配任意长度(含 0)字符序列;
 /// 其余字符(包括 `_`)按字面量匹配。算法与 Java 逐行一致:
 /// 失配时回退到最近一个 `%` 并让其多吞一个字符。
-fn match_pattern(s: &str, pattern: &str) -> bool {
-    // Java 以 UTF-16 code unit 索引;Rust 用 char 序列,语义一致(BMP 内)。
-    let s: Vec<char> = s.chars().collect();
-    let pattern: Vec<char> = pattern.chars().collect();
+fn match_pattern(s: &JavaString, pattern: &JavaString) -> bool {
+    let s = s.utf16_units();
+    let pattern = pattern.utf16_units();
     let mut s_pointer = 0usize;
     let mut p_pointer = 0usize;
     let s_len = s.len();
@@ -114,7 +114,7 @@ fn match_pattern(s: &str, pattern: &str) -> bool {
         if p_pointer < p_len && s[s_pointer] == pattern[p_pointer] {
             s_pointer += 1;
             p_pointer += 1;
-        } else if p_pointer < p_len && pattern[p_pointer] == '%' {
+        } else if p_pointer < p_len && pattern[p_pointer] == u16::from(b'%') {
             s_recall = Some(s_pointer);
             p_recall = Some(p_pointer);
             p_pointer += 1;
@@ -128,7 +128,7 @@ fn match_pattern(s: &str, pattern: &str) -> bool {
             return false;
         }
     }
-    while p_pointer < p_len && pattern[p_pointer] == '%' {
+    while p_pointer < p_len && pattern[p_pointer] == u16::from(b'%') {
         p_pointer += 1;
     }
     p_pointer == p_len

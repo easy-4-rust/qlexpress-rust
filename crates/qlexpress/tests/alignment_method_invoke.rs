@@ -164,9 +164,7 @@ fn new_instance_no_matching_constructor_returns_error() {
 fn new_instance_with_explicit_constructor() {
     // 注册 1 参构造器:接受 int 返回实例
     let mut calc = NativeType::named("com.example.Calc");
-    calc.constructor = Some(std::rc::Rc::new(|_args| {
-        Ok(DataValue::Str("Calc(1)".to_string()))
-    }));
+    calc.constructor = Some(std::rc::Rc::new(|_args| Ok(DataValue::string("Calc(1)"))));
     let runner = runner_with(calc);
     let r = runner.execute("new Calc(1)", HashMap::new(), &opts());
     assert!(r.is_ok(), "explicit constructor should match: {r:?}");
@@ -203,38 +201,55 @@ fn builtin_string_method_contract_matrix() {
         ("'qlexpress'.charAt(2)", DataValue::Char('e' as u16)),
         ("'qlexpress'.contains('expr')", DataValue::Bool(true)),
         ("'qlexpress'.startsWith('ql')", DataValue::Bool(true)),
-        ("'qlexpress'.startsWith('express', 2)", DataValue::Bool(true)),
+        (
+            "'qlexpress'.startsWith('express', 2)",
+            DataValue::Bool(true),
+        ),
         ("'qlexpress'.endsWith('ss')", DataValue::Bool(true)),
         ("'qlexpress'.indexOf('express')", DataValue::Int(2)),
-        ("'qlexpress express'.indexOf('express', 3)", DataValue::Int(10)),
+        (
+            "'qlexpress express'.indexOf('express', 3)",
+            DataValue::Int(10),
+        ),
         ("'😀'.length()", DataValue::Int(2)),
         ("'😀'.charAt(0)", DataValue::Char(0xD83D)),
         ("'😀'.charAt(1)", DataValue::Char(0xDE00)),
-        ("'a😀b'.indexOf('b')", DataValue::Int(3)),
         (
-            "'a😀b'.substring(1, 3)",
-            DataValue::Str("😀".to_string()),
+            "'😀'.substring(0, 1)",
+            DataValue::string_from_utf16(vec![0xD83D]),
         ),
         (
+            "'😀'.substring(1, 2)",
+            DataValue::string_from_utf16(vec![0xDE00]),
+        ),
+        ("'😀'.substring(0, 1).length()", DataValue::Int(1)),
+        ("'😀'.substring(0, 1).charAt(0)", DataValue::Char(0xD83D)),
+        (
+            "'😀'.substring(0, 1) + '😀'.substring(1, 2)",
+            DataValue::string("😀"),
+        ),
+        ("'a😀b'.indexOf('b')", DataValue::Int(3)),
+        ("'a😀b'.substring(1, 3)", DataValue::Str("😀".into())),
+        (
             "'QlExpress'.toUpperCase()",
-            DataValue::Str("QLEXPRESS".to_string()),
+            DataValue::Str("QLEXPRESS".into()),
         ),
         (
             "'QlExpress'.toLowerCase()",
-            DataValue::Str("qlexpress".to_string()),
+            DataValue::Str("qlexpress".into()),
         ),
-        ("'  ql  '.trim()", DataValue::Str("ql".to_string())),
+        ("'  ql  '.trim()", DataValue::Str("ql".into())),
         (
             "'\u{00a0}ql\u{00a0}'.trim()",
-            DataValue::Str("\u{00a0}ql\u{00a0}".to_string()),
+            DataValue::Str("\u{00a0}ql\u{00a0}".into()),
         ),
         (
             "'qlexpress'.substring(2, 7)",
-            DataValue::Str("expre".to_string()),
+            DataValue::Str("expre".into()),
         ),
         (
             "'qlexpress'.replace('express', 'rust')",
-            DataValue::Str("qlrust".to_string()),
+            DataValue::Str("qlrust".into()),
         ),
         ("'QL'.equals('QL')", DataValue::Bool(true)),
         ("'QL'.equals(1)", DataValue::Bool(false)),
@@ -245,7 +260,7 @@ fn builtin_string_method_contract_matrix() {
         ("'a|b||'.split('\\\\|').length", DataValue::Int(2)),
         ("'a|b||'.split('\\\\|', -1).length", DataValue::Int(4)),
         ("''.split('x').length", DataValue::Int(1)),
-        ("'ql'.toString()", DataValue::Str("ql".to_string())),
+        ("'ql'.toString()", DataValue::Str("ql".into())),
     ];
     for (script, expected) in cases {
         let result = runner
@@ -281,7 +296,7 @@ fn builtin_list_and_map_mutation_contracts() {
             DataValue::Int(1),
             DataValue::Int(4),
             DataValue::list(vec![DataValue::Int(3), DataValue::Int(4)]),
-            DataValue::Str("[20, 3, 4, 5]".to_string()),
+            DataValue::Str("[20, 3, 4, 5]".into()),
         ])
     );
 
@@ -306,7 +321,7 @@ fn builtin_list_and_map_mutation_contracts() {
             DataValue::Bool(true),
             DataValue::Int(1),
             DataValue::Int(1),
-            DataValue::list(vec![DataValue::Str("b".to_string())]),
+            DataValue::list(vec![DataValue::Str("b".into())]),
             DataValue::list(vec![DataValue::Int(2)]),
         ])
     );
@@ -335,9 +350,9 @@ fn builtin_number_and_boolean_method_contracts() {
             DataValue::Short(258),
             DataValue::Byte(2),
             DataValue::Int(1),
-            DataValue::Str("3".to_string()),
+            DataValue::Str("3".into()),
             DataValue::Bool(true),
-            DataValue::Str("false".to_string()),
+            DataValue::Str("false".into()),
         ])
     );
 }

@@ -52,7 +52,7 @@ fn runner() -> Express4Runner {
             .first()
             .map(|v| v.string_value_of())
             .unwrap_or_default();
-        Ok(DataValue::Str(format!("RuntimeException({msg})")))
+        Ok(DataValue::string(format!("RuntimeException({msg})")))
     }));
     runner.register_native_type(runtime_exc);
 
@@ -63,7 +63,7 @@ fn runner() -> Express4Runner {
             .first()
             .map(|v| v.string_value_of())
             .unwrap_or_default();
-        Ok(DataValue::Str(format!("Exception({msg})")))
+        Ok(DataValue::string(format!("Exception({msg})")))
     }));
     runner.register_native_type(exc);
 

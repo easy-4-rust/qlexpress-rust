@@ -78,23 +78,22 @@ fn runner_with_types(types: Vec<NativeType>) -> Express4Runner {
 
 fn parent_type(expose_private_static: bool, expose_private_name: bool) -> NativeType {
     let mut native_type = Parent::build_native_type();
-    native_type.static_fields.insert(
-        "staticGet".to_string(),
-        DataValue::Str("staticGet1".to_string()),
-    );
+    native_type
+        .static_fields
+        .insert("staticGet".to_string(), DataValue::Str("staticGet1".into()));
     native_type.static_field_cells.insert(
         "staticSet".to_string(),
-        Rc::new(RefCell::new(DataValue::Str("staticSet".to_string()))),
+        Rc::new(RefCell::new(DataValue::Str("staticSet".into()))),
     );
     // Java 允许通过实例读取静态 getter。
     native_type.fields.insert(
         "staticGet".to_string(),
-        Rc::new(|_| Some(DataValue::Str("staticGet1".to_string()))),
+        Rc::new(|_| Some(DataValue::Str("staticGet1".into()))),
     );
     if expose_private_static {
         native_type.static_fields.insert(
             "staticSetPrivate".to_string(),
-            DataValue::Str("staticSetPrivate".to_string()),
+            DataValue::Str("staticSetPrivate".into()),
         );
     }
     if !expose_private_name {
@@ -138,7 +137,7 @@ fn java_case1_static_getter_field() {
         .execute("Parent.staticGet", HashMap::new(), &options())
         .expect("static getter must resolve")
         .into_result();
-    assert_eq!(result, DataValue::Str("staticGet1".to_string()));
+    assert_eq!(result, DataValue::Str("staticGet1".into()));
 }
 
 /// Java `GetFieldInstructionTest#case2`：静态字段必须返回可写左值。
@@ -153,7 +152,7 @@ fn java_case2_public_static_field_is_writable_left_value() {
         )
         .expect("static assignment must succeed")
         .into_result();
-    assert_eq!(result, DataValue::Str("staticSet1".to_string()));
+    assert_eq!(result, DataValue::Str("staticSet1".into()));
 }
 
 /// Java `GetFieldInstructionTest#case3`：不可见私有静态字段视为不存在。
@@ -171,7 +170,7 @@ fn java_case4_private_static_field_with_explicit_access() {
         .execute("Parent.staticSetPrivate", HashMap::new(), &options())
         .expect("explicitly exposed static field must resolve")
         .into_result();
-    assert_eq!(result, DataValue::Str("staticSetPrivate".to_string()));
+    assert_eq!(result, DataValue::Str("staticSetPrivate".into()));
 }
 
 /// Java `GetFieldInstructionTest#case5`：实例可读取静态 getter 属性。
@@ -186,7 +185,7 @@ fn java_case5_static_getter_via_instance() {
         )
         .expect("instance static getter must resolve")
         .into_result();
-    assert_eq!(result, DataValue::Str("staticGet1".to_string()));
+    assert_eq!(result, DataValue::Str("staticGet1".into()));
 }
 
 /// Java `GetFieldInstructionTest#case6`：getter/setter 属性必须可写。
@@ -216,7 +215,7 @@ fn java_case7_private_instance_field_with_explicit_access() {
         )
         .expect("explicitly exposed instance field must be writable")
         .into_result();
-    assert_eq!(result, DataValue::Str("name1".to_string()));
+    assert_eq!(result, DataValue::Str("name1".into()));
 }
 
 /// Java `GetFieldInstructionTest#case8`：未暴露私有实例字段视为不存在。
@@ -249,7 +248,7 @@ fn java_case10_inherited_public_getter_is_visible() {
         .execute("child.birth", context("child", child_value()), &options())
         .expect("inherited getter contract must resolve")
         .into_result();
-    assert_eq!(result, DataValue::Str("2022-01-01".to_string()));
+    assert_eq!(result, DataValue::Str("2022-01-01".into()));
 }
 
 /// Java `GetFieldInstructionTest#case11`：普通方法不能冒充属性。

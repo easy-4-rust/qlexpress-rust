@@ -81,7 +81,7 @@ fn execute_basic_arithmetic_and_context() {
 fn execute_if_for_lambda_function() {
     assert_eq!(
         run("a = 0; if (a > 1) { 'big' } else { 'small' }"),
-        DataValue::Str("small".to_string())
+        DataValue::Str("small".into())
     );
     // for 循环求和
     assert_eq!(
@@ -107,7 +107,7 @@ fn execute_template_wraps_dynamic_string() {
     let result = runner
         .execute_template("hello", HashMap::new(), &opts())
         .unwrap();
-    assert_eq!(result.into_result(), DataValue::Str("hello".to_string()));
+    assert_eq!(result.into_result(), DataValue::Str("hello".into()));
 }
 
 // ---- 自定义函数:add_function / varargs / batch 部分失败 -------------------
@@ -250,12 +250,12 @@ fn replace_default_operator() {
         "+",
         Rc::new(|left: &qlexpress::QValue, right: &qlexpress::QValue| {
             match (left.get(), right.get()) {
-                (DataValue::Int(a), DataValue::Int(b)) => Ok(DataValue::Str(format!("{a}{b}"))),
+                (DataValue::Int(a), DataValue::Int(b)) => Ok(DataValue::string(format!("{a}{b}"))),
                 _ => Ok(DataValue::Null),
             }
         })
     ));
-    assert_eq!(run_with(&runner, "1 + 2"), DataValue::Str("12".to_string()));
+    assert_eq!(run_with(&runner, "1 + 2"), DataValue::Str("12".into()));
 }
 
 #[test]
@@ -434,7 +434,7 @@ fn parse_cache_export_import_execute_consistent() {
         std::cell::RefCell::new(qlexpress::runtime::data::index_map::IndexMap::from_entries(
             context
                 .into_iter()
-                .map(|(k, v)| (DataValue::Str(k), v))
+                .map(|(k, v)| (DataValue::string(k), v))
                 .collect(),
         )),
     )));

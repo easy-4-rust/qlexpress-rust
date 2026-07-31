@@ -28,8 +28,8 @@ struct HostDesk;
 impl NativeObject for HostDesk {
     fn get_field(&self, name: &str) -> Option<DataValue> {
         match name {
-            "book" | "book1" | "getBook1" => Some(DataValue::Str("Thinking in Rust".to_string())),
-            "book2" | "getBook2" => Some(DataValue::Str("Effective Rust".to_string())),
+            "book" | "book1" | "getBook1" => Some(DataValue::Str("Thinking in Rust".into())),
+            "book2" | "getBook2" => Some(DataValue::Str("Effective Rust".into())),
             _ => None,
         }
     }
@@ -37,8 +37,8 @@ impl NativeObject for HostDesk {
     fn call_method(&mut self, name: &str, _args: &[DataValue]) -> Result<DataValue, QLException> {
         match name {
             "bookCount" => Ok(DataValue::Int(1)),
-            "getBook1" => Ok(DataValue::Str("Thinking in Rust".to_string())),
-            "getBook2" => Ok(DataValue::Str("Effective Rust".to_string())),
+            "getBook1" => Ok(DataValue::Str("Thinking in Rust".into())),
+            "getBook2" => Ok(DataValue::Str("Effective Rust".into())),
             _ => Err(QLException::for_test(
                 QLExceptionKind::Runtime,
                 "method not found",
@@ -113,7 +113,7 @@ fn runner_load_field_host_api_skips_script_security() {
     let loaded = runner
         .load_field(&desk, "book")
         .expect("host API mirrors Java skipSecurity=true");
-    assert_eq!(loaded.get(), DataValue::Str("Thinking in Rust".to_string()));
+    assert_eq!(loaded.get(), DataValue::Str("Thinking in Rust".into()));
 }
 
 #[test]
@@ -229,7 +229,7 @@ fn desk_runner(strategy: QLSecurityStrategy) -> Express4Runner {
         let field_value = value.to_string();
         desk_type.fields.insert(
             method.to_string(),
-            Rc::new(move |_bean| Some(DataValue::Str(field_value.clone()))),
+            Rc::new(move |_bean| Some(DataValue::string(field_value.clone()))),
         );
         desk_type.field_aliases.insert(
             method.to_string(),
@@ -240,7 +240,7 @@ fn desk_runner(strategy: QLSecurityStrategy) -> Express4Runner {
             method.to_string(),
             Rc::new(move |_bean, args| {
                 assert!(args.is_empty());
-                Ok(DataValue::Str(method_value.clone()))
+                Ok(DataValue::string(method_value.clone()))
             }),
         );
     }
@@ -286,7 +286,7 @@ fn java_express4_runner_security_strategy_test() {
             .execute("desk.book1", host_context(), &QLOptions::default())
             .expect("non-blacklisted field")
             .result(),
-        &DataValue::Str("Thinking in Rust".to_string())
+        &DataValue::Str("Thinking in Rust".into())
     );
 
     let white = desk_runner(QLSecurityStrategy::white_list(HashSet::from([get_book2])));
@@ -295,7 +295,7 @@ fn java_express4_runner_security_strategy_test() {
             .execute("desk.getBook2()", host_context(), &QLOptions::default())
             .expect("whitelisted method")
             .result(),
-        &DataValue::Str("Effective Rust".to_string())
+        &DataValue::Str("Effective Rust".into())
     );
     assert_eq!(
         white
@@ -310,13 +310,13 @@ fn java_express4_runner_security_strategy_test() {
         open.execute("desk.book1", host_context(), &QLOptions::default())
             .expect("open field")
             .result(),
-        &DataValue::Str("Thinking in Rust".to_string())
+        &DataValue::Str("Thinking in Rust".into())
     );
     assert_eq!(
         open.execute("desk.getBook2()", host_context(), &QLOptions::default())
             .expect("open method")
             .result(),
-        &DataValue::Str("Effective Rust".to_string())
+        &DataValue::Str("Effective Rust".into())
     );
 }
 
@@ -348,7 +348,45 @@ fn custom_security_strategy_is_extensible_and_observes_shared_state() {
             .execute("desk.getBook2()", host_context(), &QLOptions::default())
             .expect("existing runner must observe the updated custom policy")
             .result(),
-        &DataValue::Str("Effective Rust".to_string())
+        &DataValue::Str("Effective Rust".into())
+    );
+}
+
+/// SOURCE_PARITY: `StrategyWhiteList` 保存构造参数 `Set<Member>` 本身，
+/// 而不是构造时快照。
+#[test]
+fn shared_white_list_observes_backing_set_mutation_after_runner_creation() {
+    use qlexpress::security::ql_security_strategy::NativeMember;
+    use std::collections::HashSet;
+
+    let allowed = Rc::new(RefCell::new(HashSet::new()));
+    let runner = desk_runner(QLSecurityStrategy::shared_white_list(Rc::clone(&allowed)));
+    let get_book2 = NativeMember::new("com.example.HostDesk", "getBook2");
+
+    assert_eq!(
+        runner
+            .execute("desk.getBook2()", host_context(), &QLOptions::default())
+            .expect_err("shared whitelist initially denies the member")
+            .error_code(),
+        error_codes::METHOD_NOT_FOUND
+    );
+
+    allowed.borrow_mut().insert(get_book2.clone());
+    assert_eq!(
+        runner
+            .execute("desk.getBook2()", host_context(), &QLOptions::default())
+            .expect("existing runner must observe the updated whitelist")
+            .result(),
+        &DataValue::Str("Effective Rust".into())
+    );
+
+    allowed.borrow_mut().remove(&get_book2);
+    assert_eq!(
+        runner
+            .execute("desk.getBook2()", host_context(), &QLOptions::default())
+            .expect_err("removing the member must revoke later calls")
+            .error_code(),
+        error_codes::METHOD_NOT_FOUND
     );
 }
 

@@ -213,7 +213,7 @@ fn script_returns_str() {
         .execute("'hello' + ' ' + 'world'", HashMap::new(), &opts())
         .expect("ok")
         .into_result();
-    assert_eq!(r, DataValue::Str("hello world".to_string()));
+    assert_eq!(r, DataValue::Str("hello world".into()));
 }
 
 #[test]

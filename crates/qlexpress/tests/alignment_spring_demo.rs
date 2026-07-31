@@ -23,7 +23,7 @@ impl NativeObject for HelloService {
 
     fn call_method(&mut self, name: &str, args: &[DataValue]) -> Result<DataValue, QLException> {
         match (name, args) {
-            ("hello", [DataValue::Str(name)]) => Ok(DataValue::Str(format!("Hello, {name}!"))),
+            ("hello", [DataValue::Str(name)]) => Ok(DataValue::string(format!("Hello, {name}!"))),
             _ => Err(QLException::for_test(
                 QLExceptionKind::Runtime,
                 format!("method not found: {name}"),
@@ -56,12 +56,12 @@ fn ql_execute_with_explicit_host_context() {
             "helloService".to_string(),
             DataValue::Object(Rc::new(RefCell::new(HelloService))),
         ),
-        ("name".to_string(), DataValue::Str("Wang".to_string())),
+        ("name".to_string(), DataValue::Str("Wang".into())),
     ]);
 
     let result = runner
         .execute("helloService.hello(name)", context, &QLOptions::default())
         .expect("host service")
         .into_result();
-    assert_eq!(result, DataValue::Str("Hello, Wang!".to_string()));
+    assert_eq!(result, DataValue::Str("Hello, Wang!".into()));
 }

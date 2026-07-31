@@ -33,7 +33,7 @@ fn explicit_plugin_supplier_exposes_registered_plugin_type() {
     let mut plugin_type = NativeType::named("com.alibaba.qlexpress4.pf4j.TestPluginInterface");
     plugin_type.static_fields.insert(
         "TEST_CONSTANT".to_string(),
-        DataValue::Str("Hello from PF4J Plugin!".to_string()),
+        DataValue::Str("Hello from PF4J Plugin!".into()),
     );
     runner.register_native_type(plugin_type);
 
@@ -48,8 +48,5 @@ fn explicit_plugin_supplier_exposes_registered_plugin_type() {
         )
         .expect("plugin class")
         .into_result();
-    assert_eq!(
-        result,
-        DataValue::Str("Hello from PF4J Plugin!".to_string())
-    );
+    assert_eq!(result, DataValue::Str("Hello from PF4J Plugin!".into()));
 }

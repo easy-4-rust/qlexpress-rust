@@ -121,7 +121,7 @@ fn map_context(entries: Vec<(&str, DataValue)>) -> Rc<RefCell<IndexMap>> {
     Rc::new(RefCell::new(IndexMap::from_entries(
         entries
             .into_iter()
-            .map(|(k, v)| (DataValue::Str(k.to_string()), v))
+            .map(|(k, v)| (DataValue::Str(k.into()), v))
             .collect(),
     )))
 }
@@ -144,7 +144,7 @@ fn map_express_context_read_and_isolated_write() {
         DataValue::Int(1)
     );
     assert_eq!(
-        external.borrow().get(&DataValue::Str("x".to_string())),
+        external.borrow().get(&DataValue::Str("x".into())),
         Some(&DataValue::Int(40)),
         "non-pollute mode must not write through to the host map"
     );
@@ -166,7 +166,7 @@ fn map_express_context_pollute_writes_through() {
         DataValue::Int(42)
     );
     assert_eq!(
-        external.borrow().get(&DataValue::Str("x".to_string())),
+        external.borrow().get(&DataValue::Str("x".into())),
         Some(&DataValue::Int(42)),
         "pollute mode must write through to the host map"
     );
@@ -185,10 +185,7 @@ fn map_express_context_get_returns_map_item_left_value() {
         panic!("MapExpressContext must yield a LeftValue (MapItemValue)");
     }
     assert_eq!(
-        context
-            .source()
-            .borrow()
-            .get(&DataValue::Str("a".to_string())),
+        context.source().borrow().get(&DataValue::Str("a".into())),
         Some(&DataValue::Int(8))
     );
 }
@@ -347,7 +344,7 @@ impl CustomFunction for Greet {
         _q_context: &mut dyn QContext,
         parameters: &Parameters,
     ) -> Result<DataValue, QLException> {
-        Ok(DataValue::Str(format!(
+        Ok(DataValue::string(format!(
             "hi {}",
             parameters.get_value(0).string_value_of()
         )))

@@ -30,7 +30,7 @@ fn doc_add_function_and_operator() {
                 .map(|i| params[i].string_value_of())
                 .collect::<Vec<_>>()
                 .join(",");
-            Ok(DataValue::Str(joined))
+            Ok(DataValue::string(joined))
         },
     );
     assert_eq!(
@@ -38,11 +38,11 @@ fn doc_add_function_and_operator() {
             .execute("join(1,2,3)", HashMap::new(), &opts_no_cache())
             .unwrap()
             .into_result(),
-        DataValue::Str("1,2,3".to_string())
+        DataValue::Str("1,2,3".into())
     );
     // 自定义二元操作符 join(与函数同名)
     runner.add_operator_bi("join", |left: DataValue, right: DataValue| {
-        DataValue::Str(format!(
+        DataValue::string(format!(
             "{},{}",
             left.string_value_of(),
             right.string_value_of()
@@ -53,7 +53,7 @@ fn doc_add_function_and_operator() {
             .execute("1 join 2 join 3", HashMap::new(), &opts_no_cache())
             .unwrap()
             .into_result(),
-        DataValue::Str("1,2,3".to_string())
+        DataValue::Str("1,2,3".into())
     );
 }
 
@@ -68,7 +68,7 @@ fn replace_default_operator() {
             .execute("'1.2'+'2.3'", HashMap::new(), &opts_no_cache())
             .unwrap()
             .into_result(),
-        DataValue::Str("1.22.3".to_string())
+        DataValue::Str("1.22.3".into())
     );
     let replaced = runner.replace_operator(
         "+",
@@ -94,7 +94,7 @@ fn replace_default_operator() {
 fn add_operator_with_group_precedence() {
     let mut runner = Express4Runner::new();
     runner.add_operator_bi("join", |left: DataValue, right: DataValue| {
-        DataValue::Str(format!(
+        DataValue::string(format!(
             "{}{}",
             left.string_value_of(),
             right.string_value_of()
@@ -105,7 +105,7 @@ fn add_operator_with_group_precedence() {
             .execute("1.2 join 2", HashMap::new(), &opts_no_cache())
             .unwrap()
             .into_result(),
-        DataValue::Str("1.22".to_string())
+        DataValue::Str("1.22".into())
     );
 
     // `.*` 投影操作符:取列表中每个 map 的指定字段。
@@ -121,7 +121,7 @@ fn add_operator_with_group_precedence() {
                         .map(|item| match item {
                             DataValue::Map(map) => map
                                 .borrow()
-                                .get(&DataValue::Str(field.clone()))
+                                .get(&DataValue::string(field.clone()))
                                 .cloned()
                                 .unwrap_or(DataValue::Null),
                             _ => DataValue::Null,

@@ -148,12 +148,12 @@ fn map_literal() {
         DataValue::Map(map) => {
             let map = map.borrow();
             assert_eq!(
-                map.get(&DataValue::Str("a".to_string())),
+                map.get(&DataValue::Str("a".into())),
                 Some(&DataValue::Int(123))
             );
             assert_eq!(
-                map.get(&DataValue::Str("b".to_string())),
-                Some(&DataValue::Str("test".to_string()))
+                map.get(&DataValue::Str("b".into())),
+                Some(&DataValue::Str("test".into()))
             );
         }
         other => panic!("期望 Map,实际为 {other:?}"),
@@ -326,7 +326,7 @@ fn multiline_str_not_close() {
 fn chinese_comma_property() {
     assert_eq!(
         run("{'销售方地址、电话':'test'}.销售方地址、电话"),
-        DataValue::Str("test".to_string())
+        DataValue::Str("test".into())
     );
 }
 
@@ -334,10 +334,7 @@ fn chinese_comma_property() {
 #[test]
 fn string_escape() {
     // Java: "\"\" + '\'\na' 结果为 "\"'\na"(引号、换行拼接)。
-    assert_eq!(
-        run("\"\\\"\"+'\\'\na'"),
-        DataValue::Str("\"'\na".to_string())
-    );
+    assert_eq!(run("\"\\\"\"+'\\'\na'"), DataValue::Str("\"'\na".into()));
 }
 
 /// 对应 Java `Express4RunnerTest#defaultAndSwitchAsVariable`。
@@ -391,10 +388,7 @@ fn avoid_null_pointer() {
     let result = Express4Runner::new()
         .execute("'a '+${a}+aa('xxx')", HashMap::new(), &avoid)
         .unwrap();
-    assert_eq!(
-        result.into_result(),
-        DataValue::Str("a nullnull".to_string())
-    );
+    assert_eq!(result.into_result(), DataValue::Str("a nullnull".into()));
 }
 
 /// 对应 Java `Express4RunnerTest#emptyListCacheTest`
@@ -423,7 +417,7 @@ fn empty_map_cache() {
         let result = runner
             .execute(
                 "m = {:}; m.put(k,'b'); return m;",
-                ctx(&[("k", DataValue::Str(format!("k{i}")))]),
+                ctx(&[("k", DataValue::string(format!("k{i}")))]),
                 &cache,
             )
             .unwrap();
@@ -444,7 +438,7 @@ fn pollute_user_context() {
     let runner = Express4Runner::new();
     let pollute = QLOptions::builder().pollute_user_context(true).build();
     let source = std::rc::Rc::new(std::cell::RefCell::new(IndexMap::from_entries(vec![(
-        DataValue::Str("b".to_string()),
+        DataValue::Str("b".into()),
         DataValue::Int(10),
     )])));
     let context = MapExpressContext::new(std::rc::Rc::clone(&source));
@@ -453,11 +447,11 @@ fn pollute_user_context() {
         .unwrap();
     let borrowed = source.borrow();
     assert_eq!(
-        borrowed.get(&DataValue::Str("a".to_string())),
+        borrowed.get(&DataValue::Str("a".into())),
         Some(&DataValue::Int(11))
     );
     assert_eq!(
-        borrowed.get(&DataValue::Str("b".to_string())),
+        borrowed.get(&DataValue::Str("b".into())),
         Some(&DataValue::Int(11))
     );
 
@@ -467,12 +461,10 @@ fn pollute_user_context() {
     runner
         .execute_with_context("a = 11", std::rc::Rc::new(context2), &opts())
         .unwrap();
-    assert!(!source2
-        .borrow()
-        .contains_key(&DataValue::Str("a".to_string())));
+    assert!(!source2.borrow().contains_key(&DataValue::Str("a".into())));
 
     let source3 = std::rc::Rc::new(std::cell::RefCell::new(IndexMap::from_entries(vec![(
-        DataValue::Str("a".to_string()),
+        DataValue::Str("a".into()),
         DataValue::Int(10),
     )])));
     let context3 = MapExpressContext::new(std::rc::Rc::clone(&source3));
@@ -481,7 +473,7 @@ fn pollute_user_context() {
         .unwrap();
     assert_eq!(result.into_result(), DataValue::Int(19));
     assert_eq!(
-        source3.borrow().get(&DataValue::Str("a".to_string())),
+        source3.borrow().get(&DataValue::Str("a".into())),
         Some(&DataValue::Int(10))
     );
 }

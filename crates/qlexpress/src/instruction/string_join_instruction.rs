@@ -5,6 +5,7 @@
 use crate::exception::error_reporter::ErrorReporter;
 use crate::exception::QLException;
 use crate::ql_options::QLOptions;
+use crate::runtime::data::java_string::JavaString;
 use crate::runtime::instruction::QLInstruction;
 use crate::runtime::q_result::QResult;
 use crate::runtime::qcontext::QContext;
@@ -47,14 +48,18 @@ impl QLInstruction for StringJoinInstruction {
         _ql_options: &QLOptions,
     ) -> Result<QResult, QLException> {
         let arguments = q_context.pop_n(self.n);
-        let mut sb = String::new();
+        let mut sb = JavaString::default();
         for i in 0..self.n {
             // Java StringBuilder.append(Object) → String.valueOf
-            let part = arguments.get_value(i).string_value_of();
+            let part = arguments.get_value(i).java_string_value_of();
             if let Some(budget) = q_context.q_runtime().execution_budget() {
-                budget.check_string_bytes(sb.len().saturating_add(part.len()))?;
+                budget.check_string_bytes(
+                    sb.len()
+                        .saturating_add(part.len())
+                        .saturating_mul(std::mem::size_of::<u16>()),
+                )?;
             }
-            sb.push_str(&part);
+            sb = sb.concat(&part);
         }
         q_context.push(QValue::Data(DataValue::Str(sb)));
         Ok(QResult::NEXT_INSTRUCTION)

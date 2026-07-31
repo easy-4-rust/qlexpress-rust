@@ -312,3 +312,40 @@ fn custom_operator_strategy_observes_dynamic_host_policy() {
         .check("1 + 2", &options)
         .expect("existing options must observe the updated custom policy");
 }
+
+/// SOURCE_PARITY: `WhiteOperatorCheckStrategy` 保存调用方集合的
+/// `unmodifiableSet` 视图，原集合变化会影响既有 `CheckOptions`。
+#[test]
+fn shared_operator_whitelist_observes_backing_set_mutation() {
+    use std::cell::RefCell;
+    use std::collections::HashSet;
+    use std::rc::Rc;
+
+    let allowed = Rc::new(RefCell::new(HashSet::from(["*".to_string()])));
+    let options = CheckOptions::builder()
+        .operator_check_strategy(OperatorCheckStrategy::shared_whitelist(Rc::clone(&allowed)))
+        .build();
+    let runner = runner();
+
+    assert_eq!(
+        runner
+            .check("1 + 2", &options)
+            .expect_err("plus is absent from the initial backing set")
+            .error_code(),
+        error_codes::OPERATOR_NOT_ALLOWED
+    );
+
+    allowed.borrow_mut().insert("+".to_string());
+    runner
+        .check("1 + 2", &options)
+        .expect("existing options must observe the added operator");
+
+    allowed.borrow_mut().remove("+");
+    assert_eq!(
+        runner
+            .check("1 + 2", &options)
+            .expect_err("removing the operator must revoke later checks")
+            .error_code(),
+        error_codes::OPERATOR_NOT_ALLOWED
+    );
+}

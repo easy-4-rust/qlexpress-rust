@@ -69,8 +69,12 @@ pub fn assign_data_value_to_field(
         }
         FieldConversionKind::String => quote! {
             if let #qlexpress_path::runtime::value::DataValue::Str(converted) = #value {
-                #field = converted.clone();
-                true
+                if let Some(converted) = converted.to_rust_string() {
+                    #field = converted;
+                    true
+                } else {
+                    false
+                }
             } else {
                 false
             }
@@ -134,7 +138,7 @@ pub fn expr_to_data_value(ty: &syn::Type, val: TokenStream) -> TokenStream {
             }
         }
         FieldConversionKind::String => {
-            quote!(::qlexpress::runtime::value::DataValue::Str((#val).to_string()))
+            quote!(::qlexpress::runtime::value::DataValue::string((#val).to_string()))
         }
         FieldConversionKind::DataValue => quote!(#val),
         FieldConversionKind::Unsupported => {

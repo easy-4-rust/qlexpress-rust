@@ -11,8 +11,9 @@ use crate::runtime::class_ref::ClassRef;
 use crate::runtime::data::index_map::IndexMap;
 use crate::runtime::data::java_array::JavaArray;
 use crate::runtime::data::java_array_list::JavaArrayList;
-use crate::runtime::native_registry::NativeRegistry;
+use crate::runtime::data::java_string::JavaString;
 use crate::runtime::native_object::NativeObject;
+use crate::runtime::native_registry::NativeRegistry;
 use crate::runtime::qlambda::QLambda;
 use crate::runtime::value::Value;
 
@@ -45,8 +46,8 @@ pub enum DataValue {
     BigDec(String),
     /// Java `Character`（单个 UTF-16 code unit，可表示 surrogate）。
     Char(u16),
-    /// Java `String`。
-    Str(String),
+    /// Java `String`；保存原始 UTF-16 code unit，包括未配对代理项。
+    Str(JavaString),
     /// Java `ArrayList` 引用。
     List(Rc<RefCell<JavaArrayList>>),
     /// Java `LinkedHashMap` 引用。
@@ -116,11 +117,9 @@ impl DataValue {
     pub fn runtime_type_name(&self) -> String {
         match self {
             DataValue::Object(object) => object.borrow().native_type_name().to_string(),
-            DataValue::Array(array) => {
-                ClassRef::array_of(array.borrow().component_type().clone())
-                    .java_name()
-                    .to_string()
-            }
+            DataValue::Array(array) => ClassRef::array_of(array.borrow().component_type().clone())
+                .java_name()
+                .to_string(),
             _ => self.data_type_name().to_string(),
         }
     }
@@ -138,9 +137,35 @@ impl DataValue {
     /// 对应 Java: com.alibaba.qlexpress4.runtime.data.DataValue#asStr。
     pub fn as_str(&self) -> Option<&str> {
         match self {
+            DataValue::Str(value) => value.as_str(),
+            _ => None,
+        }
+    }
+
+    /// 读取 Java 字符串值；非字符串返回 `None`。
+    ///
+    /// # 返回值
+    ///
+    /// 返回能够无损访问 UTF-16 code unit 的 Java 字符串引用。
+    pub fn as_java_string(&self) -> Option<&JavaString> {
+        match self {
             DataValue::Str(value) => Some(value),
             _ => None,
         }
+    }
+
+    /// 从 Rust 字符串创建 Java `String` 值。
+    pub fn string(value: impl Into<JavaString>) -> DataValue {
+        DataValue::Str(value.into())
+    }
+
+    /// 从原始 UTF-16 code unit 创建 Java `String` 值。
+    ///
+    /// # 参数
+    ///
+    /// - `units`：需要原样保存的 Java 字符串内容。
+    pub fn string_from_utf16(units: Vec<u16>) -> DataValue {
+        DataValue::Str(JavaString::from_utf16_units(units))
     }
 
     /// 创建 Java `ArrayList` 值。Rust 便捷构造方法。
@@ -157,9 +182,10 @@ impl DataValue {
             .filter(|first| !first.is_null())
             .map(|first| ClassRef::from_name(&first.runtime_type_name()))
             .filter(|first_type| {
-                items.iter().skip(1).all(|item| {
-                    ClassRef::from_name(&item.runtime_type_name()) == *first_type
-                })
+                items
+                    .iter()
+                    .skip(1)
+                    .all(|item| ClassRef::from_name(&item.runtime_type_name()) == *first_type)
             })
             .unwrap_or_else(|| ClassRef::Named("java.lang.Object".to_string()));
         DataValue::array_with_component(items, component_type)
@@ -226,49 +252,57 @@ impl DataValue {
     /// 按 Java `String.valueOf` 规则渲染值。
     /// 对应 Java: com.alibaba.qlexpress4.runtime.data.DataValue#stringValueOf。
     pub fn string_value_of(&self) -> String {
+        self.java_string_value_of().to_string_lossy()
+    }
+
+    /// 按 Java `String.valueOf` 规则生成无损 UTF-16 字符串。
+    ///
+    /// 与 [`Self::string_value_of`] 不同，本方法在字符串连接和集合
+    /// `toString` 中保留未配对代理项。
+    pub fn java_string_value_of(&self) -> JavaString {
         match self {
-            DataValue::Null => "null".to_string(),
-            DataValue::Bool(value) => value.to_string(),
-            DataValue::Byte(value) => value.to_string(),
-            DataValue::Short(value) => value.to_string(),
-            DataValue::Int(value) => value.to_string(),
-            DataValue::Long(value) => value.to_string(),
+            DataValue::Null => "null".into(),
+            DataValue::Bool(value) => value.to_string().into(),
+            DataValue::Byte(value) => value.to_string().into(),
+            DataValue::Short(value) => value.to_string().into(),
+            DataValue::Int(value) => value.to_string().into(),
+            DataValue::Long(value) => value.to_string().into(),
             DataValue::Float(value) => {
-                crate::runtime::data::convert::java_f32_to_string(*value)
+                crate::runtime::data::convert::java_f32_to_string(*value).into()
             }
             DataValue::Double(value) => {
-                crate::runtime::data::convert::java_f64_to_string(*value)
+                crate::runtime::data::convert::java_f64_to_string(*value).into()
             }
-            DataValue::BigInt(value) => value.to_string(),
+            DataValue::BigInt(value) => value.to_string().into(),
             DataValue::BigDec(value) => {
-                crate::runtime::data::convert::java_big_decimal_to_string(value)
+                crate::runtime::data::convert::java_big_decimal_to_string(value).into()
             }
-            DataValue::Char(value) => String::from_utf16_lossy(&[*value]),
+            DataValue::Char(value) => JavaString::from_utf16_units(vec![*value]),
             DataValue::Str(value) => value.clone(),
-            DataValue::List(value) => format!(
-                "[{}]",
-                value
-                    .borrow()
-                    .iter()
-                    .map(DataValue::string_value_of)
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            ),
-            DataValue::Map(value) => format!(
-                "{{{}}}",
-                value
-                    .borrow()
-                    .entries()
-                    .iter()
-                    .map(|(key, value)| format!(
-                        "{}={}",
-                        key.string_value_of(),
-                        value.string_value_of()
-                    ))
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            ),
-            other => format!("{other:?}"),
+            DataValue::List(value) => {
+                let mut result = JavaString::from("[");
+                for (index, item) in value.borrow().iter().enumerate() {
+                    if index > 0 {
+                        result = result.concat(&JavaString::from(", "));
+                    }
+                    result = result.concat(&item.java_string_value_of());
+                }
+                result.concat(&JavaString::from("]"))
+            }
+            DataValue::Map(value) => {
+                let mut result = JavaString::from("{");
+                for (index, (key, value)) in value.borrow().entries().iter().enumerate() {
+                    if index > 0 {
+                        result = result.concat(&JavaString::from(", "));
+                    }
+                    result = result
+                        .concat(&key.java_string_value_of())
+                        .concat(&JavaString::from("="))
+                        .concat(&value.java_string_value_of());
+                }
+                result.concat(&JavaString::from("}"))
+            }
+            other => format!("{other:?}").into(),
         }
     }
 }
@@ -376,10 +410,7 @@ mod tests {
         );
         assert_eq!(DataValue::Null, DataValue::Null);
         assert_ne!(DataValue::Null, DataValue::Int(0));
-        assert_eq!(
-            DataValue::Char('a' as u16),
-            DataValue::Char('a' as u16)
-        );
+        assert_eq!(DataValue::Char('a' as u16), DataValue::Char('a' as u16));
         assert_ne!(DataValue::Char('a' as u16), DataValue::Str("a".into()));
     }
 
@@ -387,17 +418,17 @@ mod tests {
     fn string_value_of_collections_matches_java_to_string_shape() {
         let list = DataValue::list(vec![
             DataValue::Int(1),
-            DataValue::Str("two".to_string()),
+            DataValue::string("two"),
             DataValue::Null,
         ]);
         assert_eq!(list.string_value_of(), "[1, two, null]");
 
         let map = DataValue::map(IndexMap::from_entries(vec![
             (
-                DataValue::Str("name".to_string()),
-                DataValue::Str("QlExpress Rust".to_string()),
+                DataValue::string("name"),
+                DataValue::string("QlExpress Rust"),
             ),
-            (DataValue::Str("items".to_string()), list),
+            (DataValue::string("items"), list),
         ]));
         assert_eq!(
             map.string_value_of(),

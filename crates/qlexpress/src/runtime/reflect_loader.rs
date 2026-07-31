@@ -80,16 +80,15 @@ impl ReflectLoader {
         let declaring_class = extension_function.declaring_class();
         let parameter_types = extension_function.parameter_types();
         let var_args = extension_function.is_var_args();
-        self.registry
-            .register_extension_candidate(
-                declaring_class,
-                method_name,
-                NativeMethodCandidate::new(
-                    parameter_types,
-                    var_args,
-                    as_native_method(extension_function),
-                ),
-            );
+        self.registry.register_extension_candidate(
+            declaring_class,
+            method_name,
+            NativeMethodCandidate::new(
+                parameter_types,
+                var_args,
+                as_native_method(extension_function),
+            ),
+        );
     }
 
     /// 是否允许宿主注册非公开成员。对应 Java 字段 `allowPrivateAccess`。
@@ -157,7 +156,7 @@ mod tests {
     fn delegates_builtin_member_loading() {
         let loader = ReflectLoader::new(QLSecurityStrategy::open(), false);
         assert!(loader
-            .load_method(&DataValue::Str("abc".to_string()), "length")
+            .load_method(&DataValue::string("abc"), "length")
             .is_some());
         assert!(!loader.allow_private_access());
     }

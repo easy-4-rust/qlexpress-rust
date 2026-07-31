@@ -88,9 +88,10 @@ fn inferred_variable() {
 
 #[test]
 fn multiple_declarators() {
-    // Java semantics: `int a, b = 10` declares `a` (default 0) and `b = 10`.
-    // The result of `a + b` is therefore `0 + 10 = 10`, not 20.
-    assert_eq!(expect_ok("int a, b = 10; a + b"), DataValue::Long(10));
+    // Java QLExpress4 keeps an uninitialized declared variable as null, so
+    // evaluating `a + b` must fail instead of inventing Java language's
+    // primitive-field default value 0.
+    expect_err_code("int a, b = 10; a + b", "INVALID_BINARY_OPERAND");
 }
 
 // ---------- Control flow ----------
@@ -210,7 +211,7 @@ fn add_varargs_function_collects_args() {
                 .map(|p| p.string_value_of())
                 .collect::<Vec<_>>()
                 .join("-");
-            Ok(DataValue::Str(joined))
+            Ok(DataValue::string(joined))
         },
     );
     let opts = QLOptions::builder().build();
@@ -218,7 +219,7 @@ fn add_varargs_function_collects_args() {
         .execute("join('a','b','c')", HashMap::new(), &opts)
         .unwrap()
         .into_result();
-    assert_eq!(result, DataValue::Str("a-b-c".to_string()));
+    assert_eq!(result, DataValue::Str("a-b-c".into()));
 }
 
 // ---------- Custom operator ----------
@@ -227,7 +228,7 @@ fn add_varargs_function_collects_args() {
 fn add_operator_bifunction() {
     let mut runner = Express4Runner::new();
     runner.add_operator_bi("join", |left: DataValue, right: DataValue| {
-        DataValue::Str(format!(
+        DataValue::string(format!(
             "{}|{}",
             left.string_value_of(),
             right.string_value_of()
@@ -238,7 +239,7 @@ fn add_operator_bifunction() {
         .execute("'a' join 'b'", HashMap::new(), &opts)
         .unwrap()
         .into_result();
-    assert_eq!(result, DataValue::Str("a|b".to_string()));
+    assert_eq!(result, DataValue::Str("a|b".into()));
 }
 
 // ---------- Security strategy ----------
@@ -341,7 +342,7 @@ fn dollar_interpolation_default() {
         .execute(script, HashMap::new(), &opts)
         .unwrap()
         .into_result();
-    assert_eq!(result, DataValue::Str("a = 3".to_string()));
+    assert_eq!(result, DataValue::Str("a = 3".into()));
 }
 
 // ---------- Lambda ----------

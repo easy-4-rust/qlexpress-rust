@@ -63,7 +63,7 @@ fn ql_alias_function_register() {
             qlexpress::exception::QLException,
         > {
             let s = params.get_value(0).string_value_of();
-            Ok(qlexpress::runtime::value::DataValue::Str(format!(
+            Ok(qlexpress::runtime::value::DataValue::string(format!(
                 "{s}!"
             )))
         },
@@ -74,7 +74,7 @@ fn ql_alias_function_register() {
         .into_result();
     assert_eq!(
         result,
-        qlexpress::runtime::value::DataValue::Str("hi!".to_string())
+        qlexpress::runtime::value::DataValue::Str("hi!".into())
     );
 }
 

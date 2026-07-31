@@ -26,6 +26,8 @@ use std::rc::Rc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Instant;
 
+use crate::annotation::ql_function_method::QLFunctionMethod;
+use crate::annotation::ql_function_provider::QLFunctionProvider;
 use crate::aparser::check_visitor::CheckVisitor;
 use crate::aparser::compile_cache::QCompileCache;
 use crate::aparser::compile_cache_store::CompileCacheStore;
@@ -50,8 +52,6 @@ use crate::api::parsecache::serializable_parse_cache_importer::{
 };
 use crate::api::parsecache::{LoadedCompileCache, LoadedParseCache, SerializableParseCache};
 use crate::api::ql_functional_varargs::QLFunctionalVarargs;
-use crate::annotation::ql_function_method::QLFunctionMethod;
-use crate::annotation::ql_function_provider::QLFunctionProvider;
 use crate::check_options::CheckOptions;
 use crate::exception::ql_syntax_exception::QLSyntaxException;
 use crate::exception::QLException;
@@ -65,9 +65,7 @@ use crate::runtime::context::{
 };
 use crate::runtime::data::index_map::IndexMap;
 use crate::runtime::delegate_qcontext::DelegateQContext;
-use crate::runtime::function::{
-    CustomFunction, ExtensionFunction, QMethodFunction,
-};
+use crate::runtime::function::{CustomFunction, ExtensionFunction, QMethodFunction};
 use crate::runtime::i_method::IMethod;
 use crate::runtime::instruction::Instruction;
 use crate::runtime::jvm_i_method::NativeIMethod;
@@ -78,10 +76,9 @@ use crate::runtime::operator::operator_manager::OperatorManager;
 use crate::runtime::parameters::Parameters;
 use crate::runtime::q_runtime::QRuntime;
 use crate::runtime::qcontext::QContext;
-use crate::runtime::qlambda_trace::QLambdaTrace;
 use crate::runtime::qlambda_definition::QLambdaDefinition;
 use crate::runtime::qlambda_definition_inner::QLambdaDefinitionInner;
-use crate::utils::ql_function_util::QLFunctionUtil;
+use crate::runtime::qlambda_trace::QLambdaTrace;
 use crate::runtime::qvm_global_scope::QvmGlobalScope;
 use crate::runtime::qvm_runtime::{current_time_millis, QvmRuntime};
 use crate::runtime::reflect_loader::ReflectLoader;
@@ -90,6 +87,7 @@ use crate::runtime::trace::{ExpressionTrace, QTraces, TracePointTree};
 use crate::runtime::value::{DataValue, QValue};
 use crate::security::ql_security_strategy::QLSecurityStrategy;
 use crate::security::{Capability, SandboxProfile};
+use crate::utils::ql_function_util::QLFunctionUtil;
 
 /// runner 身份令牌分配器(Java 以 `this` 引用相等判断 `LoadedParseCache`
 /// 绑定关系;Rust 为每个 runner 分配唯一序号,见 [`LoadedParseCache`])。
@@ -854,12 +852,7 @@ impl Express4Runner {
     ) -> Result<QLambdaTrace, QLSyntaxException> {
         if ql_options.is_cache() {
             let compile_cache = self.parse_to_definition_with_cache(script)?;
-            Ok(self.compile_cache_to_lambda(
-                compile_cache.as_ref(),
-                context,
-                ql_options,
-                true,
-            ))
+            Ok(self.compile_cache_to_lambda(compile_cache.as_ref(), context, ql_options, true))
         } else {
             let compile_cache = self.parse_definition(script)?;
             Ok(self.compile_cache_to_lambda(&compile_cache, context, ql_options, true))
@@ -958,10 +951,9 @@ impl Express4Runner {
     ) -> QLambdaTrace {
         if self.init_options.is_debug() {
             (self.init_options.debug_info_consumer())("\nInstructions:".to_string());
-            compile_cache.q_lambda_definition().println(
-                0,
-                &mut |line| (self.init_options.debug_info_consumer())(line),
-            );
+            compile_cache.q_lambda_definition().println(0, &mut |line| {
+                (self.init_options.debug_info_consumer())(line)
+            });
         }
 
         let traces = if self.init_options.is_trace_expression()
@@ -984,8 +976,7 @@ impl Express4Runner {
             ql_options.shared_attachments(),
             ql_options.is_pollute_user_context(),
         );
-        let mut root_context =
-            DelegateQContext::new(runtime, QScope::global(global_scope));
+        let mut root_context = DelegateQContext::new(runtime, QScope::global(global_scope));
         let q_lambda = Rc::clone(compile_cache.q_lambda_definition()).to_lambda(
             &mut root_context,
             ql_options,
@@ -1225,10 +1216,7 @@ impl Express4Runner {
 
     /// Java 私有方法 `addFunctionByAnnotation(Class<?>, Object)` 的 Rust
     /// 显式元数据适配。
-    fn add_function_by_annotation(
-        &self,
-        methods: Vec<QLFunctionMethod>,
-    ) -> BatchAddFunctionResult {
+    fn add_function_by_annotation(&self, methods: Vec<QLFunctionMethod>) -> BatchAddFunctionResult {
         let mut result = BatchAddFunctionResult::new();
         for method in methods {
             if !method.is_public() {
@@ -1239,8 +1227,8 @@ impl Express4Runner {
             if !QLFunctionUtil::contains_ql_function_for_method(function_names) {
                 continue;
             }
-            for function_name in QLFunctionUtil::get_ql_function_value(function_names)
-                .unwrap_or_default()
+            for function_name in
+                QLFunctionUtil::get_ql_function_value(function_names).unwrap_or_default()
             {
                 if self.add_function_shared(function_name, method.function()) {
                     result.add_succ(method.method_name());
@@ -1768,15 +1756,30 @@ impl Express4Runner {
                 }
                 Ok(())
             }
+            QLSecurityStrategy::SharedWhiteList(members) => {
+                for member in members.borrow().iter() {
+                    let capability = Capability::NativeMember {
+                        type_name: member.type_name.clone(),
+                        member_name: member.member_name.clone(),
+                    };
+                    if !sandbox_profile.capability_policy.is_allowed(&capability) {
+                        return Err(crate::runtime::execution_budget::budget_error(
+                            crate::exception::QLExceptionKind::Runtime,
+                            "SANDBOX_CAPABILITY_DENIED",
+                            format!("native member is not allowed: {capability:?}"),
+                        ));
+                    }
+                }
+                Ok(())
+            }
             QLSecurityStrategy::Open
             | QLSecurityStrategy::BlackList(_)
-            | QLSecurityStrategy::Custom(_) => {
-                Err(crate::runtime::execution_budget::budget_error(
-                    crate::exception::QLExceptionKind::Runtime,
-                    "SANDBOX_NATIVE_POLICY_UNSAFE",
-                    "execute_checked requires Isolation or an explicit enumerable native WhiteList",
-                ))
-            }
+            | QLSecurityStrategy::SharedBlackList(_)
+            | QLSecurityStrategy::Custom(_) => Err(crate::runtime::execution_budget::budget_error(
+                crate::exception::QLExceptionKind::Runtime,
+                "SANDBOX_NATIVE_POLICY_UNSAFE",
+                "execute_checked requires Isolation or an explicit enumerable native WhiteList",
+            )),
         }
     }
 
@@ -1906,7 +1909,7 @@ impl Express4Runner {
 fn map_to_index_map(context: HashMap<String, DataValue>) -> Rc<RefCell<IndexMap>> {
     let entries = context
         .into_iter()
-        .map(|(key, value)| (DataValue::Str(key), value))
+        .map(|(key, value)| (DataValue::string(key), value))
         .collect();
     Rc::new(RefCell::new(IndexMap::from_entries(entries)))
 }

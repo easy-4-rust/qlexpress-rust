@@ -67,7 +67,7 @@ fn json_to_data(value: Value) -> Result<DataValue, String> {
                 Err("unsupported JSON number".to_string())
             }
         }
-        Value::String(value) => Ok(DataValue::Str(value)),
+        Value::String(value) => Ok(DataValue::string(value)),
         Value::Array(values) => values
             .into_iter()
             .map(json_to_data)
@@ -76,7 +76,9 @@ fn json_to_data(value: Value) -> Result<DataValue, String> {
         Value::Object(values) => {
             let entries = values
                 .into_iter()
-                .map(|(key, value)| json_to_data(value).map(|value| (DataValue::Str(key), value)))
+                .map(|(key, value)| {
+                    json_to_data(value).map(|value| (DataValue::string(key), value))
+                })
                 .collect::<Result<Vec<_>, _>>()?;
             Ok(DataValue::map(
                 qlexpress::runtime::data::index_map::IndexMap::from_entries(entries),
@@ -101,9 +103,21 @@ fn data_to_json(value: &DataValue) -> Result<Value, String> {
             .ok_or_else(|| "non-finite double output".to_string()),
         DataValue::BigInt(value) => Ok(Value::String(value.to_string())),
         DataValue::BigDec(value) => Ok(Value::String(value.clone())),
-        DataValue::Char(value) => Ok(Value::String(value.to_string())),
-        DataValue::Str(value) => Ok(Value::String(value.clone())),
-        DataValue::List(values) | DataValue::Array(values) => values
+        DataValue::Char(value) => char::from_u32(u32::from(*value))
+            .map(|value| Value::String(value.to_string()))
+            .ok_or_else(|| {
+                "worker JSON output cannot represent an unpaired UTF-16 surrogate".to_string()
+            }),
+        DataValue::Str(value) => value.to_rust_string().map(Value::String).ok_or_else(|| {
+            "worker JSON output cannot represent an unpaired UTF-16 surrogate".to_string()
+        }),
+        DataValue::List(values) => values
+            .borrow()
+            .iter()
+            .map(data_to_json)
+            .collect::<Result<Vec<_>, _>>()
+            .map(Value::Array),
+        DataValue::Array(values) => values
             .borrow()
             .iter()
             .map(data_to_json)
@@ -115,7 +129,11 @@ fn data_to_json(value: &DataValue) -> Result<Value, String> {
                 let DataValue::Str(key) = key else {
                     return Err("worker JSON output requires string map keys".to_string());
                 };
-                output.insert(key.clone(), data_to_json(value)?);
+                let key = key.to_rust_string().ok_or_else(|| {
+                    "worker JSON object key cannot represent an unpaired UTF-16 surrogate"
+                        .to_string()
+                })?;
+                output.insert(key, data_to_json(value)?);
             }
             Ok(Value::Object(output))
         }

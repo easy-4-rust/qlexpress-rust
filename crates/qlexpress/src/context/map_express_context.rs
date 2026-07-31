@@ -42,11 +42,9 @@ impl ExpressContext for MapExpressContext {
         _attachments: &Attachments,
         variable_name: &str,
     ) -> Result<Option<QValue>, QLException> {
-        let item: Rc<RefCell<dyn crate::runtime::left_value::LeftValue>> =
-            Rc::new(RefCell::new(MapItemValue::new(
-                Rc::clone(&self.source),
-                DataValue::Str(variable_name.to_string()),
-            )));
+        let item: Rc<RefCell<dyn crate::runtime::left_value::LeftValue>> = Rc::new(RefCell::new(
+            MapItemValue::new(Rc::clone(&self.source), DataValue::string(variable_name)),
+        ));
         Ok(Some(QValue::Left(item)))
     }
 }

@@ -68,12 +68,12 @@ struct SensitiveHost {
 impl NativeObject for SensitiveHost {
     fn get_field(&self, _name: &str) -> Option<DataValue> {
         self.invocations.set(self.invocations.get() + 1);
-        Some(DataValue::Str("secret".to_string()))
+        Some(DataValue::string("secret"))
     }
 
     fn call_method(&mut self, _name: &str, _args: &[DataValue]) -> Result<DataValue, QLException> {
         self.invocations.set(self.invocations.get() + 1);
-        Ok(DataValue::Str("executed".to_string()))
+        Ok(DataValue::string("executed"))
     }
 
     fn native_type_name(&self) -> &str {

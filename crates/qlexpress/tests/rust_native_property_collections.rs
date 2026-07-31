@@ -45,7 +45,7 @@ fn run_str(script: &str) -> String {
         .expect("ok")
         .into_result();
     match r {
-        DataValue::Str(s) => s,
+        DataValue::Str(s) => s.to_string_lossy(),
         other => panic!("expected str, got {other:?}"),
     }
 }

@@ -6,7 +6,6 @@ use crate::exception::error_codes;
 use crate::exception::ql_exception::QLExceptionKind;
 use crate::exception::QLException;
 use crate::member::method_handler::Access;
-use crate::runtime::class_ref::ClassRef;
 use crate::runtime::data::convert::parameters_type_convertor::ParametersTypeConvertor;
 use crate::runtime::function::custom_function::CustomFunction;
 use crate::runtime::i_method::IMethod;

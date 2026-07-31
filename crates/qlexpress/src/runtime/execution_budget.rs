@@ -154,7 +154,20 @@ impl ExecutionBudget {
         visited: &mut HashSet<usize>,
     ) -> Result<(), QLException> {
         match value {
-            DataValue::Str(value) | DataValue::BigDec(value) => {
+            DataValue::Str(value) => {
+                let bytes = value.len().saturating_mul(std::mem::size_of::<u16>());
+                if bytes > self.limits.max_string_bytes {
+                    return Err(budget_error(
+                        QLExceptionKind::Runtime,
+                        "SANDBOX_STRING_BYTES_EXCEEDED",
+                        format!(
+                            "sandbox string bytes exceeded: bytes {}, limit {}",
+                            bytes, self.limits.max_string_bytes
+                        ),
+                    ));
+                }
+            }
+            DataValue::BigDec(value) => {
                 if value.len() > self.limits.max_string_bytes {
                     return Err(budget_error(
                         QLExceptionKind::Runtime,
@@ -303,7 +316,8 @@ fn estimated_size(
         DataValue::Byte(_) | DataValue::Short(_) | DataValue::Int(_) => 16,
         DataValue::Long(_) | DataValue::Float(_) | DataValue::Double(_) => 32,
         DataValue::BigInt(value) => value.to_string().len(),
-        DataValue::BigDec(value) | DataValue::Str(value) => value.len(),
+        DataValue::BigDec(value) => value.len(),
+        DataValue::Str(value) => value.len().saturating_mul(std::mem::size_of::<u16>()),
         DataValue::Char(_) => 2,
         DataValue::Lambda(_) | DataValue::Object(_) => 64,
         DataValue::List(values) => {

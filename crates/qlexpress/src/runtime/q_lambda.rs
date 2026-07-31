@@ -174,7 +174,7 @@ mod tests {
     /// 无参数调用；前者返回值，后者只丢弃返回值。
     #[test]
     fn supplier_and_runnable_defaults_preserve_java_call_contract() {
-        let lambda = method_lambda("isEmpty", DataValue::Str(String::new()));
+        let lambda = method_lambda("isEmpty", DataValue::string(String::new()));
 
         assert_eq!(lambda.get().expect("supplier call"), DataValue::Bool(true));
         lambda.run().expect("runnable call");
@@ -184,8 +184,8 @@ mod tests {
     /// `Function.apply` 返回同一次单参数调用的结果。
     #[test]
     fn consumer_and_function_defaults_preserve_java_result_contract() {
-        let lambda = method_lambda("equals", DataValue::Str("same".to_string()));
-        let argument = DataValue::Str("same".to_string());
+        let lambda = method_lambda("equals", DataValue::string("same"));
+        let argument = DataValue::string("same");
 
         lambda.accept(&argument).expect("consumer call");
         assert_eq!(
@@ -197,22 +197,19 @@ mod tests {
     /// `SOURCE_PARITY`：Java `Predicate.test` 只接受 `Boolean` 返回值。
     #[test]
     fn predicate_default_returns_boolean_and_rejects_other_types() {
-        let predicate = method_lambda("equals", DataValue::Str("same".to_string()));
+        let predicate = method_lambda("equals", DataValue::string("same"));
         assert!(predicate
-            .test(&DataValue::Str("same".to_string()))
+            .test(&DataValue::string("same"))
             .expect("boolean predicate"));
         assert!(!predicate
-            .test(&DataValue::Str("other".to_string()))
+            .test(&DataValue::string("other"))
             .expect("false predicate"));
 
-        let non_boolean = method_lambda("substring", DataValue::Str("value".to_string()));
+        let non_boolean = method_lambda("substring", DataValue::string("value"));
         let error = non_boolean
             .test(&DataValue::Int(1))
             .expect_err("predicate result must be boolean");
-        assert_eq!(
-            error.error_code(),
-            error_codes::INCOMPATIBLE_TYPE_CAST
-        );
+        assert_eq!(error.error_code(), error_codes::INCOMPATIBLE_TYPE_CAST);
         assert_eq!(
             error.reason(),
             "incompatible cast from type: java.lang.String to type: java.lang.Boolean"
@@ -223,10 +220,7 @@ mod tests {
     /// 不得把它吞掉或替换为成功的 `null`。
     #[test]
     fn functional_defaults_propagate_lambda_errors() {
-        let lambda = method_lambda(
-            "methodThatDoesNotExist",
-            DataValue::Str("value".to_string()),
-        );
+        let lambda = method_lambda("methodThatDoesNotExist", DataValue::string("value"));
         let error = lambda.get().expect_err("missing method must propagate");
         assert_eq!(error.error_code(), error_codes::INVALID_ARGUMENT);
     }

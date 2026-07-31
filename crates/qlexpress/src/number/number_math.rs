@@ -439,11 +439,7 @@ pub(crate) fn arithmetic_exception(message: impl Into<String>) -> QLException {
 /// Java `new BigDecimal(text)` 对 NaN/Infinity 抛出的
 /// `NumberFormatException`，保留 JDK 17 的 reason 与可识别类型码。
 pub(crate) fn number_format_exception(text: &str) -> QLException {
-    let invalid = text
-        .trim_start_matches('-')
-        .chars()
-        .next()
-        .unwrap_or('N');
+    let invalid = text.trim_start_matches('-').chars().next().unwrap_or('N');
     QLException::for_test(
         QLExceptionKind::Runtime,
         format!(
@@ -465,13 +461,11 @@ pub(crate) fn java_value_string(value: &DataValue) -> String {
         DataValue::Int(v) => v.to_string(),
         DataValue::Long(v) => v.to_string(),
         DataValue::BigInt(v) => v.to_string(),
-        DataValue::BigDec(v) => {
-            crate::runtime::data::convert::java_big_decimal_to_string(v)
-        }
+        DataValue::BigDec(v) => crate::runtime::data::convert::java_big_decimal_to_string(v),
         DataValue::Float(v) => crate::runtime::data::convert::java_f32_to_string(*v),
         DataValue::Double(v) => crate::runtime::data::convert::java_f64_to_string(*v),
         DataValue::Char(v) => String::from_utf16_lossy(&[*v]),
-        DataValue::Str(v) => v.clone(),
+        DataValue::Str(v) => v.to_string_lossy(),
         other => format!("{other:?}"),
     }
 }

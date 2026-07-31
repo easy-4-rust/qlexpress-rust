@@ -58,7 +58,7 @@ impl QLambdaMethod {
             }
             // Java: first argument must be an instance of the class; the
             // method is then resolved on it with the remaining arguments.
-            if !self.registry.is_value_assignable(meta_clz, &params[0]) {
+            if !self.registry.is_value_assignable(&meta_clz, &params[0]) {
                 return Err(self.method_not_found(params));
             }
             let rest = &params[1..];
@@ -78,6 +78,13 @@ impl QLambdaMethod {
             )?;
             Ok(QResult::Return(value.get()))
         } else {
+            if self
+                .registry
+                .resolve_method_for_args(&self.bean, &self.method_name, params)
+                .is_none()
+            {
+                return Err(self.method_not_found(params));
+            }
             let value = find_method_and_invoke(
                 &self.bean,
                 &self.method_name,

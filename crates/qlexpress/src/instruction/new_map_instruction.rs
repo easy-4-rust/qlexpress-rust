@@ -56,7 +56,7 @@ impl QLInstruction for NewMapInstruction {
         let init_items = q_context.pop_n(self.keys.len());
         let mut map = IndexMap::new();
         for (i, key) in self.keys.iter().enumerate() {
-            map.insert(DataValue::Str(key.clone()), init_items.get_value(i));
+            map.insert(DataValue::string(key.clone()), init_items.get_value(i));
         }
         q_context.push(QValue::Data(DataValue::map(map)));
         Ok(QResult::NEXT_INSTRUCTION)

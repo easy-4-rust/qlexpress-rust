@@ -36,7 +36,7 @@ fn run_with(script: &str, context: HashMap<String, DataValue>) -> DataValue {
 #[test]
 fn interpolation_basic() {
     let result = run_with("\"Hello,${a+1}\"", ctx(&[("a", DataValue::Int(1))]));
-    assert_eq!(result, DataValue::Str("Hello,2".to_string()));
+    assert_eq!(result, DataValue::Str("Hello,2".into()));
 }
 
 /// 对应 Java `Express4RunnerTest#interpolationTest` 的
@@ -58,7 +58,7 @@ fn interpolation_disable() {
             .execute("\"Hello,${ a + 1 }\"", context.clone(), &opts())
             .unwrap()
             .into_result(),
-        DataValue::Str("Hello,${ a + 1 }".to_string())
+        DataValue::Str("Hello,${ a + 1 }".into())
     );
     // 字符串内未闭合的 `${` 也原样保留。
     assert_eq!(
@@ -66,7 +66,7 @@ fn interpolation_disable() {
             .execute("\"Hello,${lll\"", context.clone(), &opts())
             .unwrap()
             .into_result(),
-        DataValue::Str("Hello,${lll".to_string())
+        DataValue::Str("Hello,${lll".into())
     );
     // disable 模式下脚本本身含 `\n \b`:Java 端会按转义解析为真换行 + 真退格,
     // Rust 端同样处理。期望写真实字符。
@@ -75,7 +75,7 @@ fn interpolation_disable() {
             .execute(r#""Hello,aaa $ lll\"\n\b""#, context, &opts())
             .unwrap()
             .into_result(),
-        DataValue::Str("Hello,aaa $ lll\"\n\u{8}".to_string())
+        DataValue::Str("Hello,aaa $ lll\"\n\u{8}".into())
     );
 }
 
@@ -86,14 +86,14 @@ fn template_engine() {
     let context = ctx(&[
         ("a", DataValue::Int(1)),
         ("b", DataValue::Int(2)),
-        ("c", DataValue::Str("test".to_string())),
+        ("c", DataValue::Str("test".into())),
     ]);
     assert_eq!(
         runner
             .execute_template("a ${a};b ${b+2}", context.clone(), &opts())
             .unwrap()
             .into_result(),
-        DataValue::Str("a 1;b 4".to_string())
+        DataValue::Str("a 1;b 4".into())
     );
     assert_eq!(
         runner
@@ -104,21 +104,21 @@ fn template_engine() {
             )
             .unwrap()
             .into_result(),
-        DataValue::Str("m xx YYY".to_string())
+        DataValue::Str("m xx YYY".into())
     );
     assert_eq!(
         runner
             .execute_template("m\n ${a}\n c", context.clone(), &opts())
             .unwrap()
             .into_result(),
-        DataValue::Str("m\n 1\n c".to_string())
+        DataValue::Str("m\n 1\n c".into())
     );
     assert_eq!(
         runner
             .execute_template("m \n\"haha\" d\"", context, &opts())
             .unwrap()
             .into_result(),
-        DataValue::Str("m \n\"haha\" d\"".to_string())
+        DataValue::Str("m \n\"haha\" d\"".into())
     );
 }
 

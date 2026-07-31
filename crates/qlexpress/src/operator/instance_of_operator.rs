@@ -7,7 +7,7 @@
 use crate::exception::error_reporter::ErrorReporter;
 use crate::exception::QLException;
 use crate::ql_precedences;
-use crate::runtime::member::{self, ClassRef};
+use crate::runtime::member;
 use crate::runtime::qcontext::QContext;
 use crate::runtime::value::{DataValue, QValue};
 
@@ -89,6 +89,7 @@ impl BinaryOperator for InstanceOfOperator {
 mod tests {
     use super::*;
     use crate::exception::pure_err_reporter::PureErrReporter;
+    use crate::runtime::member::ClassRef;
     use crate::runtime::member::MetaClass;
 
     #[test]

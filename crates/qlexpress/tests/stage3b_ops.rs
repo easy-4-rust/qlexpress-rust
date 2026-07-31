@@ -86,7 +86,7 @@ impl BinaryOperator for MockBin {
             }
             BinKind::Add => {
                 if matches!(l, DataValue::Str(_)) || matches!(r, DataValue::Str(_)) {
-                    DataValue::Str(format!("{}{}", l.string_value_of(), r.string_value_of()))
+                    DataValue::string(format!("{}{}", l.string_value_of(), r.string_value_of()))
                 } else {
                     num_bin(&l, &r, |a, b| a + b)
                 }

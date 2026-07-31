@@ -114,13 +114,13 @@ fn add_function_with_consumer() {
     let runner = Express4Runner::new();
     runner.add_function_unary("double_str", |v: DataValue| -> DataValue {
         let s = v.string_value_of();
-        DataValue::Str(format!("{s}{s}"))
+        DataValue::string(format!("{s}{s}"))
     });
     let r = runner
         .execute("double_str(\"ab\")", HashMap::new(), &opts())
         .expect("ok")
         .into_result();
-    assert_eq!(r, DataValue::Str("abab".to_string()));
+    assert_eq!(r, DataValue::Str("abab".into()));
 }
 
 // Java source: CustomItemsDocTest#addFunctionByVarargsTest
@@ -131,7 +131,7 @@ fn add_varargs_function() {
     runner.add_varargs_function(
         "join",
         |params: &[DataValue]| -> Result<DataValue, qlexpress::exception::QLException> {
-            Ok(DataValue::Str(
+            Ok(DataValue::string(
                 params
                     .iter()
                     .map(DataValue::string_value_of)
@@ -144,7 +144,7 @@ fn add_varargs_function() {
         .execute("join(1,2,3)", HashMap::new(), &opts())
         .expect("ok")
         .into_result();
-    assert_eq!(r, DataValue::Str("1,2,3".to_string()));
+    assert_eq!(r, DataValue::Str("1,2,3".into()));
 }
 
 // ---------- addOperator variants ----------
@@ -155,7 +155,7 @@ fn add_operator_bifunction() {
     // Java addOperatorBiFunction
     let mut runner = Express4Runner::new();
     runner.add_operator_bi("join", |left: DataValue, right: DataValue| {
-        DataValue::Str(format!(
+        DataValue::string(format!(
             "{},{}",
             left.string_value_of(),
             right.string_value_of()
@@ -165,7 +165,7 @@ fn add_operator_bifunction() {
         .execute("1 join 2 join 3", HashMap::new(), &opts())
         .expect("ok")
         .into_result();
-    assert_eq!(r, DataValue::Str("1,2,3".to_string()));
+    assert_eq!(r, DataValue::Str("1,2,3".into()));
 }
 
 // Java source: CustomItemsDocTest#replaceDefaultOperatorTest
@@ -195,7 +195,7 @@ fn add_operator_with_add_precedence() {
     assert!(runner.add_operator_with_precedence(
         "?><",
         Rc::new(|left: &QValue, right: &QValue| {
-            Ok(DataValue::Str(format!(
+            Ok(DataValue::string(format!(
                 "{}{}",
                 left.get().string_value_of(),
                 right.get().string_value_of()
@@ -207,7 +207,7 @@ fn add_operator_with_add_precedence() {
         .execute("1 ?>< 2 * 3", HashMap::new(), &opts())
         .expect("ok")
         .into_result();
-    assert_eq!(result, DataValue::Str("16".to_string()));
+    assert_eq!(result, DataValue::Str("16".into()));
 }
 
 // Java source: CustomItemsDocTest#addOperatorByVarargsTest
@@ -217,7 +217,7 @@ fn add_operator_by_varargs() {
     assert!(runner.add_operator_varargs(
         "join",
         |params: &[DataValue]| -> Result<DataValue, QLException> {
-            Ok(DataValue::Str(format!(
+            Ok(DataValue::string(format!(
                 "{},{}",
                 params[0].string_value_of(),
                 params[1].string_value_of()
@@ -228,7 +228,7 @@ fn add_operator_by_varargs() {
         .execute("1 join 2", HashMap::new(), &opts())
         .expect("ok")
         .into_result();
-    assert_eq!(result, DataValue::Str("1,2".to_string()));
+    assert_eq!(result, DataValue::Str("1,2".into()));
 }
 
 fn sum_values(values: impl IntoIterator<Item = DataValue>) -> f64 {

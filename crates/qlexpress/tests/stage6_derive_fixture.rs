@@ -72,7 +72,7 @@ fn derive_native_object_writes_supported_fields() {
     assert_eq!(object.borrow().get_field("x"), Some(DataValue::Long(42)));
     assert!(!object
         .borrow_mut()
-        .set_field("x", &DataValue::Str("invalid".to_string())));
+        .set_field("x", &DataValue::Str("invalid".into())));
     assert!(!object.borrow_mut().set_field("missing", &DataValue::Int(1)));
 }
 
@@ -179,7 +179,7 @@ fn classified_object_literal_constructs_and_populates_native_object() {
     let object = result.as_object_ref().expect("native object result");
     assert_eq!(
         object.borrow().get_field("name"),
-        Some(DataValue::Str("alice".to_string()))
+        Some(DataValue::Str("alice".into()))
     );
     assert_eq!(object.borrow().get_field("score"), Some(DataValue::Long(7)));
 }
@@ -249,10 +249,7 @@ fn derive_converts_mixed_field_values() {
     assert_eq!(native.get_field("n"), Some(DataValue::Long(5)));
     assert_eq!(native.get_field("f"), Some(DataValue::Double(1.5)));
     assert_eq!(native.get_field("b"), Some(DataValue::Bool(true)));
-    assert_eq!(
-        native.get_field("s"),
-        Some(DataValue::Str("hi".to_string()))
-    );
+    assert_eq!(native.get_field("s"), Some(DataValue::Str("hi".into())));
 }
 
 // ---------------- Fixture 6: round-trip execute via runner ----------------

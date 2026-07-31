@@ -29,13 +29,13 @@ fn ctx(pairs: &[(&str, DataValue)]) -> HashMap<String, DataValue> {
 fn add_macro_and_replace() {
     let runner = Express4Runner::new();
     runner.add_macro("rename", "name='haha-'+name").unwrap();
-    let context = ctx(&[("name", DataValue::Str("wuli".to_string()))]);
+    let context = ctx(&[("name", DataValue::Str("wuli".into()))]);
     assert_eq!(
         runner
             .execute("rename", context.clone(), &opts())
             .unwrap()
             .into_result(),
-        DataValue::Str("haha-wuli".to_string())
+        DataValue::Str("haha-wuli".into())
     );
     // 替换宏定义
     runner
@@ -46,7 +46,7 @@ fn add_macro_and_replace() {
             .execute("rename", context, &opts())
             .unwrap()
             .into_result(),
-        DataValue::Str("huhu-wuli".to_string())
+        DataValue::Str("huhu-wuli".into())
     );
 }
 
@@ -117,7 +117,7 @@ fn at_function_name() {
          params: &qlexpress::runtime::parameters::Parameters|
          -> Result<_, _> {
             match params.get_value(0) {
-                DataValue::Str(s) => Ok(DataValue::Str(format!("{s},{s}"))),
+                DataValue::Str(s) => Ok(DataValue::string(format!("{s},{s}"))),
                 other => Ok(other),
             }
         },
@@ -127,6 +127,6 @@ fn at_function_name() {
             .execute("@('a')", HashMap::new(), &opts())
             .unwrap()
             .into_result(),
-        DataValue::Str("a,a".to_string())
+        DataValue::Str("a,a".into())
     );
 }

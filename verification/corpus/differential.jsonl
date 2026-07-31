@@ -47,4 +47,10 @@
 {"id":"spread-list","script":"[1, ...[2,3], 4]"}
 {"id":"nested-map-list","script":"{'items':[{'id':1},{'id':2}],'ok':true}"}
 {"id":"unicode","script":"'你好' + '世界'"}
+{"id":"utf16-length","script":"'😀'.length()"}
+{"id":"utf16-high-surrogate","script":"'😀'.substring(0,1)"}
+{"id":"utf16-low-surrogate","script":"'😀'.substring(1,2)"}
+{"id":"utf16-substring-char-at","script":"'😀'.substring(0,1).charAt(0)"}
+{"id":"utf16-surrogate-rejoin","script":"'😀'.substring(0,1) + '😀'.substring(1,2)"}
+{"id":"utf16-surrogate-map-key","script":"m={}; k='😀'.substring(0,1); m.put(k,7); m.get(k)"}
 {"id":"cache-trace","script":"x = 4; x * x","options":{"cache":true,"trace_expression":true}}

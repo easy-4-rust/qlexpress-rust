@@ -49,10 +49,7 @@ fn build_main_definition(manager: &OperatorManager) -> Rc<dyn QLambdaDefinition>
     Rc::new(QLambdaDefinitionInner::new(
         "main",
         instructions,
-        vec![Param::new(
-            "a",
-            Some(ClassRef::Primitive(TargetType::Int)),
-        )],
+        vec![Param::new("a", Some(ClassRef::Primitive(TargetType::Int)))],
         2,
     ))
 }
@@ -79,7 +76,9 @@ fn export_json_import_round_trip() {
     assert_eq!(main.params.as_ref().unwrap()[0].name.as_deref(), Some("a"));
     assert_eq!(
         main.params.as_ref().unwrap()[0].class_name.as_deref(),
-        Some("java.lang.Integer")
+        // Java `int.class.getName()` returns the primitive name, not the
+        // boxed `Integer` class name.
+        Some("int")
     );
     let opcodes: Vec<&str> = main
         .instructions
@@ -153,7 +152,7 @@ fn constant_round_trip_all_types() {
     let cases: Vec<(DataValue, &str)> = vec![
         (DataValue::Null, "NULL"),
         (DataValue::Bool(true), "BOOLEAN"),
-        (DataValue::Str("hello".to_string()), "STRING"),
+        (DataValue::Str("hello".into()), "STRING"),
         (DataValue::Char('x' as u16), "CHAR"),
         (DataValue::Int(-7), "INT"),
         (DataValue::Long(9_000_000_000), "LONG"),

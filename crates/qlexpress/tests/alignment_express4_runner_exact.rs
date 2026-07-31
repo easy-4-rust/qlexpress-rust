@@ -119,11 +119,7 @@ fn java_parse_to_lambda_script_overload() {
 fn existing_lambda_observes_later_runner_function_registration() {
     let runner = Express4Runner::new();
     let lambda = runner
-        .parse_to_lambda(
-            "lateBound()",
-            Rc::new(EmptyContext),
-            &QLOptions::default(),
-        )
+        .parse_to_lambda("lateBound()", Rc::new(EmptyContext), &QLOptions::default())
         .expect("unknown runtime function names compile to dynamic lookup");
 
     assert!(runner.add_function(
@@ -157,8 +153,7 @@ fn existing_lambda_observes_later_attachment_map_mutation() {
                 .unwrap_or(DataValue::Null))
         },
     ));
-    let shared_attachments: SharedAttachments =
-        Rc::new(std::cell::RefCell::new(HashMap::new()));
+    let shared_attachments: SharedAttachments = Rc::new(std::cell::RefCell::new(HashMap::new()));
     let options = QLOptions::builder()
         .shared_attachments(Rc::clone(&shared_attachments))
         .build();
@@ -176,7 +171,7 @@ fn existing_lambda_observes_later_attachment_map_mutation() {
     shared_attachments.borrow_mut().insert(
         "box".to_string(),
         DataValue::Map(Rc::new(std::cell::RefCell::new(IndexMap::from_entries(
-            vec![(DataValue::Str("value".to_string()), DataValue::Int(2))],
+            vec![(DataValue::Str("value".into()), DataValue::Int(2))],
         )))),
     );
 
@@ -199,11 +194,10 @@ fn custom_function_can_mutate_live_scope_function_table() {
     assert!(runner.add_function(
         "install",
         |context: &mut dyn QContext, _parameters: &Parameters| {
-            let late_function: Rc<dyn CustomFunction> = Rc::new(
-                |_context: &mut dyn QContext, _parameters: &Parameters| {
+            let late_function: Rc<dyn CustomFunction> =
+                Rc::new(|_context: &mut dyn QContext, _parameters: &Parameters| {
                     Ok(DataValue::Int(42))
-                },
-            );
+                });
             let function_table = context.function_table();
             function_table
                 .borrow_mut()
@@ -213,11 +207,7 @@ fn custom_function_can_mutate_live_scope_function_table() {
     ));
 
     let result = runner
-        .execute(
-            "install(); late()",
-            HashMap::new(),
-            &QLOptions::default(),
-        )
+        .execute("install(); late()", HashMap::new(), &QLOptions::default())
         .expect("newly installed function must be visible in the same execution");
     assert_integer(result.result(), 42);
 }
@@ -231,11 +221,7 @@ fn java_parse_to_lambda_cache_overloads_and_runner_binding() {
     let loaded = owner.import_parse_cache(&serialized).expect("load cache");
 
     let loaded_lambda = owner
-        .parse_loaded_cache_to_lambda(
-            &loaded,
-            Rc::new(EmptyContext),
-            &QLOptions::default(),
-        )
+        .parse_loaded_cache_to_lambda(&loaded, Rc::new(EmptyContext), &QLOptions::default())
         .expect("materialize loaded cache");
     assert_integer(
         &loaded_lambda
@@ -264,10 +250,10 @@ fn java_parse_to_lambda_cache_overloads_and_runner_binding() {
 
     let other_runner = Express4Runner::new();
     let error = match other_runner.parse_loaded_cache_to_lambda(
-            &loaded,
-            Rc::new(EmptyContext),
-            &QLOptions::default(),
-        ) {
+        &loaded,
+        Rc::new(EmptyContext),
+        &QLOptions::default(),
+    ) {
         Ok(_) => panic!("cache must stay bound to its importing runner"),
         Err(error) => error,
     };
@@ -452,8 +438,8 @@ fn java_map_set_get_test() {
         panic!("new HashMap must produce a map");
     };
     assert_eq!(
-        map.borrow().get(&DataValue::Str("aaa".to_string())),
-        Some(&DataValue::Str("bbb".to_string()))
+        map.borrow().get(&DataValue::Str("aaa".into())),
+        Some(&DataValue::Str("bbb".into()))
     );
 }
 
@@ -523,7 +509,7 @@ fn java_add_function_of_service_method_overload_test() {
         ClassRef::Named("OverloadService".to_string()),
         vec![ClassRef::Named("java.lang.String".to_string())],
         Rc::new(|_object, arguments| match arguments {
-            [DataValue::Str(value)] => Ok(DataValue::Str(format!("S:{value}"))),
+            [DataValue::Str(value)] => Ok(DataValue::string(format!("S:{value}"))),
             _ => unreachable!("fmtStr receives one string"),
         }),
     );
@@ -533,7 +519,7 @@ fn java_add_function_of_service_method_overload_test() {
             .execute("fmtStr('x')", HashMap::new(), &QLOptions::default())
             .expect("string overload")
             .result(),
-        &DataValue::Str("S:x".to_string())
+        &DataValue::Str("S:x".into())
     );
 
     let int_method = NativeIMethod::from_native(
@@ -545,7 +531,7 @@ fn java_add_function_of_service_method_overload_test() {
         ],
         Rc::new(|_object, arguments| match arguments {
             [DataValue::Null, DataValue::Int(right)] => {
-                Ok(DataValue::Str(format!("I:null,{right}")))
+                Ok(DataValue::string(format!("I:null,{right}")))
             }
             _ => unreachable!("fmtInt receives nullable Integer and int"),
         }),
@@ -556,7 +542,7 @@ fn java_add_function_of_service_method_overload_test() {
             .execute("fmtInt(null,2)", HashMap::new(), &QLOptions::default())
             .expect("integer overload")
             .result(),
-        &DataValue::Str("I:null,2".to_string())
+        &DataValue::Str("I:null,2".into())
     );
 }
 
@@ -578,7 +564,7 @@ impl ExpressContext for AttachmentPathContext {
             return Ok(None);
         };
         let value = attachments.get(root).and_then(|value| match value {
-            DataValue::Map(map) => map.borrow().get(&DataValue::Str(leaf.to_string())).cloned(),
+            DataValue::Map(map) => map.borrow().get(&DataValue::Str(leaf.into())).cloned(),
             _ => None,
         });
         Ok(value.map(QValue::Data))
@@ -590,7 +576,7 @@ impl ExpressContext for AttachmentPathContext {
 fn java_custom_express_key_value() {
     fn nested(key: &str, value: i32) -> DataValue {
         DataValue::Map(Rc::new(std::cell::RefCell::new(IndexMap::from_entries(
-            vec![(DataValue::Str(key.to_string()), DataValue::Int(value))],
+            vec![(DataValue::Str(key.into()), DataValue::Int(value))],
         ))))
     }
     let attachments = HashMap::from([
@@ -619,7 +605,7 @@ fn java_custom_complex_function_doc_test() {
                 .get("tenant")
                 .map(DataValue::string_value_of)
                 .unwrap_or_default();
-            Ok(DataValue::Str(format!("hello,{tenant}")))
+            Ok(DataValue::string(format!("hello,{tenant}")))
         }
     ));
     for tenant in ["jack", "lucy"] {
@@ -630,12 +616,15 @@ fn java_custom_complex_function_doc_test() {
                 &QLOptions::builder()
                     .attachments(HashMap::from([(
                         "tenant".to_string(),
-                        DataValue::Str(tenant.to_string()),
+                        DataValue::Str(tenant.into()),
                     )]))
                     .build(),
             )
             .expect("attachment-aware custom function");
-        assert_eq!(result.result(), &DataValue::Str(format!("hello,{tenant}")));
+        assert_eq!(
+            result.result(),
+            &DataValue::string(format!("hello,{tenant}"))
+        );
     }
 }
 
@@ -651,11 +640,11 @@ fn java_custom_selector_test() {
     let result = runner
         .execute(
             "'Hello ' + #[0]",
-            HashMap::from([("0".to_string(), DataValue::Str("World".to_string()))]),
+            HashMap::from([("0".to_string(), DataValue::Str("World".into()))]),
             &QLOptions::default(),
         )
         .expect("custom selector");
-    assert_eq!(result.result(), &DataValue::Str("Hello World".to_string()));
+    assert_eq!(result.result(), &DataValue::Str("Hello World".into()));
 }
 
 /// Java `Express4RunnerTest#customSelectorWhenNoCloseTest`。
@@ -688,15 +677,12 @@ fn java_list_get_when_precise_test() {
             "list.get(list.size()-1);",
             HashMap::from([(
                 "list".to_string(),
-                DataValue::list(vec![
-                    DataValue::Str("a".to_string()),
-                    DataValue::Str("b".to_string()),
-                ]),
+                DataValue::list(vec![DataValue::Str("a".into()), DataValue::Str("b".into())]),
             )]),
             &QLOptions::builder().precise(true).cache(true).build(),
         )
         .expect("precise list index");
-    assert_eq!(result.result(), &DataValue::Str("b".to_string()));
+    assert_eq!(result.result(), &DataValue::Str("b".into()));
 }
 
 /// Java `Express4RunnerTest#dynamicVariableComplexTest`。
@@ -704,9 +690,9 @@ fn java_list_get_when_precise_test() {
 fn java_dynamic_variable_complex_test() {
     let runner = Rc::new(Express4Runner::new());
     let static_context = Rc::new(std::cell::RefCell::new(IndexMap::from_entries(vec![
-        (DataValue::Str("语文".to_string()), DataValue::Int(88)),
-        (DataValue::Str("数学".to_string()), DataValue::Int(99)),
-        (DataValue::Str("英语".to_string()), DataValue::Int(95)),
+        (DataValue::Str("语文".into()), DataValue::Int(88)),
+        (DataValue::Str("数学".into()), DataValue::Int(99)),
+        (DataValue::Str("英语".into()), DataValue::Int(95)),
     ])));
     let dynamic: Rc<DynamicVariableContext> =
         Rc::new_cyclic(|weak: &std::rc::Weak<DynamicVariableContext>| {
@@ -826,10 +812,7 @@ fn java_ql_static_function_test() {
             &QLOptions::default(),
         )
         .expect("static annotated function adaptation");
-    assert_eq!(
-        result.result(),
-        &DataValue::Str("formate string".to_string())
-    );
+    assert_eq!(result.result(), &DataValue::Str("formate string".into()));
 }
 
 /// Java `Express4RunnerTest#listSpreadTest`。
@@ -887,7 +870,7 @@ fn java_import_cls_alias_test() {
             )
             .expect("alias class name")
             .result(),
-        &DataValue::Str("java.util.ArrayList".to_string())
+        &DataValue::Str("java.util.ArrayList".into())
     );
 }
 
@@ -914,7 +897,7 @@ fn java_import_cls_alias_multiple_test() {
             &QLOptions::default(),
         )
         .expect("multiple class aliases");
-    assert_eq!(result.result(), &DataValue::Str("a".to_string()));
+    assert_eq!(result.result(), &DataValue::Str("a".into()));
 }
 
 /// Java `Express4RunnerTest#importClsAliasLowercaseAliasTest`。
@@ -1053,13 +1036,13 @@ fn java_execute_with_obj_context_test() {
         "test.MyObj",
         &[
             ("a", DataValue::Int(1)),
-            ("b", DataValue::Str("test".to_string())),
+            ("b", DataValue::Str("test".into())),
         ],
     );
     let result = Express4Runner::new()
         .execute_with_object("a+b", object, &QLOptions::default())
         .expect("object fields must be exposed");
-    assert_eq!(result.result(), &DataValue::Str("1test".to_string()));
+    assert_eq!(result.result(), &DataValue::Str("1test".into()));
 }
 
 /// Java `Express4RunnerTest#qlAliasTest`。Rust 以显式别名元数据替代
@@ -1087,10 +1070,10 @@ fn java_ql_alias_test() {
     let patient = RecordObject::value(
         "test.Patient",
         &[
-            ("birth", DataValue::Str("1987-02-23".to_string())),
-            ("name", DataValue::Str("老王".to_string())),
-            ("sex", DataValue::Str("男".to_string())),
-            ("level", DataValue::Str("高危".to_string())),
+            ("birth", DataValue::Str("1987-02-23".into())),
+            ("name", DataValue::Str("老王".into())),
+            ("sex", DataValue::Str("男".into())),
+            ("level", DataValue::Str("高危".into())),
         ],
     );
     let cases = [
@@ -1140,14 +1123,14 @@ fn java_ql_alias_doc_test() {
     let order = RecordObject::value(
         "test.Order",
         &[
-            ("orderNum", DataValue::Str("OR123455".to_string())),
+            ("orderNum", DataValue::Str("OR123455".into())),
             ("amount", DataValue::Int(100)),
         ],
     );
     let user = RecordObject::value(
         "test.User",
         &[
-            ("name", DataValue::Str("jack".to_string())),
+            ("name", DataValue::Str("jack".into())),
             ("vip", DataValue::Bool(true)),
         ],
     );
@@ -1201,7 +1184,7 @@ fn java_import_cls_alias_obfuscation_test() {
             &QLOptions::default(),
         )
         .expect("obfuscated class aliases");
-    assert_eq!(result.result(), &DataValue::Str("jack:100".to_string()));
+    assert_eq!(result.result(), &DataValue::Str("jack:100".into()));
 }
 
 /// Java `Express4RunnerTest#addFunctionByAnnotationTest`。
@@ -1235,7 +1218,7 @@ fn java_add_function_by_annotation_test() {
     );
     let concat: Rc<dyn CustomFunction> = Rc::new(
         |_context: &mut dyn QContext, parameters: &Parameters| -> Result<DataValue, QLException> {
-            Ok(DataValue::Str(format!(
+            Ok(DataValue::string(format!(
                 "{}{}",
                 parameters.get_value(0).string_value_of(),
                 parameters.get_value(1).string_value_of()
@@ -1283,7 +1266,7 @@ fn java_add_function_by_annotation_test() {
     let concatenated = runner
         .execute("concat('aa', null)", HashMap::new(), &QLOptions::default())
         .expect("null concatenation");
-    assert_eq!(concatenated.result(), &DataValue::Str("aanull".to_string()));
+    assert_eq!(concatenated.result(), &DataValue::Str("aanull".into()));
     let list = runner
         .execute(
             "l = [1,2];\naddAll(l, 'aa', 'bb', 'cc')",
@@ -1296,9 +1279,9 @@ fn java_add_function_by_annotation_test() {
         &DataValue::list(vec![
             DataValue::Int(1),
             DataValue::Int(2),
-            DataValue::Str("aa".to_string()),
-            DataValue::Str("bb".to_string()),
-            DataValue::Str("cc".to_string()),
+            DataValue::Str("aa".into()),
+            DataValue::Str("bb".into()),
+            DataValue::Str("cc".into()),
         ])
     );
 }
@@ -1385,7 +1368,7 @@ fn java_invoke_default_method_test() {
         "haha".to_string(),
         Rc::new(|_bean, args| {
             if args.is_empty() {
-                Ok(DataValue::Str("haha".to_string()))
+                Ok(DataValue::Str("haha".into()))
             } else {
                 Err(QLException::for_test(
                     qlexpress::exception::ql_exception::QLExceptionKind::Runtime,
@@ -1419,7 +1402,7 @@ fn java_invoke_default_method_test() {
         "haha".to_string(),
         Rc::new(|_bean, args| {
             if args.is_empty() {
-                Ok(DataValue::Str("grandPa".to_string()))
+                Ok(DataValue::Str("grandPa".into()))
             } else {
                 Err(QLException::for_test(
                     qlexpress::exception::ql_exception::QLExceptionKind::Runtime,
@@ -1457,7 +1440,7 @@ fn java_invoke_default_method_test() {
             )
             .expect("default interface method")
             .result(),
-        &DataValue::Str("haha".to_string())
+        &DataValue::Str("haha".into())
     );
     assert_eq!(
         runner
@@ -1468,22 +1451,13 @@ fn java_invoke_default_method_test() {
             )
             .expect("grand-parent default method")
             .result(),
-        &DataValue::Str("grandPa".to_string())
+        &DataValue::Str("grandPa".into())
     );
 
     let map = DataValue::map(IndexMap::from_entries(vec![
-        (
-            DataValue::Str("a".to_string()),
-            DataValue::Str("123".to_string()),
-        ),
-        (
-            DataValue::Str("b".to_string()),
-            DataValue::Str("456".to_string()),
-        ),
-        (
-            DataValue::Str("c".to_string()),
-            DataValue::Str("789".to_string()),
-        ),
+        (DataValue::Str("a".into()), DataValue::Str("123".into())),
+        (DataValue::Str("b".into()), DataValue::Str("456".into())),
+        (DataValue::Str("c".into()), DataValue::Str("789".into())),
     ]));
     let stream_result = runner
         .execute(
@@ -1499,9 +1473,9 @@ fn java_invoke_default_method_test() {
     assert_eq!(
         stream_result.result(),
         &DataValue::list(vec![
-            DataValue::Str("a:123".to_string()),
-            DataValue::Str("b:456".to_string()),
-            DataValue::Str("c:789".to_string()),
+            DataValue::Str("a:123".into()),
+            DataValue::Str("b:456".into()),
+            DataValue::Str("c:789".into()),
         ])
     );
 }
@@ -1580,45 +1554,10 @@ impl ExtensionFunction for HelloExtension {
         object: &DataValue,
         _arguments: &[DataValue],
     ) -> Result<DataValue, QLException> {
-        Ok(DataValue::Str(format!(
+        Ok(DataValue::string(format!(
             "Hello,{}",
             object.string_value_of()
         )))
-    }
-}
-
-struct AddExtension {
-    name: &'static str,
-}
-
-impl ExtensionFunction for AddExtension {
-    fn parameter_types(&self) -> Vec<ClassRef> {
-        vec![ClassRef::Named("java.lang.Object".to_string())]
-    }
-
-    fn name(&self) -> &str {
-        self.name
-    }
-
-    fn declaring_class(&self) -> ClassRef {
-        ClassRef::Named("java.lang.Number".to_string())
-    }
-
-    fn invoke(
-        &self,
-        object: &DataValue,
-        arguments: &[DataValue],
-    ) -> Result<DataValue, QLException> {
-        let mut total = match object {
-            DataValue::Int(value) => *value,
-            _ => 0,
-        };
-        for argument in arguments {
-            if let DataValue::Int(value) = argument {
-                total += value;
-            }
-        }
-        Ok(DataValue::Int(total))
     }
 }
 
@@ -1645,7 +1584,7 @@ impl ExtensionFunction for OverloadedExtension {
         _object: &DataValue,
         _arguments: &[DataValue],
     ) -> Result<DataValue, QLException> {
-        Ok(DataValue::Str(self.result.to_string()))
+        Ok(DataValue::Str(self.result.into()))
     }
 }
 
@@ -1659,16 +1598,44 @@ fn java_extension_function_test() {
             .execute("'jack'.hello()", HashMap::new(), &QLOptions::default())
             .expect("string extension")
             .result(),
-        &DataValue::Str("Hello,jack".to_string())
+        &DataValue::Str("Hello,jack".into())
     );
 
-    runner.add_extend_function(AddExtension { name: "add" });
+    runner.add_extend_function_varargs(
+        "add",
+        ClassRef::Named("java.lang.Number".to_string()),
+        |params: &[DataValue]| {
+            Ok(DataValue::Int(
+                params
+                    .iter()
+                    .filter_map(|value| match value {
+                        DataValue::Int(value) => Some(*value),
+                        _ => None,
+                    })
+                    .sum(),
+            ))
+        },
+    );
     let add = runner
         .execute("1.add(2)", HashMap::new(), &QLOptions::default())
         .expect("number add extension");
     assert_integer(add.result(), 3);
 
-    runner.add_extend_function(AddExtension { name: "add2" });
+    runner.add_extend_function_varargs(
+        "add2",
+        ClassRef::Named("java.lang.Number".to_string()),
+        |params: &[DataValue]| {
+            Ok(DataValue::Int(
+                params
+                    .iter()
+                    .filter_map(|value| match value {
+                        DataValue::Int(value) => Some(*value),
+                        _ => None,
+                    })
+                    .sum(),
+            ))
+        },
+    );
     let add2 = runner
         .execute("1.add2(2,3)", HashMap::new(), &QLOptions::default())
         .expect("number add2 extension");
@@ -1692,12 +1659,12 @@ fn extension_function_overloads_do_not_overwrite_each_other() {
     let zero = runner
         .execute("'x'.pick()", HashMap::new(), &QLOptions::default())
         .expect("zero-argument extension overload");
-    assert_eq!(zero.result(), &DataValue::Str("zero".to_string()));
+    assert_eq!(zero.result(), &DataValue::Str("zero".into()));
 
     let one = runner
         .execute("'x'.pick(7)", HashMap::new(), &QLOptions::default())
         .expect("one-argument extension overload");
-    assert_eq!(one.result(), &DataValue::Str("one".to_string()));
+    assert_eq!(one.result(), &DataValue::Str("one".into()));
 }
 
 /// RUST_OBLIGATION: Java
@@ -1710,7 +1677,7 @@ fn varargs_extension_function_receives_receiver_then_script_arguments() {
         "describe",
         ClassRef::Named("java.lang.String".to_string()),
         |arguments: &[DataValue]| {
-            Ok(DataValue::Str(
+            Ok(DataValue::string(
                 arguments
                     .iter()
                     .map(DataValue::string_value_of)
@@ -1727,10 +1694,7 @@ fn varargs_extension_function_receives_receiver_then_script_arguments() {
             &QLOptions::default(),
         )
         .expect("varargs extension");
-    assert_eq!(
-        result.result(),
-        &DataValue::Str("root|1|leaf".to_string())
-    );
+    assert_eq!(result.result(), &DataValue::Str("root|1|leaf".into()));
 }
 
 /// RUST_OBLIGATION: Java `ReflectLoader` 由 runner 与已创建 Lambda 共享；
@@ -1754,16 +1718,12 @@ fn extension_registration_remains_visible_to_existing_lambda() {
             .call(&[])
             .expect("existing lambda must observe later registration")
             .value(),
-        DataValue::Str("Hello,jack".to_string())
+        DataValue::Str("Hello,jack".into())
     );
 }
 
 fn annotated_constant(value: i32) -> Rc<dyn CustomFunction> {
-    Rc::new(
-        move |_context: &mut dyn QContext, _parameters: &Parameters| {
-            Ok(DataValue::Int(value))
-        },
-    )
+    Rc::new(move |_context: &mut dyn QContext, _parameters: &Parameters| Ok(DataValue::Int(value)))
 }
 
 struct AnnotatedObjectFunctions;

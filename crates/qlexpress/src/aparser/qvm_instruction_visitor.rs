@@ -1090,8 +1090,7 @@ impl<'a> QvmInstructionVisitor<'a> {
                 }
             };
             if catch_params.decl_types.is_empty() {
-                let handler =
-                    handler_for(self, Param::new(e_name.clone(), Some(object_cls())));
+                let handler = handler_for(self, Param::new(e_name.clone(), Some(object_cls())));
                 exception_table.push((object_cls(), handler));
             }
             for decl_type in &catch_params.decl_types {
@@ -1209,7 +1208,10 @@ impl<'a> QvmInstructionVisitor<'a> {
             return;
         }
         if let Some(array_initializer) = &ctx.array_initializer {
-            self.new_arr_with_initializers(decl_cls.clone(), array_initializer);
+            let component_cls = decl_cls
+                .component_type()
+                .unwrap_or_else(|| decl_cls.clone());
+            self.new_arr_with_initializers(component_cls, array_initializer);
         }
     }
 
@@ -2013,7 +2015,7 @@ impl<'a> Visitor for QvmInstructionVisitor<'a> {
                             let reporter = self.new_reporter_with_token(cls_value.quote.symbol());
                             self.add_instruction(Box::new(ConstInstruction::new(
                                 reporter,
-                                DataValue::Str(QLStringUtils::parse_string_escape(cls_text)),
+                                DataValue::string(QLStringUtils::parse_string_escape(cls_text)),
                                 None,
                             )));
                             // @class override
@@ -2271,7 +2273,7 @@ impl<'a> Visitor for QvmInstructionVisitor<'a> {
         let error_reporter = self.reporter_of(&ctx.op_id);
         self.add_instruction(Box::new(ConstInstruction::new(
             Rc::clone(&error_reporter),
-            DataValue::Str(ctx.path_text.clone()),
+            DataValue::string(ctx.path_text.clone()),
             None,
         )));
 
@@ -2441,7 +2443,7 @@ impl<'a> Visitor for QvmInstructionVisitor<'a> {
                     }
                 }
                 token::QUOTE_STRING_LITERAL => {
-                    Some(DataValue::Str(QLStringUtils::parse_string_escape(text)))
+                    Some(DataValue::string(QLStringUtils::parse_string_escape(text)))
                 }
                 token::NULL => Some(DataValue::NULL_VALUE),
                 _ => None,
@@ -2500,7 +2502,7 @@ impl<'a> Visitor for QvmInstructionVisitor<'a> {
                     let reporter = self.new_reporter_with_token(ctx.open_quote.symbol());
                     self.add_instruction(Box::new(ConstInstruction::new(
                         reporter,
-                        DataValue::Str(String::new()),
+                        DataValue::string(String::new()),
                         None,
                     )));
                 }
@@ -2509,7 +2511,7 @@ impl<'a> Visitor for QvmInstructionVisitor<'a> {
                     let reporter = self.new_reporter_with_token(ctx.open_quote.symbol());
                     self.add_instruction(Box::new(ConstInstruction::new(
                         reporter,
-                        DataValue::Str(QLStringUtils::parse_string_escape_start_end(
+                        DataValue::string(QLStringUtils::parse_string_escape_start_end(
                             text,
                             0,
                             text.chars().count(),
@@ -2528,7 +2530,7 @@ impl<'a> Visitor for QvmInstructionVisitor<'a> {
             let trace_key = Some(ctx.open_quote.symbol().start_index());
             self.add_instruction(Box::new(ConstInstruction::new(
                 reporter,
-                DataValue::Str(QLStringUtils::parse_string_escape_start_end(
+                DataValue::string(QLStringUtils::parse_string_escape_start_end(
                     &text,
                     0,
                     text.chars().count(),
@@ -2564,7 +2566,7 @@ impl<'a> Visitor for QvmInstructionVisitor<'a> {
                         let trace_key = Some(ctx.open_quote.symbol().start_index());
                         self.add_instruction(Box::new(ConstInstruction::new(
                             reporter,
-                            DataValue::Str(QLStringUtils::parse_string_escape_start_end(
+                            DataValue::string(QLStringUtils::parse_string_escape_start_end(
                                 origin_str,
                                 0,
                                 origin_str.chars().count(),
@@ -3335,9 +3337,7 @@ fn parse_floating_literal(floating_text: &str) -> Option<DataValue> {
             // Java: baseDecimal.compareTo(MAX_DOUBLE) <= 0 ?
             // maybePresentWithDouble : baseDecimal
             match cmp_decimal(&normalized, MAX_DOUBLE_TEXT) {
-                Some(std::cmp::Ordering::Greater) => {
-                    Some(DataValue::BigDec(normalized))
-                }
+                Some(std::cmp::Ordering::Greater) => Some(DataValue::BigDec(normalized)),
                 Some(_) => Some(maybe_present_with_double(&normalized)?),
                 None => None,
             }

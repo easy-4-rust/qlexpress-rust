@@ -42,7 +42,7 @@ fn substring_lambda(registry: Rc<NativeRegistry>) -> Rc<QLambda> {
     Rc::new(QLambda::Method(QLambdaMethod::new(
         "substring",
         registry,
-        DataValue::Str("qlexpress".to_string()),
+        DataValue::Str("qlexpress".into()),
     )))
 }
 
@@ -119,7 +119,7 @@ fn call_const_instruction_uses_same_argument_order_and_result_contract() {
         .execute(&mut context, &QLOptions::builder().build())
         .expect("const lambda call");
 
-    assert_eq!(context.pop().get(), DataValue::Str("ql".to_string()));
+    assert_eq!(context.pop().get(), DataValue::Str("ql".into()));
     assert_eq!(instruction.arg_num(), 2);
     assert_eq!(instruction.lambda_name(), "substring");
     assert_eq!(instruction.stack_input(), 2);

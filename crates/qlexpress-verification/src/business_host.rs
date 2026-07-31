@@ -78,11 +78,8 @@ pub fn run() -> Result<(), String> {
         let DataValue::Map(result) = result else {
             return Err(format!("business order {order_id}: expected map result"));
         };
-        let decision = result
-            .borrow()
-            .get(&DataValue::Str("decision".to_string()))
-            .cloned();
-        if decision != Some(DataValue::Str(expected.to_string())) {
+        let decision = result.borrow().get(&DataValue::string("decision")).cloned();
+        if decision != Some(DataValue::string(expected)) {
             return Err(format!(
                 "business order {order_id}: expected {expected}, got {decision:?}"
             ));

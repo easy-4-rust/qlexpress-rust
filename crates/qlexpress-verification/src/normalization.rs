@@ -15,8 +15,8 @@ pub fn normalize(value: &DataValue) -> String {
         DataValue::Double(value) => format!("double:{}", normalize_float(*value)),
         DataValue::BigInt(value) => format!("bigint:{value}"),
         DataValue::BigDec(value) => format!("bigdec:{value}"),
-        DataValue::Char(value) => format!("char:{}", escape(&value.to_string())),
-        DataValue::Str(value) => format!("string:{}", escape(value)),
+        DataValue::Char(value) => format!("char:{}", escape_utf16(&[*value])),
+        DataValue::Str(value) => format!("string:{}", escape_utf16(value.utf16_units())),
         DataValue::List(values) => {
             let values = values.borrow();
             format!(
@@ -69,4 +69,32 @@ fn escape(value: &str) -> String {
         .replace(']', "\\]")
         .replace('{', "\\{")
         .replace('}', "\\}")
+}
+
+fn escape_utf16(units: &[u16]) -> String {
+    let mut output = String::new();
+    for decoded in char::decode_utf16(units.iter().copied()) {
+        match decoded {
+            Ok(character) => output.push(character),
+            Err(error) => {
+                output.push_str(&format!("\\u{:04X}", error.unpaired_surrogate()));
+            }
+        }
+    }
+    escape(&output)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::normalize;
+    use qlexpress::runtime::value::DataValue;
+
+    #[test]
+    fn normalization_preserves_unpaired_utf16_surrogates() {
+        assert_eq!(
+            normalize(&DataValue::string_from_utf16(vec![0xD83D])),
+            r"string:\\uD83D"
+        );
+        assert_eq!(normalize(&DataValue::string("😀")), "string:😀");
+    }
 }

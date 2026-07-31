@@ -442,7 +442,7 @@ fn method_invoke_dispatches_to_native_registry() {
     let result = run_top(
         &runtime(),
         vec![
-            konst(DataValue::Str("hello".to_string())),
+            konst(DataValue::Str("hello".into())),
             Box::new(MethodInvokeInstruction::new(
                 reporter(),
                 "toUpperCase",
@@ -453,7 +453,7 @@ fn method_invoke_dispatches_to_native_registry() {
         ],
     )
     .expect("run");
-    assert_eq!(result, QResult::Return(DataValue::Str("HELLO".to_string())));
+    assert_eq!(result, QResult::Return(DataValue::Str("HELLO".into())));
 }
 
 #[test]
@@ -461,7 +461,7 @@ fn method_not_found_error_code() {
     let err = run_top(
         &runtime(),
         vec![
-            konst(DataValue::Str("hello".to_string())),
+            konst(DataValue::Str("hello".into())),
             Box::new(MethodInvokeInstruction::new(
                 reporter(),
                 "noSuchMethod",

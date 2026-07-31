@@ -32,7 +32,7 @@ impl QLAliasContext {
         let mut context = IndexMap::new();
         for (aliases, value) in aliased_values {
             for alias in *aliases {
-                context.insert(DataValue::Str((*alias).to_string()), value.clone());
+                context.insert(DataValue::string(*alias), value.clone());
             }
         }
         QLAliasContext {
@@ -48,11 +48,9 @@ impl ExpressContext for QLAliasContext {
         _attachments: &Attachments,
         variable_name: &str,
     ) -> Result<Option<QValue>, QLException> {
-        let item: Rc<RefCell<dyn crate::runtime::left_value::LeftValue>> =
-            Rc::new(RefCell::new(MapItemValue::new(
-                Rc::clone(&self.context),
-                DataValue::Str(variable_name.to_string()),
-            )));
+        let item: Rc<RefCell<dyn crate::runtime::left_value::LeftValue>> = Rc::new(RefCell::new(
+            MapItemValue::new(Rc::clone(&self.context), DataValue::string(variable_name)),
+        ));
         Ok(Some(QValue::Left(item)))
     }
 }

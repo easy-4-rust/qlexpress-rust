@@ -10,7 +10,6 @@ use crate::aparser::operator_factory::OperatorFactory;
 use crate::exception::default_err_reporter::DefaultErrReporter;
 use crate::exception::error_codes;
 use crate::exception::error_reporter::ErrorReporter;
-use crate::runtime::data::convert::obj_type_convertor::TargetType;
 use crate::runtime::instruction::{
     BreakContinueInstruction, CallConstInstruction, CallFunctionInstruction, CallInstruction,
     CastInstruction, CheckTimeOutInstruction, CloseScopeInstruction, ConstInstruction,
@@ -514,7 +513,22 @@ impl<'a> SerializableParseCacheExporter<'a> {
                 value: None,
             },
             DataValue::Bool(v) => typed_constant("BOOLEAN", Value::from(*v)),
-            DataValue::Str(v) => typed_constant("STRING", Value::from(v.clone())),
+            DataValue::Str(v) => {
+                let Some(value) = v.to_rust_string() else {
+                    return Err(SerializableParseCacheException::new(
+                        Some(&self.script),
+                        owner.map(|inst| source_of(inst.error_reporter())).as_ref(),
+                        error_codes::SERIALIZABLE_PARSE_CACHE_UNSUPPORTED_CONSTANT,
+                        &crate::exception::error_codes::format_msg(
+                            error_codes::error_msg(
+                                error_codes::SERIALIZABLE_PARSE_CACHE_UNSUPPORTED_CONSTANT,
+                            ),
+                            &["java.lang.String(unpaired UTF-16 surrogate)".to_string()],
+                        ),
+                    ));
+                };
+                typed_constant("STRING", Value::from(value))
+            }
             DataValue::Char(v) => match char::from_u32(u32::from(*v)) {
                 Some(character) => typed_constant("CHAR", Value::from(character.to_string())),
                 None => {

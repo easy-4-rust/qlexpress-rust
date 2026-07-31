@@ -106,9 +106,7 @@ mod tests {
     fn component_type_is_checked() {
         let array = Rc::new(RefCell::new(JavaArray::typed(
             vec![DataValue::Int(1)],
-            ClassRef::Primitive(
-                crate::runtime::data::convert::obj_type_convertor::TargetType::Int,
-            ),
+            ClassRef::Primitive(crate::runtime::data::convert::obj_type_convertor::TargetType::Int),
             Rc::new(NativeRegistry::new()),
         )));
         let mut item = ArrayItemValue::new(Rc::clone(&array), 0);

@@ -134,7 +134,9 @@ fn assert_function(ctx: &mut dyn QContext, params: &Parameters) -> Result<DataVa
         2 => match params.get_value(0) {
             DataValue::Bool(true) => Ok(DataValue::Null),
             _ => match params.get_value(1) {
-                DataValue::Str(msg) => Err(biz_error(wrap_assert_message(ctx, &msg))),
+                DataValue::Str(msg) => {
+                    Err(biz_error(wrap_assert_message(ctx, &msg.to_string_lossy())))
+                }
                 _ => Err(biz_error(wrap_assert_message(ctx, "assert fail"))),
             },
         },
@@ -155,7 +157,9 @@ fn assert_false_function(
         2 => match params.get_value(0) {
             DataValue::Bool(false) => Ok(DataValue::Null),
             _ => match params.get_value(1) {
-                DataValue::Str(msg) => Err(biz_error(wrap_assert_message(ctx, &msg))),
+                DataValue::Str(msg) => {
+                    Err(biz_error(wrap_assert_message(ctx, &msg.to_string_lossy())))
+                }
                 _ => Err(biz_error(wrap_assert_message(ctx, "assert fail"))),
             },
         },
@@ -196,7 +200,7 @@ fn assert_error_code_function(
         Ok(_) => Err(biz_error(format!(
             "expect error codes:{expected_code}, but end normally"
         ))),
-        Err(err) if err.error_code() == expected_code => Ok(DataValue::Null),
+        Err(err) if expected_code.as_str() == Some(err.error_code()) => Ok(DataValue::Null),
         Err(err) => Err(biz_error(format!(
             "expect error code {expected_code}, but got {}: {}",
             err.error_code(),

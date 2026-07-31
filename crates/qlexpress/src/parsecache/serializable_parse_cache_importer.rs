@@ -303,10 +303,7 @@ impl<'a> SerializableParseCacheImporter<'a> {
             "DEFINE_LOCAL" => Box::new(DefineLocalInstruction::new(
                 Rc::clone(&reporter),
                 self.required_string(operands, "variableName", inst)?,
-                Some(self.load_class(
-                    &self.required_string(operands, "className", inst)?,
-                    inst,
-                )?),
+                Some(self.load_class(&self.required_string(operands, "className", inst)?, inst)?),
             )),
             "NEW_INSTANCE" => Box::new(NewInstanceInstruction::new(
                 Rc::clone(&reporter),
@@ -517,7 +514,7 @@ impl<'a> SerializableParseCacheImporter<'a> {
                 owner,
                 "constant.value",
             )?)),
-            "STRING" => Ok(DataValue::Str(self.as_string(
+            "STRING" => Ok(DataValue::string(self.as_string(
                 &value,
                 owner,
                 "constant.value",

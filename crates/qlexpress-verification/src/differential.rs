@@ -154,7 +154,7 @@ fn json_to_data_value(value: serde_json::Value) -> Result<DataValue, String> {
                 Err(format!("unsupported JSON number: {value}"))
             }
         }
-        serde_json::Value::String(value) => Ok(DataValue::Str(value)),
+        serde_json::Value::String(value) => Ok(DataValue::string(value)),
         serde_json::Value::Array(values) => values
             .into_iter()
             .map(json_to_data_value)
@@ -164,7 +164,7 @@ fn json_to_data_value(value: serde_json::Value) -> Result<DataValue, String> {
             let entries = values
                 .into_iter()
                 .map(|(key, value)| {
-                    json_to_data_value(value).map(|value| (DataValue::Str(key), value))
+                    json_to_data_value(value).map(|value| (DataValue::string(key), value))
                 })
                 .collect::<Result<Vec<_>, _>>()?;
             Ok(DataValue::map(IndexMap::from_entries(entries)))

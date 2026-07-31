@@ -107,7 +107,7 @@ pub(crate) fn op_in(
             Ok(false)
         }
         // Java:rightOperand instanceof String → contains(String.valueOf(left))
-        DataValue::Str(haystack) => Ok(haystack.contains(&left_operand.string_value_of())),
+        DataValue::Str(haystack) => Ok(haystack.contains(&left_operand.java_string_value_of())),
         // Java else 分支(含 Map):buildInvalidOperandTypeException
         _ => Err(build_invalid_operand_type_exception(
             left,

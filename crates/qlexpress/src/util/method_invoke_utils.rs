@@ -52,18 +52,14 @@ pub fn invoke_i_method(
     method
         .invoke(bean, &convert_result)
         .map(QValue::Data)
-        .map_err(|error| {
-            ReflectLoader::unwrap_method_invoke_ex(error_reporter, method_name, error)
-        })
+        .map_err(|error| ReflectLoader::unwrap_method_invoke_ex(error_reporter, method_name, error))
 }
 
 /// 对应 Java 私有方法 `MethodInvokeUtils.findQLambdaInstance`:
 /// Map 中以方法名为 key 存储的 Lambda 可作为「方法」调用。
 fn find_q_lambda_instance(bean: &DataValue, method_name: &str) -> Option<Rc<QLambda>> {
     if let DataValue::Map(map) = bean {
-        if let Some(DataValue::Lambda(lambda)) =
-            map.borrow().get(&DataValue::Str(method_name.to_string()))
-        {
+        if let Some(DataValue::Lambda(lambda)) = map.borrow().get(&DataValue::string(method_name)) {
             return Some(Rc::clone(lambda));
         }
     }
@@ -93,6 +89,13 @@ pub fn find_method_and_invoke(
     if let DataValue::Object(obj) = bean {
         if as_meta_class(bean).is_none() {
             let type_name = obj.borrow().native_type_name().to_string();
+            if registry.has_registered_method_candidates(&type_name, method_name) {
+                return Err(error_reporter.report_format(
+                    error_codes::METHOD_NOT_FOUND,
+                    error_codes::error_msg(error_codes::METHOD_NOT_FOUND),
+                    &[method_name.to_string(), format!("{params:?}")],
+                ));
+            }
             if !registry.is_member_allowed(&type_name, method_name) {
                 return Err(error_reporter.report_format(
                     error_codes::METHOD_NOT_FOUND,
@@ -104,11 +107,7 @@ pub fn find_method_and_invoke(
                 .borrow_mut()
                 .call_method(method_name, params)
                 .map_err(|error| {
-                    ReflectLoader::unwrap_method_invoke_ex(
-                        error_reporter,
-                        method_name,
-                        error,
-                    )
+                    ReflectLoader::unwrap_method_invoke_ex(error_reporter, method_name, error)
                 })?;
             return Ok(QValue::Data(result));
         }

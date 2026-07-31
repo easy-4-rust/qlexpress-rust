@@ -4,11 +4,15 @@
 //! registered explicitly (SPEC §4/§6), so members are identified by
 //! `NativeMember` descriptors (`type_name.member_name`).
 
+use std::cell::RefCell;
 use std::collections::HashSet;
 use std::fmt;
 use std::rc::Rc;
 
 pub use super::native_member::NativeMember;
+
+/// 在宿主、安全策略和 runner 之间共享的原生成员集合。
+pub type SharedNativeMembers = Rc<RefCell<HashSet<NativeMember>>>;
 
 impl NativeMember {
     /// 创建用于安全策略匹配的“类型名 + 成员名”描述符。
@@ -36,6 +40,10 @@ pub enum QLSecurityStrategy {
     BlackList(HashSet<NativeMember>),
     /// Java `QLSecurityStrategy.whiteList(Set<Member>)`.
     WhiteList(HashSet<NativeMember>),
+    /// 保存调用方集合引用的 Java 黑名单语义。
+    SharedBlackList(SharedNativeMembers),
+    /// 保存调用方集合引用的 Java 白名单语义。
+    SharedWhiteList(SharedNativeMembers),
     /// 业务宿主实现 Java `QLSecurityStrategy#check(Member)` 的 Rust 闭包适配。
     Custom(Rc<dyn Fn(&NativeMember) -> bool>),
 }
@@ -51,13 +59,15 @@ impl fmt::Debug for QLSecurityStrategy {
         match self {
             Self::Open => formatter.write_str("Open"),
             Self::Isolation => formatter.write_str("Isolation"),
-            Self::BlackList(members) => formatter
-                .debug_tuple("BlackList")
-                .field(members)
+            Self::BlackList(members) => formatter.debug_tuple("BlackList").field(members).finish(),
+            Self::WhiteList(members) => formatter.debug_tuple("WhiteList").field(members).finish(),
+            Self::SharedBlackList(members) => formatter
+                .debug_tuple("SharedBlackList")
+                .field(&members.borrow())
                 .finish(),
-            Self::WhiteList(members) => formatter
-                .debug_tuple("WhiteList")
-                .field(members)
+            Self::SharedWhiteList(members) => formatter
+                .debug_tuple("SharedWhiteList")
+                .field(&members.borrow())
                 .finish(),
             Self::Custom(_) => formatter.write_str("Custom(..)"),
         }
@@ -70,6 +80,10 @@ impl PartialEq for QLSecurityStrategy {
             (Self::Open, Self::Open) | (Self::Isolation, Self::Isolation) => true,
             (Self::BlackList(left), Self::BlackList(right))
             | (Self::WhiteList(left), Self::WhiteList(right)) => left == right,
+            (Self::SharedBlackList(left), Self::SharedBlackList(right))
+            | (Self::SharedWhiteList(left), Self::SharedWhiteList(right)) => {
+                Rc::ptr_eq(left, right) || *left.borrow() == *right.borrow()
+            }
             (Self::Custom(left), Self::Custom(right)) => Rc::ptr_eq(left, right),
             _ => false,
         }
@@ -115,6 +129,35 @@ impl QLSecurityStrategy {
         QLSecurityStrategy::WhiteList(white_list)
     }
 
+    /// 使用调用方保留的共享集合创建黑名单策略。
+    ///
+    /// Java `StrategyBlackList` 直接保存构造参数 `Set<Member>`；调用方在
+    /// runner 创建后修改集合时，后续成员检查会立即观察到变化。
+    ///
+    /// # 参数
+    ///
+    /// - `black_list`：宿主与策略共享的成员集合。
+    ///
+    /// # 返回值
+    ///
+    /// 返回具有 Java 引用语义的黑名单策略。
+    pub fn shared_black_list(black_list: SharedNativeMembers) -> Self {
+        Self::SharedBlackList(black_list)
+    }
+
+    /// 使用调用方保留的共享集合创建白名单策略。
+    ///
+    /// # 参数
+    ///
+    /// - `white_list`：宿主与策略共享的成员集合。
+    ///
+    /// # 返回值
+    ///
+    /// 返回具有 Java 引用语义的白名单策略。
+    pub fn shared_white_list(white_list: SharedNativeMembers) -> Self {
+        Self::SharedWhiteList(white_list)
+    }
+
     /// 使用宿主闭包创建自定义成员安全策略。
     ///
     /// Java 的 `QLSecurityStrategy` 是公开接口，业务宿主可按成员、租户或
@@ -145,6 +188,10 @@ impl QLSecurityStrategy {
             QLSecurityStrategy::Isolation => false,
             QLSecurityStrategy::BlackList(black_list) => !black_list.contains(member),
             QLSecurityStrategy::WhiteList(white_list) => white_list.contains(member),
+            QLSecurityStrategy::SharedBlackList(black_list) => {
+                !black_list.borrow().contains(member)
+            }
+            QLSecurityStrategy::SharedWhiteList(white_list) => white_list.borrow().contains(member),
             QLSecurityStrategy::Custom(check) => check(member),
         }
     }
@@ -172,13 +219,25 @@ mod tests {
     fn custom_strategy_preserves_java_interface_extensibility_and_shared_state() {
         let allowed = Rc::new(std::cell::RefCell::new(HashSet::new()));
         let captured = Rc::clone(&allowed);
-        let strategy =
-            QLSecurityStrategy::custom(move |member| captured.borrow().contains(member));
+        let strategy = QLSecurityStrategy::custom(move |member| captured.borrow().contains(member));
         let member = NativeMember::new("com.example.Service", "run");
 
         assert!(!strategy.check(&member));
         allowed.borrow_mut().insert(member.clone());
         assert!(strategy.check(&member));
         assert_eq!(strategy.clone(), strategy);
+    }
+
+    #[test]
+    fn shared_lists_observe_mutation_after_strategy_creation() {
+        let members = Rc::new(RefCell::new(HashSet::new()));
+        let strategy = QLSecurityStrategy::shared_white_list(Rc::clone(&members));
+        let member = NativeMember::new("com.example.Service", "run");
+
+        assert!(!strategy.check(&member));
+        members.borrow_mut().insert(member.clone());
+        assert!(strategy.check(&member));
+        members.borrow_mut().remove(&member);
+        assert!(!strategy.check(&member));
     }
 }

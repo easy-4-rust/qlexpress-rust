@@ -1101,16 +1101,15 @@ pub(crate) fn java_digit_value(c: char, radix: u32) -> Option<u32> {
 
 fn java_decimal_digit_value(c: char) -> Option<u32> {
     const STARTS: &[u32] = &[
-        0x0030, 0x0660, 0x06F0, 0x07C0, 0x0966, 0x09E6, 0x0A66, 0x0AE6, 0x0B66,
-        0x0BE6, 0x0C66, 0x0CE6, 0x0D66, 0x0DE6, 0x0E50, 0x0ED0, 0x0F20, 0x1040,
-        0x1090, 0x17E0, 0x1810, 0x1946, 0x19D0, 0x1A80, 0x1A90, 0x1B50, 0x1BB0,
-        0x1C40, 0x1C50, 0xA620, 0xA8D0, 0xA900, 0xA9D0, 0xA9F0, 0xAA50, 0xABF0,
-        0xFF10,
+        0x0030, 0x0660, 0x06F0, 0x07C0, 0x0966, 0x09E6, 0x0A66, 0x0AE6, 0x0B66, 0x0BE6, 0x0C66,
+        0x0CE6, 0x0D66, 0x0DE6, 0x0E50, 0x0ED0, 0x0F20, 0x1040, 0x1090, 0x17E0, 0x1810, 0x1946,
+        0x19D0, 0x1A80, 0x1A90, 0x1B50, 0x1BB0, 0x1C40, 0x1C50, 0xA620, 0xA8D0, 0xA900, 0xA9D0,
+        0xA9F0, 0xAA50, 0xABF0, 0xFF10,
     ];
     let code = c as u32;
     STARTS
         .iter()
-        .find_map(|start| (code >= *start && code < *start + 10).then_some(code - *start))
+        .find_map(|start| (code >= *start && code < *start + 10).then(|| code - *start))
 }
 
 #[cfg(test)]
@@ -1683,10 +1682,7 @@ mod tests {
     fn token_positions_use_java_utf16_units() {
         let tokens = lex("\"😀\" x");
         assert_eq!(tokens[0].text(), "\"");
-        assert_eq!(
-            (tokens[1].start_index(), tokens[1].stop_index()),
-            (1, 2)
-        );
+        assert_eq!((tokens[1].start_index(), tokens[1].stop_index()), (1, 2));
         assert_eq!(
             (tokens[2].start_index(), tokens[2].char_position_in_line()),
             (3, 3)
@@ -1704,11 +1700,7 @@ mod tests {
         let tokens = lex("𐐀");
         assert_eq!(
             types(&tokens),
-            vec![
-                token::CATCH_ALL as i32,
-                token::CATCH_ALL as i32,
-                token::EOF
-            ]
+            vec![token::CATCH_ALL as i32, token::CATCH_ALL as i32, token::EOF]
         );
         assert_eq!((tokens[0].start_index(), tokens[0].stop_index()), (0, 0));
         assert_eq!((tokens[1].start_index(), tokens[1].stop_index()), (1, 1));
@@ -1720,7 +1712,10 @@ mod tests {
     #[test]
     fn unicode_java_digits_are_scanned_as_numbers() {
         let tokens = lex("١٢ 0xＦＦ");
-        assert_eq!(tokens[0].token_type(), token::INTEGER_OR_FLOATING_LITERAL as i32);
+        assert_eq!(
+            tokens[0].token_type(),
+            token::INTEGER_OR_FLOATING_LITERAL as i32
+        );
         assert_eq!(tokens[0].text(), "١٢");
         assert_eq!(tokens[1].token_type(), token::INTEGER_LITERAL as i32);
         assert_eq!(tokens[1].text(), "0xＦＦ");
