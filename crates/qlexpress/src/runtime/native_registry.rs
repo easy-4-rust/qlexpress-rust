@@ -11,9 +11,9 @@ use std::rc::Rc;
 
 use regex::Regex;
 
-use crate::exception::QLException;
 use crate::exception::error_codes;
 use crate::exception::ql_exception::QLExceptionKind;
+use crate::exception::QLException;
 use crate::member::field_handler::Preferred as PreferredFieldHandler;
 use crate::runtime::class_ref::ClassRef;
 use crate::runtime::data::convert::number_compare;
@@ -27,7 +27,7 @@ use crate::runtime::java_collector::JavaCollector;
 use crate::runtime::java_map_entry::JavaMapEntry;
 use crate::runtime::java_stream::JavaStream;
 use crate::runtime::member_resolver::MemberResolver;
-use crate::runtime::meta_class::{MetaClass, as_meta_class};
+use crate::runtime::meta_class::{as_meta_class, MetaClass};
 use crate::runtime::native_type::{
     NativeConstructor, NativeConstructorCandidate, NativeMethod, NativeMethodCandidate, NativeType,
 };

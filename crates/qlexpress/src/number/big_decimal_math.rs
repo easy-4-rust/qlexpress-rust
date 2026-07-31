@@ -163,8 +163,7 @@ fn parse_dec(s: &str) -> Decimal {
         .filter(|c| c.is_ascii_digit())
         .map(|c| (c as u8) - b'0')
         .collect();
-    let scale =
-        frac_part.chars().filter(|c| c.is_ascii_digit()).count() as i64 - exponent;
+    let scale = frac_part.chars().filter(|c| c.is_ascii_digit()).count() as i64 - exponent;
     let first_nz = digits.iter().position(|&d| d != 0).unwrap_or(digits.len());
     digits.drain(..first_nz);
     Decimal {

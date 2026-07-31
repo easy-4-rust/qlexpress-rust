@@ -74,11 +74,11 @@ pub use exception::{
 pub use runtime::context::{ExpressContext, MapExpressContext, QLAliasContext};
 pub use runtime::value::{DataValue, NativeObject, QValue, Value};
 
+pub use annotation::{QLFunctionMethod, QLFunctionProvider};
 /// 宿主扩展契约:自定义函数、变参函数、批量注册结果、自定义操作符。
 /// 对应 Java `runtime.function.CustomFunction` / `api.*` /
 /// `runtime.operator.CustomBinaryOperator`。
 pub use api::{BatchAddFunctionResult, QLFunctionalVarargs};
-pub use annotation::{QLFunctionMethod, QLFunctionProvider};
 pub use runtime::function::CustomFunction;
 pub use runtime::operator::custom_binary_operator::CustomBinaryOperator;
 

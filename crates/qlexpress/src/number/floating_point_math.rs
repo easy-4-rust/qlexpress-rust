@@ -89,9 +89,8 @@ impl FloatingPointMath {
     /// Java `modImpl`:`toBigInteger(l).mod(toBigInteger(r)).doubleValue()`。
     /// 对应 Java: com.alibaba.qlexpress4.runtime.operator.number.FloatingPointMath#modImpl。
     pub fn mod_impl(left: &DataValue, right: &DataValue) -> Result<DataValue, QLException> {
-        let modulus = convert::try_to_big_int(right).ok_or_else(|| {
-            number_math::number_format_exception(&right.string_value_of())
-        })?;
+        let modulus = convert::try_to_big_int(right)
+            .ok_or_else(|| number_math::number_format_exception(&right.string_value_of()))?;
         if modulus <= num_bigint::BigInt::zero() {
             return Err(number_math::arithmetic_exception(
                 "BigInteger: modulus not positive",
@@ -151,18 +150,13 @@ mod tests {
     #[test]
     fn mod_uses_arbitrary_precision_big_integer_conversion() {
         assert_eq!(
-            FloatingPointMath::mod_impl(
-                &DataValue::Double(1.0E100),
-                &DataValue::Double(3.0),
-            )
-            .unwrap(),
+            FloatingPointMath::mod_impl(&DataValue::Double(1.0E100), &DataValue::Double(3.0),)
+                .unwrap(),
             DataValue::Double(1.0)
         );
-        let error = FloatingPointMath::mod_impl(
-            &DataValue::Double(f64::NAN),
-            &DataValue::Double(3.0),
-        )
-        .unwrap_err();
+        let error =
+            FloatingPointMath::mod_impl(&DataValue::Double(f64::NAN), &DataValue::Double(3.0))
+                .unwrap_err();
         assert_eq!(
             error.error_code(),
             super::number_math::NUMBER_FORMAT_EXCEPTION

@@ -75,6 +75,7 @@ __pycache__/
 *.http
 *.json
 !verification/acceptance/latest.json
+!verification/migration-dispositions.json
 !verification/migration-manifest-summary.json
 .flattened-pom.xml
 /agentdb.rvf

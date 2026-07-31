@@ -6,8 +6,8 @@
 
 use std::rc::Rc;
 
-use crate::exception::QLException;
 use crate::exception::error_reporter::ErrorReporter;
+use crate::exception::QLException;
 use crate::ql_options::QLOptions;
 use crate::runtime::q_result::QResult;
 use crate::runtime::qcontext::QContext;

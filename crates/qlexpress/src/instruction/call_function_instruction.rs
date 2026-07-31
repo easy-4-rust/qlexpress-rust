@@ -2,11 +2,11 @@
 //! 职责:按函数名调用函数/Lambda。
 //! 本文件由 `call.rs` 拆分而来(SPEC §5.5 一类一文件),仅移动代码与补充中文注释,行为完全一致。
 
-use crate::exception::QLException;
 use crate::exception::error_codes;
 use crate::exception::error_reporter::ErrorReporter;
+use crate::exception::QLException;
 use crate::ql_options::QLOptions;
-use crate::runtime::instruction::{QLInstruction, with_trace};
+use crate::runtime::instruction::{with_trace, QLInstruction};
 use crate::runtime::q_result::QResult;
 use crate::runtime::qcontext::QContext;
 use crate::runtime::util::throw_utils::{report_user_defined_exception, wrap_throwable};

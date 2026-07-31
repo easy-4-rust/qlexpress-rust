@@ -7,11 +7,11 @@
 
 use std::rc::Rc;
 
-use crate::exception::QLException;
 use crate::exception::error_codes;
 use crate::exception::error_reporter::ErrorReporter;
+use crate::exception::QLException;
 use crate::runtime::class_ref::ClassRef;
-use crate::runtime::function::{ExtensionFunction, as_native_method};
+use crate::runtime::function::{as_native_method, ExtensionFunction};
 use crate::runtime::native_registry::NativeRegistry;
 use crate::runtime::native_type::{NativeConstructor, NativeMethod, NativeMethodCandidate};
 use crate::runtime::value::{DataValue, QValue};
@@ -155,11 +155,9 @@ mod tests {
     #[test]
     fn delegates_builtin_member_loading() {
         let loader = ReflectLoader::new(QLSecurityStrategy::open(), false);
-        assert!(
-            loader
-                .load_method(&DataValue::string("abc"), "length")
-                .is_some()
-        );
+        assert!(loader
+            .load_method(&DataValue::string("abc"), "length")
+            .is_some());
         assert!(!loader.allow_private_access());
     }
 }

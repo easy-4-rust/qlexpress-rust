@@ -92,11 +92,8 @@ mod tests {
     #[test]
     fn unconvertible_becomes_null_like_java() {
         let args = vec![DataValue::Str("x".into())];
-        let result = ParametersTypeConvertor::cast(
-            &args,
-            &[ClassRef::Primitive(TargetType::Int)],
-            false,
-        );
+        let result =
+            ParametersTypeConvertor::cast(&args, &[ClassRef::Primitive(TargetType::Int)], false);
         assert_eq!(result, vec![DataValue::Null]);
     }
 

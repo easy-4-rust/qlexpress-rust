@@ -296,6 +296,7 @@ impl QScope {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::panic::{catch_unwind, AssertUnwindSafe};
 
     fn root() -> ScopeRef {
         QScope::global(QvmGlobalScope::empty())
@@ -355,6 +356,10 @@ mod tests {
             .unwrap()
             .expect("same slot");
         assert_eq!(b.borrow().get(), DataValue::Long(5));
+        assert_eq!(
+            QScope::get_symbol_value(&global, "a").unwrap(),
+            Some(DataValue::Long(5))
+        );
     }
 
     #[test]
@@ -367,5 +372,60 @@ mod tests {
         assert_eq!(params.get_value(0), DataValue::Int(2));
         assert_eq!(params.get_value(1), DataValue::Int(3));
         assert_eq!(QScope::peek(&scope).get(), DataValue::Int(1));
+    }
+
+    /// `SOURCE_PARITY`：Java `QvmBlockScope#defineFunction/getFunction/
+    /// getParent/newScope` 的本地优先、父级回退和父引用语义。
+    #[test]
+    fn block_scope_functions_and_parent_chain_match_java() {
+        let parent = stack_scope();
+        let child = QScope::new_scope(&parent);
+        assert!(Rc::ptr_eq(
+            &QScope::parent(&child).expect("block parent"),
+            &parent
+        ));
+
+        let parent_function: Rc<dyn CustomFunction> = Rc::new(
+            |_context: &mut dyn crate::runtime::qcontext::QContext, _parameters: &Parameters| {
+                Ok(DataValue::Int(1))
+            },
+        );
+        QScope::define_function(&parent, "f", Rc::clone(&parent_function));
+        assert!(Rc::ptr_eq(
+            &QScope::get_function(&child, "f").expect("parent function"),
+            &parent_function
+        ));
+
+        let child_function: Rc<dyn CustomFunction> = Rc::new(
+            |_context: &mut dyn crate::runtime::qcontext::QContext, _parameters: &Parameters| {
+                Ok(DataValue::Int(2))
+            },
+        );
+        QScope::define_function(&child, "f", Rc::clone(&child_function));
+        assert!(Rc::ptr_eq(
+            &QScope::get_function(&child, "f").expect("child function"),
+            &child_function
+        ));
+        assert!(Rc::ptr_eq(
+            &QScope::get_function(&parent, "f").expect("parent unchanged"),
+            &parent_function
+        ));
+    }
+
+    /// `SOURCE_PARITY`：Java `QvmGlobalScope` 不支持操作数栈与
+    /// `newScope`；Rust 用 panic 表达 UnsupportedOperationException，
+    /// `parent` 用 None 表达不存在父作用域。
+    #[test]
+    fn global_scope_rejects_block_only_operations() {
+        let global = root();
+        assert!(QScope::parent(&global).is_none());
+        assert!(catch_unwind(AssertUnwindSafe(|| {
+            QScope::push(&global, DataValue::Int(1).into());
+        }))
+        .is_err());
+        assert!(catch_unwind(AssertUnwindSafe(|| QScope::pop_n(&global, 1))).is_err());
+        assert!(catch_unwind(AssertUnwindSafe(|| QScope::pop(&global))).is_err());
+        assert!(catch_unwind(AssertUnwindSafe(|| QScope::peek(&global))).is_err());
+        assert!(catch_unwind(AssertUnwindSafe(|| QScope::new_scope(&global))).is_err());
     }
 }

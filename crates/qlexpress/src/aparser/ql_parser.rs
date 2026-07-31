@@ -1376,10 +1376,7 @@ impl<'a> QLParser<'a> {
         let (else_keyword, else_body) = if self.la(ELSE) {
             let else_keyword = self.consume_node();
             self.skip_newlines();
-            (
-                Some(else_keyword),
-                Some(Box::new(self.parse_else_body()?)),
-            )
+            (Some(else_keyword), Some(Box::new(self.parse_else_body()?)))
         } else {
             self.p = save;
             (None, None)
@@ -2810,6 +2807,16 @@ mod tests {
         }
     }
 
+    fn literal_of(expr: &ExpressionContext) -> &LiteralContext {
+        match primary_of(base_expr(expr)).pathable.as_deref() {
+            Some(Node::ConstExpr(constant)) => match constant.literal.as_ref() {
+                Node::Literal(literal) => literal,
+                other => panic!("expected literal, got {other:?}"),
+            },
+            other => panic!("expected constant expression, got {other:?}"),
+        }
+    }
+
     fn binaryop_text(left_asso: &Node) -> &str {
         match left_asso {
             Node::LeftAsso(l) => match l.binaryop.as_ref() {
@@ -2826,10 +2833,7 @@ mod tests {
     #[test]
     fn rule_context_text_preserves_exact_java_children() {
         let cases = [
-            (
-                "while (a) { b = [1, 2,]; }",
-                "while(a){b=[1,2,]}",
-            ),
+            ("while (a) { b = [1, 2,]; }", "while(a){b=[1,2,]}"),
             (
                 "function f(int a, b) { return a ? b : 0; }",
                 "functionf(inta,b){returna?b:0}",
@@ -2850,8 +2854,10 @@ mod tests {
         }
     }
 
-    /// `SOURCE_PARITY`：Java `RuleContext` 的 child/token/bounds/tree-string
-    /// 查询必须观察到右圆括号，而不是在 Rust 所有权适配中丢失它。
+    /// `SOURCE_PARITY`：覆盖 Java `RuleContext#isEmpty/getChildCount/getChild/
+    /// getRuleContexts/tokenNode/tokenNodes/getStart/getStop/toStringTree`。
+    /// Rust 解析器在构造强类型 AST 时完成 Java `addChild/addToken/setStart/
+    /// setStop` 的职责，所有查询必须观察到完整的括号和规则孩子。
     #[test]
     fn rule_context_queries_include_punctuation_and_bounds() {
         let tree = parse("(a);");
@@ -2862,9 +2868,22 @@ mod tests {
         };
         let group_node = Node::GroupExpr(group.clone());
 
+        assert!(!group_node.is_empty());
         assert_eq!(group_node.child_count(), 3);
         assert_eq!(group_node.child(0).text(), "(");
         assert_eq!(group_node.child(2).text(), ")");
+        assert_eq!(
+            group_node
+                .rule_child(0, |_| true)
+                .map(Node::text)
+                .as_deref(),
+            Some("a")
+        );
+        assert_eq!(group_node.rule_contexts(|_| true).len(), 1);
+        assert_eq!(
+            group_node.token_node(LPAREN).map(TerminalNode::text),
+            Some("(")
+        );
         assert_eq!(group_node.token_nodes(LPAREN).len(), 1);
         assert_eq!(group_node.token_nodes(RPAREN).len(), 1);
         assert_eq!(group_node.start_token().map(Token::text), Some("("));
@@ -2988,7 +3007,22 @@ mod tests {
                     Node::LocalVariableDeclaration(decl) => {
                         match decl.variable_declarator_list.as_ref() {
                             Node::VariableDeclaratorList(list) => {
-                                assert_eq!(list.variables.len(), 2)
+                                assert_eq!(list.variables.len(), 2);
+                                match &list.variables[0] {
+                                    Node::VariableDeclarator(declarator) => {
+                                        assert!(matches!(
+                                            declarator.id.as_ref(),
+                                            Node::VariableDeclaratorId(_)
+                                        ));
+                                        assert!(matches!(
+                                            declarator.initializer.as_deref(),
+                                            Some(Node::VariableInitializer(_))
+                                        ));
+                                    }
+                                    other => {
+                                        panic!("expected variable declarator, got {other:?}")
+                                    }
+                                }
                             }
                             other => panic!("expected declarator list, got {other:?}"),
                         }
@@ -3060,7 +3094,21 @@ mod tests {
             Some(Node::SwitchExpr(s)) => match s.groups.as_deref() {
                 Some(Node::SwitchCaseGroups(groups)) => {
                     assert_eq!(groups.groups.len(), 2);
-                    assert!(matches!(groups.groups[0], Node::SwitchStatementGroup(_)));
+                    match &groups.groups[0] {
+                        Node::SwitchStatementGroup(group) => {
+                            match group.labels.as_ref() {
+                                Node::SwitchLabels(labels) => {
+                                    assert_eq!(labels.labels.len(), 1)
+                                }
+                                other => panic!("expected switch labels, got {other:?}"),
+                            }
+                            assert!(matches!(
+                                group.block_statements.as_deref(),
+                                Some(Node::BlockStatements(_))
+                            ));
+                        }
+                        other => panic!("expected statement group, got {other:?}"),
+                    }
                 }
                 other => panic!("expected groups, got {other:?}"),
             },
@@ -3079,7 +3127,16 @@ mod tests {
             Some(Node::SwitchExpr(s)) => match s.groups.as_deref() {
                 Some(Node::SwitchCaseGroups(groups)) => {
                     assert_eq!(groups.groups.len(), 3);
-                    assert!(matches!(groups.groups[0], Node::SwitchExprGroup(_)));
+                    match &groups.groups[0] {
+                        Node::SwitchExprGroup(group) => {
+                            assert!(matches!(
+                                group.label.as_ref(),
+                                Node::SwitchExpressionLabel(_)
+                            ));
+                            assert!(matches!(group.expression.as_ref(), Node::Expression(_)));
+                        }
+                        other => panic!("expected expression group, got {other:?}"),
+                    }
                     assert!(matches!(groups.groups[2], Node::SwitchExprGroup(_)));
                 }
                 other => panic!("expected groups, got {other:?}"),
@@ -3345,6 +3402,40 @@ mod tests {
             other => panic!("expected map, got {other:?}"),
         }
 
+        // Double-quoted StringKey and the special '@class' ClsValue accessor.
+        let tree = parse(r#"x = {"name": 1, '@class': 'java.lang.String'};"#);
+        let expr = expr_statement(&statements(&tree)[0]);
+        let rhs = match expr.expression.as_deref() {
+            Some(Node::Expression(e)) => e,
+            _other => panic!(),
+        };
+        match primary_of(base_expr(rhs)).pathable.as_deref() {
+            Some(Node::MapExpr(map)) => match map.map_entries.as_ref() {
+                Node::MapEntries(entries) => {
+                    assert_eq!(entries.entries.len(), 2);
+                    match &entries.entries[0] {
+                        Node::MapEntry(entry) => assert!(matches!(
+                            entry.map_key.as_ref(),
+                            Node::StringKey(StringKeyContext {
+                                double_quote_string,
+                            }) if matches!(double_quote_string.as_ref(), Node::DoubleQuoteStringLiteral(_))
+                        )),
+                        other => panic!("expected map entry, got {other:?}"),
+                    }
+                    match &entries.entries[1] {
+                        Node::MapEntry(entry) => assert!(matches!(
+                            entry.map_value.as_ref(),
+                            Node::ClsValue(ClsValueContext { quote })
+                                if quote.text() == "'java.lang.String'"
+                        )),
+                        other => panic!("expected class map entry, got {other:?}"),
+                    }
+                }
+                other => panic!("expected entries, got {other:?}"),
+            },
+            other => panic!("expected map, got {other:?}"),
+        }
+
         // empty map literal
         let tree = parse("x = {:};");
         let expr = expr_statement(&statements(&tree)[0]);
@@ -3501,13 +3592,118 @@ mod tests {
                         // "a " + ${y + 1} + " b"
                         assert!(s.static_characters.is_none());
                         assert_eq!(s.parts.len(), 3);
-                        assert!(matches!(s.parts[1], DyStrPart::Expr(_)));
+                        match &s.parts[1] {
+                            DyStrPart::Expr(expression) => match expression.as_ref() {
+                                Node::StringExpression(string_expression) => {
+                                    assert_eq!(string_expression.start.text(), "${");
+                                    assert!(string_expression.expression.is_some());
+                                    assert!(string_expression.selector_variable.is_none());
+                                }
+                                other => {
+                                    panic!("expected string expression, got {other:?}")
+                                }
+                            },
+                            other => panic!("expected dynamic part, got {other:?}"),
+                        }
                     }
                     other => panic!("expected string literal, got {other:?}"),
                 },
                 other => panic!("expected literal, got {other:?}"),
             },
             other => panic!("expected const, got {other:?}"),
+        }
+
+        let tree = build_tree(
+            "x = \"${user}\";",
+            Some(&DefaultOps),
+            false,
+            |_| {},
+            InterpolationMode::Variable,
+            "${",
+            "}",
+            true,
+        )
+        .expect("variable interpolation");
+        let expression = expr_statement(&statements(&tree)[0])
+            .expression
+            .as_deref()
+            .and_then(|node| match node {
+                Node::Expression(expression) => Some(expression),
+                _ => None,
+            })
+            .expect("assignment rhs");
+        let literal = literal_of(expression);
+        match literal.double_quote_string.as_deref() {
+            Some(Node::DoubleQuoteStringLiteral(string)) => match &string.parts[0] {
+                DyStrPart::Expr(expression) => match expression.as_ref() {
+                    Node::StringExpression(string_expression) => {
+                        assert_eq!(
+                            string_expression
+                                .selector_variable
+                                .as_ref()
+                                .map(TerminalNode::text),
+                            Some("user")
+                        );
+                        assert!(string_expression.expression.is_none());
+                    }
+                    other => panic!("expected string expression, got {other:?}"),
+                },
+                other => panic!("expected dynamic part, got {other:?}"),
+            },
+            other => panic!("expected double-quoted literal, got {other:?}"),
+        }
+    }
+
+    /// `SOURCE_PARITY`：Java `LiteralContext` 的四种 token accessor、
+    /// `boolenLiteral` 和 `doubleQuoteStringLiteral` 在 Rust 中分别适配为
+    /// `token`、`boolen` 与 `double_quote_string` 字段。
+    #[test]
+    fn literal_context_accessors_preserve_java_variants() {
+        for (script, token_type, text) in [
+            ("0x1F;", INTEGER_LITERAL, "0x1F"),
+            (".5;", FLOATING_POINT_LITERAL, ".5"),
+            ("1;", INTEGER_OR_FLOATING_LITERAL, "1"),
+            ("'text';", QUOTE_STRING_LITERAL, "'text'"),
+        ] {
+            let tree = parse(script);
+            let literal = literal_of(expr_statement(&statements(&tree)[0]));
+            let token = literal.token.as_ref().expect("token literal");
+            assert_eq!(token.symbol().token_type(), token_type);
+            assert_eq!(token.text(), text);
+            assert!(literal.boolen.is_none());
+            assert!(literal.double_quote_string.is_none());
+        }
+
+        let tree = parse("true;");
+        let literal = literal_of(expr_statement(&statements(&tree)[0]));
+        assert!(matches!(
+            literal.boolen.as_deref(),
+            Some(Node::BoolenLiteral(_))
+        ));
+        assert!(literal.token.is_none());
+
+        // Java 仅在 DISABLE 模式发出 StaticStringCharacters；SCRIPT /
+        // VARIABLE 模式使用 DyStrText，即使字符串中没有插值。
+        let tree = build_tree(
+            "\"plain\";",
+            Some(&DefaultOps),
+            false,
+            |_| {},
+            InterpolationMode::Disable,
+            "${",
+            "}",
+            true,
+        )
+        .expect("disabled interpolation literal");
+        let literal = literal_of(expr_statement(&statements(&tree)[0]));
+        match literal.double_quote_string.as_deref() {
+            Some(Node::DoubleQuoteStringLiteral(string)) => {
+                assert_eq!(
+                    string.static_characters.as_ref().map(TerminalNode::text),
+                    Some("plain")
+                );
+            }
+            other => panic!("expected double-quoted literal, got {other:?}"),
         }
     }
 
@@ -3555,7 +3751,24 @@ mod tests {
                             Node::VariableDeclaratorList(list) => match &list.variables[0] {
                                 Node::VariableDeclarator(v) => match v.initializer.as_deref() {
                                     Some(Node::VariableInitializer(init)) => {
-                                        assert!(init.array_initializer.is_some());
+                                        match init.array_initializer.as_deref() {
+                                            Some(Node::ArrayInitializer(array)) => {
+                                                assert_eq!(array.lbrace.text(), "{");
+                                                assert_eq!(array.rbrace.text(), "}");
+                                                match array.initializers.as_deref() {
+                                                    Some(Node::VariableInitializerList(list)) => {
+                                                        assert_eq!(list.initializers.len(), 2);
+                                                        assert_eq!(list.commas.len(), 1);
+                                                    }
+                                                    other => panic!(
+                                                        "expected initializer list, got {other:?}"
+                                                    ),
+                                                }
+                                            }
+                                            other => {
+                                                panic!("expected array initializer, got {other:?}")
+                                            }
+                                        }
                                     }
                                     other => panic!("expected initializer, got {other:?}"),
                                 },
@@ -3692,13 +3905,19 @@ mod tests {
 
     #[test]
     fn check_visitor_can_disable_function_calls() {
-        let tree = parse("a = f(1);");
         let options = crate::check_options::CheckOptions::builder()
             .disable_function_calls(true)
             .build();
-        let mut checker = CheckVisitor::new(&options, "a = f(1);");
-        let err = checker.check(&tree).unwrap_err();
-        assert_eq!(err.error_code(), "FUNCTION_CALL_NOT_ALLOWED");
+        for script in ["a = f(1);", "a = value?.f();", "a = values*.f();"] {
+            let tree = parse(script);
+            let mut checker = CheckVisitor::new(&options, script);
+            let err = checker.check(&tree).unwrap_err();
+            assert_eq!(
+                err.error_code(),
+                "FUNCTION_CALL_NOT_ALLOWED",
+                "script: {script}"
+            );
+        }
     }
 
     #[test]

@@ -190,6 +190,7 @@ pub trait Visitor {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::aparser::syntax_tree_factory::ChainKind;
     use crate::aparser::token::{self, Token};
 
     fn tok(text: &str) -> Token {
@@ -279,5 +280,44 @@ mod tests {
         assert_eq!(term.text(), "x");
         assert_eq!(term.symbol().line(), 2);
         assert_eq!(term.symbol().char_position_in_line(), 5);
+    }
+
+    /// `SOURCE_PARITY`：Java BaseVisitor 的 optional/spread method/field
+    /// 四个默认方法都调用 `visitChildren`；Rust 以 `ChainKind` 合并节点类型，
+    /// 但必须保持相同的孩子遍历。
+    #[test]
+    fn merged_chain_visitors_preserve_default_child_traversal() {
+        for (chain, token_type, operator) in [
+            (ChainKind::Optional, token::OPTIONAL_CHAINING as i32, "?."),
+            (ChainKind::Spread, token::SPREAD_CHAINING as i32, "*."),
+        ] {
+            let method = Node::MethodInvoke(MethodInvokeContext {
+                dot: TerminalNode::new(Token::new(token_type, operator, 0, 1, 1, 0)),
+                var_id: Box::new(Node::VarId(VarIdContext {
+                    token: TerminalNode::new(tok("method")),
+                })),
+                lparen: TerminalNode::new(Token::new(token::LPAREN as i32, "(", 8, 8, 1, 8)),
+                argument_list: None,
+                rparen: TerminalNode::new(Token::new(token::RPAREN as i32, ")", 9, 9, 1, 9)),
+                chain,
+            });
+            let mut counter = Counter { count: 0 };
+            method.accept(&mut counter);
+            assert_eq!(counter.count, 2);
+            assert_eq!(method.text(), format!("{operator}method()"));
+
+            let field = Node::FieldAccess(FieldAccessContext {
+                dot: TerminalNode::new(Token::new(token_type, operator, 0, 1, 1, 0)),
+                field_id: Box::new(Node::FieldId(FieldIdContext {
+                    token: Some(TerminalNode::new(tok("field"))),
+                    quote: None,
+                })),
+                chain,
+            });
+            let mut counter = Counter { count: 0 };
+            field.accept(&mut counter);
+            assert_eq!(counter.count, 2);
+            assert_eq!(field.text(), format!("{operator}field"));
+        }
     }
 }

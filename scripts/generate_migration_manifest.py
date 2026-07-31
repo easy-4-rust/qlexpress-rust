@@ -5,12 +5,15 @@ The manifest deliberately does not infer semantic parity from names, file counts
 or green tests.  A discovered Rust candidate is ``UNVERIFIED`` until a reviewer
 or a later verifier records contract-level evidence.  Structural gaps retain the
 strict ``MISSING``/``MISPLACED``/``PARTIAL`` states required by the migration
-process.
+process.  Reviewed states may only be supplied through a baseline-pinned
+disposition file whose source and test anchors are validated against the
+current checkout.
 """
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sqlite3
@@ -35,6 +38,22 @@ STRICT_STATES = {
     "DEPENDENCY_REUSED",
     "PLATFORM_NA",
     "RUST_EXTENSION",
+}
+HANDLED_STATES = {"IMPLEMENTED", "DEPENDENCY_REUSED", "PLATFORM_NA"}
+DISPOSITION_CLASSIFICATIONS = {
+    "EXACT",
+    "ADAPTED",
+    "DEPENDENCY_REUSED",
+    "PLATFORM_NA",
+}
+TEST_EVIDENCE_LEVELS = {
+    "V1_RUST_LOCAL",
+    "V2_MIRRORED",
+    "V3_GOLDEN_DIFF",
+    "V4_LIVE_DIFF",
+    "V5_HOST",
+    "V6_NONFUNCTIONAL",
+    "V7_ROLLBACK",
 }
 CHINESE = re.compile(r"[\u3400-\u9fff]")
 
@@ -83,6 +102,14 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         help="Optional JSON emitted by audit_migration_tests.py.",
     )
+    parser.add_argument(
+        "--dispositions",
+        type=Path,
+        help=(
+            "Optional baseline-pinned JSON containing manually reviewed object, "
+            "nested-type, method, and source-test dispositions."
+        ),
+    )
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument(
         "--summary-output",
@@ -120,6 +147,386 @@ def git_state(root: Path) -> dict[str, Any]:
         "branch": run(root, "git", "branch", "--show-current"),
         "dirty": status not in {"", "UNKNOWN"},
         "status": [] if status in {"", "UNKNOWN"} else status.splitlines(),
+    }
+
+
+def dirty_paths(state: dict[str, Any]) -> list[str]:
+    """Extract repository-relative paths from porcelain-v1 status rows."""
+    paths: list[str] = []
+    for row in state["status"]:
+        value = row[3:]
+        if " -> " in value:
+            value = value.split(" -> ", 1)[1]
+        paths.append(value)
+    return paths
+
+
+def count_states(rows: list[dict[str, Any]]) -> dict[str, int]:
+    """Count strict states after reviewed dispositions have been applied."""
+    counts: dict[str, int] = defaultdict(int)
+    for row in rows:
+        counts[row["state"]] += 1
+    return counts
+
+
+def source_tree_fingerprint(root: Path, source_root: Path) -> str:
+    """Hash every relative path and byte in a source tree deterministically."""
+    digest = hashlib.sha256()
+    absolute_source_root = (root / source_root).resolve()
+    for path in sorted(absolute_source_root.rglob("*.rs")):
+        relative = path.relative_to(root.resolve()).as_posix()
+        digest.update(relative.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(path.read_bytes())
+        digest.update(b"\0")
+    return f"sha256:{digest.hexdigest()}"
+
+
+def git_is_ancestor(root: Path, ancestor: str, descendant: str) -> bool:
+    """Return whether a reviewed baseline is an ancestor of the checkout."""
+    result = subprocess.run(
+        ["git", "merge-base", "--is-ancestor", ancestor, descendant],
+        cwd=root,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    return result.returncode == 0
+
+
+def normalized_signature(signature: str) -> str:
+    """Return a stable, whitespace-normalized CodeGraph signature."""
+    return " ".join(signature.split())
+
+
+def java_key(java: dict[str, Any]) -> str:
+    """Build the stable disposition key for one Java source node."""
+    return (
+        f"{java['qualified_name']}|"
+        f"{normalized_signature(str(java.get('signature', '')))}"
+    )
+
+
+def _require_non_empty_string(
+    value: Any,
+    *,
+    field: str,
+    java_key_value: str,
+) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(
+            f"disposition {java_key_value}: {field} must be a non-empty string"
+        )
+    return value.strip()
+
+
+def _validate_file_anchor(
+    anchor: Any,
+    *,
+    rust_root: Path,
+    java_key_value: str,
+    field: str,
+    symbol_field: str,
+) -> dict[str, str]:
+    if not isinstance(anchor, dict):
+        raise ValueError(
+            f"disposition {java_key_value}: {field} entries must be objects"
+        )
+    file_name = _require_non_empty_string(
+        anchor.get("file"),
+        field=f"{field}.file",
+        java_key_value=java_key_value,
+    )
+    symbol = _require_non_empty_string(
+        anchor.get(symbol_field),
+        field=f"{field}.{symbol_field}",
+        java_key_value=java_key_value,
+    )
+    resolved_rust_root = rust_root.resolve()
+    path = (resolved_rust_root / file_name).resolve()
+    try:
+        path.relative_to(resolved_rust_root)
+    except ValueError as error:
+        raise ValueError(
+            f"disposition {java_key_value}: {field}.file escapes Rust root: "
+            f"{file_name}"
+        ) from error
+    if not path.is_file():
+        raise ValueError(
+            f"disposition {java_key_value}: evidence file does not exist: "
+            f"{file_name}"
+        )
+    source = path.read_text(encoding="utf-8", errors="replace")
+    if symbol not in source:
+        raise ValueError(
+            f"disposition {java_key_value}: {field}.{symbol_field} "
+            f"{symbol!r} not found in {file_name}"
+        )
+    return {"file": file_name, symbol_field: symbol}
+
+
+def validate_disposition(
+    raw: Any,
+    *,
+    rust_root: Path,
+) -> dict[str, Any]:
+    """Validate one reviewed parity disposition and all local evidence anchors."""
+    if not isinstance(raw, dict):
+        raise ValueError("disposition entries must be JSON objects")
+    key = _require_non_empty_string(
+        raw.get("java_key"),
+        field="java_key",
+        java_key_value="<unknown>",
+    )
+    state = _require_non_empty_string(
+        raw.get("state"),
+        field="state",
+        java_key_value=key,
+    )
+    if state not in STRICT_STATES - {"RUST_EXTENSION"}:
+        raise ValueError(f"disposition {key}: unsupported state {state!r}")
+    classification = _require_non_empty_string(
+        raw.get("classification"),
+        field="classification",
+        java_key_value=key,
+    )
+    if classification not in DISPOSITION_CLASSIFICATIONS:
+        raise ValueError(
+            f"disposition {key}: unsupported classification {classification!r}"
+        )
+    if state == "DEPENDENCY_REUSED" and classification != "DEPENDENCY_REUSED":
+        raise ValueError(
+            f"disposition {key}: DEPENDENCY_REUSED requires matching classification"
+        )
+    if state == "PLATFORM_NA" and classification != "PLATFORM_NA":
+        raise ValueError(
+            f"disposition {key}: PLATFORM_NA requires matching classification"
+        )
+    if state == "IMPLEMENTED" and classification not in {"EXACT", "ADAPTED"}:
+        raise ValueError(
+            f"disposition {key}: IMPLEMENTED requires EXACT or ADAPTED"
+        )
+
+    semantic_evidence = raw.get("semantic_evidence", [])
+    if not isinstance(semantic_evidence, list) or any(
+        not isinstance(item, str) or not item.strip()
+        for item in semantic_evidence
+    ):
+        raise ValueError(
+            f"disposition {key}: semantic_evidence must contain non-empty strings"
+        )
+    review_note = _require_non_empty_string(
+        raw.get("review_note"),
+        field="review_note",
+        java_key_value=key,
+    )
+
+    raw_rust_evidence = raw.get("rust_evidence", [])
+    if not isinstance(raw_rust_evidence, list):
+        raise ValueError(
+            f"disposition {key}: rust_evidence must be an array"
+        )
+    rust_evidence = [
+        _validate_file_anchor(
+            item,
+            rust_root=rust_root,
+            java_key_value=key,
+            field="rust_evidence",
+            symbol_field="symbol",
+        )
+        for item in raw_rust_evidence
+    ]
+    raw_test_evidence = raw.get("test_evidence", [])
+    if not isinstance(raw_test_evidence, list):
+        raise ValueError(
+            f"disposition {key}: test_evidence must be an array"
+        )
+    test_evidence = []
+    for item in raw_test_evidence:
+        validated = _validate_file_anchor(
+            item,
+            rust_root=rust_root,
+            java_key_value=key,
+            field="test_evidence",
+            symbol_field="test",
+        )
+        level = _require_non_empty_string(
+            item.get("level") if isinstance(item, dict) else None,
+            field="test_evidence.level",
+            java_key_value=key,
+        )
+        if level not in TEST_EVIDENCE_LEVELS:
+            raise ValueError(
+                f"disposition {key}: unsupported evidence level {level!r}"
+            )
+        validated["level"] = level
+        test_evidence.append(validated)
+
+    if state in {"IMPLEMENTED", "DEPENDENCY_REUSED"}:
+        if not semantic_evidence:
+            raise ValueError(
+                f"disposition {key}: {state} requires semantic_evidence"
+            )
+        if not rust_evidence:
+            raise ValueError(
+                f"disposition {key}: {state} requires rust_evidence"
+            )
+        if not test_evidence:
+            raise ValueError(
+                f"disposition {key}: {state} requires test_evidence"
+            )
+    platform_evidence = raw.get("platform_evidence", [])
+    if state == "PLATFORM_NA":
+        if (
+            not isinstance(platform_evidence, list)
+            or not platform_evidence
+            or any(
+                not isinstance(item, str) or not item.strip()
+                for item in platform_evidence
+            )
+        ):
+            raise ValueError(
+                f"disposition {key}: PLATFORM_NA requires platform_evidence"
+            )
+
+    dependency_evidence = raw.get("dependency_evidence")
+    if state == "DEPENDENCY_REUSED":
+        if not isinstance(dependency_evidence, dict):
+            raise ValueError(
+                f"disposition {key}: DEPENDENCY_REUSED requires dependency_evidence"
+            )
+        for field in ("package", "version_or_commit", "upstream_symbol", "adapter"):
+            _require_non_empty_string(
+                dependency_evidence.get(field),
+                field=f"dependency_evidence.{field}",
+                java_key_value=key,
+            )
+
+    return {
+        **raw,
+        "java_key": key,
+        "state": state,
+        "classification": classification,
+        "semantic_evidence": [item.strip() for item in semantic_evidence],
+        "review_note": review_note,
+        "rust_evidence": rust_evidence,
+        "test_evidence": test_evidence,
+    }
+
+
+def load_dispositions(
+    path: Path,
+    *,
+    java_sha: str,
+    rust_sha: str,
+    rust_source_fingerprint: str,
+    rust_root: Path,
+) -> dict[str, dict[str, dict[str, Any]]]:
+    """Load and baseline-check the authoritative reviewed disposition file."""
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(raw, dict) or raw.get("schema_version") != 1:
+        raise ValueError("dispositions must use schema_version 1")
+    if raw.get("java_baseline") != java_sha:
+        raise ValueError(
+            "disposition Java baseline does not match the current Java checkout"
+        )
+    reviewed_rust_baseline = raw.get("rust_baseline")
+    if (
+        reviewed_rust_baseline != rust_sha
+        and (
+            not isinstance(reviewed_rust_baseline, str)
+            or not git_is_ancestor(rust_root, reviewed_rust_baseline, rust_sha)
+        )
+    ):
+        raise ValueError(
+            "disposition Rust baseline is not the current checkout or one of "
+            "its ancestors"
+        )
+    if raw.get("rust_source_fingerprint") != rust_source_fingerprint:
+        raise ValueError(
+            "disposition Rust source fingerprint does not match current sources"
+        )
+
+    result: dict[str, dict[str, dict[str, Any]]] = {}
+    for section in ("objects", "nested_java_types", "methods"):
+        entries = raw.get(section, [])
+        if not isinstance(entries, list):
+            raise ValueError(f"dispositions section {section} must be an array")
+        indexed: dict[str, dict[str, Any]] = {}
+        for entry in entries:
+            if not isinstance(entry, dict):
+                raise ValueError(
+                    f"dispositions section {section} entries must be objects"
+                )
+            has_key = "java_key" in entry
+            has_keys = "java_keys" in entry
+            if has_key == has_keys:
+                raise ValueError(
+                    f"disposition in {section} must define exactly one of "
+                    "java_key or java_keys"
+                )
+            keys = entry.get("java_keys") if has_keys else [entry.get("java_key")]
+            if (
+                not isinstance(keys, list)
+                or not keys
+                or any(not isinstance(key, str) or not key.strip() for key in keys)
+            ):
+                raise ValueError(
+                    f"disposition in {section}: java_keys must contain "
+                    "non-empty strings"
+                )
+            for raw_key in keys:
+                expanded = {
+                    key: value
+                    for key, value in entry.items()
+                    if key != "java_keys"
+                }
+                expanded["java_key"] = raw_key
+                validated = validate_disposition(expanded, rust_root=rust_root)
+                key = validated["java_key"]
+                if key in indexed:
+                    raise ValueError(
+                        f"duplicate disposition key in {section}: {key}"
+                    )
+                indexed[key] = validated
+        result[section] = indexed
+    return result
+
+
+def apply_dispositions(
+    rows: list[dict[str, Any]],
+    dispositions: dict[str, dict[str, Any]],
+    *,
+    section: str,
+) -> dict[str, int]:
+    """Apply only exact reviewed keys and reject stale/unmatched dispositions."""
+    matched: set[str] = set()
+    for row in rows:
+        key = java_key(row["java"])
+        disposition = dispositions.get(key)
+        row["java_key"] = key
+        if disposition is None:
+            continue
+        matched.add(key)
+        row["state"] = disposition["state"]
+        row["semantic_evidence"] = disposition["semantic_evidence"]
+        row["review_note"] = disposition["review_note"]
+        row["reviewed_disposition"] = disposition
+        if disposition["test_evidence"]:
+            row["reviewed_test_evidence"] = disposition["test_evidence"]
+
+    unmatched = sorted(set(dispositions) - matched)
+    if unmatched:
+        raise ValueError(
+            f"unmatched {section} disposition keys: {', '.join(unmatched)}"
+        )
+    return {
+        "provided": len(dispositions),
+        "matched": len(matched),
+        "handled": sum(
+            row["state"] in HANDLED_STATES and java_key(row["java"]) in matched
+            for row in rows
+        ),
     }
 
 
@@ -840,6 +1247,8 @@ def main() -> int:
         if not path.is_file():
             raise SystemExit(f"missing CodeGraph database: {path}")
 
+    java_state = git_state(java_root)
+    rust_state = git_state(rust_root)
     java_nodes = load_nodes(java_db)
     rust_nodes = load_nodes(rust_db)
     primary_types = primary_java_types(java_nodes)
@@ -1111,8 +1520,39 @@ def main() -> int:
             }
         )
 
-    java_state = git_state(java_root)
-    rust_state = git_state(rust_root)
+    disposition_stats: dict[str, dict[str, int]] = {}
+    current_rust_source_fingerprint = source_tree_fingerprint(
+        rust_root,
+        rust_source_root,
+    )
+    if args.dispositions:
+        dispositions = load_dispositions(
+            args.dispositions.resolve(),
+            java_sha=java_state["sha"],
+            rust_sha=rust_state["sha"],
+            rust_source_fingerprint=current_rust_source_fingerprint,
+            rust_root=rust_root,
+        )
+        disposition_stats = {
+            "objects": apply_dispositions(
+                object_rows,
+                dispositions["objects"],
+                section="objects",
+            ),
+            "nested_java_types": apply_dispositions(
+                nested_rows,
+                dispositions["nested_java_types"],
+                section="nested_java_types",
+            ),
+            "methods": apply_dispositions(
+                method_rows,
+                dispositions["methods"],
+                section="methods",
+            ),
+        }
+        state_counts = count_states(object_rows)
+        nested_state_counts = count_states(nested_rows)
+        method_state_counts = count_states(method_rows)
     object_candidate_docs = [
         candidate["doc"]
         for row in object_rows
@@ -1178,6 +1618,11 @@ def main() -> int:
                 "name/path matches are discovery evidence only; semantic parity "
                 "requires explicit contract evidence"
             ),
+            "reviewed_disposition_rule": (
+                "handled states require an exact baseline, exact Java key, "
+                "semantic rationale, current Rust source anchor, and current "
+                "semantic test anchor"
+            ),
             "strict_states": sorted(STRICT_STATES),
         },
         "baselines": {
@@ -1190,6 +1635,7 @@ def main() -> int:
             },
             "rust": {
                 "root": str(rust_root),
+                "source_fingerprint": current_rust_source_fingerprint,
                 **rust_state,
                 "codegraph": json_command(
                     rust_root, "codegraph", "status", "--json"
@@ -1206,6 +1652,7 @@ def main() -> int:
             "object_states": dict(sorted(state_counts.items())),
             "nested_type_states": dict(sorted(nested_state_counts.items())),
             "method_states": dict(sorted(method_state_counts.items())),
+            "reviewed_dispositions": disposition_stats,
             "explicit_test_marker_keys": len(test_markers),
             "comment_coverage": comment_coverage,
             "evidence_coverage": evidence_coverage,
@@ -1275,6 +1722,9 @@ def main() -> int:
                 "full_manifest": str(args.output),
                 "test_inventory": (
                     str(args.test_inventory) if args.test_inventory else None
+                ),
+                "dispositions": (
+                    str(args.dispositions) if args.dispositions else None
                 ),
             },
             "completion": {

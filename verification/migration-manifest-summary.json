@@ -1,10 +1,11 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-07-30T18:42:04.258841+00:00",
+  "generated_at": "2026-07-31T02:00:24.952180+00:00",
   "policy": {
     "source": "rust-java-migration + rust-java-migration-testing",
     "retain_package_segments": 1,
     "candidate_rule": "name/path matches are discovery evidence only; semantic parity requires explicit contract evidence",
+    "reviewed_disposition_rule": "handled states require an exact baseline, exact Java key, semantic rationale, current Rust source anchor, and current semantic test anchor",
     "strict_states": [
       "DEPENDENCY_REUSED",
       "IMPLEMENTED",
@@ -72,12 +73,82 @@
     },
     "rust": {
       "root": "/Users/wandl/workspaces/workspace-github-easy-4-rust/qlexpress-rust",
-      "sha": "e4cf77e4802bf12e9ce540061d73f01210e6f248",
+      "source_fingerprint": "sha256:c8e5bf8f4608618fbee31e5142df8a7c236841f1d252133f43a44169bfd4a27a",
+      "sha": "982f449b470fdd2f949555015ab13d7aa82ec45d",
       "branch": "dev",
       "dirty": true,
       "status": [
-        "M scripts/generate_migration_manifest.py",
-        " M verification/migration-manifest-summary.json"
+        "M crates/qlexpress/src/aparser/parse_tree.rs",
+        " M crates/qlexpress/src/aparser/ql_parser.rs",
+        " M crates/qlexpress/src/aparser/ql_parser_base_visitor.rs",
+        " M crates/qlexpress/src/aparser/syntax_tree_factory.rs",
+        " M crates/qlexpress/src/aparser/terminal_node.rs",
+        " M crates/qlexpress/src/convert/obj_type_convertor.rs",
+        " M crates/qlexpress/src/convert/parameters_type_convertor.rs",
+        " M crates/qlexpress/src/exception/ex_message_util.rs",
+        " M crates/qlexpress/src/instruction/break_continue_instruction.rs",
+        " M crates/qlexpress/src/instruction/call_const_instruction.rs",
+        " M crates/qlexpress/src/instruction/call_function_instruction.rs",
+        " M crates/qlexpress/src/instruction/call_instruction.rs",
+        " M crates/qlexpress/src/instruction/cast_instruction.rs",
+        " M crates/qlexpress/src/instruction/check_time_out_instruction.rs",
+        " M crates/qlexpress/src/instruction/close_scope_instruction.rs",
+        " M crates/qlexpress/src/instruction/const_instruction.rs",
+        " M crates/qlexpress/src/instruction/define_function_instruction.rs",
+        " M crates/qlexpress/src/instruction/define_local_instruction.rs",
+        " M crates/qlexpress/src/instruction/for_instruction.rs",
+        " M crates/qlexpress/src/instruction/get_field_instruction.rs",
+        " M crates/qlexpress/src/instruction/get_method_instruction.rs",
+        " M crates/qlexpress/src/instruction/index_instruction.rs",
+        " M crates/qlexpress/src/instruction/jump_if_instruction.rs",
+        " M crates/qlexpress/src/instruction/jump_if_pop_instruction.rs",
+        " M crates/qlexpress/src/instruction/jump_instruction.rs",
+        " M crates/qlexpress/src/instruction/load_instruction.rs",
+        " M crates/qlexpress/src/instruction/load_lambda_instruction.rs",
+        " M crates/qlexpress/src/instruction/method_invoke_instruction.rs",
+        " M crates/qlexpress/src/instruction/multi_new_array_instruction.rs",
+        " M crates/qlexpress/src/instruction/new_array_instruction.rs",
+        " M crates/qlexpress/src/instruction/new_filled_instance_instruction.rs",
+        " M crates/qlexpress/src/instruction/new_instance_instruction.rs",
+        " M crates/qlexpress/src/instruction/new_list_instruction.rs",
+        " M crates/qlexpress/src/instruction/new_map_instruction.rs",
+        " M crates/qlexpress/src/instruction/new_scope_instruction.rs",
+        " M crates/qlexpress/src/instruction/operator_instruction.rs",
+        " M crates/qlexpress/src/instruction/pop_instruction.rs",
+        " M crates/qlexpress/src/instruction/ql_instruction.rs",
+        " M crates/qlexpress/src/instruction/return_instruction.rs",
+        " M crates/qlexpress/src/instruction/slice_instruction.rs",
+        " M crates/qlexpress/src/instruction/spread_get_field_instruction.rs",
+        " M crates/qlexpress/src/instruction/spread_method_invoke_instruction.rs",
+        " M crates/qlexpress/src/instruction/string_join_instruction.rs",
+        " M crates/qlexpress/src/instruction/throw_instruction.rs",
+        " M crates/qlexpress/src/instruction/trace_evaluated_instruction.rs",
+        " M crates/qlexpress/src/instruction/trace_peek_instruction.rs",
+        " M crates/qlexpress/src/instruction/try_catch_instruction.rs",
+        " M crates/qlexpress/src/instruction/unary_instruction.rs",
+        " M crates/qlexpress/src/instruction/while_instruction.rs",
+        " M crates/qlexpress/src/lib.rs",
+        " M crates/qlexpress/src/number/big_decimal_math.rs",
+        " M crates/qlexpress/src/number/floating_point_math.rs",
+        " M crates/qlexpress/src/ql_options.rs",
+        " M crates/qlexpress/src/runtime/execution_budget.rs",
+        " M crates/qlexpress/src/runtime/java_collector.rs",
+        " M crates/qlexpress/src/runtime/java_map_entry.rs",
+        " M crates/qlexpress/src/runtime/java_stream.rs",
+        " M crates/qlexpress/src/runtime/left_value.rs",
+        " M crates/qlexpress/src/runtime/member.rs",
+        " M crates/qlexpress/src/runtime/meta_class.rs",
+        " M crates/qlexpress/src/runtime/native_registry.rs",
+        " M crates/qlexpress/src/runtime/opaque_native_object.rs",
+        " M crates/qlexpress/src/runtime/q_lambda.rs",
+        " M crates/qlexpress/src/runtime/q_lambda_inner.rs",
+        " M crates/qlexpress/src/runtime/qvm_global_scope.rs",
+        " M crates/qlexpress/src/runtime/reflect_loader.rs",
+        " M crates/qlexpress/src/scope/q_scope.rs",
+        " M \"docs/\\350\\277\\201\\347\\247\\273\\345\\267\\256\\345\\274\\202\\345\\256\\241\\350\\256\\241\\345\\237\\272\\347\\272\\277.md\"",
+        " M scripts/generate_migration_manifest.py",
+        " M verification/migration-manifest-summary.json",
+        "?? scripts/tests/"
       ],
       "codegraph": {
         "initialized": true,
@@ -114,7 +185,7 @@
         ],
         "pendingChanges": {
           "added": 0,
-          "modified": 1,
+          "modified": 40,
           "removed": 0
         },
         "worktreeMismatch": null,
@@ -134,8 +205,8 @@
     "java_nested_types": 136,
     "java_anonymous_types": 5,
     "java_public_or_protected_methods": 1814,
-    "rust_production_types": 423,
-    "rust_production_methods": 2469,
+    "rust_production_types": 446,
+    "rust_production_methods": 4072,
     "object_states": {
       "UNVERIFIED": 237
     },
@@ -143,25 +214,43 @@
       "UNVERIFIED": 136
     },
     "method_states": {
-      "MISSING": 148,
-      "UNVERIFIED": 1666
+      "IMPLEMENTED": 65,
+      "MISSING": 34,
+      "UNVERIFIED": 1715
     },
-    "explicit_test_marker_keys": 288,
+    "reviewed_dispositions": {
+      "objects": {
+        "provided": 0,
+        "matched": 0,
+        "handled": 0
+      },
+      "nested_java_types": {
+        "provided": 0,
+        "matched": 0,
+        "handled": 0
+      },
+      "methods": {
+        "provided": 65,
+        "matched": 65,
+        "handled": 65
+      }
+    },
+    "explicit_test_marker_keys": 327,
     "comment_coverage": {
       "java_primary_objects_with_doc": 192,
-      "rust_object_candidates": 473,
-      "rust_object_candidates_with_chinese_doc": 430,
-      "rust_object_candidates_with_java_source_trace": 423,
+      "rust_object_candidates": 477,
+      "rust_object_candidates_with_chinese_doc": 436,
+      "rust_object_candidates_with_java_source_trace": 426,
       "java_methods_with_doc": 90,
-      "rust_method_candidates": 2070,
-      "rust_method_candidates_with_chinese_doc": 1497,
-      "rust_method_candidates_with_java_source_trace": 1209
+      "rust_method_candidates": 3191,
+      "rust_method_candidates_with_chinese_doc": 2422,
+      "rust_method_candidates_with_java_source_trace": 2115
     },
     "evidence_coverage": {
-      "java_methods_with_member_candidate": 1666,
-      "java_methods_with_method_candidate": 1491,
-      "rust_member_candidates": 4031,
-      "java_methods_with_explicit_test_marker": 32,
+      "java_methods_with_member_candidate": 1715,
+      "java_methods_with_method_candidate": 1541,
+      "rust_member_candidates": 5200,
+      "java_methods_with_explicit_test_marker": 63,
       "java_methods_with_direct_call_graph": 835,
       "direct_java_call_edges_recorded": 2257
     },
@@ -178,7 +267,8 @@
   "artifacts": {
     "generator": "scripts/generate_migration_manifest.py",
     "full_manifest": "verification/migration-manifest.json",
-    "test_inventory": "verification/migration-test-inventory.json"
+    "test_inventory": "verification/migration-test-inventory.json",
+    "dispositions": "verification/migration-dispositions.json"
   },
   "completion": {
     "proven": false,

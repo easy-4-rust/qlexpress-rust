@@ -318,18 +318,13 @@ mod tests {
 
     #[test]
     fn cloned_options_share_the_java_attachment_map_identity() {
-        let opts = QLOptions::builder()
-            .attachments(HashMap::new())
-            .build();
+        let opts = QLOptions::builder().attachments(HashMap::new()).build();
         let cloned = opts.clone();
 
         opts.attachments_mut()
             .insert("late".to_string(), DataValue::Int(42));
 
-        assert_eq!(
-            cloned.attachments().get("late"),
-            Some(&DataValue::Int(42))
-        );
+        assert_eq!(cloned.attachments().get("late"), Some(&DataValue::Int(42)));
     }
 
     #[test]

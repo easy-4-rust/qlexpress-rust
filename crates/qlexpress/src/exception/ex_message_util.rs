@@ -59,8 +59,7 @@ impl ExMessageUtil {
         let token_start = token_start_pos.max(0) as usize;
 
         let start_report_pos = token_start.saturating_sub(SNIPPET_EXTENSION_LEN);
-        let end_report_pos =
-            (token_start + lexeme_len + SNIPPET_EXTENSION_LEN).min(units.len());
+        let end_report_pos = (token_start + lexeme_len + SNIPPET_EXTENSION_LEN).min(units.len());
 
         let mut snippet_builder = String::new();
         if start_report_pos > 0 {

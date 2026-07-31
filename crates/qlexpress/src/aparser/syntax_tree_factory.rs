@@ -240,11 +240,7 @@ impl HasChildren for ForEachStatementContext {
 
 impl HasChildren for FunctionStatementContext {
     fn children(&self) -> Vec<ChildRef<'_>> {
-        let mut out = vec![
-            t(&self.function_token),
-            n(&self.var_id),
-            t(&self.lparen),
-        ];
+        let mut out = vec![t(&self.function_token), n(&self.var_id), t(&self.lparen)];
         push_opt(&mut out, &self.params);
         out.push(t(&self.rparen));
         out.push(t(&self.lbrace));
@@ -581,11 +577,7 @@ impl HasChildren for ListItemsContext {
 
 impl HasChildren for MapExprContext {
     fn children(&self) -> Vec<ChildRef<'_>> {
-        vec![
-            t(&self.lbrace),
-            n(&self.map_entries),
-            t(&self.rbrace),
-        ]
+        vec![t(&self.lbrace), n(&self.map_entries), t(&self.rbrace)]
     }
 }
 

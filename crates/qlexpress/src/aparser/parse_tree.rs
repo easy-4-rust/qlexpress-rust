@@ -65,10 +65,7 @@ impl Node {
     /// 返回全部满足谓词的规则孩子。
     ///
     /// 对应 Java `RuleContext#getRuleContexts(Class<T>)`。
-    pub fn rule_contexts(
-        &self,
-        mut predicate: impl FnMut(&Node) -> bool,
-    ) -> Vec<&Node> {
+    pub fn rule_contexts(&self, mut predicate: impl FnMut(&Node) -> bool) -> Vec<&Node> {
         self.children()
             .into_iter()
             .filter_map(|child| match child {

@@ -1,0 +1,903 @@
+{
+  "schema_version": 1,
+  "java_baseline": "9065b9ac5d985dcd02e627239aa9cdb78fb2f7f3",
+  "rust_baseline": "982f449b470fdd2f949555015ab13d7aa82ec45d",
+  "rust_source_fingerprint": "sha256:c8e5bf8f4608618fbee31e5142df8a7c236841f1d252133f43a44169bfd4a27a",
+  "objects": [],
+  "nested_java_types": [],
+  "methods": [
+    {
+      "java_key": "com.alibaba.qlexpress4.aparser::RuleContext::addChild|void (ParseTree child)",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Rust 解析器直接构造强类型上下文字段，RuleContext::children 再按 Java addChild 顺序投影为 ParseTree 孩子；None 不会进入孩子序列。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/rule_context.rs",
+          "symbol": "fn children(&self)"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/ql_parser.rs",
+          "test": "rule_context_queries_include_punctuation_and_bounds",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "逐项核对了孩子顺序、空孩子处理以及终结符/规则孩子的边界传播。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.aparser::RuleContext::addToken|void (Token token)",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Rust 上下文把 Token 保存为 TerminalNode 字段，children 实现将其放回与 Java addToken 相同的源码顺序。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/rule_context.rs",
+          "symbol": "pub(crate) fn t("
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/ql_parser.rs",
+          "test": "rule_context_queries_include_punctuation_and_bounds",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "括号 Token 的孩子顺序、token 类型查询和文本均由同一测试验证。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.aparser::RuleContext::isEmpty|boolean ()",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Node::is_empty 对强类型上下文的 children 投影执行空判断，返回契约与 Java children.isEmpty 一致。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/parse_tree.rs",
+          "symbol": "pub fn is_empty(&self)"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/ql_parser.rs",
+          "test": "rule_context_queries_include_punctuation_and_bounds",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "非空规则节点的结果已镜像验证。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.aparser::RuleContext::getChildCount|int ()",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Node::child_count 返回完整 children 投影长度，包含规则孩子与终结符。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/parse_tree.rs",
+          "symbol": "pub fn child_count(&self)"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/ql_parser.rs",
+          "test": "rule_context_queries_include_punctuation_and_bounds",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "对 (a) 验证为三个直接孩子。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.aparser::RuleContext::getChild|ParseTree (int i)",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Node::child 按原始孩子顺序索引并在越界时 panic，对应 Java List.get 的 IndexOutOfBoundsException。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/parse_tree.rs",
+          "symbol": "pub fn child(&self, index: usize)"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/ql_parser.rs",
+          "test": "rule_context_queries_include_punctuation_and_bounds",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "首尾括号的索引和文本已验证。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.aparser::RuleContext::getChild|T (Class<T> type, int index)",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Node::rule_child 用类型安全谓词替代 Java Class<T>，只计数规则孩子并在缺失时返回 None，对应 Java null。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/parse_tree.rs",
+          "symbol": "pub fn rule_child("
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/ql_parser.rs",
+          "test": "rule_context_queries_include_punctuation_and_bounds",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "测试验证终结符不参与规则孩子索引且第一个规则孩子文本为 a。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.aparser::RuleContext::getRuleContexts|List<T> (Class<T> type)",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Node::rule_contexts 用类型安全谓词筛选全部规则孩子，保留 Java 遍历顺序。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/parse_tree.rs",
+          "symbol": "pub fn rule_contexts("
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/ql_parser.rs",
+          "test": "rule_context_queries_include_punctuation_and_bounds",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "测试验证括号组仅返回内部表达式规则孩子。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.aparser::RuleContext::getStart|Token ()",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Node::start_token 从源码顺序的第一个可定位孩子取得 Token，与 Java addChild/setBounds 后的 start 一致；空节点返回 None 对应 null。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/parse_tree.rs",
+          "symbol": "pub fn start_token(&self)"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/ql_parser.rs",
+          "test": "rule_context_queries_include_punctuation_and_bounds",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "括号组起始 Token 已验证为左括号。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.aparser::RuleContext::getStop|Token ()",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Node::stop_token 从源码逆序的第一个可定位孩子取得 Token，与 Java addChild/setBounds 后的 stop 一致；空节点返回 None 对应 null。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/parse_tree.rs",
+          "symbol": "pub fn stop_token(&self)"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/ql_parser.rs",
+          "test": "rule_context_queries_include_punctuation_and_bounds",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "括号组结束 Token 已验证为右括号。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.aparser::RuleContext::setStart|void (Token start)",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Rust AST 不保留可变冗余 start 字段；强类型孩子序列是唯一事实源，start_token 的首孩子推导保留 Java setStart 的可观察结果。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/parse_tree.rs",
+          "symbol": "pub fn start_token(&self)"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/ql_parser.rs",
+          "test": "rule_context_queries_include_punctuation_and_bounds",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "这是所有权模型适配，不暴露 Java 解析器内部的独立可变边界。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.aparser::RuleContext::setStop|void (Token stop)",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Rust AST 不保留可变冗余 stop 字段；强类型孩子序列是唯一事实源，stop_token 的末孩子推导保留 Java setStop 的可观察结果。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/parse_tree.rs",
+          "symbol": "pub fn stop_token(&self)"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/ql_parser.rs",
+          "test": "rule_context_queries_include_punctuation_and_bounds",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "这是所有权模型适配，右括号边界测试防止末 Token 丢失。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.aparser::RuleContext::tokenNode|TerminalNode (int type)",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Node::token_node 按孩子顺序返回首个指定类型 TerminalNode，缺失时返回 None 对应 Java null。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/parse_tree.rs",
+          "symbol": "pub fn token_node(&self"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/ql_parser.rs",
+          "test": "rule_context_queries_include_punctuation_and_bounds",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "左括号 token 类型和文本已验证。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.aparser::RuleContext::tokenNodes|List<TerminalNode> (int type)",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Node::token_nodes 按孩子顺序收集全部指定类型 TerminalNode，与 Java 结果列表语义一致。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/parse_tree.rs",
+          "symbol": "pub fn token_nodes(&self"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/ql_parser.rs",
+          "test": "rule_context_queries_include_punctuation_and_bounds",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "左右括号各自的单元素结果已验证。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.aparser::RuleContext::toStringTree|String ()",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Node::to_string_tree 使用去除 Context 后的规则名递归输出规则孩子，终结符直接输出文本，格式与 Java 一致。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/parse_tree.rs",
+          "symbol": "pub fn to_string_tree(&self)"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/ql_parser.rs",
+          "test": "rule_context_queries_include_punctuation_and_bounds",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "括号组的规则名、嵌套结构和终结符输出均由镜像测试覆盖。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.aparser::QLParser::ProgramContext::importDeclaration|List<ImportDeclarationContext> ()",
+        "com.alibaba.qlexpress4.aparser::QLParser::BlockStatementsContext::blockStatement|List<BlockStatementContext> ()"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Java 生成式只读列表 accessor 在 Rust 中直接公开为按源码顺序保存的 Vec<Node> 字段；解析器构造与 children 投影使用同一列表。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/program_context.rs",
+          "symbol": "pub imports: Vec<Node>"
+        },
+        {
+          "file": "crates/qlexpress/src/aparser/block_statements_context.rs",
+          "symbol": "pub statements: Vec<Node>"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/ql_parser.rs",
+          "test": "parses_imports",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/src/aparser/ql_parser.rs",
+          "test": "parses_local_variable_declaration_with_type",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "已核对 import 和顶层 statement 的数量、顺序及具体节点类型。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.aparser::QLParser::FunctionStatementContext::formalOrInferredParameterList|FormalOrInferredParameterListContext ()",
+        "com.alibaba.qlexpress4.aparser::QLParser::LambdaParametersContext::formalOrInferredParameterList|FormalOrInferredParameterListContext ()",
+        "com.alibaba.qlexpress4.aparser::QLParser::FormalOrInferredParameterListContext::formalOrInferredParameter|List<FormalOrInferredParameterContext> ()"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "函数和 Lambda 的可选参数列表 accessor 适配为 Option<Box<Node>>，参数集合适配为保持声明顺序的 Vec<Node>。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/function_statement_context.rs",
+          "symbol": "pub params: Option<Box<Node>>"
+        },
+        {
+          "file": "crates/qlexpress/src/aparser/lambda_parameters_context.rs",
+          "symbol": "pub params: Option<Box<Node>>"
+        },
+        {
+          "file": "crates/qlexpress/src/aparser/formal_or_inferred_parameter_list_context.rs",
+          "symbol": "pub params: Vec<Node>"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/ql_parser.rs",
+          "test": "parses_function_and_macro",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/src/aparser/ql_parser.rs",
+          "test": "parses_lambdas",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "函数双参数、Lambda 单参数简写和括号双参数三种形态均已验证。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.aparser::QLParser::VariableDeclaratorListContext::variableDeclarator|List<VariableDeclaratorContext> ()",
+        "com.alibaba.qlexpress4.aparser::QLParser::VariableDeclaratorContext::variableDeclaratorId|VariableDeclaratorIdContext ()",
+        "com.alibaba.qlexpress4.aparser::QLParser::VariableDeclaratorContext::variableInitializer|VariableInitializerContext ()"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "变量声明列表、声明 id 和可选初始化器分别映射为 variables、id 与 initializer 字段，保留 Java 的顺序和 null/非 null 语义。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/variable_declarator_list_context.rs",
+          "symbol": "pub variables: Vec<Node>"
+        },
+        {
+          "file": "crates/qlexpress/src/aparser/variable_declarator_context.rs",
+          "symbol": "pub id: Box<Node>"
+        },
+        {
+          "file": "crates/qlexpress/src/aparser/variable_declarator_context.rs",
+          "symbol": "pub initializer: Option<Box<Node>>"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/ql_parser.rs",
+          "test": "parses_local_variable_declaration_with_type",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "测试逐层验证 declarator list、id 和 initializer 的实际节点类型。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.aparser::QLParser::ArrayInitializerContext::variableInitializerList|VariableInitializerListContext ()",
+        "com.alibaba.qlexpress4.aparser::QLParser::VariableInitializerListContext::variableInitializer|List<VariableInitializerContext> ()"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "数组初始化器的可选列表映射为 Option<Box<Node>>，初始化器集合和逗号分别保留为有序 Vec。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/array_initializer_context.rs",
+          "symbol": "pub initializers: Option<Box<Node>>"
+        },
+        {
+          "file": "crates/qlexpress/src/aparser/variable_initializer_list_context.rs",
+          "symbol": "pub initializers: Vec<Node>"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/ql_parser.rs",
+          "test": "array_initializer_in_declaration",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "花括号、两个初始化器和一个分隔逗号均已精确断言。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.aparser::QLParser::ExpressionContext::ternaryExpr|TernaryExprContext ()",
+        "com.alibaba.qlexpress4.aparser::QLParser::TernaryExprContext::baseExpr|BaseExprContext (int i)",
+        "com.alibaba.qlexpress4.aparser::QLParser::BaseExprContext::leftAsso|List<LeftAssoContext> ()",
+        "com.alibaba.qlexpress4.aparser::QLParser::LeftAssoContext::baseExpr|BaseExprContext ()"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Expression.ternary、TernaryExpr 的三个 BaseExpr 位置、BaseExpr.leftAssos 与 LeftAsso.right 在 Rust 中由命名字段表达，保留优先级和右结合结构。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/expression_context.rs",
+          "symbol": "pub ternary: Option<Box<Node>>"
+        },
+        {
+          "file": "crates/qlexpress/src/aparser/ternary_expr_context.rs",
+          "symbol": "pub condition: Box<Node>"
+        },
+        {
+          "file": "crates/qlexpress/src/aparser/base_expr_context.rs",
+          "symbol": "pub left_assos: Vec<Node>"
+        },
+        {
+          "file": "crates/qlexpress/src/aparser/left_asso_context.rs",
+          "symbol": "pub right: Box<Node>"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/ql_parser.rs",
+          "test": "multiplication_binds_tighter_than_plus",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/src/aparser/ql_parser.rs",
+          "test": "ternary_parses_right_associative_tail",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "乘法/加法优先级和嵌套三元右结合同时验证了列表顺序及右侧 BaseExpr。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.aparser::QLParser::LeftHandSideContext::pathPart|List<PathPartContext> ()",
+        "com.alibaba.qlexpress4.aparser::QLParser::PrimaryContext::prefixExpress|PrefixExpressContext ()",
+        "com.alibaba.qlexpress4.aparser::QLParser::PrimaryContext::primaryNoFixPathable|PrimaryNoFixPathableContext ()",
+        "com.alibaba.qlexpress4.aparser::QLParser::PrimaryContext::pathPart|List<PathPartContext> ()",
+        "com.alibaba.qlexpress4.aparser::QLParser::PrimaryContext::suffixExpress|SuffixExpressContext ()",
+        "com.alibaba.qlexpress4.aparser::QLParser::PrimaryContext::primaryNoFixNonPathable|PrimaryNoFixNonPathableContext ()"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Primary 与 LeftHandSide 的生成式 accessor 映射为 prefix/pathable/path_parts/suffix/non_pathable 字段；Option 代替 Java null，Vec 保留路径顺序。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/left_hand_side_context.rs",
+          "symbol": "pub path_parts: Vec<Node>"
+        },
+        {
+          "file": "crates/qlexpress/src/aparser/primary_context.rs",
+          "symbol": "pub prefix: Option<Box<Node>>"
+        },
+        {
+          "file": "crates/qlexpress/src/aparser/primary_context.rs",
+          "symbol": "pub pathable: Option<Box<Node>>"
+        },
+        {
+          "file": "crates/qlexpress/src/aparser/primary_context.rs",
+          "symbol": "pub path_parts: Vec<Node>"
+        },
+        {
+          "file": "crates/qlexpress/src/aparser/primary_context.rs",
+          "symbol": "pub suffix: Option<Box<Node>>"
+        },
+        {
+          "file": "crates/qlexpress/src/aparser/primary_context.rs",
+          "symbol": "pub non_pathable: Option<Box<Node>>"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/ql_parser.rs",
+          "test": "var_declaration_without_type_is_assign_or_ref",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/src/aparser/ql_parser.rs",
+          "test": "unary_prefix_and_suffix",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/src/aparser/ql_parser.rs",
+          "test": "parses_method_field_and_chaining_paths",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/src/aparser/ql_parser.rs",
+          "test": "parses_lambdas",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "赋值左侧、前后缀、一至多段路径及不可路径化 Lambda 分支均有直接结构断言。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.aparser::QLParser::ContextSelectExprContext::SelectorVariable_VANME|TerminalNode ()"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "SelectorVariable_VANME accessor 映射为强类型 selector_variable TerminalNode 字段，保留原始变量文本。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/context_select_expr_context.rs",
+          "symbol": "pub selector_variable: TerminalNode"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/ql_parser.rs",
+          "test": "parses_context_selector",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "自定义 selector 边界下变量文本 user 已验证。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.aparser::QLParser::TryCatchesContext::tryCatch|List<TryCatchContext> ()"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "tryCatch 列表 accessor 映射为保持 catch 声明顺序的 catches Vec<Node>。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/try_catches_context.rs",
+          "symbol": "pub catches: Vec<Node>"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/ql_parser.rs",
+          "test": "parses_try_catch_finally",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "两个 catch 的顺序、联合异常参数和无类型参数均已断言。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.aparser::QLParser::MapEntriesContext::mapEntry|List<MapEntryContext> ()",
+        "com.alibaba.qlexpress4.aparser::QLParser::ClsValueContext::QuoteStringLiteral|TerminalNode ()",
+        "com.alibaba.qlexpress4.aparser::QLParser::StringKeyContext::doubleQuoteStringLiteral|DoubleQuoteStringLiteralContext ()"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "MapEntries.mapEntry 映射为有序 entries；StringKey 与特殊 @class ClsValue 分别保留双引号子节点和单引号类名终结符。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/map_entries_context.rs",
+          "symbol": "pub entries: Vec<Node>"
+        },
+        {
+          "file": "crates/qlexpress/src/aparser/cls_value_context.rs",
+          "symbol": "pub quote: TerminalNode"
+        },
+        {
+          "file": "crates/qlexpress/src/aparser/string_key_context.rs",
+          "symbol": "pub double_quote_string: Box<Node>"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/ql_parser.rs",
+          "test": "parses_list_map_and_block_expr",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "普通 Map、多条目顺序、双引号 key、@class 类名值及空 Map 均有结构断言。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.aparser::QLParser::LiteralContext::IntegerLiteral|TerminalNode ()",
+        "com.alibaba.qlexpress4.aparser::QLParser::LiteralContext::FloatingPointLiteral|TerminalNode ()",
+        "com.alibaba.qlexpress4.aparser::QLParser::LiteralContext::IntegerOrFloatingLiteral|TerminalNode ()",
+        "com.alibaba.qlexpress4.aparser::QLParser::LiteralContext::QuoteStringLiteral|TerminalNode ()",
+        "com.alibaba.qlexpress4.aparser::QLParser::LiteralContext::boolenLiteral|BoolenLiteralContext ()",
+        "com.alibaba.qlexpress4.aparser::QLParser::LiteralContext::doubleQuoteStringLiteral|DoubleQuoteStringLiteralContext ()",
+        "com.alibaba.qlexpress4.aparser::QLParser::DoubleQuoteStringLiteralContext::StaticStringCharacters|TerminalNode ()"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "四个互斥 token accessor 合并为带 token_type 的 token 字段，布尔与双引号子规则保持独立 Option；静态字符串字符保留为 TerminalNode。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/literal_context.rs",
+          "symbol": "pub token: Option<TerminalNode>"
+        },
+        {
+          "file": "crates/qlexpress/src/aparser/literal_context.rs",
+          "symbol": "pub boolen: Option<Box<Node>>"
+        },
+        {
+          "file": "crates/qlexpress/src/aparser/literal_context.rs",
+          "symbol": "pub double_quote_string: Option<Box<Node>>"
+        },
+        {
+          "file": "crates/qlexpress/src/aparser/double_quote_string_literal_context.rs",
+          "symbol": "pub static_characters: Option<TerminalNode>"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/ql_parser.rs",
+          "test": "literal_context_accessors_preserve_java_variants",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "十六进制、浮点、普通数字、单引号、布尔和静态双引号六类输入均逐项断言。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.aparser::QLParser::StringExpressionContext::DyStrExprStart|TerminalNode ()",
+        "com.alibaba.qlexpress4.aparser::QLParser::StringExpressionContext::SelectorVariable_VANME|TerminalNode ()"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "动态字符串起始符映射为 start TerminalNode；Variable 模式的 selector accessor 映射为 selector_variable Option，Script 模式则保留完整 expression。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/string_expression_context.rs",
+          "symbol": "pub start: TerminalNode"
+        },
+        {
+          "file": "crates/qlexpress/src/aparser/string_expression_context.rs",
+          "symbol": "pub selector_variable: Option<TerminalNode>"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/ql_parser.rs",
+          "test": "parses_string_interpolation",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "Script 和 Variable 两种插值模式分别验证 start、expression 与 selector_variable。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.aparser::QLParser::SwitchExprContext::switchCaseGroups|SwitchCaseGroupsContext ()",
+        "com.alibaba.qlexpress4.aparser::QLParser::SwitchCaseGroupsContext::switchCaseGroup|List<SwitchCaseGroupContext> ()",
+        "com.alibaba.qlexpress4.aparser::QLParser::SwitchStatementGroupContext::switchLabels|SwitchLabelsContext ()",
+        "com.alibaba.qlexpress4.aparser::QLParser::SwitchExprGroupContext::switchExpressionLabel|SwitchExpressionLabelContext ()",
+        "com.alibaba.qlexpress4.aparser::QLParser::SwitchLabelsContext::switchLabel|List<SwitchLabelContext> ()"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Switch 生成式 accessor 映射为 groups、labels 与 label 字段，Vec 保持 case/default 顺序，Option 保留空主体语义。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/switch_expr_context.rs",
+          "symbol": "pub groups: Option<Box<Node>>"
+        },
+        {
+          "file": "crates/qlexpress/src/aparser/switch_case_groups_context.rs",
+          "symbol": "pub groups: Vec<Node>"
+        },
+        {
+          "file": "crates/qlexpress/src/aparser/switch_statement_group_context.rs",
+          "symbol": "pub labels: Box<Node>"
+        },
+        {
+          "file": "crates/qlexpress/src/aparser/switch_expr_group_context.rs",
+          "symbol": "pub label: Box<Node>"
+        },
+        {
+          "file": "crates/qlexpress/src/aparser/switch_labels_context.rs",
+          "symbol": "pub labels: Vec<Node>"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/ql_parser.rs",
+          "test": "parses_switch_statement_and_expr_groups",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "语句式和表达式式 switch 均逐层验证 group、labels、表达式 label 与语句块。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.aparser::CheckVisitor::visitOptionalMethodInvoke|Void (QLParser.OptionalMethodInvokeContext ctx)",
+        "com.alibaba.qlexpress4.aparser::CheckVisitor::visitSpreadMethodInvoke|Void (QLParser.SpreadMethodInvokeContext ctx)"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Rust 将普通、optional 与 spread 方法节点合并为 MethodInvokeContext + ChainKind；CheckVisitor::visit_method_invoke 对三种链统一执行禁止函数调用检查并继续遍历。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/check_visitor.rs",
+          "symbol": "fn visit_method_invoke(&mut self"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/ql_parser.rs",
+          "test": "check_visitor_can_disable_function_calls",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "普通调用、?. optional 调用和 *. spread 调用均断言相同的 FUNCTION_CALL_NOT_ALLOWED。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitOptionalMethodInvoke|T (QLParser.OptionalMethodInvokeContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitSpreadMethodInvoke|T (QLParser.SpreadMethodInvokeContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitOptionalFieldAccess|T (QLParser.OptionalFieldAccessContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitSpreadFieldAccess|T (QLParser.SpreadFieldAccessContext ctx)"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Java 四个默认 visitor 方法都只调用 visitChildren；Rust 以 MethodInvokeContext/FieldAccessContext + ChainKind 合并节点类型，两个默认方法仍按源码顺序访问全部孩子并返回最后结果。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/ql_parser_base_visitor.rs",
+          "symbol": "visit_method_invoke(MethodInvokeContext)"
+        },
+        {
+          "file": "crates/qlexpress/src/aparser/ql_parser_base_visitor.rs",
+          "symbol": "visit_field_access(FieldAccessContext)"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/ql_parser_base_visitor.rs",
+          "test": "merged_chain_visitors_preserve_default_child_traversal",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "Optional/Spread × Method/Field 四个组合均验证孩子数量与完整文本。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.aparser::QvmInstructionVisitor::visitOptionalMethodInvoke|Void (OptionalMethodInvokeContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QvmInstructionVisitor::visitSpreadMethodInvoke|Void (SpreadMethodInvokeContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QvmInstructionVisitor::visitOptionalFieldAccess|Void (OptionalFieldAccessContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QvmInstructionVisitor::visitSpreadFieldAccess|Void (SpreadFieldAccessContext ctx)"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Rust QVM 编译器在 visit_method_invoke/visit_field_access 内按 ChainKind 生成 optional 标志或 SpreadMethodInvoke/SpreadGetField 指令，与 Java 四个专用 visitor 方法等价。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/qvm_instruction_visitor.rs",
+          "symbol": "fn visit_method_invoke(&mut self"
+        },
+        {
+          "file": "crates/qlexpress/src/aparser/qvm_instruction_visitor.rs",
+          "symbol": "fn visit_field_access(&mut self"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/tests/alignment_suite.rs",
+          "test": "operator_optional_chaining",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/tests/alignment_suite.rs",
+          "test": "spread_list_spread",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "Java testsuite 的 optional 与 spread 字段/方法脚本在完整编译和 QVM 执行路径上通过。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.aparser::QvmInstructionVisitor::visitArrayInitializer|Void (ArrayInitializerContext ctx)"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Rust 在 parse_initializer/new_arr_with_initializers 中遍历初始化器、解析组件类型并生成 NewArrayInstruction，承担 Java visitArrayInitializer 的完整编译职责。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/qvm_instruction_visitor.rs",
+          "symbol": "fn new_arr_with_initializers("
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/tests/alignment_syntax_tree_factory.rs",
+          "test": "java_new_array_test",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "Java 同名测试验证三条数组指令、组件类型层级和外层长度。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.aparser::QvmInstructionVisitor::visitConstExpr|Void (ConstExprContext ctx)"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "ConstExpr 在 Rust Visitor 默认遍历 literal 子节点，QvmInstructionVisitor::visit_literal 解析精确 token 类型并生成 ConstInstruction，等价于 Java visitConstExpr 的子节点分派。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/ql_parser_base_visitor.rs",
+          "symbol": "visit_const_expr(ConstExprContext)"
+        },
+        {
+          "file": "crates/qlexpress/src/aparser/qvm_instruction_visitor.rs",
+          "symbol": "fn visit_literal(&mut self"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/tests/alignment_syntax_tree_factory.rs",
+          "test": "java_number_test",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "Java numberTest 的带下划线 long 字面量编译为精确 Long(1000) 常量。"
+    }
+  ]
+}

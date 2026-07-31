@@ -8,10 +8,10 @@ use std::collections::HashMap;
 use std::fmt;
 use std::rc::Rc;
 
-use crate::exception::QLException;
 use crate::exception::error_codes;
 use crate::exception::error_reporter::ErrorReporter;
 use crate::exception::pure_err_reporter::PureErrReporter;
+use crate::exception::QLException;
 use crate::runtime::data::lambda::QLambdaMethod;
 use crate::runtime::function::CustomFunction;
 use crate::runtime::q_result::QResult;
@@ -198,16 +198,12 @@ mod tests {
     #[test]
     fn predicate_default_returns_boolean_and_rejects_other_types() {
         let predicate = method_lambda("equals", DataValue::string("same"));
-        assert!(
-            predicate
-                .test(&DataValue::string("same"))
-                .expect("boolean predicate")
-        );
-        assert!(
-            !predicate
-                .test(&DataValue::string("other"))
-                .expect("false predicate")
-        );
+        assert!(predicate
+            .test(&DataValue::string("same"))
+            .expect("boolean predicate"));
+        assert!(!predicate
+            .test(&DataValue::string("other"))
+            .expect("false predicate"));
 
         let non_boolean = method_lambda("substring", DataValue::string("value"));
         let error = non_boolean

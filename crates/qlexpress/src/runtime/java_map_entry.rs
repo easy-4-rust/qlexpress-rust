@@ -1,8 +1,8 @@
 //! Java `java.util.Map.Entry` 的最小宿主适配。
 
-use crate::exception::QLException;
 use crate::exception::error_codes;
 use crate::exception::ql_exception::QLExceptionKind;
+use crate::exception::QLException;
 use crate::runtime::native_object::NativeObject;
 use crate::runtime::value::DataValue;
 

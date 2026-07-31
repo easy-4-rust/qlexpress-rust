@@ -4,9 +4,9 @@
 //! The Java function-interface proxy branch is handled by the native
 //! registry (SPEC §4/§6), not here.
 
-use crate::runtime::value::DataValue;
 use crate::runtime::class_ref::ClassRef;
 use crate::runtime::native_registry::NativeRegistry;
+use crate::runtime::value::DataValue;
 
 use super::{to_big_dec_string, to_f64, to_i64, try_to_big_int};
 
