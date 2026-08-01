@@ -8,6 +8,7 @@ use crate::exception::QLException;
 use crate::ql_options::QLOptions;
 use crate::runtime::instruction::QLInstruction;
 use crate::runtime::member::ClassRef;
+use crate::runtime::opaque_native_object::OpaqueNativeObject;
 use crate::runtime::q_result::QResult;
 use crate::runtime::qcontext::QContext;
 use crate::runtime::qlambda_definition::QLambdaDefinition;
@@ -40,6 +41,20 @@ pub struct TryCatchInstruction {
 }
 
 impl TryCatchInstruction {
+    /// 为 QL 内核直接产生、尚未带 Java Throwable 的错误补齐可 catch 的
+    /// 运行时异常对象。Java 版会保留原始 ArithmeticException/NPE；Rust 没有
+    /// JVM throwable，因此在异常边界恢复其可观察的类型语义。
+    fn inferred_catch_obj(error: &QLException) -> Option<DataValue> {
+        let class_name = match error.error_code() {
+            error_codes::INVALID_ARITHMETIC => "java.lang.ArithmeticException",
+            error_codes::NULL_FIELD_ACCESS
+            | error_codes::NULL_METHOD_ACCESS
+            | error_codes::NULL_CALL => "java.lang.NullPointerException",
+            _ => return None,
+        };
+        Some(OpaqueNativeObject::new(class_name).into_data_value())
+    }
+
     /// 构造指令,对应 Java 构造器 `TryCatchInstruction`。
     pub fn new(
         error_reporter: Rc<dyn ErrorReporter>,
@@ -101,7 +116,10 @@ impl TryCatchInstruction {
         let catch_type = match catch_obj {
             // Java substitutes `new Object()` for a null catch object.
             None => "java.lang.Object",
-            Some(value) => value.data_type_name(),
+            // Java catch 按 Throwable 的实际运行时类匹配；宿主异常在 Rust
+            // 中统一装入 `DataValue::Object`，其静态标签是 NativeObject，
+            // 必须取显式注册的实际类名而不能用 data_type_name。
+            Some(value) => &value.runtime_type_name(),
         };
         self.exception_table
             .iter()
@@ -144,8 +162,15 @@ impl TryCatchInstruction {
         match body_lambda.call(&[]) {
             Ok(result) => Ok(result),
             Err(err) => {
-                let handled =
-                    self.call_exception_handler(err.catch_obj(), q_context, ql_options)?;
+                let inferred_catch_obj = err
+                    .catch_obj()
+                    .cloned()
+                    .or_else(|| Self::inferred_catch_obj(&err));
+                let handled = self.call_exception_handler(
+                    inferred_catch_obj.as_ref(),
+                    q_context,
+                    ql_options,
+                )?;
                 match handled {
                     Some(result) => Ok(result),
                     // Java: QLRuntimeException with no matching handler →

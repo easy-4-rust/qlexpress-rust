@@ -40,6 +40,186 @@
 {"id":"assignment","script":"a = 3; a += 4; a"}
 {"id":"bitwise","script":"(7 & 3) | 8"}
 {"id":"shift","script":"-1 >>> 1"}
+{"id":"number-int-overflow-add","script":"2147483647 + 1"}
+{"id":"number-int-overflow-multiply","script":"1073741824 * 2"}
+{"id":"number-long-overflow-add","script":"9223372036854775807L + 1L"}
+{"id":"number-long-overflow-subtract","script":"-9223372036854775808L - 1L"}
+{"id":"number-bigint-multiply","script":"999999999999999999999999999999 * 999999999999999999999999999999"}
+{"id":"number-bigdec-add","script":"123456789.123456789 + 987654321.987654321"}
+{"id":"number-bigdec-rounded-divide","script":"34.00000000000 / 3"}
+{"id":"number-integer-divide-to-bigdec","script":"7 / 2"}
+{"id":"number-double-positive-infinity","script":"1.0d / 0.0d"}
+{"id":"number-double-negative-infinity","script":"-1.0d / 0.0d"}
+{"id":"number-double-nan","script":"0.0d / 0.0d"}
+{"id":"number-double-remainder-nan","script":"1.0d % 0.0d"}
+{"id":"number-negative-int-remainder","script":"-7 % 3"}
+{"id":"number-negative-bigint-remainder","script":"BigInteger.valueOf(-7) % 3"}
+{"id":"number-long-bitwise-and","script":"10L & 6"}
+{"id":"number-bigint-bitwise-xor","script":"BigInteger.valueOf(10) ^ 6"}
+{"id":"number-int-shift-distance-mask","script":"1 << 32"}
+{"id":"number-long-shift-distance-mask","script":"1L << 64"}
+{"id":"number-signed-right-shift","script":"-8 >> 2"}
+{"id":"number-unsigned-right-shift","script":"-1 >>> 1"}
+{"id":"number-unary-plus-float-promotes-double","script":"+(7.5f)"}
+{"id":"number-bigdecimal-scale-compare","script":"1.0 == 1.00"}
+{"id":"number-shift-float-left-error","script":"8.0f >> 2"}
+{"id":"number-shift-float-distance-error","script":"8 >> 2.0d"}
+{"id":"numbermath-domain-int","number_math":{"operation":"getMath","left":{"type":"int","value":"1"},"right":{"type":"int","value":"2"}}}
+{"id":"numbermath-domain-long","number_math":{"operation":"getMath","left":{"type":"int","value":"1"},"right":{"type":"long","value":"2"}}}
+{"id":"numbermath-domain-bigint","number_math":{"operation":"getMath","left":{"type":"bigint","value":"1"},"right":{"type":"long","value":"2"}}}
+{"id":"numbermath-domain-bigdec","number_math":{"operation":"getMath","left":{"type":"bigdec","value":"1.0"},"right":{"type":"bigint","value":"2"}}}
+{"id":"numbermath-domain-float-wins","number_math":{"operation":"getMath","left":{"type":"float","value":"1.0"},"right":{"type":"bigdec","value":"2.0"}}}
+{"id":"numbermath-abs-int-min","number_math":{"operation":"abs","left":{"type":"int","value":"-2147483648"}}}
+{"id":"numbermath-abs-bigdec","number_math":{"operation":"abs","left":{"type":"bigdec","value":"-7.50"}}}
+{"id":"numbermath-add-byte-short","number_math":{"operation":"add","left":{"type":"byte","value":"120"},"right":{"type":"short","value":"10"}}}
+{"id":"numbermath-add-int-overflow","number_math":{"operation":"add","left":{"type":"int","value":"2147483647"},"right":{"type":"int","value":"1"}}}
+{"id":"numbermath-subtract-bigdec","number_math":{"operation":"subtract","left":{"type":"bigdec","value":"7.50"},"right":{"type":"int","value":"2"}}}
+{"id":"numbermath-multiply-floating-wins","number_math":{"operation":"multiply","left":{"type":"double","value":"1.5"},"right":{"type":"bigint","value":"4"}}}
+{"id":"numbermath-divide-int-to-bigdec","number_math":{"operation":"divide","left":{"type":"int","value":"7"},"right":{"type":"int","value":"2"}}}
+{"id":"numbermath-divide-double-zero","number_math":{"operation":"divide","left":{"type":"double","value":"1.0"},"right":{"type":"double","value":"0.0"}}}
+{"id":"numbermath-compare-cross-type","number_math":{"operation":"compareTo","left":{"type":"bigdec","value":"1.00"},"right":{"type":"double","value":"1.0"}}}
+{"id":"numbermath-compare-nan","number_math":{"operation":"compareTo","left":{"type":"double","value":"NaN"},"right":{"type":"double","value":"1.0"}}}
+{"id":"numbermath-or-int","number_math":{"operation":"or","left":{"type":"int","value":"10"},"right":{"type":"int","value":"5"}}}
+{"id":"numbermath-and-long","number_math":{"operation":"and","left":{"type":"long","value":"10"},"right":{"type":"int","value":"6"}}}
+{"id":"numbermath-xor-bigint","number_math":{"operation":"xor","left":{"type":"bigint","value":"10"},"right":{"type":"int","value":"6"}}}
+{"id":"numbermath-int-div-negative","number_math":{"operation":"intDiv","left":{"type":"long","value":"-7"},"right":{"type":"int","value":"3"}}}
+{"id":"numbermath-mod-negative","number_math":{"operation":"mod","left":{"type":"int","value":"-7"},"right":{"type":"int","value":"3"}}}
+{"id":"numbermath-remainder-negative","number_math":{"operation":"remainder","left":{"type":"bigint","value":"-7"},"right":{"type":"int","value":"3"}}}
+{"id":"numbermath-left-shift-mask","number_math":{"operation":"leftShift","left":{"type":"int","value":"1"},"right":{"type":"int","value":"32"}}}
+{"id":"numbermath-right-shift-bigint","number_math":{"operation":"rightShift","left":{"type":"bigint","value":"-8"},"right":{"type":"int","value":"2"}}}
+{"id":"numbermath-right-shift-unsigned","number_math":{"operation":"rightShiftUnsigned","left":{"type":"int","value":"-1"},"right":{"type":"int","value":"1"}}}
+{"id":"numbermath-bitwise-negate-long","number_math":{"operation":"bitwiseNegate","left":{"type":"long","value":"0"}}}
+{"id":"numbermath-unary-minus-bigdec","number_math":{"operation":"unaryMinus","left":{"type":"bigdec","value":"7.50"}}}
+{"id":"numbermath-unary-plus-float","number_math":{"operation":"unaryPlus","left":{"type":"float","value":"-7.5"}}}
+{"id":"numbermath-to-bigdecimal-double","number_math":{"operation":"toBigDecimal","left":{"type":"double","value":"1.5"}}}
+{"id":"numbermath-to-biginteger-bigdec","number_math":{"operation":"toBigInteger","left":{"type":"bigdec","value":"-7.9"}}}
+{"id":"numbermath-predicate-floating","number_math":{"operation":"isFloatingPoint","left":{"type":"float","value":"1.0"}}}
+{"id":"numbermath-predicate-integer-exact","number_math":{"operation":"isInteger","left":{"type":"long","value":"1"}}}
+{"id":"numbermath-predicate-short","number_math":{"operation":"isShort","left":{"type":"short","value":"1"}}}
+{"id":"numbermath-predicate-byte","number_math":{"operation":"isByte","left":{"type":"byte","value":"1"}}}
+{"id":"numbermath-predicate-long","number_math":{"operation":"isLong","left":{"type":"long","value":"1"}}}
+{"id":"numbermath-predicate-bigdec","number_math":{"operation":"isBigDecimal","left":{"type":"bigdec","value":"1"}}}
+{"id":"numbermath-predicate-bigint","number_math":{"operation":"isBigInteger","left":{"type":"bigint","value":"1"}}}
+{"id":"numbermath-error-double-bitwise","number_math":{"operation":"and","left":{"type":"double","value":"1.0"},"right":{"type":"double","value":"2.0"}}}
+{"id":"numbermath-error-float-shift-distance","number_math":{"operation":"leftShift","left":{"type":"int","value":"1"},"right":{"type":"double","value":"1.0"}}}
+{"id":"numbermath-error-bigint-unsigned-shift","number_math":{"operation":"rightShiftUnsigned","left":{"type":"bigint","value":"1"},"right":{"type":"int","value":"1"}}}
+{"id":"numbermath-error-integer-divide-zero","number_math":{"operation":"divide","left":{"type":"int","value":"1"},"right":{"type":"int","value":"0"}}}
+{"id":"numbermath-error-nonpositive-modulus","number_math":{"operation":"mod","left":{"type":"int","value":"7"},"right":{"type":"int","value":"-3"}}}
+{"id":"impl-integer-abs","number_math":{"implementation":"IntegerMath","operation":"absImpl","left":{"type":"int","value":"-2147483648"}}}
+{"id":"impl-integer-add","number_math":{"implementation":"IntegerMath","operation":"addImpl","left":{"type":"int","value":"2147483647"},"right":{"type":"int","value":"1"}}}
+{"id":"impl-integer-subtract","number_math":{"implementation":"IntegerMath","operation":"subtractImpl","left":{"type":"int","value":"-2147483648"},"right":{"type":"int","value":"1"}}}
+{"id":"impl-integer-multiply","number_math":{"implementation":"IntegerMath","operation":"multiplyImpl","left":{"type":"int","value":"1073741824"},"right":{"type":"int","value":"2"}}}
+{"id":"impl-integer-divide","number_math":{"implementation":"IntegerMath","operation":"divideImpl","left":{"type":"int","value":"7"},"right":{"type":"int","value":"2"}}}
+{"id":"impl-integer-compare","number_math":{"implementation":"IntegerMath","operation":"compareToImpl","left":{"type":"int","value":"-1"},"right":{"type":"int","value":"1"}}}
+{"id":"impl-integer-or","number_math":{"implementation":"IntegerMath","operation":"orImpl","left":{"type":"int","value":"10"},"right":{"type":"int","value":"5"}}}
+{"id":"impl-integer-and","number_math":{"implementation":"IntegerMath","operation":"andImpl","left":{"type":"int","value":"10"},"right":{"type":"int","value":"6"}}}
+{"id":"impl-integer-xor","number_math":{"implementation":"IntegerMath","operation":"xorImpl","left":{"type":"int","value":"10"},"right":{"type":"int","value":"6"}}}
+{"id":"impl-integer-int-div","number_math":{"implementation":"IntegerMath","operation":"intDivImpl","left":{"type":"int","value":"-7"},"right":{"type":"int","value":"3"}}}
+{"id":"impl-integer-mod","number_math":{"implementation":"IntegerMath","operation":"modImpl","left":{"type":"int","value":"-7"},"right":{"type":"int","value":"3"}}}
+{"id":"impl-integer-remainder","number_math":{"implementation":"IntegerMath","operation":"remainderImpl","left":{"type":"int","value":"-7"},"right":{"type":"int","value":"3"}}}
+{"id":"impl-integer-unary-minus","number_math":{"implementation":"IntegerMath","operation":"unaryMinusImpl","left":{"type":"int","value":"-2147483648"}}}
+{"id":"impl-integer-unary-plus","number_math":{"implementation":"IntegerMath","operation":"unaryPlusImpl","left":{"type":"byte","value":"7"}}}
+{"id":"impl-integer-bitwise-negate","number_math":{"implementation":"IntegerMath","operation":"bitwiseNegateImpl","left":{"type":"int","value":"0"}}}
+{"id":"impl-integer-left-shift","number_math":{"implementation":"IntegerMath","operation":"leftShiftImpl","left":{"type":"int","value":"1"},"right":{"type":"int","value":"32"}}}
+{"id":"impl-integer-right-shift","number_math":{"implementation":"IntegerMath","operation":"rightShiftImpl","left":{"type":"int","value":"-8"},"right":{"type":"int","value":"2"}}}
+{"id":"impl-integer-right-shift-unsigned","number_math":{"implementation":"IntegerMath","operation":"rightShiftUnsignedImpl","left":{"type":"int","value":"-1"},"right":{"type":"int","value":"1"}}}
+{"id":"impl-long-abs","number_math":{"implementation":"LongMath","operation":"absImpl","left":{"type":"long","value":"-9223372036854775808"}}}
+{"id":"impl-long-add","number_math":{"implementation":"LongMath","operation":"addImpl","left":{"type":"long","value":"9223372036854775807"},"right":{"type":"long","value":"1"}}}
+{"id":"impl-long-subtract","number_math":{"implementation":"LongMath","operation":"subtractImpl","left":{"type":"long","value":"-9223372036854775808"},"right":{"type":"long","value":"1"}}}
+{"id":"impl-long-multiply","number_math":{"implementation":"LongMath","operation":"multiplyImpl","left":{"type":"long","value":"4611686018427387904"},"right":{"type":"long","value":"2"}}}
+{"id":"impl-long-divide","number_math":{"implementation":"LongMath","operation":"divideImpl","left":{"type":"long","value":"7"},"right":{"type":"long","value":"2"}}}
+{"id":"impl-long-compare","number_math":{"implementation":"LongMath","operation":"compareToImpl","left":{"type":"long","value":"-1"},"right":{"type":"long","value":"1"}}}
+{"id":"impl-long-int-div","number_math":{"implementation":"LongMath","operation":"intDivImpl","left":{"type":"long","value":"-7"},"right":{"type":"long","value":"3"}}}
+{"id":"impl-long-remainder","number_math":{"implementation":"LongMath","operation":"remainderImpl","left":{"type":"long","value":"-7"},"right":{"type":"long","value":"3"}}}
+{"id":"impl-long-mod","number_math":{"implementation":"LongMath","operation":"modImpl","left":{"type":"long","value":"-7"},"right":{"type":"long","value":"3"}}}
+{"id":"impl-long-unary-minus","number_math":{"implementation":"LongMath","operation":"unaryMinusImpl","left":{"type":"long","value":"-9223372036854775808"}}}
+{"id":"impl-long-unary-plus","number_math":{"implementation":"LongMath","operation":"unaryPlusImpl","left":{"type":"int","value":"7"}}}
+{"id":"impl-long-bitwise-negate","number_math":{"implementation":"LongMath","operation":"bitwiseNegateImpl","left":{"type":"long","value":"0"}}}
+{"id":"impl-long-or","number_math":{"implementation":"LongMath","operation":"orImpl","left":{"type":"long","value":"10"},"right":{"type":"long","value":"5"}}}
+{"id":"impl-long-and","number_math":{"implementation":"LongMath","operation":"andImpl","left":{"type":"long","value":"10"},"right":{"type":"long","value":"6"}}}
+{"id":"impl-long-bit-and","number_math":{"implementation":"LongMath","operation":"bitAndImpl","left":{"type":"long","value":"10"},"right":{"type":"long","value":"6"}}}
+{"id":"impl-long-xor","number_math":{"implementation":"LongMath","operation":"xorImpl","left":{"type":"long","value":"10"},"right":{"type":"long","value":"6"}}}
+{"id":"impl-long-left-shift","number_math":{"implementation":"LongMath","operation":"leftShiftImpl","left":{"type":"long","value":"1"},"right":{"type":"long","value":"64"}}}
+{"id":"impl-long-right-shift","number_math":{"implementation":"LongMath","operation":"rightShiftImpl","left":{"type":"long","value":"-8"},"right":{"type":"long","value":"2"}}}
+{"id":"impl-long-right-shift-unsigned","number_math":{"implementation":"LongMath","operation":"rightShiftUnsignedImpl","left":{"type":"long","value":"-1"},"right":{"type":"long","value":"1"}}}
+{"id":"impl-bigint-abs","number_math":{"implementation":"BigIntegerMath","operation":"absImpl","left":{"type":"bigint","value":"-999999999999999999999999999999"}}}
+{"id":"impl-bigint-add","number_math":{"implementation":"BigIntegerMath","operation":"addImpl","left":{"type":"bigint","value":"999999999999999999999999999999"},"right":{"type":"bigint","value":"1"}}}
+{"id":"impl-bigint-subtract","number_math":{"implementation":"BigIntegerMath","operation":"subtractImpl","left":{"type":"bigint","value":"-999999999999999999999999999999"},"right":{"type":"bigint","value":"1"}}}
+{"id":"impl-bigint-multiply","number_math":{"implementation":"BigIntegerMath","operation":"multiplyImpl","left":{"type":"bigint","value":"999999999999999999"},"right":{"type":"bigint","value":"999999999999999999"}}}
+{"id":"impl-bigint-divide","number_math":{"implementation":"BigIntegerMath","operation":"divideImpl","left":{"type":"bigint","value":"7"},"right":{"type":"bigint","value":"2"}}}
+{"id":"impl-bigint-compare","number_math":{"implementation":"BigIntegerMath","operation":"compareToImpl","left":{"type":"bigint","value":"999999999999999999999"},"right":{"type":"bigint","value":"999999999999999999998"}}}
+{"id":"impl-bigint-int-div","number_math":{"implementation":"BigIntegerMath","operation":"intDivImpl","left":{"type":"bigint","value":"-7"},"right":{"type":"bigint","value":"3"}}}
+{"id":"impl-bigint-mod","number_math":{"implementation":"BigIntegerMath","operation":"modImpl","left":{"type":"bigint","value":"-7"},"right":{"type":"bigint","value":"3"}}}
+{"id":"impl-bigint-remainder","number_math":{"implementation":"BigIntegerMath","operation":"remainderImpl","left":{"type":"bigint","value":"-7"},"right":{"type":"bigint","value":"3"}}}
+{"id":"impl-bigint-unary-minus","number_math":{"implementation":"BigIntegerMath","operation":"unaryMinusImpl","left":{"type":"bigint","value":"999999999999999999999"}}}
+{"id":"impl-bigint-unary-plus","number_math":{"implementation":"BigIntegerMath","operation":"unaryPlusImpl","left":{"type":"long","value":"7"}}}
+{"id":"impl-bigint-bitwise-negate","number_math":{"implementation":"BigIntegerMath","operation":"bitwiseNegateImpl","left":{"type":"bigint","value":"0"}}}
+{"id":"impl-bigint-or","number_math":{"implementation":"BigIntegerMath","operation":"orImpl","left":{"type":"bigint","value":"10"},"right":{"type":"bigint","value":"5"}}}
+{"id":"impl-bigint-and","number_math":{"implementation":"BigIntegerMath","operation":"andImpl","left":{"type":"bigint","value":"10"},"right":{"type":"bigint","value":"6"}}}
+{"id":"impl-bigint-xor","number_math":{"implementation":"BigIntegerMath","operation":"xorImpl","left":{"type":"bigint","value":"10"},"right":{"type":"bigint","value":"6"}}}
+{"id":"impl-bigint-left-shift","number_math":{"implementation":"BigIntegerMath","operation":"leftShiftImpl","left":{"type":"bigint","value":"1"},"right":{"type":"int","value":"130"}}}
+{"id":"impl-bigint-right-shift","number_math":{"implementation":"BigIntegerMath","operation":"rightShiftImpl","left":{"type":"bigint","value":"-8"},"right":{"type":"int","value":"2"}}}
+{"id":"impl-bigdec-abs","number_math":{"implementation":"BigDecimalMath","operation":"absImpl","left":{"type":"bigdec","value":"-7.50"}}}
+{"id":"impl-bigdec-add","number_math":{"implementation":"BigDecimalMath","operation":"addImpl","left":{"type":"bigdec","value":"1.20"},"right":{"type":"bigdec","value":"3.400"}}}
+{"id":"impl-bigdec-subtract","number_math":{"implementation":"BigDecimalMath","operation":"subtractImpl","left":{"type":"bigdec","value":"1E+3"},"right":{"type":"bigdec","value":"0.01"}}}
+{"id":"impl-bigdec-multiply","number_math":{"implementation":"BigDecimalMath","operation":"multiplyImpl","left":{"type":"bigdec","value":"1.20"},"right":{"type":"bigdec","value":"3.00"}}}
+{"id":"impl-bigdec-divide","number_math":{"implementation":"BigDecimalMath","operation":"divideImpl","left":{"type":"bigdec","value":"34.00000000000"},"right":{"type":"bigdec","value":"3"}}}
+{"id":"impl-bigdec-compare","number_math":{"implementation":"BigDecimalMath","operation":"compareToImpl","left":{"type":"bigdec","value":"1.0"},"right":{"type":"bigdec","value":"1.00"}}}
+{"id":"impl-bigdec-unary-minus","number_math":{"implementation":"BigDecimalMath","operation":"unaryMinusImpl","left":{"type":"bigdec","value":"7.50"}}}
+{"id":"impl-bigdec-unary-plus","number_math":{"implementation":"BigDecimalMath","operation":"unaryPlusImpl","left":{"type":"int","value":"7"}}}
+{"id":"impl-bigdec-remainder","number_math":{"implementation":"BigDecimalMath","operation":"remainderImpl","left":{"type":"bigdec","value":"-7.5"},"right":{"type":"bigdec","value":"3"}}}
+{"id":"impl-bigdec-mod","number_math":{"implementation":"BigDecimalMath","operation":"modImpl","left":{"type":"bigdec","value":"-7.5"},"right":{"type":"bigdec","value":"3"}}}
+{"id":"impl-floating-abs","number_math":{"implementation":"FloatingPointMath","operation":"absImpl","left":{"type":"double","value":"-Infinity"}}}
+{"id":"impl-floating-add","number_math":{"implementation":"FloatingPointMath","operation":"addImpl","left":{"type":"double","value":"1.5"},"right":{"type":"float","value":"2.25"}}}
+{"id":"impl-floating-subtract","number_math":{"implementation":"FloatingPointMath","operation":"subtractImpl","left":{"type":"double","value":"1.5"},"right":{"type":"float","value":"2.25"}}}
+{"id":"impl-floating-multiply","number_math":{"implementation":"FloatingPointMath","operation":"multiplyImpl","left":{"type":"double","value":"1.5"},"right":{"type":"float","value":"2.25"}}}
+{"id":"impl-floating-divide","number_math":{"implementation":"FloatingPointMath","operation":"divideImpl","left":{"type":"double","value":"1.0"},"right":{"type":"double","value":"0.0"}}}
+{"id":"impl-floating-compare","number_math":{"implementation":"FloatingPointMath","operation":"compareToImpl","left":{"type":"double","value":"NaN"},"right":{"type":"double","value":"1.0"}}}
+{"id":"impl-floating-remainder","number_math":{"implementation":"FloatingPointMath","operation":"remainderImpl","left":{"type":"double","value":"1.0"},"right":{"type":"double","value":"0.0"}}}
+{"id":"impl-floating-mod","number_math":{"implementation":"FloatingPointMath","operation":"modImpl","left":{"type":"double","value":"-7.5"},"right":{"type":"double","value":"3.0"}}}
+{"id":"impl-floating-unary-minus","number_math":{"implementation":"FloatingPointMath","operation":"unaryMinusImpl","left":{"type":"double","value":"Infinity"}}}
+{"id":"impl-floating-unary-plus","number_math":{"implementation":"FloatingPointMath","operation":"unaryPlusImpl","left":{"type":"float","value":"-7.5"}}}
+{"id":"basebinary-plus-string-left-null","script":"'value=' + null"}
+{"id":"basebinary-plus-string-right","script":"1 + 'x'"}
+{"id":"basebinary-plus-number-char","script":"1 + 'a'"}
+{"id":"basebinary-plus-precise","script":"0.1d + 0.2d","options":{"precise":true}}
+{"id":"basebinary-minus-number-char","script":"100 - 'a'"}
+{"id":"basebinary-minus-precise","script":"0.3d - 0.1d","options":{"precise":true}}
+{"id":"basebinary-multiply-overflow","script":"1073741824 * 2"}
+{"id":"basebinary-multiply-precise","script":"0.1d * 0.2d","options":{"precise":true}}
+{"id":"basebinary-multiply-char-error","script":"'a' * 2"}
+{"id":"basebinary-divide-precise","script":"1.0d / 3.0d","options":{"precise":true}}
+{"id":"basebinary-divide-zero-error-reason","script":"1 / 0"}
+{"id":"basebinary-divide-floating-zero","script":"1.0d / 0.0d"}
+{"id":"basebinary-remainder-negative","script":"-7 % 3"}
+{"id":"basebinary-remainder-precise","script":"7.5d % 3.0d","options":{"precise":true}}
+{"id":"basebinary-remainder-zero-error-reason","script":"1 % 0"}
+{"id":"basebinary-bitwise-and-boolean-null","script":"true & null"}
+{"id":"basebinary-bitwise-or-null-boolean","script":"null | true"}
+{"id":"basebinary-bitwise-xor-null-boolean","script":"null ^ true"}
+{"id":"basebinary-bitwise-number-promotion","script":"10L & 6"}
+{"id":"basebinary-left-shift-mask","script":"1 << 32"}
+{"id":"basebinary-right-shift-signed","script":"-8 >> 2"}
+{"id":"basebinary-right-shift-unsigned","script":"-1 >>> 1"}
+{"id":"basebinary-compare-number-char","script":"98 > 'a'"}
+{"id":"basebinary-compare-string","script":"'abc' < 'abd'"}
+{"id":"basebinary-compare-boolean","script":"true > false"}
+{"id":"basebinary-equals-number-char","script":"97 == 'a'"}
+{"id":"basebinary-equals-number-cross-type","script":"1 == 1.00"}
+{"id":"basebinary-equals-list-objects","script":"[1,2] == [1,2]"}
+{"id":"basebinary-in-null-null","script":"null in null"}
+{"id":"basebinary-in-null-list","script":"null in [1,2,3]"}
+{"id":"basebinary-in-list-numeric-equality","script":"1L in [0,1.00,2]"}
+{"id":"basebinary-in-primitive-array","script":"1 in new int[]{1,2,3}"}
+{"id":"basebinary-in-string-value-of","script":"12 in 'abc12def'"}
+{"id":"basebinary-in-invalid-map-error","script":"1 in {'a':1}"}
+{"id":"basebinary-like-null-null","script":"null like null"}
+{"id":"basebinary-like-one-null","script":"'a' like null"}
+{"id":"basebinary-like-backtracking","script":"'ABCD' like 'A%B%D'"}
+{"id":"basebinary-like-trailing-wildcards","script":"'abc' like 'abc%%'"}
+{"id":"basebinary-like-invalid-error","script":"'abc' like 200"}
+{"id":"basebinary-invalid-operand-reason","script":"true + []"}
+{"id":"basebinary-invalid-left-value","script":"function value(){1;} value() += 2"}
 {"id":"numeric-equality","script":"1 == 1L"}
 {"id":"in-operator","script":"3 in [1,2,3]"}
 {"id":"not-in-operator","script":"4 not in [1,2,3]"}
@@ -52,5 +232,53 @@
 {"id":"utf16-low-surrogate","script":"'😀'.substring(1,2)"}
 {"id":"utf16-substring-char-at","script":"'😀'.substring(0,1).charAt(0)"}
 {"id":"utf16-surrogate-rejoin","script":"'😀'.substring(0,1) + '😀'.substring(1,2)"}
-{"id":"utf16-surrogate-map-key","script":"m={}; k='😀'.substring(0,1); m.put(k,7); m.get(k)"}
 {"id":"cache-trace","script":"x = 4; x * x","options":{"cache":true,"trace_expression":true}}
+{"id":"operator-manager-get-binary-add","operator_manager":{"operation":"getBinaryOperator","lexeme":"+"}}
+{"id":"operator-manager-get-binary-assign","operator_manager":{"operation":"getBinaryOperator","lexeme":"="}}
+{"id":"operator-manager-get-binary-remainder-assign","operator_manager":{"operation":"getBinaryOperator","lexeme":"%="}}
+{"id":"operator-manager-get-binary-not-like","operator_manager":{"operation":"getBinaryOperator","lexeme":"not_like"}}
+{"id":"operator-manager-get-binary-instanceof","operator_manager":{"operation":"getBinaryOperator","lexeme":"instanceof"}}
+{"id":"operator-manager-get-binary-missing","operator_manager":{"operation":"getBinaryOperator","lexeme":"missing"}}
+{"id":"operator-manager-get-prefix-plus","operator_manager":{"operation":"getPrefixUnaryOperator","lexeme":"+"}}
+{"id":"operator-manager-get-prefix-minus","operator_manager":{"operation":"getPrefixUnaryOperator","lexeme":"-"}}
+{"id":"operator-manager-get-prefix-increment","operator_manager":{"operation":"getPrefixUnaryOperator","lexeme":"++"}}
+{"id":"operator-manager-get-prefix-decrement","operator_manager":{"operation":"getPrefixUnaryOperator","lexeme":"--"}}
+{"id":"operator-manager-get-prefix-invert","operator_manager":{"operation":"getPrefixUnaryOperator","lexeme":"~"}}
+{"id":"operator-manager-get-prefix-not","operator_manager":{"operation":"getPrefixUnaryOperator","lexeme":"!"}}
+{"id":"operator-manager-get-prefix-missing","operator_manager":{"operation":"getPrefixUnaryOperator","lexeme":"*"}}
+{"id":"operator-manager-get-suffix-increment","operator_manager":{"operation":"getSuffixUnaryOperator","lexeme":"++"}}
+{"id":"operator-manager-get-suffix-decrement","operator_manager":{"operation":"getSuffixUnaryOperator","lexeme":"--"}}
+{"id":"operator-manager-get-suffix-missing","operator_manager":{"operation":"getSuffixUnaryOperator","lexeme":"!"}}
+{"id":"operator-manager-is-middle","operator_manager":{"operation":"isOpType","lexeme":"+","op_type":"MIDDLE"}}
+{"id":"operator-manager-is-middle-missing","operator_manager":{"operation":"isOpType","lexeme":"missing","op_type":"MIDDLE"}}
+{"id":"operator-manager-is-prefix","operator_manager":{"operation":"isOpType","lexeme":"+","op_type":"PREFIX"}}
+{"id":"operator-manager-is-prefix-missing","operator_manager":{"operation":"isOpType","lexeme":"*","op_type":"PREFIX"}}
+{"id":"operator-manager-is-suffix","operator_manager":{"operation":"isOpType","lexeme":"++","op_type":"SUFFIX"}}
+{"id":"operator-manager-is-suffix-missing","operator_manager":{"operation":"isOpType","lexeme":"!","op_type":"SUFFIX"}}
+{"id":"operator-manager-precedence-default","operator_manager":{"operation":"precedence","lexeme":"+"}}
+{"id":"operator-manager-precedence-custom","operator_manager":{"operation":"precedence","lexeme":"sum","setup":[{"action":"add","lexeme":"sum","priority":177}]}}
+{"id":"operator-manager-get-alias-missing","operator_manager":{"operation":"getAlias","lexeme":"ruo"}}
+{"id":"operator-manager-get-alias-present","operator_manager":{"operation":"getAlias","lexeme":"ruo","setup":[{"action":"keyword_alias","lexeme":"ruo","keyword":"if"}]}}
+{"id":"operator-manager-add-custom","operator_manager":{"operation":"addBinaryOperator","lexeme":"sum","priority":177}}
+{"id":"operator-manager-add-custom-duplicate","operator_manager":{"operation":"addBinaryOperator","lexeme":"sum","priority":177,"setup":[{"action":"add","lexeme":"sum","priority":177}]}}
+{"id":"operator-manager-add-custom-builtin-conflict","operator_manager":{"operation":"addBinaryOperator","lexeme":"+","priority":177}}
+{"id":"operator-manager-replace-default","operator_manager":{"operation":"replaceDefaultOperator","lexeme":"+"}}
+{"id":"operator-manager-replace-default-duplicate","operator_manager":{"operation":"replaceDefaultOperator","lexeme":"+","setup":[{"action":"replace","lexeme":"+"}]}}
+{"id":"operator-manager-replace-missing","operator_manager":{"operation":"replaceDefaultOperator","lexeme":"missing"}}
+{"id":"operator-manager-add-default-alias","operator_manager":{"operation":"addOperatorAlias","lexeme":"plus","origin":"+"}}
+{"id":"operator-manager-add-custom-alias","operator_manager":{"operation":"addOperatorAlias","lexeme":"total","origin":"sum","setup":[{"action":"add","lexeme":"sum","priority":177}]}}
+{"id":"operator-manager-add-alias-missing-origin","operator_manager":{"operation":"addOperatorAlias","lexeme":"x","origin":"missing"}}
+{"id":"operator-manager-add-alias-duplicate","operator_manager":{"operation":"addOperatorAlias","lexeme":"plus","origin":"+","setup":[{"action":"operator_alias","lexeme":"plus","origin":"+"}]}}
+{"id":"operator-manager-add-alias-over-builtin-lexeme","operator_manager":{"operation":"addOperatorAlias","lexeme":"+","origin":"-"}}
+{"id":"operator-manager-add-keyword-alias","operator_manager":{"operation":"addKeyWordAlias","lexeme":"ruo","keyword":"if"}}
+{"id":"operator-manager-add-keyword-alias-invalid","operator_manager":{"operation":"addKeyWordAlias","lexeme":"x","keyword":"missing"}}
+{"id":"operator-manager-add-keyword-alias-overwrite","operator_manager":{"operation":"addKeyWordAlias","lexeme":"ruo","keyword":"while","setup":[{"action":"keyword_alias","lexeme":"ruo","keyword":"if"}]}}
+{"id":"operator-manager-execute-custom-adapter","operator_manager":{"operation":"executeBinary","lexeme":"sum","left":{"type":"int","value":"7"},"right":{"type":"long","value":"5"},"setup":[{"action":"add","lexeme":"sum","priority":177}]}}
+{"id":"operator-manager-execute-custom-alias-adapter","operator_manager":{"operation":"executeBinary","lexeme":"total","left":{"type":"int","value":"7"},"right":{"type":"long","value":"5"},"setup":[{"action":"add","lexeme":"sum","priority":177},{"action":"operator_alias","lexeme":"total","origin":"sum"}]}}
+{"id":"operator-manager-execute-default-alias-adapter","operator_manager":{"operation":"executeBinary","lexeme":"plus","left":{"type":"int","value":"7"},"right":{"type":"long","value":"5"},"setup":[{"action":"operator_alias","lexeme":"plus","origin":"+"}]}}
+{"id":"operator-manager-execute-replacement-adapter","operator_manager":{"operation":"executeBinary","lexeme":"+","left":{"type":"int","value":"7"},"right":{"type":"long","value":"5"},"setup":[{"action":"replace","lexeme":"+"}]}}
+{"id":"delegate-context-full-contract","delegate_context":{"scenario":"full_contract"}}
+{"id":"delegate-context-close-global-unsupported","delegate_context":{"scenario":"close_global"}}
+{"id":"fixed-size-stack-full-contract","fixed_size_stack":{"scenario":"full_contract"}}
+{"id":"runtime-core-full-contract","runtime_core":{"scenario":"full_contract"}}
+{"id":"exception-table-full-contract","exception_table":{"scenario":"full_contract"}}

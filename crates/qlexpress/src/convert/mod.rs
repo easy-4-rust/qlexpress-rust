@@ -14,7 +14,7 @@ pub mod target_type;
 pub use number_math_helpers::{
     big_dec_compare, big_dec_to_big_int, big_dec_to_i128, java_big_decimal_to_string,
     java_f32_to_string, java_f64_to_string, math_domain, num_kind, number_compare, promote,
-    to_big_dec_string, to_big_int, to_f64, to_i128, to_i64, try_to_big_int, MathDomain,
+    to_big_dec_string, to_big_int, to_f64, to_i128, to_i32, to_i64, try_to_big_int, MathDomain,
 };
 pub use obj_type_convertor::{ObjTypeConvertor, QConverted, TargetType};
 pub use parameters_type_convertor::ParametersTypeConvertor;

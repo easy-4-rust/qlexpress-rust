@@ -3,7 +3,7 @@
 //! 类加载/本地注册表、trace 集合)。
 //! 本文件由 `qvm_runtime.rs` 拆分而来(SPEC §5.5 一类一文件),仅移动代码与补充中文注释,行为完全一致。
 
-use std::cell::Ref;
+use std::cell::{Ref, RefMut};
 use std::rc::Rc;
 
 use crate::ql_options::Attachments;
@@ -22,6 +22,12 @@ pub trait QRuntime {
     /// 执行附件。对应 Java 方法 `attachment()`。
     /// Java `attachment()`.
     fn attachment(&self) -> Ref<'_, Attachments>;
+
+    /// 可变访问执行附件。
+    ///
+    /// Java `attachment()` 返回原始可变 `Map<String, Object>`；Rust 按借用
+    /// 规范拆分只读和可变入口，该方法保留 Java Map 内容可写及引用共享语义。
+    fn attachment_mut(&self) -> RefMut<'_, Attachments>;
 
     /// 本地注册表。对应 Java 方法 `getReflectLoader()`——由显式的本地注册表
     /// 替代(SPEC §4)。

@@ -37,3 +37,26 @@ impl BaseUnaryOperator {
         )
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::exception::pure_err_reporter::PureErrReporter;
+    use crate::runtime::value::DataValue;
+
+    /// SOURCE_PARITY: Java `BaseUnaryOperator#buildInvalidOperandTypeException`。
+    #[test]
+    fn invalid_operand_reports_operator_type_and_java_value_in_order() {
+        let error = BaseUnaryOperator::build_invalid_operand_type_exception(
+            "!",
+            &QValue::Data(DataValue::string("text")),
+            &PureErrReporter::INSTANCE,
+        );
+
+        assert_eq!(error.error_code(), error_codes::INVALID_UNARY_OPERAND);
+        assert_eq!(
+            error.reason(),
+            "the '!' operator can not be applied to type java.lang.String with value text"
+        );
+    }
+}

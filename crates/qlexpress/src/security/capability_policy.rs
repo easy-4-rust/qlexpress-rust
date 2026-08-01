@@ -109,3 +109,47 @@ impl CapabilityPolicy {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn policy_requires_exact_capability_except_list_extension_runtime_adapter() {
+        let native = Capability::NativeMember {
+            type_name: "com.example.Order".to_string(),
+            member_name: "total".to_string(),
+        };
+        let list_extension = Capability::ExtensionMethod {
+            type_name: "java.util.List".to_string(),
+            method_name: "filter".to_string(),
+        };
+        let function = Capability::Function("approved".to_string());
+        let policy = CapabilityPolicy::deny_all()
+            .allow(native.clone())
+            .allow(list_extension.clone())
+            .allow(function.clone());
+
+        assert!(policy.is_allowed(&native));
+        assert!(policy.is_allowed(&list_extension));
+        assert!(policy.is_allowed(&function));
+        assert!(!policy.is_allowed(&Capability::Macro("approved".to_string())));
+        assert_eq!(policy.allowed().len(), 3);
+
+        assert!(policy.is_method_allowed("com.example.Order", "total"));
+        assert!(!policy.is_method_allowed("com.example.Order", "delete"));
+        assert!(policy.is_method_allowed("java.util.List", "filter"));
+        assert!(policy.is_method_allowed("java.util.ArrayList", "filter"));
+        assert!(!policy.is_method_allowed("java.util.HashSet", "filter"));
+        assert!(!policy.is_method_allowed("java.util.ArrayList", "map"));
+    }
+
+    #[test]
+    fn allow_only_deduplicates_and_deny_all_has_no_implicit_permissions() {
+        let function = Capability::Function("lookup".to_string());
+        let policy = CapabilityPolicy::allow_only([function.clone(), function.clone()]);
+        assert_eq!(policy.allowed().len(), 1);
+        assert!(policy.is_allowed(&function));
+        assert!(!CapabilityPolicy::deny_all().is_method_allowed("java.lang.String", "length"));
+    }
+}

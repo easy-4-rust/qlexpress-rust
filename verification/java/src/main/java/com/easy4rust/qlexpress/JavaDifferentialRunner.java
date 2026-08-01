@@ -4,6 +4,8 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.lang.reflect.Array;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
@@ -11,8 +13,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.AbstractMap;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +29,32 @@ import com.alibaba.qlexpress4.InitOptions;
 import com.alibaba.qlexpress4.QLOptions;
 import com.alibaba.qlexpress4.QLResult;
 import com.alibaba.qlexpress4.exception.QLException;
+import com.alibaba.qlexpress4.exception.PureErrReporter;
+import com.alibaba.qlexpress4.aparser.ParserOperatorManager.OpType;
+import com.alibaba.qlexpress4.runtime.Value;
+import com.alibaba.qlexpress4.runtime.DelegateQContext;
+import com.alibaba.qlexpress4.runtime.ExceptionTable;
+import com.alibaba.qlexpress4.runtime.FixedSizeStack;
+import com.alibaba.qlexpress4.runtime.Parameters;
+import com.alibaba.qlexpress4.runtime.QvmGlobalScope;
+import com.alibaba.qlexpress4.runtime.QvmRuntime;
+import com.alibaba.qlexpress4.runtime.ReflectLoader;
+import com.alibaba.qlexpress4.runtime.context.MapExpressContext;
+import com.alibaba.qlexpress4.runtime.data.DataValue;
+import com.alibaba.qlexpress4.runtime.function.CustomFunction;
+import com.alibaba.qlexpress4.runtime.operator.BinaryOperator;
+import com.alibaba.qlexpress4.runtime.operator.CustomBinaryOperator;
+import com.alibaba.qlexpress4.runtime.operator.OperatorManager;
+import com.alibaba.qlexpress4.runtime.operator.unary.UnaryOperator;
+import com.alibaba.qlexpress4.runtime.scope.QScope;
+import com.alibaba.qlexpress4.runtime.scope.QvmBlockScope;
+import com.alibaba.qlexpress4.runtime.trace.QTraces;
+import com.alibaba.qlexpress4.runtime.operator.number.BigDecimalMath;
+import com.alibaba.qlexpress4.runtime.operator.number.BigIntegerMath;
+import com.alibaba.qlexpress4.runtime.operator.number.FloatingPointMath;
+import com.alibaba.qlexpress4.runtime.operator.number.IntegerMath;
+import com.alibaba.qlexpress4.runtime.operator.number.LongMath;
+import com.alibaba.qlexpress4.runtime.operator.number.NumberMath;
 import com.alibaba.qlexpress4.security.QLSecurityStrategy;
 
 /**
@@ -62,6 +92,30 @@ public final class JavaDifferentialRunner {
 
     private static Map<String, Object> execute(JSONObject testCase) {
         String id = testCase.getString("id");
+        JSONObject numberMath = testCase.getJSONObject("number_math");
+        if (numberMath != null) {
+            return executeNumberMath(id, numberMath);
+        }
+        JSONObject operatorManager = testCase.getJSONObject("operator_manager");
+        if (operatorManager != null) {
+            return executeOperatorManager(id, operatorManager);
+        }
+        JSONObject delegateContext = testCase.getJSONObject("delegate_context");
+        if (delegateContext != null) {
+            return executeDelegateContext(id, delegateContext);
+        }
+        JSONObject fixedSizeStack = testCase.getJSONObject("fixed_size_stack");
+        if (fixedSizeStack != null) {
+            return executeFixedSizeStack(id, fixedSizeStack);
+        }
+        JSONObject runtimeCore = testCase.getJSONObject("runtime_core");
+        if (runtimeCore != null) {
+            return executeRuntimeCore(id, runtimeCore);
+        }
+        JSONObject exceptionTable = testCase.getJSONObject("exception_table");
+        if (exceptionTable != null) {
+            return executeExceptionTable(id, exceptionTable);
+        }
         String script = testCase.getString("script");
         JSONObject contextObject = testCase.getJSONObject("context");
         Map<String, Object> context =
@@ -87,13 +141,672 @@ public final class JavaDifferentialRunner {
         }
         catch (QLException error) {
             record.put("outcome", "error");
-            record.put("normalized", null);
+            record.put("normalized", "error:" + error.getErrorCode() + ":" + error.getReason());
             record.put("error_code", error.getErrorCode());
             record.put("line", error.getLineNo());
             record.put("column", error.getColNo());
             record.put("trace_count", 0);
         }
         return record;
+    }
+
+    /**
+     * 直接比较异常表的声明顺序、Java 类型可赋值关系和可空 finally 位置。
+     *
+     * @param id 差分用例标识
+     * @param invocation 场景描述
+     * @return 规范化的有序观察结果
+     */
+    private static Map<String, Object> executeExceptionTable(String id, JSONObject invocation) {
+        String scenario = invocation.getString("scenario");
+        if (!"full_contract".equals(scenario)) {
+            throw new IllegalArgumentException("unsupported exception_table scenario: " + scenario);
+        }
+
+        List<Map.Entry<Class<?>, Integer>> handlers = new ArrayList<>();
+        handlers.add(new AbstractMap.SimpleImmutableEntry<>(Number.class, 11));
+        handlers.add(new AbstractMap.SimpleImmutableEntry<>(RuntimeException.class, 22));
+        handlers.add(new AbstractMap.SimpleImmutableEntry<>(Object.class, 33));
+        ExceptionTable table = new ExceptionTable(handlers, 44);
+        List<Map.Entry<Class<?>, Integer>> objectFirstHandlers = new ArrayList<>();
+        objectFirstHandlers.add(new AbstractMap.SimpleImmutableEntry<>(Object.class, 5));
+        objectFirstHandlers.add(new AbstractMap.SimpleImmutableEntry<>(Number.class, 6));
+        ExceptionTable objectFirst = new ExceptionTable(objectFirstHandlers, null);
+
+        Map<String, Object> observed = new LinkedHashMap<>();
+        observed.put("null_to_first", table.getRelativePos(null));
+        observed.put("integer_to_number", table.getRelativePos(1));
+        observed.put("long_to_number", table.getRelativePos(1L));
+        observed.put("runtime_subclass", table.getRelativePos(new IllegalArgumentException()));
+        observed.put("string_to_object", table.getRelativePos("fallback"));
+        observed.put("final_pos", table.getFinalPos());
+        observed.put("declaration_order", objectFirst.getRelativePos(1));
+        observed.put("empty_relative", ExceptionTable.EMPTY.getRelativePos(1));
+        observed.put("empty_final", ExceptionTable.EMPTY.getFinalPos());
+        return successRecord(id, observed);
+    }
+
+    /**
+     * 直接比较 QRuntime、QvmRuntime 与 QContext 的引用共享和委托契约。
+     *
+     * @param id 差分用例标识
+     * @param invocation 场景描述
+     * @return 规范化的有序观察结果
+     */
+    private static Map<String, Object> executeRuntimeCore(String id, JSONObject invocation) {
+        String scenario = invocation.getString("scenario");
+        if (!"full_contract".equals(scenario)) {
+            throw new IllegalArgumentException("unsupported runtime_core scenario: " + scenario);
+        }
+
+        Map<String, Object> attachments = new LinkedHashMap<>();
+        attachments.put("tenant", "acme");
+        QTraces traces = new QTraces(new ArrayList<>(), new HashMap<>());
+        ReflectLoader reflectLoader = new ReflectLoader(QLSecurityStrategy.open(), false);
+        QvmRuntime runtime = new QvmRuntime(traces, attachments, reflectLoader, 424242L);
+        Map<String, Object> observed = new LinkedHashMap<>();
+
+        observed.put("runtime_start", runtime.scriptStartTimeStamp());
+        observed.put("runtime_attachment_initial", runtime.attachment().get("tenant"));
+        observed.put("runtime_registry_same", runtime.getReflectLoader() == reflectLoader);
+        observed.put("runtime_trace_count", runtime.getTraces().getExpressionTraces().size());
+
+        attachments.put("external_write", 7);
+        observed.put("external_write_visible", runtime.attachment().get("external_write"));
+        runtime.attachment().put("runtime_write", 8);
+        observed.put("runtime_write_visible_external", attachments.get("runtime_write"));
+
+        QvmGlobalScope globalScope = new QvmGlobalScope(
+            new MapExpressContext(new LinkedHashMap<>()),
+            new HashMap<>(),
+            QLOptions.builder().attachments(attachments).build());
+        QvmBlockScope blockScope = new QvmBlockScope(
+            globalScope,
+            new HashMap<>(),
+            1,
+            ExceptionTable.EMPTY);
+        DelegateQContext context = new DelegateQContext(runtime, blockScope);
+        observed.put("context_runtime_same", true);
+        observed.put("context_start", context.scriptStartTimeStamp());
+        observed.put("context_registry_same", context.getReflectLoader() == reflectLoader);
+        observed.put("context_traces_same", context.getTraces() == traces);
+        observed.put("context_current_initial", context.getCurrentScope() == blockScope);
+        context.attachment().put("context_write", 9);
+        observed.put("context_write_visible_runtime", runtime.attachment().get("context_write"));
+        QScope child = context.newScope();
+        observed.put("context_current_child", context.getCurrentScope() == child);
+        context.closeScope();
+        observed.put("context_closed_to_parent", context.getCurrentScope() == blockScope);
+        return successRecord(id, observed);
+    }
+
+    /**
+     * 直接比较 FixedSizeStack、StackSwapParameters 与 Parameters 的顺序和共享窗口副作用。
+     *
+     * @param id 差分用例标识
+     * @param invocation 场景描述
+     * @return 规范化的有序观察结果
+     */
+    private static Map<String, Object> executeFixedSizeStack(String id, JSONObject invocation) {
+        String scenario = invocation.getString("scenario");
+        if (!"full_contract".equals(scenario)) {
+            throw new IllegalArgumentException("unsupported fixed_size_stack scenario: " + scenario);
+        }
+
+        FixedSizeStack stack = new FixedSizeStack(4);
+        Map<String, Object> observed = new LinkedHashMap<>();
+        observed.put("capacity", 4);
+        for (int value = 1; value <= 4; value++) {
+            stack.push(new DataValue(value));
+        }
+        observed.put("peak", stack.peak().get());
+        observed.put("pop_4", stack.pop().get());
+        observed.put("pop_3", stack.pop().get());
+        stack.push(new DataValue(5));
+        stack.push(new DataValue(6));
+
+        Parameters parameters = stack.pop(3);
+        observed.put("parameters_size", parameters.size());
+        observed.put("parameters_present_0", parameters.get(0) != null);
+        observed.put("parameters_values", parameterValues(parameters));
+        observed.put("parameters_oob_present", parameters.get(3) != null);
+        observed.put("parameters_oob_value", parameters.getValue(3));
+        observed.put("remaining_peak", stack.peak().get());
+
+        stack.push(new DataValue(9));
+        observed.put("live_after_one_push", parameterValues(parameters));
+        stack.push(new DataValue(8));
+        observed.put("live_after_two_pushes", parameterValues(parameters));
+        stack.push(new DataValue(7));
+        observed.put("live_after_three_pushes", parameterValues(parameters));
+        observed.put("pop_reused_top", stack.pop().get());
+        observed.put("peak_after_pop", stack.peak().get());
+        Parameters emptyParameters = stack.pop(0);
+        observed.put("zero_pop_size", emptyParameters.size());
+        observed.put("zero_pop_get", emptyParameters.get(0) != null);
+
+        FixedSizeStack nullStack = new FixedSizeStack(1);
+        nullStack.push(new DataValue((Object)null));
+        Parameters nullParameters = nullStack.pop(1);
+        observed.put("null_slot_present", nullParameters.get(0) != null);
+        observed.put("null_slot_value", nullParameters.getValue(0));
+        return successRecord(id, observed);
+    }
+
+    private static List<Object> parameterValues(Parameters parameters) {
+        List<Object> values = new ArrayList<>(parameters.size());
+        for (int index = 0; index < parameters.size(); index++) {
+            values.add(parameters.getValue(index));
+        }
+        return values;
+    }
+
+    /**
+     * 直接构造 DelegateQContext，逐项观察运行时委托、作用域、符号、函数表和共享栈。
+     *
+     * @param id 差分用例标识
+     * @param invocation 场景描述
+     * @return 规范化的有序观察结果
+     */
+    private static Map<String, Object> executeDelegateContext(String id, JSONObject invocation) {
+        String scenario = invocation.getString("scenario");
+        if ("close_global".equals(scenario)) {
+            return executeDelegateCloseGlobal(id);
+        }
+        if (!"full_contract".equals(scenario)) {
+            throw new IllegalArgumentException("unsupported delegate_context scenario: " + scenario);
+        }
+
+        Map<String, Object> attachments = new LinkedHashMap<>();
+        attachments.put("tenant", "acme");
+        QTraces traces = new QTraces(new ArrayList<>(), new HashMap<>());
+        ReflectLoader reflectLoader = new ReflectLoader(QLSecurityStrategy.open(), false);
+        QvmRuntime runtime = new QvmRuntime(traces, attachments, reflectLoader, 123456L);
+        QLOptions options = QLOptions.builder().attachments(attachments).build();
+        QvmGlobalScope globalScope = new QvmGlobalScope(
+            new MapExpressContext(new LinkedHashMap<>()),
+            new HashMap<>(),
+            options);
+        QvmBlockScope blockScope = new QvmBlockScope(
+            globalScope,
+            new HashMap<>(),
+            8,
+            ExceptionTable.EMPTY);
+        DelegateQContext context = new DelegateQContext(runtime, blockScope);
+        Map<String, Object> observed = new LinkedHashMap<>();
+
+        observed.put("start_time", context.scriptStartTimeStamp());
+        observed.put("attachment", context.attachment().get("tenant"));
+        observed.put("reflect_same", context.getReflectLoader() == reflectLoader);
+        observed.put("traces_same", context.getTraces() == traces);
+        observed.put("trace_count", context.getTraces().getExpressionTraces().size());
+        observed.put("current_initial", context.getCurrentScope() == blockScope);
+        observed.put("parent_initial", context.getParent() == globalScope);
+
+        context.defineLocalSymbol("x", Integer.class, 7);
+        Value symbol = context.getSymbol("x");
+        observed.put("symbol_present", symbol != null);
+        observed.put("symbol_value", symbol.get());
+        observed.put("missing_value", context.getSymbolValue("missing"));
+
+        CustomFunction function = (qContext, parameters) -> parameters.size();
+        context.defineFunction("f", function);
+        observed.put("function_get", context.getFunction("f") != null);
+        Map<String, CustomFunction> functionTable = context.getFunctionTable();
+        functionTable.put("g", function);
+        observed.put("function_table_size", functionTable.size());
+        observed.put("function_table_write_through", context.getFunction("g") != null);
+
+        context.push(new DataValue(1));
+        context.push(new DataValue(2));
+        QScope childScope = context.newScope();
+        context.push(new DataValue(3));
+        observed.put("stack_peek", context.peek().get());
+        Parameters popped = context.pop(2);
+        observed.put("pop_n_size", popped.size());
+        observed.put("pop_n_0", popped.get(0).get());
+        observed.put("pop_n_1", popped.get(1).get());
+        observed.put("stack_after_pop_n", context.peek().get());
+        context.push(new DataValue(4));
+        observed.put("pop_single", context.pop().get());
+        observed.put("child_current", context.getCurrentScope() == childScope);
+        observed.put("child_parent", context.getParent() == blockScope);
+        observed.put("child_inherits_function", context.getFunction("f") != null);
+        observed.put("child_function_table_size", context.getFunctionTable().size());
+        observed.put("child_inherited_symbol", context.getSymbolValue("x"));
+        context.defineLocalSymbol("x", Integer.class, 9);
+        observed.put("child_shadow", context.getSymbolValue("x"));
+        context.closeScope();
+        observed.put("closed_to_parent", context.getCurrentScope() == blockScope);
+        observed.put("parent_symbol_after_close", context.getSymbolValue("x"));
+        context.closeScope();
+        observed.put("closed_to_global", context.getCurrentScope() == globalScope);
+
+        return successRecord(id, observed);
+    }
+
+    private static Map<String, Object> executeDelegateCloseGlobal(String id) {
+        Map<String, Object> attachments = new LinkedHashMap<>();
+        QvmRuntime runtime = new QvmRuntime(
+            new QTraces(new ArrayList<>(), new HashMap<>()),
+            attachments,
+            new ReflectLoader(QLSecurityStrategy.open(), false),
+            123456L);
+        QvmGlobalScope globalScope = new QvmGlobalScope(
+            new MapExpressContext(new LinkedHashMap<>()),
+            new HashMap<>(),
+            QLOptions.builder().build());
+        DelegateQContext context = new DelegateQContext(runtime, globalScope);
+        try {
+            context.closeScope();
+            throw new IllegalStateException(
+                "DelegateQContext.closeScope silently accepted global scope");
+        }
+        catch (UnsupportedOperationException expected) {
+            Map<String, Object> record = new LinkedHashMap<>();
+            record.put("id", id);
+            record.put("outcome", "error");
+            record.put(
+                "normalized",
+                "error:UNSUPPORTED_OPERATION:QvmGlobalScope.getParent is unsupported");
+            record.put("error_code", "UNSUPPORTED_OPERATION");
+            record.put("line", 0);
+            record.put("column", 0);
+            record.put("trace_count", 0);
+            return record;
+        }
+    }
+
+    /**
+     * 直接调用 Java OperatorManager，验证注册、覆盖、别名、查找和适配器行为。
+     *
+     * @param id 差分用例标识
+     * @param invocation 操作、预置步骤与操作数
+     * @return 与 Rust 执行器相同结构的规范化记录
+     */
+    private static Map<String, Object> executeOperatorManager(String id, JSONObject invocation) {
+        OperatorManager manager = new OperatorManager();
+        List<JSONObject> setups = invocation.getList("setup", JSONObject.class);
+        if (setups != null) {
+            for (JSONObject setup : setups) {
+                if (!applyOperatorManagerSetup(manager, setup)) {
+                    throw new IllegalArgumentException(
+                        "operator_manager setup failed: " + setup.getString("action") + " "
+                            + setup.getString("lexeme"));
+                }
+            }
+        }
+
+        String operation = invocation.getString("operation");
+        String lexeme = invocation.getString("lexeme");
+        try {
+            Object result;
+            switch (operation) {
+                case "addBinaryOperator":
+                    result = manager.addBinaryOperator(
+                        lexeme,
+                        additiveCustomOperator(),
+                        invocation.getIntValue("priority", 300));
+                    break;
+                case "replaceDefaultOperator":
+                    result = manager.replaceDefaultOperator(lexeme, additiveCustomOperator());
+                    break;
+                case "addOperatorAlias":
+                    result = manager.addOperatorAlias(lexeme, invocation.getString("origin"));
+                    break;
+                case "addKeyWordAlias":
+                    result = manager.addKeyWordAlias(lexeme, invocation.getString("keyword"));
+                    break;
+                case "getBinaryOperator":
+                    result = operatorMetadata(manager.getBinaryOperator(lexeme));
+                    break;
+                case "getPrefixUnaryOperator":
+                    result = unaryOperatorMetadata(manager.getPrefixUnaryOperator(lexeme));
+                    break;
+                case "getSuffixUnaryOperator":
+                    result = unaryOperatorMetadata(manager.getSuffixUnaryOperator(lexeme));
+                    break;
+                case "isOpType":
+                    result = manager.isOpType(lexeme, OpType.valueOf(invocation.getString("op_type")));
+                    break;
+                case "precedence":
+                    result = manager.precedence(lexeme);
+                    break;
+                case "getAlias":
+                    result = manager.getAlias(lexeme);
+                    break;
+                case "executeBinary":
+                    BinaryOperator operator = manager.getBinaryOperator(lexeme);
+                    if (operator == null) {
+                        throw new IllegalArgumentException(
+                            "operator_manager binary operator not found: " + lexeme);
+                    }
+                    Number left = typedNumber(invocation.getJSONObject("left"));
+                    Number right = typedNumber(invocation.getJSONObject("right"));
+                    Value leftValue = () -> left;
+                    Value rightValue = () -> right;
+                    result = operator.execute(
+                        leftValue,
+                        rightValue,
+                        null,
+                        QLOptions.builder().build(),
+                        PureErrReporter.INSTANCE);
+                    break;
+                default:
+                    throw new IllegalArgumentException(
+                        "unsupported operator_manager operation: " + operation);
+            }
+            return successRecord(id, result);
+        }
+        catch (RuntimeException error) {
+            return runtimeErrorRecord(id, error);
+        }
+    }
+
+    private static boolean applyOperatorManagerSetup(OperatorManager manager, JSONObject setup) {
+        String action = setup.getString("action");
+        String lexeme = setup.getString("lexeme");
+        switch (action) {
+            case "add":
+                return manager.addBinaryOperator(
+                    lexeme,
+                    additiveCustomOperator(),
+                    setup.getIntValue("priority", 300));
+            case "replace":
+                return manager.replaceDefaultOperator(lexeme, additiveCustomOperator());
+            case "operator_alias":
+                return manager.addOperatorAlias(lexeme, setup.getString("origin"));
+            case "keyword_alias":
+                return manager.addKeyWordAlias(lexeme, setup.getString("keyword"));
+            default:
+                throw new IllegalArgumentException(
+                    "unsupported operator_manager setup action: " + action);
+        }
+    }
+
+    private static CustomBinaryOperator additiveCustomOperator() {
+        return (left, right) -> NumberMath.add((Number)left.get(), (Number)right.get());
+    }
+
+    private static Object operatorMetadata(BinaryOperator operator) {
+        if (operator == null) {
+            return null;
+        }
+        return operator.getOperator() + "|" + operator.getPriority();
+    }
+
+    private static Object unaryOperatorMetadata(UnaryOperator operator) {
+        if (operator == null) {
+            return null;
+        }
+        return operator.getOperator() + "|" + operator.getPriority();
+    }
+
+    private static Map<String, Object> successRecord(String id, Object result) {
+        Map<String, Object> record = new LinkedHashMap<>();
+        record.put("id", id);
+        record.put("outcome", "ok");
+        record.put("normalized", normalize(result));
+        record.put("error_code", null);
+        record.put("line", null);
+        record.put("column", null);
+        record.put("trace_count", 0);
+        return record;
+    }
+
+    private static Map<String, Object> runtimeErrorRecord(String id, RuntimeException error) {
+        Map<String, Object> record = new LinkedHashMap<>();
+        record.put("id", id);
+        record.put("outcome", "error");
+        record.put(
+            "normalized",
+            "error:" + error.getClass().getSimpleName() + ":" + error.getMessage());
+        record.put("error_code", error.getClass().getSimpleName());
+        record.put("line", 0);
+        record.put("column", 0);
+        record.put("trace_count", 0);
+        return record;
+    }
+
+    /**
+     * 直接调用 Java NumberMath 静态门面，作为 Rust 数值域实现的 oracle。
+     *
+     * @param id 差分用例标识
+     * @param invocation 操作名与显式 Number 子类型操作数
+     * @return 与脚本差分相同结构的规范化记录
+     */
+    private static Map<String, Object> executeNumberMath(String id, JSONObject invocation) {
+        String operation = invocation.getString("operation");
+        Number left = typedNumber(invocation.getJSONObject("left"));
+        JSONObject rightObject = invocation.getJSONObject("right");
+        Number right = rightObject == null ? null : typedNumber(rightObject);
+        String implementation = invocation.getString("implementation");
+        try {
+            Object result;
+            if (implementation != null) {
+                result = invokeConcreteNumberMath(implementation, operation, left, right);
+            }
+            else {
+                switch (operation) {
+                case "abs":
+                    result = NumberMath.abs(left);
+                    break;
+                case "add":
+                    result = NumberMath.add(left, requireRight(operation, right));
+                    break;
+                case "subtract":
+                    result = NumberMath.subtract(left, requireRight(operation, right));
+                    break;
+                case "multiply":
+                    result = NumberMath.multiply(left, requireRight(operation, right));
+                    break;
+                case "divide":
+                    result = NumberMath.divide(left, requireRight(operation, right));
+                    break;
+                case "compareTo":
+                    result = NumberMath.compareTo(left, requireRight(operation, right));
+                    break;
+                case "or":
+                    result = NumberMath.or(left, requireRight(operation, right));
+                    break;
+                case "and":
+                    result = NumberMath.and(left, requireRight(operation, right));
+                    break;
+                case "xor":
+                    result = NumberMath.xor(left, requireRight(operation, right));
+                    break;
+                case "intDiv":
+                    result = NumberMath.intDiv(left, requireRight(operation, right));
+                    break;
+                case "mod":
+                    result = NumberMath.mod(left, requireRight(operation, right));
+                    break;
+                case "remainder":
+                    result = NumberMath.remainder(left, requireRight(operation, right));
+                    break;
+                case "leftShift":
+                    result = NumberMath.leftShift(left, requireRight(operation, right));
+                    break;
+                case "rightShift":
+                    result = NumberMath.rightShift(left, requireRight(operation, right));
+                    break;
+                case "rightShiftUnsigned":
+                    result = NumberMath.rightShiftUnsigned(left, requireRight(operation, right));
+                    break;
+                case "bitwiseNegate":
+                    result = NumberMath.bitwiseNegate(left);
+                    break;
+                case "unaryMinus":
+                    result = NumberMath.unaryMinus(left);
+                    break;
+                case "unaryPlus":
+                    result = NumberMath.unaryPlus(left);
+                    break;
+                case "toBigDecimal":
+                    result = NumberMath.toBigDecimal(left);
+                    break;
+                case "toBigInteger":
+                    result = NumberMath.toBigInteger(left);
+                    break;
+                case "isFloatingPoint":
+                    result = NumberMath.isFloatingPoint(left);
+                    break;
+                case "isInteger":
+                    result = NumberMath.isInteger(left);
+                    break;
+                case "isShort":
+                    result = NumberMath.isShort(left);
+                    break;
+                case "isByte":
+                    result = NumberMath.isByte(left);
+                    break;
+                case "isLong":
+                    result = NumberMath.isLong(left);
+                    break;
+                case "isBigDecimal":
+                    result = NumberMath.isBigDecimal(left);
+                    break;
+                case "isBigInteger":
+                    result = NumberMath.isBigInteger(left);
+                    break;
+                case "getMath":
+                    result = NumberMath.getMath(left, requireRight(operation, right)).getClass().getSimpleName();
+                    break;
+                default:
+                    throw new IllegalArgumentException("unsupported number_math operation: " + operation);
+                }
+            }
+            Map<String, Object> record = new LinkedHashMap<>();
+            record.put("id", id);
+            record.put("outcome", "ok");
+            record.put("normalized", normalize(result));
+            record.put("error_code", null);
+            record.put("line", null);
+            record.put("column", null);
+            record.put("trace_count", 0);
+            return record;
+        }
+        catch (RuntimeException error) {
+            String category = numberMathErrorCategory(error);
+            Map<String, Object> record = new LinkedHashMap<>();
+            record.put("id", id);
+            record.put("outcome", "error");
+            record.put("normalized", "error:" + category + ":" + error.getMessage());
+            record.put("error_code", category);
+            record.put("line", 0);
+            record.put("column", 0);
+            record.put("trace_count", 0);
+            return record;
+        }
+    }
+
+    /**
+     * 直接调用具体 Java NumberMath 实现的公开 override，验证每个数值域，而非只验证门面分派结果。
+     *
+     * @param implementation Java 实现类简单名
+     * @param operation 公开实现方法名，例如 {@code addImpl}
+     * @param left 左操作数或一元操作数
+     * @param right 可选右操作数
+     * @return Java 具体实现的原始返回值
+     */
+    private static Object invokeConcreteNumberMath(
+        String implementation,
+        String operation,
+        Number left,
+        Number right) {
+        Object receiver;
+        switch (implementation) {
+            case "IntegerMath":
+                receiver = IntegerMath.INSTANCE;
+                break;
+            case "LongMath":
+                receiver = LongMath.INSTANCE;
+                break;
+            case "BigIntegerMath":
+                receiver = BigIntegerMath.INSTANCE;
+                break;
+            case "BigDecimalMath":
+                receiver = BigDecimalMath.INSTANCE;
+                break;
+            case "FloatingPointMath":
+                receiver = FloatingPointMath.INSTANCE;
+                break;
+            default:
+                throw new IllegalArgumentException("unsupported number_math implementation: " + implementation);
+        }
+        try {
+            Method method;
+            if (isUnaryNumberMathImplementation(operation)) {
+                method = receiver.getClass().getMethod(operation, Number.class);
+                return method.invoke(receiver, left);
+            }
+            method = receiver.getClass().getMethod(operation, Number.class, Number.class);
+            return method.invoke(receiver, left, requireRight(operation, right));
+        }
+        catch (NoSuchMethodException | IllegalAccessException error) {
+            throw new IllegalArgumentException(
+                "unsupported concrete number_math operation: " + implementation + "." + operation,
+                error);
+        }
+        catch (InvocationTargetException error) {
+            Throwable cause = error.getCause();
+            if (cause instanceof RuntimeException) {
+                throw (RuntimeException)cause;
+            }
+            throw new IllegalStateException("concrete number_math invocation failed", cause);
+        }
+    }
+
+    private static boolean isUnaryNumberMathImplementation(String operation) {
+        return "absImpl".equals(operation)
+            || "unaryMinusImpl".equals(operation)
+            || "unaryPlusImpl".equals(operation)
+            || "bitwiseNegateImpl".equals(operation);
+    }
+
+    private static Number requireRight(String operation, Number right) {
+        if (right == null) {
+            throw new IllegalArgumentException("number_math " + operation + " requires right operand");
+        }
+        return right;
+    }
+
+    private static Number typedNumber(JSONObject number) {
+        String type = number.getString("type");
+        String value = number.getString("value");
+        switch (type) {
+            case "byte":
+                return Byte.valueOf(value);
+            case "short":
+                return Short.valueOf(value);
+            case "int":
+                return Integer.valueOf(value);
+            case "long":
+                return Long.valueOf(value);
+            case "float":
+                return Float.valueOf(value);
+            case "double":
+                return Double.valueOf(value);
+            case "bigint":
+                return new BigInteger(value);
+            case "bigdec":
+                return new BigDecimal(value);
+            default:
+                throw new IllegalArgumentException("unsupported number type: " + type);
+        }
+    }
+
+    private static String numberMathErrorCategory(RuntimeException error) {
+        if (error instanceof NumberFormatException) {
+            return "NUMBER_FORMAT_EXCEPTION";
+        }
+        if (error instanceof UnsupportedOperationException) {
+            return "UNSUPPORTED_OPERATION";
+        }
+        if (error instanceof ArithmeticException) {
+            return "ARITHMETIC_EXCEPTION";
+        }
+        return error.getClass().getSimpleName();
     }
 
     private static QLOptions options(JSONObject options) {

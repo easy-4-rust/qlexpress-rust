@@ -107,6 +107,23 @@ impl QScope {
         this.borrow().parent.as_ref().map(Rc::clone)
     }
 
+    /// 判断名字是否已经在当前作用域链中声明，且不会触发全局外部变量的懒创建。
+    ///
+    /// 对应 Java：函数调用区分“未知函数名”与“已声明但值为 null 的 Lambda
+    /// 变量”时的符号表查询；后者必须抛 `NULL_CALL`，不能误报
+    /// `FUNCTION_NOT_FOUND`。
+    pub fn contains_symbol(this: &ScopeRef, var_name: &str) -> bool {
+        let (contains, parent) = {
+            let borrowed = this.borrow();
+            let contains = match &borrowed.kind {
+                QScopeKind::Global(global) => global.has_declared_symbol(var_name),
+                QScopeKind::Block(block) => block.symbol_table().contains_key(var_name),
+            };
+            (contains, borrowed.parent.as_ref().map(Rc::clone))
+        };
+        contains || parent.is_some_and(|parent| Self::contains_symbol(&parent, var_name))
+    }
+
     /// Java `getSymbol`: local symbol table first, then the parent chain;
     /// the global scope creates the variable when absent.
     ///

@@ -239,7 +239,7 @@ def main() -> None:
         "",
         f"- Java：`{java_sha}`，静态识别 **{len(rows)}** 个测试方法。",
         f"- Rust 审计基线：`{rust_sha}`；当前工作树静态识别 **{inventory['summary']['rust_tests']}** 个测试函数。",
-        "- Java/Rust 覆盖率：" + acceptance.get(
+        "- 辅助覆盖率快照（仅说明各自测试路径被执行，不是跨语言语义一致性证据）：" + acceptance.get(
             "coverage_summary",
             "等待本轮 JaCoCo 与 `cargo-llvm-cov` 重跑，禁止沿用旧数字。",
         ),

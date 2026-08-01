@@ -1,7 +1,7 @@
 //! Execution context passed to every instruction, mirroring Java
 //! `com.alibaba.qlexpress4.runtime.QContext` (= `QScope` + `QRuntime`).
 
-use std::cell::{Ref, RefCell};
+use std::cell::{Ref, RefCell, RefMut};
 use std::rc::Rc;
 use std::time::Instant;
 
@@ -40,6 +40,12 @@ pub trait QContext {
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/QContext.java`，方法 `attachment`。
     /// Java `attachment()`.
     fn attachment(&self) -> Ref<'_, Attachments>;
+
+    /// 可变访问执行附件。
+    ///
+    /// 对应 Java `QRuntime#attachment()` 返回的可变 Map；Rust 将可变借用
+    /// 独立成方法，避免在只读调用点取得不必要的独占借用。
+    fn attachment_mut(&self) -> RefMut<'_, Attachments>;
 
     /// 处理 registry 对应的接口职责。
     /// 无显式参数；返回：`&Rc<NativeRegistry>`。

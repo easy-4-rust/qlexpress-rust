@@ -19,6 +19,47 @@ use qlexpress::ql_options::QLOptions;
 use qlexpress::runtime::value::DataValue;
 use qlexpress::security::ql_security_strategy::QLSecurityStrategy;
 
+/// 确保 Java 独立语言脚本既作为 Rust fixture 保存，也确实被本对齐套件的
+/// 可执行测试源码逐项采用。
+///
+/// Java 的 `TestSuiteRunner#suiteTest` 执行 `testsuite/independent` 的 151 个
+/// 脚本；本文件保留逐用例的断言和宿主配置。此检查阻止两份资产此后发生静默漂移。
+#[test]
+fn vendored_independent_fixtures_match_executed_alignment_scripts() {
+    let fixture_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/fixtures/java-testsuite/independent");
+    let source = include_str!("alignment_suite.rs");
+    let mut stack = vec![fixture_root];
+    let mut checked = 0_usize;
+
+    while let Some(path) = stack.pop() {
+        for entry in std::fs::read_dir(path).expect("read vendored Java fixture directory") {
+            let entry = entry.expect("read vendored Java fixture entry");
+            let entry_path = entry.path();
+            if entry_path.is_dir() {
+                stack.push(entry_path);
+                continue;
+            }
+            if entry_path.extension().and_then(std::ffi::OsStr::to_str) != Some("ql") {
+                continue;
+            }
+            let script = std::fs::read_to_string(&entry_path).expect("read vendored Java script");
+            let normalized_script = script.trim_end_matches('\n');
+            assert!(
+                source.contains(normalized_script),
+                "fixture is not embedded in an executable alignment test: {}",
+                entry_path.display()
+            );
+            checked += 1;
+        }
+    }
+
+    assert_eq!(
+        checked, 151,
+        "Java independent testsuite fixture count changed"
+    );
+}
+
 /// 逐项对应 Java `TestSuiteRunner#assertTest`，验证测试路径附件、
 /// `BIZ_EXCEPTION` 错误码/原因，以及函数名和变量名可共存。
 #[test]

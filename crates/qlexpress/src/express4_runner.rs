@@ -121,6 +121,12 @@ where
         self.binding_class.clone()
     }
 
+    fn is_var_args(&self) -> bool {
+        // Java 匿名 ExtensionFunction 明确覆盖 isVarArgs() 并返回 true；
+        // 该元数据决定标准 IMethod 参数转换是否把多个脚本实参打包为 Object[]。
+        true
+    }
+
     fn invoke(
         &self,
         object: &DataValue,
@@ -138,10 +144,6 @@ where
         extension_arguments.push(object.clone());
         extension_arguments.extend(var_args.iter().cloned());
         self.functional_varargs.call(&extension_arguments)
-    }
-
-    fn is_var_args(&self) -> bool {
-        true
     }
 }
 
@@ -606,6 +608,39 @@ impl Express4Runner {
             .import_parse_cache(cache)
             .map_err(|err| err.into_ql_exception())?;
         self.execute_with_loaded_cache(&loaded, context, ql_options)
+    }
+
+    /// 以 Map 上下文加载并执行可序列化 parse cache。
+    ///
+    /// 对应 Java：`Express4Runner#execute(SerializableParseCache,
+    /// Map<String, Object>, QLOptions)`。该重载与字符串脚本的 Map 入口一样，
+    /// 先构造 [`MapExpressContext`]，再复用 [`Self::execute_with_cache`]；
+    /// `polluteUserContext`、attachments 和 trace 等执行选项保持同一语义。
+    ///
+    /// # 参数
+    ///
+    /// - `cache`：待导入并执行的可序列化编译缓存；
+    /// - `context`：变量名到脚本值的 Map 上下文；
+    /// - `ql_options`：本次执行选项。
+    ///
+    /// # 返回值
+    ///
+    /// 返回脚本结果及可选表达式 trace。
+    ///
+    /// # 错误
+    ///
+    /// 缓存模型无效、导入失败或脚本运行失败时返回 [`QLException`]。
+    pub fn execute_with_cache_map(
+        &self,
+        cache: &SerializableParseCache,
+        context: HashMap<String, DataValue>,
+        ql_options: &QLOptions,
+    ) -> Result<QLResult, QLException> {
+        self.execute_with_cache(
+            cache,
+            Rc::new(MapExpressContext::new(map_to_index_map(context))),
+            ql_options,
+        )
     }
 
     /// 编译并执行,同时返回主 Lambda 的指令序列(调试用途)。
@@ -1141,6 +1176,74 @@ impl Express4Runner {
             move |_ctx: &mut dyn QContext, parameters: &Parameters| {
                 let arg = parameters.get_value(0);
                 Ok(function(arg))
+            },
+        )
+    }
+
+    /// 注册谓词函数，取首个参数（缺省为 `Null`）并返回布尔值。
+    ///
+    /// 对应 Java `addFunction(String name, Predicate<T> predicate)`：额外参数
+    /// 不参与调用，`Predicate#test` 的 `boolean` 结果包装为脚本布尔值；同名
+    /// 函数已存在时保持 `putIfAbsent` 语义并返回 `false`。
+    ///
+    /// # 参数
+    ///
+    /// - `name`：脚本侧函数名；
+    /// - `predicate`：接收第一个脚本参数并返回布尔判定的宿主闭包。
+    pub fn add_function_predicate<F>(&self, name: impl Into<String>, predicate: F) -> bool
+    where
+        F: Fn(DataValue) -> bool + 'static,
+    {
+        self.add_function(
+            name,
+            move |_ctx: &mut dyn QContext, parameters: &Parameters| {
+                Ok(DataValue::Bool(predicate(parameters.get_value(0))))
+            },
+        )
+    }
+
+    /// 注册无参副作用函数，忽略脚本实参并固定返回 `Null`。
+    ///
+    /// 对应 Java `addFunction(String name, Runnable runnable)`：调用
+    /// `Runnable#run()` 后返回 Java `null`；同名函数已存在时不替换。
+    ///
+    /// # 参数
+    ///
+    /// - `name`：脚本侧函数名；
+    /// - `runnable`：每次脚本调用时执行一次的宿主闭包。
+    pub fn add_function_runnable<F>(&self, name: impl Into<String>, runnable: F) -> bool
+    where
+        F: Fn() + 'static,
+    {
+        self.add_function(
+            name,
+            move |_ctx: &mut dyn QContext, _parameters: &Parameters| {
+                runnable();
+                Ok(DataValue::Null)
+            },
+        )
+    }
+
+    /// 注册消费型副作用函数，取首个参数（缺省为 `Null`）并固定返回
+    /// `Null`。
+    ///
+    /// 对应 Java `addFunction(String name, Consumer<T> consumer)`：额外参数
+    /// 被忽略，`Consumer#accept` 的副作用完成后返回 Java `null`；同名函数
+    /// 已存在时不替换。
+    ///
+    /// # 参数
+    ///
+    /// - `name`：脚本侧函数名；
+    /// - `consumer`：接收第一个脚本参数的宿主闭包。
+    pub fn add_function_consumer<F>(&self, name: impl Into<String>, consumer: F) -> bool
+    where
+        F: Fn(DataValue) + 'static,
+    {
+        self.add_function(
+            name,
+            move |_ctx: &mut dyn QContext, parameters: &Parameters| {
+                consumer(parameters.get_value(0));
+                Ok(DataValue::Null)
             },
         )
     }
@@ -2027,4 +2130,56 @@ fn validate_ast_budget(tree: &Node, sandbox_profile: &SandboxProfile) -> Result<
 /// `wrapAsDynamicString(String)`(`null` → `""`,转义双引号)。
 fn wrap_as_dynamic_string(template: &str) -> String {
     format!("\"{}\"", template.replace('\"', "\\\""))
+}
+
+#[cfg(test)]
+mod varargs_extension_function_tests {
+    use super::*;
+    use crate::runtime::i_method::IMethod;
+
+    /// SOURCE_PARITY: Java `Express4Runner#addExtendFunction(String, Class,
+    /// QLFunctionalVarargs)` 匿名类的五个覆盖方法必须共同保留：Object[]
+    /// 签名、varargs=true、名称、声明类，以及 receiver 位于展开参数第 0 位。
+    #[test]
+    fn java_anonymous_varargs_extension_contract() {
+        let extension = VarargsExtensionFunction {
+            name: "describe".to_string(),
+            binding_class: ClassRef::Named("java.lang.String".to_string()),
+            functional_varargs: |arguments: &[DataValue]| {
+                Ok(DataValue::string(
+                    arguments
+                        .iter()
+                        .map(DataValue::string_value_of)
+                        .collect::<Vec<_>>()
+                        .join("|"),
+                ))
+            },
+        };
+
+        assert_eq!(
+            ExtensionFunction::parameter_types(&extension),
+            vec![ClassRef::array_of(ClassRef::Named(
+                "java.lang.Object".to_string()
+            ))]
+        );
+        assert!(ExtensionFunction::is_var_args(&extension));
+        assert!(IMethod::is_var_args(&extension));
+        assert_eq!(ExtensionFunction::name(&extension), "describe");
+        assert_eq!(
+            ExtensionFunction::declaring_class(&extension),
+            ClassRef::Named("java.lang.String".to_string())
+        );
+        assert_eq!(
+            ExtensionFunction::invoke(
+                &extension,
+                &DataValue::string("root"),
+                &[DataValue::array(vec![
+                    DataValue::Int(1),
+                    DataValue::string("leaf")
+                ])],
+            )
+            .expect("invoke varargs extension"),
+            DataValue::string("root|1|leaf")
+        );
+    }
 }

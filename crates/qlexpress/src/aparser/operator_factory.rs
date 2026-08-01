@@ -18,6 +18,7 @@ use crate::runtime::operator::base::{BinaryOperator, UnaryOperator};
 use crate::runtime::operator::custom_binary_operator::CustomBinaryOperator;
 use crate::runtime::qcontext::QContext;
 use crate::runtime::value::{DataValue, QValue};
+use crate::util::rethrow_custom_operator_error;
 
 /// `OperatorFactory` 接口的 Rust 实现，保留对应对象的领域职责与公开契约。
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/OperatorFactory.java`；具体对象路径见 `docs/对象级对照表.md`。
@@ -45,8 +46,8 @@ pub trait OperatorFactory {
 }
 
 /// Java `OperatorManager.adapt2BinOp`: wraps a [`CustomBinaryOperator]`
-/// into a [`BinaryOperator`], converting user errors into reported
-/// `OPERATOR_INNER_EXCEPTION` failures (Java `ThrowUtils.wrapThrowable`).
+/// into a [`BinaryOperator`], preserving Java's `UserDefineException`
+/// branch before wrapping other failures with `OPERATOR_INNER_EXCEPTION`.
 struct CustomBinaryOperatorAdapter {
     operator_name: String,
     custom_binary_operator: Rc<dyn CustomBinaryOperator>,
@@ -64,19 +65,7 @@ impl BinaryOperator for CustomBinaryOperatorAdapter {
     ) -> Result<DataValue, QLException> {
         self.custom_binary_operator
             .execute(left, right)
-            .map_err(|err| {
-                // Java: UserDefineException -> reportUserDefinedException;
-                // other Throwable -> OPERATOR_INNER_EXCEPTION. The Rust
-                // port carries the user message in the QLException reason.
-                error_reporter.report(
-                    "OPERATOR_INNER_EXCEPTION",
-                    &format!(
-                        "custom operator '{}' inner exception: {}",
-                        self.operator_name,
-                        err.reason()
-                    ),
-                )
-            })
+            .map_err(|err| rethrow_custom_operator_error(err, error_reporter, &self.operator_name))
     }
 
     fn operator(&self) -> &str {

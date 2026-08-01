@@ -238,4 +238,24 @@ mod tests {
         members.borrow_mut().remove(&member);
         assert!(!strategy.check(&member));
     }
+
+    #[test]
+    fn shared_blacklist_and_strategy_identity_cover_remaining_java_adapters() {
+        let member = NativeMember::new("com.example.Service", "run");
+        let members = Rc::new(RefCell::new(HashSet::new()));
+        let blacklist = QLSecurityStrategy::shared_black_list(Rc::clone(&members));
+        assert!(blacklist.check(&member));
+        members.borrow_mut().insert(member.clone());
+        assert!(!blacklist.check(&member));
+
+        assert_ne!(QLSecurityStrategy::open(), QLSecurityStrategy::isolation());
+        assert_ne!(
+            QLSecurityStrategy::black_list(HashSet::new()),
+            QLSecurityStrategy::white_list(HashSet::new())
+        );
+        assert_ne!(
+            QLSecurityStrategy::custom(|_| true),
+            QLSecurityStrategy::custom(|_| true)
+        );
+    }
 }

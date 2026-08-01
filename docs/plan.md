@@ -1,6 +1,7 @@
 # QlExpress Rust 迁移计划（历史入口）
 
-本文件保留为早期 Stage 0–7 计划的兼容入口。迁移已经完成，当前事实来源是：
+本文件保留为早期 Stage 0–7 计划的兼容入口。历史阶段曾记录为完成；当前严格
+审计仍存在 `UNVERIFIED` 条目，故全量迁移**尚未被证明完成**。当前事实来源是：
 
 1. [迁移路线图](迁移路线图.md)：阶段状态、架构决策和质量门禁；
 2. [对象级对照表](对象级对照表.md)：237 个 Java 对象逐项映射；
@@ -17,7 +18,7 @@
 | 合并待拆 / 缺失 / stub | 0 / 0 / 0 |
 | 测试 | 803 个 Rust `#[test]` 静态清单；全工作区实跑通过 / 0 failed / 0 ignored |
 | Java 测试 | Maven 225 passed；SOURCE_PARITY 223 个注解方法逐项登记 |
-| 核心行覆盖率 | cargo-llvm-cov 20,217 / 23,787 = 84.99%，高于 Java 84.84% |
+| 核心行覆盖率 | cargo-llvm-cov 20,217 / 23,787 = 84.99%；仅反映 Rust 路径执行，不作为 Java 语义一致性结论 |
 | 格式 | `cargo fmt --all -- --check` 通过 |
 | 静态检查 | `cargo clippy --workspace --all-targets --all-features -- -D warnings` 通过 |
 

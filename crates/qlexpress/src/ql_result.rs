@@ -40,3 +40,16 @@ impl QLResult {
         self.result
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn constructor_and_accessors_keep_result_and_trace_order() {
+        let result = QLResult::new(DataValue::Long(42), Vec::new());
+        assert_eq!(result.result(), &DataValue::Long(42));
+        assert!(result.expression_traces().is_empty());
+        assert_eq!(result.into_result(), DataValue::Long(42));
+    }
+}

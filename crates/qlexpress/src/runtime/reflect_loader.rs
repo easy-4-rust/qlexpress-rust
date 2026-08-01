@@ -195,13 +195,20 @@ impl ReflectLoader {
         } else {
             error_codes::INVOKE_METHOD_UNKNOWN_ERROR
         };
-        error_reporter
+        let mut reported = error_reporter
             .report_format(
                 error_code,
                 error_codes::error_msg(error_code),
                 &[method_name.to_string()],
             )
-            .with_cause(error)
+            .with_cause(error.clone());
+        // Java InvocationTargetException 的 target exception 会成为
+        // QLRuntimeException 的 catchObj；包装错误码不能丢失该对象，否则
+        // `catch (ArithmeticException e)` 等处理器永远不可达。
+        if let Some(catch_obj) = error.catch_obj().cloned() {
+            reported = reported.with_catch_obj(catch_obj);
+        }
+        reported
     }
 }
 

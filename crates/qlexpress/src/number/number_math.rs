@@ -468,7 +468,7 @@ pub(crate) fn java_value_string(value: &DataValue) -> String {
         DataValue::Double(v) => crate::runtime::data::convert::java_f64_to_string(*v),
         DataValue::Char(v) => String::from_utf16_lossy(&[*v]),
         DataValue::Str(v) => v.to_string_lossy(),
-        other => format!("{other:?}"),
+        other => other.string_value_of(),
     }
 }
 

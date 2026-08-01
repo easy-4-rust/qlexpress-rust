@@ -38,6 +38,12 @@ pub struct QvmGlobalScope {
 }
 
 impl QvmGlobalScope {
+    /// 判断脚本变量是否已在全局作用域创建，且不触发外部上下文查询。
+    /// 对应 Java：`Map.containsKey` 级别的符号存在性判断。
+    pub fn has_declared_symbol(&self, var_name: &str) -> bool {
+        self.new_variables.contains_key(var_name)
+    }
+
     /// Stage 3a 兼容构造器:以 `IndexMap` 为外部变量来源
     /// (内部包装为 [`MapExpressContext`],对应 Java 以
     /// `MapExpressContext` 作为 `externalVariable` 的用法)。

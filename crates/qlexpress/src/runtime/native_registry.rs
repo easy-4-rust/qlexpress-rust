@@ -15,6 +15,8 @@ use crate::exception::error_codes;
 use crate::exception::ql_exception::QLExceptionKind;
 use crate::exception::QLException;
 use crate::member::field_handler::Preferred as PreferredFieldHandler;
+use crate::number::big_decimal_math::BigDecimalMath;
+use crate::proxy::q_lambda_invocation_handler::QLambdaInvocationHandler;
 use crate::runtime::class_ref::ClassRef;
 use crate::runtime::data::convert::number_compare;
 use crate::runtime::data::convert::parameters_type_convertor::ParametersTypeConvertor;
@@ -505,6 +507,25 @@ impl NativeRegistry {
                             {
                                 return Some(QValue::Data(value));
                             }
+                            // Java 允许通过实例读取/写入 static Field（例如
+                            // `SampleEnum.NORMAL.testStaticField`）；反射最终仍以
+                            // declaring class 的同一共享字段为准。
+                            if let Some(cell) = native_type.static_field_cells.get(&registered_name)
+                            {
+                                let getter_cell = Rc::clone(cell);
+                                let setter_cell = Rc::clone(cell);
+                                return Some(QValue::Left(Rc::new(RefCell::new(FieldValue::new(
+                                    Box::new(move || getter_cell.borrow().clone()),
+                                    Box::new(move |value| {
+                                        *setter_cell.borrow_mut() = value;
+                                        true
+                                    }),
+                                    None,
+                                )))));
+                            }
+                            if let Some(value) = native_type.static_fields.get(&registered_name) {
+                                return Some(QValue::Data(value.clone()));
+                            }
                             // Rust 的显式注册表就是 Java 反射可见性边界：类型已
                             // 注册但成员未注册时，不得绕过注册表直读对象字段。
                             return None;
@@ -643,6 +664,10 @@ impl NativeRegistry {
                     Ok(DataValue::string(class_name.clone()))
                 }));
             }
+            if method_name == "isArray" && args.is_empty() {
+                let is_array = meta.component_type().is_some();
+                return Some(Rc::new(move |_bean, _args| Ok(DataValue::Bool(is_array))));
+            }
             return self.resolve_registered_candidate(
                 meta.java_name(),
                 method_name,
@@ -650,6 +675,18 @@ impl NativeRegistry {
                 true,
                 bean,
             );
+        }
+
+        // Java 将赋给 SAM 接口的 QLambda 包装为动态 Proxy；抽象接口方法
+        // 的调用必须原样转发全部实参并取 Lambda 结果。Rust 不具 JVM Proxy，
+        // 但脚本值在运行时仍保留 Lambda，因此在方法解析边界提供同一分派。
+        // 接口可赋值性已由声明/形参转换检查，宿主自定义 SAM 与 JDK
+        // Runnable/Supplier/Consumer/Function 共用此路径。
+        if let DataValue::Lambda(lambda) = bean {
+            let handler = QLambdaInvocationHandler::new(Rc::clone(lambda));
+            return Some(Rc::new(move |_bean, arguments| {
+                handler.invoke_abstract(arguments)
+            }));
         }
 
         let type_name = native_type_name(bean);
@@ -1010,6 +1047,53 @@ impl NativeRegistry {
             )),
             _ => Err(wrong_args("Integer")),
         }));
+        // Java `Integer` 的常用静态数值 API。它们既可通过 `Integer.max(...)`
+        // 直接调用，也必须可由 `Integer::max` 方法引用取得。
+        integer.static_methods.insert(
+            "max".to_string(),
+            Rc::new(|_bean, args| match args {
+                [left, right] if left.is_number() && right.is_number() => Ok(DataValue::Int(
+                    crate::runtime::data::convert::to_i32(left)
+                        .max(crate::runtime::data::convert::to_i32(right)),
+                )),
+                _ => Err(wrong_args("Integer.max")),
+            }),
+        );
+        integer.static_methods.insert(
+            "min".to_string(),
+            Rc::new(|_bean, args| match args {
+                [left, right] if left.is_number() && right.is_number() => Ok(DataValue::Int(
+                    crate::runtime::data::convert::to_i32(left)
+                        .min(crate::runtime::data::convert::to_i32(right)),
+                )),
+                _ => Err(wrong_args("Integer.min")),
+            }),
+        );
+        integer.static_methods.insert(
+            "compare".to_string(),
+            Rc::new(|_bean, args| match args {
+                [left, right] if left.is_number() && right.is_number() => {
+                    let compared = crate::runtime::data::convert::to_i32(left)
+                        .cmp(&crate::runtime::data::convert::to_i32(right));
+                    Ok(DataValue::Int(match compared {
+                        std::cmp::Ordering::Less => -1,
+                        std::cmp::Ordering::Equal => 0,
+                        std::cmp::Ordering::Greater => 1,
+                    }))
+                }
+                _ => Err(wrong_args("Integer.compare")),
+            }),
+        );
+        integer.static_methods.insert(
+            "sum".to_string(),
+            Rc::new(|_bean, args| match args {
+                [left, right] if left.is_number() && right.is_number() => Ok(DataValue::Int(
+                    crate::runtime::data::convert::to_i32(left)
+                        .wrapping_add(crate::runtime::data::convert::to_i32(right)),
+                )),
+                _ => Err(wrong_args("Integer.sum")),
+            }),
+        );
         self.register_type(integer);
 
         let mut long = NativeType::named("java.lang.Long");
@@ -1037,9 +1121,42 @@ impl NativeRegistry {
         );
         self.register_type(big_integer);
 
+        // `BigDecimal` 既是规则语言的数值域，也必须作为 Java 风格原生类型
+        // 暴露构造器和实例 `divide`；后者保持 JDK 无舍入精确除法的异常语义。
+        let mut big_decimal = NativeType::named("java.math.BigDecimal");
+        big_decimal.constructor = Some(Rc::new(|args| match args {
+            [value] if value.is_number() || matches!(value, DataValue::Str(_)) => Ok(
+                DataValue::BigDec(crate::runtime::data::convert::to_big_dec_string(value)),
+            ),
+            _ => Err(wrong_args("BigDecimal")),
+        }));
+        big_decimal.methods.insert(
+            "divide".to_string(),
+            Rc::new(|bean, args| match args {
+                [right] if right.is_number() => BigDecimalMath::divide_exact_method(bean, right)
+                    .map_err(|error| {
+                        // 对应 Java 反射调用目标抛出的 ArithmeticException：
+                        // 错误码、cause 和 catchObj 都必须保留给 try/catch。
+                        QLException::host_error(
+                            QLExceptionKind::Runtime,
+                            error.reason(),
+                            error.error_code(),
+                        )
+                        .with_catch_obj(
+                            OpaqueNativeObject::new("java.lang.ArithmeticException")
+                                .into_data_value(),
+                        )
+                    }),
+                _ => Err(wrong_args("BigDecimal.divide")),
+            }),
+        );
+        self.register_type(big_decimal);
+
         for exception_name in [
+            "java.lang.Exception",
             "java.lang.RuntimeException",
             "java.lang.NullPointerException",
+            "java.lang.ArithmeticException",
         ] {
             let mut exception_type = NativeType::named(exception_name);
             exception_type.constructor = Some(Rc::new(move |args| {
@@ -1364,6 +1481,10 @@ fn string_method(name: &str) -> Option<NativeMethod> {
         "endsWith" => Rc::new(|bean, args| match (bean, string_arg(args, 0)) {
             (DataValue::Str(s), Some(p)) => Ok(DataValue::Bool(s.ends_with(p))),
             _ => Err(wrong_args("endsWith")),
+        }),
+        "concat" => Rc::new(|bean, args| match (bean, string_arg(args, 0), args.len()) {
+            (DataValue::Str(value), Some(suffix), 1) => Ok(DataValue::Str(value.concat(suffix))),
+            _ => Err(wrong_args("concat")),
         }),
         "indexOf" => Rc::new(|bean, args| match (bean, string_arg(args, 0), args.len()) {
             (DataValue::Str(s), Some(sub), 1) => {

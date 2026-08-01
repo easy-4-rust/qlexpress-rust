@@ -19,7 +19,13 @@ fn executes_in_fresh_restricted_process() {
         tenant_id: "tenant-a".into(),
         resource_limits: None,
     };
-    let response = ProcessWorker::new(worker_binary(), WorkerLimits::default())
+    // 该用例验证进程边界和协议，不验证生产默认延迟；LLVM coverage 插桩会显著
+    // 放大一次性子进程的冷启动时间。超时强制回收由下一个 1ms 用例独立验收。
+    let functional_limits = WorkerLimits {
+        wall_timeout: Duration::from_secs(5),
+        ..WorkerLimits::default()
+    };
+    let response = ProcessWorker::new(worker_binary(), functional_limits)
         .execute(&request)
         .unwrap();
     assert!(response.ok, "{response:?}");

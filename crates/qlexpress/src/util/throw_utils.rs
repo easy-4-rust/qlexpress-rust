@@ -56,3 +56,31 @@ pub fn report_user_defined_exception(
         error_reporter.report(error_codes::BIZ_EXCEPTION, err.reason())
     }
 }
+
+/// 将自定义二元操作符错误按 Java `OperatorManager#adapt2BinOp` 规则重抛。
+///
+/// Java 先捕获 `UserDefineException` 并按其类型重新报告；其他 `Throwable`
+/// 才走 `OPERATOR_INNER_EXCEPTION` 包装。Rust 用错误码表示前一种受控错误，
+/// 用 `host_origin` 区分尚未包装的宿主错误。
+/// 对应 Java: `OperatorManager#adapt2BinOp`。
+pub fn rethrow_custom_operator_error(
+    err: QLException,
+    error_reporter: &dyn ErrorReporter,
+    operator_name: &str,
+) -> QLException {
+    if err.error_code() == error_codes::INVALID_ARGUMENT
+        || err.error_code() == error_codes::BIZ_EXCEPTION
+    {
+        return report_user_defined_exception(error_reporter, &err);
+    }
+
+    let error_code = "OPERATOR_INNER_EXCEPTION";
+    let error_message = format!("custom operator '{operator_name}' inner exception");
+    if err.is_host_origin() {
+        error_reporter
+            .report_format(error_code, &error_message, &[])
+            .with_cause(err)
+    } else {
+        wrap_throwable(err, error_reporter, error_code, &error_message, &[])
+    }
+}

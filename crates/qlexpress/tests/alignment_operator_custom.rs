@@ -9,6 +9,9 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 
+use qlexpress::exception::error_codes;
+use qlexpress::exception::ql_exception_kind::QLExceptionKind;
+use qlexpress::exception::QLException;
 use qlexpress::ql_options::QLOptions;
 use qlexpress::runtime::value::{DataValue, QValue};
 use qlexpress::Express4Runner;
@@ -86,6 +89,100 @@ fn replace_default_operator() {
             .into_result(),
         DataValue::Double(3.5)
     );
+}
+
+/// 对应 Java `OperatorManager#adapt2BinOp` 的 `UserDefineException` 分支：
+/// 参数错误不得被错误包装成 `OPERATOR_INNER_EXCEPTION`。
+#[test]
+fn custom_operator_invalid_argument_keeps_user_defined_error_category() {
+    let mut runner = Express4Runner::new();
+    assert!(runner.add_operator(
+        "badarg",
+        Rc::new(|_left: &QValue, _right: &QValue| {
+            Err(QLException::for_test(
+                QLExceptionKind::Runtime,
+                "bad input",
+                error_codes::INVALID_ARGUMENT,
+            ))
+        }),
+    ));
+
+    let error = runner
+        .execute("1 badarg 2", HashMap::new(), &opts_no_cache())
+        .expect_err("custom argument failure");
+    assert_eq!(error.error_code(), error_codes::INVALID_ARGUMENT);
+    assert_eq!(error.reason(), "bad input");
+}
+
+/// 对应 Java `OperatorManager#adapt2BinOp` 的默认 `UserDefineException`
+/// 分支：业务错误同样不能落入内部异常包装。
+#[test]
+fn custom_operator_business_error_keeps_user_defined_error_category() {
+    let mut runner = Express4Runner::new();
+    assert!(runner.add_operator(
+        "badbiz",
+        Rc::new(|_left: &QValue, _right: &QValue| {
+            Err(QLException::for_test(
+                QLExceptionKind::Runtime,
+                "business rejected",
+                error_codes::BIZ_EXCEPTION,
+            ))
+        }),
+    ));
+
+    let error = runner
+        .execute("1 badbiz 2", HashMap::new(), &opts_no_cache())
+        .expect_err("custom business failure");
+    assert_eq!(error.error_code(), error_codes::BIZ_EXCEPTION);
+    assert_eq!(error.reason(), "business rejected");
+}
+
+/// 对应 Java `OperatorManager#adapt2BinOp` 的非 `UserDefineException` 分支：
+/// 宿主异常必须在当前位置包装为 `OPERATOR_INNER_EXCEPTION`，并保留 cause。
+#[test]
+fn custom_operator_host_failure_is_wrapped_and_keeps_cause() {
+    let mut runner = Express4Runner::new();
+    assert!(runner.add_operator(
+        "hostfail",
+        Rc::new(|_left: &QValue, _right: &QValue| {
+            Err(QLException::host_error(
+                QLExceptionKind::Runtime,
+                "host exploded",
+                "HOST_FAILURE",
+            ))
+        }),
+    ));
+
+    let error = runner
+        .execute("1 hostfail 2", HashMap::new(), &opts_no_cache())
+        .expect_err("host custom operator failure");
+    assert_eq!(error.error_code(), "OPERATOR_INNER_EXCEPTION");
+    let cause = error.cause().expect("host error must remain the cause");
+    assert_eq!(cause.error_code(), "HOST_FAILURE");
+    assert_eq!(cause.reason(), "host exploded");
+}
+
+/// Java `ThrowUtils.wrapThrowable` 会把未包装的原生算术异常改报当前
+/// 操作符的内部异常，不能以用户定义错误原样泄漏。
+#[test]
+fn custom_operator_arithmetic_failure_is_wrapped() {
+    let mut runner = Express4Runner::new();
+    assert!(runner.add_operator(
+        "arithfail",
+        Rc::new(|_left: &QValue, _right: &QValue| {
+            Err(QLException::for_test(
+                QLExceptionKind::Runtime,
+                "division by zero",
+                "ARITHMETIC_EXCEPTION",
+            ))
+        }),
+    ));
+
+    let error = runner
+        .execute("1 arithfail 2", HashMap::new(), &opts_no_cache())
+        .expect_err("arithmetic custom operator failure");
+    assert_eq!(error.error_code(), "OPERATOR_INNER_EXCEPTION");
+    assert!(error.cause().is_none());
 }
 
 /// 对应 Java `Express4RunnerTest#addOperatorTest` 的

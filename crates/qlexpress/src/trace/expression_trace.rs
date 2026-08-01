@@ -178,4 +178,30 @@ mod tests {
         assert!(pretty.contains("| VALUE 1 1"));
         assert_eq!(root.get_type(), TraceType::Operator);
     }
+
+    #[test]
+    fn accessors_and_null_evaluation_follow_java_trace_contract() {
+        let child = ExpressionTrace::new(TraceType::Value, "value", vec![], 2, 4, 12);
+        let mut trace = ExpressionTrace::new(TraceType::Function, "call", vec![child], 2, 1, 9);
+
+        assert_eq!(trace.trace_type(), TraceType::Function);
+        assert_eq!(trace.token(), "call");
+        assert_eq!(trace.line(), 2);
+        assert_eq!(trace.col(), 1);
+        assert_eq!(trace.position(), 9);
+        assert!(!trace.is_evaluated());
+        assert!(trace.value().is_none());
+        assert_eq!(trace.children().len(), 1);
+        trace.children_mut()[0].value_evaluated(DataValue::Null);
+        assert!(trace.children()[0].is_evaluated());
+        assert_eq!(trace.children()[0].value(), Some(&DataValue::Null));
+
+        trace.value_evaluated(DataValue::Null);
+        assert!(trace.is_evaluated());
+        assert_eq!(trace.value(), Some(&DataValue::Null));
+        assert_eq!(
+            trace.to_pretty_string(1),
+            "| FUNCTION call null\n    | VALUE value null\n"
+        );
+    }
 }

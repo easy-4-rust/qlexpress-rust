@@ -814,6 +814,59 @@ mod tests {
     }
 
     #[test]
+    fn java_protected_predicate_and_char_conversion_matrix() {
+        let int_value = v(DataValue::Int(1));
+        let long_value = v(DataValue::Long(1));
+        let bool_value = v(DataValue::Bool(true));
+        let null_value = v(DataValue::Null);
+        let char_value = v(DataValue::Char('a' as u16));
+        let string_value = v(DataValue::string("a"));
+        let list_value = v(DataValue::list(Vec::new()));
+
+        assert!(BaseBinaryOperator::is_same_type(
+            &int_value,
+            &v(DataValue::Int(2))
+        ));
+        assert!(!BaseBinaryOperator::is_same_type(&int_value, &long_value));
+        assert!(BaseBinaryOperator::is_instanceof_comparable(&string_value));
+        assert!(!BaseBinaryOperator::is_instanceof_comparable(&list_value));
+        assert!(BaseBinaryOperator::is_both_boolean(
+            &bool_value,
+            &v(DataValue::Bool(false))
+        ));
+        assert!(BaseBinaryOperator::is_boolean_and_null(
+            &bool_value,
+            &null_value
+        ));
+        assert!(BaseBinaryOperator::is_both_number(&int_value, &long_value));
+        assert!(BaseBinaryOperator::is_both_number_or_char(
+            &char_value.get(),
+            &int_value.get()
+        ));
+        assert!(BaseBinaryOperator::is_number_character(
+            &char_value,
+            &int_value
+        ));
+        assert!(BaseBinaryOperator::is_number(&int_value));
+        assert_eq!(
+            BaseBinaryOperator::char2number(&char_value.get()),
+            DataValue::Int(97)
+        );
+
+        let assignment_error =
+            BaseBinaryOperator::assert_left_value(&int_value, &PureErrReporter::INSTANCE)
+                .unwrap_err();
+        assert_eq!(
+            assignment_error.error_code(),
+            error_codes::INVALID_ASSIGNMENT
+        );
+        assert_eq!(
+            assignment_error.reason(),
+            "value on the left side is not assignable"
+        );
+    }
+
+    #[test]
     fn divide_by_zero_reports_invalid_arithmetic() {
         let err = BaseBinaryOperator::divide(
             "/",
@@ -839,6 +892,19 @@ mod tests {
         .unwrap_err();
         assert_eq!(err.error_code(), error_codes::INVALID_BINARY_OPERAND);
         assert!(err.reason().contains("the '+' operator can not be applied"));
+
+        let list_err = BaseBinaryOperator::plus(
+            "+",
+            &v(DataValue::Bool(true)),
+            &v(DataValue::list(Vec::new())),
+            &opts(),
+            &PureErrReporter::INSTANCE,
+        )
+        .unwrap_err();
+        assert_eq!(
+            list_err.reason(),
+            "the '+' operator can not be applied to leftType:java.lang.Boolean with leftValue:true and rightType:java.util.ArrayList with rightValue:[]"
+        );
     }
 
     #[test]

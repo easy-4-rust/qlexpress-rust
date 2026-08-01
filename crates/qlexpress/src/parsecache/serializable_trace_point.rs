@@ -71,4 +71,42 @@ mod tests {
         point.set_type(None);
         assert_eq!(point.get_type(), None);
     }
+
+    /// SOURCE_PARITY: Java 无参构造器、token/children/line/col/position
+    /// getter/setter 适配为 Rust 公开字段，递归结构与 JSON 名称不变。
+    #[test]
+    fn public_fields_preserve_java_bean_and_recursive_json_contract() {
+        let mut point = SerializableTracePoint::default();
+        assert_eq!(point.token, None);
+        assert_eq!(point.children, None);
+        assert_eq!(point.line, 0);
+        assert_eq!(point.col, 0);
+        assert_eq!(point.position, 0);
+
+        point.set_type(Some("OPERATOR".to_string()));
+        point.token = Some("+".to_string());
+        point.line = 3;
+        point.col = 5;
+        point.position = 12;
+        point.children = Some(vec![SerializableTracePoint {
+            trace_type: Some("VALUE".to_string()),
+            token: Some("1".to_string()),
+            line: 3,
+            col: 3,
+            position: 10,
+            children: None,
+        }]);
+
+        let json = serde_json::to_value(&point).expect("serialize trace point");
+        assert_eq!(json["type"], "OPERATOR");
+        assert_eq!(json["token"], "+");
+        assert_eq!(json["line"], 3);
+        assert_eq!(json["col"], 5);
+        assert_eq!(json["position"], 12);
+        assert_eq!(json["children"][0]["type"], "VALUE");
+
+        let restored: SerializableTracePoint =
+            serde_json::from_value(json).expect("deserialize trace point");
+        assert_eq!(restored, point);
+    }
 }

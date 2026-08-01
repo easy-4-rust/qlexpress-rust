@@ -65,6 +65,10 @@ impl CallFunctionInstruction {
         q_context: &mut dyn QContext,
         ql_options: &QLOptions,
     ) -> Result<(), QLException> {
+        let declared_symbol = crate::runtime::scope::QScope::contains_symbol(
+            &q_context.current_scope(),
+            &self.function_name,
+        );
         let lambda_symbol = q_context.get_symbol_value(&self.function_name)?;
         // 对齐 Java:全局作用域对缺失变量返回 null 值(Java `null`),
         // 与「符号不存在」同等处理 —— avoidNullPointer 下短路为 null,
@@ -77,6 +81,12 @@ impl CallFunctionInstruction {
                 q_context.pop_n(self.arg_num);
                 q_context.push(QValue::Data(DataValue::NULL_VALUE));
                 return Ok(());
+            }
+            if declared_symbol {
+                return Err(self.error_reporter.report(
+                    error_codes::NULL_CALL,
+                    error_codes::error_msg(error_codes::NULL_CALL),
+                ));
             }
             return Err(self.error_reporter.report_format(
                 error_codes::FUNCTION_NOT_FOUND,

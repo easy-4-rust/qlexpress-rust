@@ -103,6 +103,28 @@ fn java_json_round_trip_import_and_execute() {
     assert!(instructions[0].source.is_some());
 }
 
+/// Java `Express4Runner#execute(SerializableParseCache, Map, QLOptions)`。
+#[test]
+fn java_serializable_cache_map_overload_imports_and_executes() {
+    let producer = Express4Runner::new();
+    let parsed = json_round_trip(
+        &producer
+            .export_parse_cache("price * count")
+            .expect("export cache"),
+    );
+    let result = Express4Runner::new()
+        .execute_with_cache_map(
+            &parsed,
+            HashMap::from([
+                ("price".to_string(), DataValue::Int(5)),
+                ("count".to_string(), DataValue::Int(3)),
+            ]),
+            &QLOptions::default(),
+        )
+        .expect("Map overload must import and execute cache");
+    assert_number(result.result(), 15);
+}
+
 /// Java `SerializableParseCacheTest#loadedParseCacheCanBeReusedOnSameRunner`。
 #[test]
 fn java_loaded_parse_cache_can_be_reused_on_same_runner() {

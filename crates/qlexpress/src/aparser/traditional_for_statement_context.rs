@@ -15,7 +15,7 @@ pub struct TraditionalForStatementContext {
     pub for_init: Box<Node>,
     /// 该语法规则中的 `for_condition` 子节点、终结符或节点集合。
     pub for_condition: Option<Box<Node>>,
-    /// 条件后的第二个分号；第一个分号由 [`ForInitContext`] 持有。
+    /// 条件后的第二个分号；第一个分号属于 `for_init` 子节点。
     pub condition_semi: TerminalNode,
     /// 该语法规则中的 `for_update` 子节点、终结符或节点集合。
     pub for_update: Option<Box<Node>>,

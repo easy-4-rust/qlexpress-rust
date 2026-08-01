@@ -6,7 +6,7 @@
 //! `com.alibaba.qlexpress4.runtime.QvmRuntime` (context) and
 //! `QLambdaInner.callInner` (the instruction loop).
 
-use std::cell::Ref;
+use std::cell::{Ref, RefMut};
 use std::rc::Rc;
 use std::time::Instant;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -207,6 +207,10 @@ impl QRuntime for QvmRuntime {
 
     fn attachment(&self) -> Ref<'_, Attachments> {
         self.attachments.borrow()
+    }
+
+    fn attachment_mut(&self) -> RefMut<'_, Attachments> {
+        self.attachments.borrow_mut()
     }
 
     fn registry(&self) -> &Rc<NativeRegistry> {

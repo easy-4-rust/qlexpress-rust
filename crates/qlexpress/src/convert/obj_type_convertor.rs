@@ -8,7 +8,7 @@ use crate::runtime::class_ref::ClassRef;
 use crate::runtime::native_registry::NativeRegistry;
 use crate::runtime::value::DataValue;
 
-use super::{to_big_dec_string, to_f64, to_i64, try_to_big_int};
+use super::{to_big_dec_string, to_f64, to_i32, to_i64, try_to_big_int};
 
 pub use super::q_converted::QConverted;
 pub use super::target_type::TargetType;
@@ -101,7 +101,7 @@ impl ObjTypeConvertor {
             },
             TargetType::Int => match value {
                 DataValue::Int(_) => QConverted::converted(value.clone()),
-                v if v.is_number() => QConverted::converted(DataValue::Int(to_i64(v) as i32)),
+                v if v.is_number() => QConverted::converted(DataValue::Int(to_i32(v))),
                 _ => QConverted::un_convertible(),
             },
             TargetType::Long => match value {
@@ -230,7 +230,11 @@ fn no_need_convert(value: &DataValue, target: TargetType) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use std::rc::Rc;
+
     use super::*;
+    use crate::runtime::qlambda::QLambda;
+    use crate::runtime::qlambda_empty::QLambdaEmpty;
 
     #[test]
     fn no_need_convert_cases() {
@@ -254,6 +258,16 @@ mod tests {
         assert_eq!(
             ObjTypeConvertor::cast(&DataValue::Double(2.7), TargetType::Long).get_converted(),
             &DataValue::Long(2)
+        );
+        assert_eq!(
+            ObjTypeConvertor::cast(&DataValue::Double(11_111_111_111.1), TargetType::Int)
+                .get_converted(),
+            &DataValue::Int(i32::MAX)
+        );
+        assert_eq!(
+            ObjTypeConvertor::cast(&DataValue::Double(-11_111_111_111.1), TargetType::Int)
+                .get_converted(),
+            &DataValue::Int(i32::MIN)
         );
         assert_eq!(
             ObjTypeConvertor::cast(&DataValue::Int(5), TargetType::BigDecimal).get_converted(),
@@ -287,6 +301,12 @@ mod tests {
             !ObjTypeConvertor::cast(&DataValue::Str("ab".into()), TargetType::Character)
                 .is_convertible()
         );
+        // Java `String.length()` counts UTF-16 code units, so a supplementary
+        // character occupies two units and cannot convert to `char`.
+        assert!(
+            !ObjTypeConvertor::cast(&DataValue::Str("😀".into()), TargetType::Character)
+                .is_convertible()
+        );
         assert_eq!(
             ObjTypeConvertor::cast(&DataValue::Int(97), TargetType::Character).get_converted(),
             &DataValue::Char('a' as u16)
@@ -299,5 +319,20 @@ mod tests {
             ObjTypeConvertor::cast(&DataValue::Bool(true), TargetType::Boolean).get_converted(),
             &DataValue::Bool(true)
         );
+    }
+
+    #[test]
+    fn lambda_is_convertible_to_registered_function_interface() {
+        // Java source parity: ObjTypeConvertor#castFunctionInter wraps a
+        // QLambda as the requested function interface. Rust preserves the
+        // Lambda value and NativeRegistry performs the explicit-interface
+        // adaptation at the registered host-method boundary.
+        let value = DataValue::Lambda(Rc::new(QLambda::Empty(QLambdaEmpty::INSTANCE)));
+        let target = ClassRef::Named("java.util.function.Predicate".to_string());
+        let registry = NativeRegistry::with_builtins();
+
+        let converted = ObjTypeConvertor::cast_class(&value, Some(&target), Some(&registry));
+        assert!(converted.is_convertible());
+        assert!(matches!(converted.get_converted(), DataValue::Lambda(_)));
     }
 }

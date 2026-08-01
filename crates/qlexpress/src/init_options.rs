@@ -390,19 +390,38 @@ mod tests {
 
     #[test]
     fn builder_appends_imports_and_sets_fields() {
+        let debug_lines = Rc::new(RefCell::new(Vec::new()));
+        let captured_debug_lines = Rc::clone(&debug_lines);
         let opts = InitOptions::builder()
+            .class_supplier(Rc::new(|name: &str| {
+                (name == "com.example.Host").then(|| name.to_string())
+            }))
             .add_default_import(vec![QLImport::import_cls("java.util.Date")])
             .debug(true)
+            .debug_info_consumer(Rc::new(move |line| {
+                captured_debug_lines.borrow_mut().push(line);
+            }))
+            .security_strategy(QLSecurityStrategy::open())
             .allow_private_access(true)
             .interpolation_mode(InterpolationMode::Variable)
+            .trace_expression(true)
             .selector_start("#{")
             .selector_end("}]")
             .strict_new_lines(false)
             .build();
+        assert_eq!(
+            opts.class_supplier().load_cls("com.example.Host"),
+            Some("com.example.Host".to_string())
+        );
+        assert_eq!(opts.class_supplier().load_cls("com.example.Missing"), None);
         assert_eq!(opts.default_import().len(), 6);
         assert!(opts.is_debug());
+        (opts.debug_info_consumer())("debug-line".to_string());
+        assert_eq!(debug_lines.borrow().as_slice(), ["debug-line"]);
+        assert_eq!(opts.security_strategy(), &QLSecurityStrategy::Open);
         assert!(opts.is_allow_private_access());
         assert_eq!(opts.interpolation_mode(), InterpolationMode::Variable);
+        assert!(opts.is_trace_expression());
         assert_eq!(opts.selector_start(), "#{");
         assert_eq!(opts.selector_end(), "}]");
         assert!(!opts.is_strict_new_lines());

@@ -28,29 +28,31 @@ impl ParametersTypeConvertor {
         is_var_arg: bool,
     ) -> Vec<DataValue> {
         if !is_var_arg {
-            return arguments
-                .iter()
-                .zip(param_types.iter())
-                .map(|(argument, param_type)| cast_parameter(argument, param_type))
+            // Java allocates by `arguments.length` and indexes `paramTypes[i]`.
+            // Do not use `zip`: it would silently discard an overlong argument
+            // list, whereas Java throws ArrayIndexOutOfBoundsException.
+            return (0..arguments.len())
+                .map(|index| cast_parameter(&arguments[index], &param_types[index]))
                 .collect();
         }
 
-        debug_assert!(!param_types.is_empty());
-        let item_type = param_types
-            .last()
-            .and_then(ClassRef::component_type)
+        // These direct indexes intentionally preserve Java's invalid-shape
+        // failure behavior. Normal runtime callers resolve arity first.
+        let var_arg_start = param_types
+            .len()
+            .checked_sub(1)
+            .expect("Java ParametersTypeConvertor requires a vararg array parameter");
+        let item_type = param_types[var_arg_start]
+            .component_type()
             .unwrap_or_else(|| ClassRef::Named("java.lang.Object".to_string()));
-        let var_arg_start = param_types.len() - 1;
 
-        let var_args: Vec<DataValue> = arguments[var_arg_start.min(arguments.len())..]
+        let var_args: Vec<DataValue> = arguments[var_arg_start..]
             .iter()
             .map(|argument| cast_parameter(argument, &item_type))
             .collect();
 
-        let mut result: Vec<DataValue> = param_types[..var_arg_start]
-            .iter()
-            .zip(arguments.iter())
-            .map(|(param_type, argument)| cast_parameter(argument, param_type))
+        let mut result: Vec<DataValue> = (0..var_arg_start)
+            .map(|index| cast_parameter(&arguments[index], &param_types[index]))
             .collect();
         result.push(DataValue::array_with_component(var_args, item_type));
         result
@@ -141,6 +143,33 @@ mod tests {
         assert_eq!(
             var_args.borrow().component_type(),
             &ClassRef::Primitive(TargetType::Int)
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn non_vararg_overflow_is_not_silently_truncated() {
+        // Java source parity: ParametersTypeConvertor#cast indexes
+        // paramTypes[i] for every argument and throws on this shape.
+        ParametersTypeConvertor::cast(
+            &[DataValue::Int(1), DataValue::Int(2)],
+            &[ClassRef::Primitive(TargetType::Int)],
+            false,
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn vararg_underflow_is_not_silently_normalized() {
+        // Java source parity: ParametersTypeConvertor#cast indexes
+        // arguments[i] for every fixed parameter before the vararg tail.
+        ParametersTypeConvertor::cast(
+            &[],
+            &[
+                ClassRef::Primitive(TargetType::Int),
+                ClassRef::array_of(ClassRef::Primitive(TargetType::Int)),
+            ],
+            true,
         );
     }
 }

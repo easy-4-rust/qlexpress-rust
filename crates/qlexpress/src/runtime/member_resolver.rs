@@ -284,7 +284,8 @@ impl MemberResolver {
     /// 按实参类型选择构造器候选。
     ///
     /// 对应 Java：`MemberResolver#resolveConstructor(Class<?>, Class<?>[])`。
-    /// Rust 无运行时构造器枚举，调用方传入 [`NativeType`] 已显式登记的
+    /// Rust 无运行时构造器枚举，调用方传入
+    /// [`NativeType`](crate::runtime::native_type::NativeType) 已显式登记的
     /// `(参数类型, varargs)` 候选；返回值是 Java `Constructor` 在该列表中
     /// 的等价索引。
     ///

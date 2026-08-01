@@ -24,6 +24,7 @@ use crate::exception::QLException;
 use crate::ql_options::QLOptions;
 use crate::runtime::qcontext::QContext;
 use crate::runtime::value::{DataValue, QValue};
+use crate::util::rethrow_custom_operator_error;
 
 use super::base::{BinaryOperator, UnaryOperator};
 use super::custom_binary_operator::CustomBinaryOperator;
@@ -55,8 +56,8 @@ use super::unary::{
 };
 
 /// Java `OperatorManager.adapt2BinOp`:把 CustomBinaryOperator 适配成
-/// BinaryOperator,用户异常经 `ThrowUtils` 包装为
-/// OPERATOR_INNER_EXCEPTION(用户消息保留在 reason 中)。
+/// BinaryOperator；`UserDefineException` 重新报告为业务/参数错误，
+/// 其他异常才包装为 `OPERATOR_INNER_EXCEPTION`。
 struct CustomBinaryOperatorAdapter {
     operator_name: String,
     custom_binary_operator: Rc<dyn CustomBinaryOperator>,
@@ -64,8 +65,8 @@ struct CustomBinaryOperatorAdapter {
 }
 
 impl BinaryOperator for CustomBinaryOperatorAdapter {
-    /// 对应 Java 方法: 匿名类 `execute(...)`(catch UserDefineException /
-    /// Throwable 两条路径在 Rust 合并为 QLException 包装)。
+    /// 对应 Java 方法: 匿名类 `execute(...)`，保留 `UserDefineException`
+    /// 和其他 `Throwable` 的两条异常分支。
     fn execute(
         &self,
         left: &QValue,
@@ -76,16 +77,7 @@ impl BinaryOperator for CustomBinaryOperatorAdapter {
     ) -> Result<DataValue, QLException> {
         self.custom_binary_operator
             .execute(left, right)
-            .map_err(|err| {
-                error_reporter.report(
-                    "OPERATOR_INNER_EXCEPTION",
-                    &format!(
-                        "custom operator '{}' inner exception: {}",
-                        self.operator_name,
-                        err.reason()
-                    ),
-                )
-            })
+            .map_err(|err| rethrow_custom_operator_error(err, error_reporter, &self.operator_name))
     }
 
     fn operator(&self) -> &str {

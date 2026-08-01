@@ -20,10 +20,10 @@ pub trait CustomBinaryOperator {
     /// Java `execute(Value left, Value right)`.
     ///
     /// Java throws `UserDefineException` for a custom error message and any
-    /// other `Throwable` for an internal failure; the Rust port folds both
-    /// into [`QLException`] (the operator manager wraps it with the
-    /// `OPERATOR_INNER_EXCEPTION` code, mirroring Java's
-    /// `ThrowUtils.wrapThrowable`).
+    /// other `Throwable` for an internal failure. Rust uses [`QLException`]:
+    /// user-defined `INVALID_ARGUMENT` and `BIZ` errors retain their category,
+    /// while host-originated failures are reported as
+    /// `OPERATOR_INNER_EXCEPTION`, mirroring Java's `ThrowUtils.wrapThrowable`.
     fn execute(&self, left: &QValue, right: &QValue) -> Result<DataValue, QLException>;
 }
 

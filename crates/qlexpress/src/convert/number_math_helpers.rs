@@ -187,6 +187,20 @@ pub fn to_i64(value: &DataValue) -> i64 {
     }
 }
 
+/// 转换为 Java `Number.intValue()` 语义的 `i32`。
+///
+/// Java `Double.intValue()`/`Float.intValue()` 在数值超过 `Integer` 范围时
+/// 饱和到最大/最小值；不能先按 `longValue()` 转换再截断，否则会把高位溢出
+/// 错误地折返到低 32 位。整数和任意精度数值仍保留 Java 窄化转换的低位规则。
+/// 对应 Java：`java.lang.Number#intValue`。
+pub fn to_i32(value: &DataValue) -> i32 {
+    match value {
+        DataValue::Float(v) => *v as i32,
+        DataValue::Double(v) => *v as i32,
+        _ => to_i64(value) as i32,
+    }
+}
+
 /// 转换到 Java `BigInteger` 数域。
 /// 对应 Java: 无（Rust 原生适配）。
 pub fn to_big_int(value: &DataValue) -> BigInt {

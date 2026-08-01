@@ -4,6 +4,7 @@
 
 #![allow(clippy::result_large_err)]
 
+use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -80,47 +81,73 @@ fn add_function_with_function_signature() {
 fn add_function_with_predicate() {
     // Java addFunction(String, Predicate<T>)
     let runner = Express4Runner::new();
-    runner.add_function_unary("is_pos", |v: DataValue| -> DataValue {
-        // 接受任意 numeric,通过 to_i64 统一处理
-        let n = qlexpress::runtime::data::convert::to_i64(&v);
-        DataValue::Bool(n > 0)
-    });
-    let r = runner
-        .execute("is_pos(5)", HashMap::new(), &opts())
-        .expect("ok")
-        .into_result();
-    assert_eq!(r, DataValue::Bool(true));
+    let observed = Rc::new(RefCell::new(Vec::new()));
+    let observed_by_predicate = Rc::clone(&observed);
+    assert!(runner.add_function_predicate("is_pos", move |value| {
+        observed_by_predicate.borrow_mut().push(value.clone());
+        qlexpress::runtime::data::convert::to_i64(&value) > 0
+    }));
+    assert!(!runner.add_function_predicate("is_pos", |_| false));
+
+    assert_eq!(
+        runner
+            .execute("is_pos(5, 99)", HashMap::new(), &opts())
+            .expect("predicate with extra argument")
+            .into_result(),
+        DataValue::Bool(true)
+    );
+    assert_eq!(
+        runner
+            .execute("is_pos()", HashMap::new(), &opts())
+            .expect("predicate with missing argument")
+            .into_result(),
+        DataValue::Bool(false)
+    );
+    assert_eq!(
+        observed.borrow().as_slice(),
+        &[DataValue::Int(5), DataValue::Null]
+    );
 }
 
 #[test]
 fn add_function_with_runnable_returns_null() {
     // Java Runnable.run() returns void → null
     let runner = Express4Runner::new();
-    runner.add_function(
-        "do_nothing",
-        |_ctx: &mut dyn QContext,
-         _params: &Parameters|
-         -> Result<DataValue, qlexpress::exception::QLException> { Ok(DataValue::Null) },
-    );
+    let calls = Rc::new(Cell::new(0));
+    let calls_by_runnable = Rc::clone(&calls);
+    assert!(runner.add_function_runnable("do_nothing", move || {
+        calls_by_runnable.set(calls_by_runnable.get() + 1);
+    }));
     let r = runner
-        .execute("do_nothing()", HashMap::new(), &opts())
+        .execute("do_nothing(1, 2)", HashMap::new(), &opts())
         .expect("ok")
         .into_result();
     assert_eq!(r, DataValue::Null);
+    assert_eq!(calls.get(), 1);
 }
 
 #[test]
 fn add_function_with_consumer() {
     let runner = Express4Runner::new();
-    runner.add_function_unary("double_str", |v: DataValue| -> DataValue {
-        let s = v.string_value_of();
-        DataValue::string(format!("{s}{s}"))
-    });
-    let r = runner
-        .execute("double_str(\"ab\")", HashMap::new(), &opts())
-        .expect("ok")
-        .into_result();
-    assert_eq!(r, DataValue::Str("abab".into()));
+    let consumed = Rc::new(RefCell::new(Vec::new()));
+    let consumed_by_function = Rc::clone(&consumed);
+    assert!(runner.add_function_consumer("consume", move |value| {
+        consumed_by_function.borrow_mut().push(value);
+    }));
+
+    for script in ["consume('ab', 'ignored')", "consume()"] {
+        assert_eq!(
+            runner
+                .execute(script, HashMap::new(), &opts())
+                .expect("consumer")
+                .into_result(),
+            DataValue::Null
+        );
+    }
+    assert_eq!(
+        consumed.borrow().as_slice(),
+        &[DataValue::Str("ab".into()), DataValue::Null]
+    );
 }
 
 // Java source: CustomItemsDocTest#addFunctionByVarargsTest

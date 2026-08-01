@@ -28,7 +28,8 @@ fn ctx(pairs: &[(&str, DataValue)]) -> HashMap<String, DataValue> {
 #[test]
 fn add_macro_and_replace() {
     let runner = Express4Runner::new();
-    runner.add_macro("rename", "name='haha-'+name").unwrap();
+    assert!(runner.add_macro("rename", "name='haha-'+name").unwrap());
+    assert!(!runner.add_macro("rename", "name='ignored-'+name").unwrap());
     let context = ctx(&[("name", DataValue::Str("wuli".into()))]);
     assert_eq!(
         runner

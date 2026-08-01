@@ -72,9 +72,7 @@ impl ExceptionTable {
     /// # 返回值
     /// 返回首个匹配的相对位置；没有匹配项时返回 `None`。
     pub fn get_relative_pos(&self, throw_obj: &DataValue) -> Option<i32> {
-        self.get_relative_pos_with(throw_obj, |handler_type, thrown_type| {
-            handler_type == thrown_type || handler_type.is_java_object()
-        })
+        self.get_relative_pos_with(throw_obj, builtin_assignable_from)
     }
 
     /// 使用宿主提供的类型可赋值判断查找异常处理位置。
@@ -153,6 +151,77 @@ impl ExceptionTable {
     }
 }
 
+/// 复现无需宿主注册即可确定的 Java `Class#isAssignableFrom` 关系。
+///
+/// Java 的 `Class<?>` 自带继承元数据；Rust 的 [`ClassRef`] 对宿主类型只保存名称，
+/// 因此宿主自定义继承仍由 [`ExceptionTable::get_relative_pos_with`] 注入判断。这里不能
+/// 退化为“名称相等”，否则 `catch (Number)` 无法捕获 `Integer`，
+/// `catch (RuntimeException)` 也无法捕获 `IllegalArgumentException`。
+fn builtin_assignable_from(handler_type: &ClassRef, thrown_type: &ClassRef) -> bool {
+    let handler_name = handler_type.java_name();
+    let thrown_name = thrown_type.java_name();
+    if handler_name == thrown_name || handler_type.is_java_object() {
+        return true;
+    }
+
+    if handler_name == "java.lang.Number" {
+        return matches!(
+            thrown_name,
+            "java.lang.Byte"
+                | "java.lang.Short"
+                | "java.lang.Integer"
+                | "java.lang.Long"
+                | "java.lang.Float"
+                | "java.lang.Double"
+                | "java.math.BigInteger"
+                | "java.math.BigDecimal"
+        );
+    }
+
+    let ql_runtime_exception = matches!(
+        thrown_name,
+        "com.alibaba.qlexpress4.exception.QLException"
+            | "com.alibaba.qlexpress4.exception.QLRuntimeException"
+            | "com.alibaba.qlexpress4.exception.QLSyntaxException"
+            | "com.alibaba.qlexpress4.exception.QLTimeoutException"
+            | "com.alibaba.qlexpress4.api.parsecache.SerializableParseCacheException"
+    );
+    let java_runtime_exception = matches!(
+        thrown_name,
+        "java.lang.RuntimeException"
+            | "java.lang.ArithmeticException"
+            | "java.lang.ClassCastException"
+            | "java.lang.IllegalArgumentException"
+            | "java.lang.IllegalStateException"
+            | "java.lang.IndexOutOfBoundsException"
+            | "java.lang.ArrayIndexOutOfBoundsException"
+            | "java.lang.StringIndexOutOfBoundsException"
+            | "java.lang.NullPointerException"
+            | "java.lang.NumberFormatException"
+            | "java.lang.SecurityException"
+            | "java.lang.UnsupportedOperationException"
+    ) || ql_runtime_exception;
+    let java_exception = java_runtime_exception
+        || matches!(
+            thrown_name,
+            "java.lang.Exception"
+                | "java.lang.ReflectiveOperationException"
+                | "com.alibaba.qlexpress4.exception.UserDefineException"
+        );
+    match handler_name {
+        "java.lang.RuntimeException" => java_runtime_exception,
+        "java.lang.Exception" => java_exception,
+        "java.lang.Throwable" => java_exception || thrown_name.ends_with("Error"),
+        "com.alibaba.qlexpress4.exception.QLException" => ql_runtime_exception,
+        "com.alibaba.qlexpress4.exception.QLRuntimeException" => matches!(
+            thrown_name,
+            "com.alibaba.qlexpress4.exception.QLRuntimeException"
+                | "com.alibaba.qlexpress4.exception.QLTimeoutException"
+        ),
+        _ => false,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -173,6 +242,32 @@ mod tests {
         assert_eq!(table.get_relative_pos(&DataValue::Int(1)), Some(9));
         assert_eq!(table.get_final_pos(), Some(12));
         assert_eq!(ExceptionTable::new().get_final_pos(), None);
+    }
+
+    /// Java `Class#isAssignableFrom` 会让 `Number` 捕获所有包装数值，
+    /// `RuntimeException` 捕获其标准子类；Rust 不能只比较类名。
+    #[test]
+    fn java_builtin_assignability_is_preserved() {
+        use crate::runtime::opaque_native_object::OpaqueNativeObject;
+
+        let table = ExceptionTable::from_handler_positions(
+            vec![
+                (ClassRef::from_name("java.lang.Number"), 4),
+                (ClassRef::from_name("java.lang.RuntimeException"), 7),
+                (ClassRef::from_name("java.lang.Object"), 9),
+            ],
+            None,
+        );
+
+        assert_eq!(table.get_relative_pos(&DataValue::Int(1)), Some(4));
+        assert_eq!(table.get_relative_pos(&DataValue::Long(1)), Some(4));
+        let illegal_argument =
+            OpaqueNativeObject::new("java.lang.IllegalArgumentException").into_data_value();
+        assert_eq!(table.get_relative_pos(&illegal_argument), Some(7));
+        assert_eq!(
+            table.get_relative_pos(&DataValue::string("fallback")),
+            Some(9)
+        );
     }
 
     /// `RUST_OBLIGATION`：显式注册的宿主继承关系能够参与 Java

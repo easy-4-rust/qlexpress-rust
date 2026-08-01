@@ -74,6 +74,26 @@ fn java_compatible_compile_cache_is_not_lru_bounded() {
     assert_eq!(runner.compile_cache_stats().evictions, 0);
 }
 
+/// SOURCE_PARITY: Java `Express4Runner#clearCompileCache()` 清空按脚本文本
+/// 保存的编译产物；同一脚本随后必须重新编译，而不是继续返回旧对象。
+#[test]
+fn java_clear_compile_cache_forces_recompile() {
+    let runner = Express4Runner::new();
+    let before_clear = runner
+        .parse_to_definition_with_cache("40 + 2")
+        .expect("populate compatible compile cache");
+    assert_eq!(runner.compile_cache_stats().entries, 1);
+
+    runner.clear_compile_cache();
+    assert_eq!(runner.compile_cache_stats().entries, 0);
+
+    let after_clear = runner
+        .parse_to_definition_with_cache("40 + 2")
+        .expect("recompile after explicit cache clear");
+    assert!(!Rc::ptr_eq(&before_clear, &after_clear));
+    assert_eq!(runner.compile_cache_stats().entries, 1);
+}
+
 /// SOURCE_PARITY: Java `Express4Runner#parseToLambda(String, ExpressContext,
 /// QLOptions)`，并覆盖 `QLOptions.cache` 的两条分支。
 #[test]
@@ -484,16 +504,20 @@ fn java_number_ambiguous_value_test() {
 #[test]
 fn java_add_function_of_service_method_basic_test() {
     let runner = Express4Runner::new();
+    let service = RecordObject::value("MyFunctionUtil", &[]);
     let method = NativeIMethod::from_native(
         "add",
         ClassRef::Named("MyFunctionUtil".to_string()),
         vec![ClassRef::from_name("int"), ClassRef::from_name("int")],
-        Rc::new(|_object, arguments| match arguments {
-            [DataValue::Int(left), DataValue::Int(right)] => Ok(DataValue::Int(left + right)),
-            _ => unreachable!("svcAdd receives two ints"),
+        Rc::new(|object, arguments| match (object, arguments) {
+            (DataValue::Object(service), [DataValue::Int(left), DataValue::Int(right)]) => {
+                assert_eq!(service.borrow().native_type_name(), "MyFunctionUtil");
+                Ok(DataValue::Int(left + right))
+            }
+            _ => unreachable!("svcAdd receives its service instance and two ints"),
         }),
     );
-    assert!(runner.add_function_of_class_method("svcAdd", None, method));
+    assert!(runner.add_function_of_class_method("svcAdd", Some(service), method));
     let result = runner
         .execute("svcAdd(1,2)", HashMap::new(), &QLOptions::default())
         .expect("service method function");

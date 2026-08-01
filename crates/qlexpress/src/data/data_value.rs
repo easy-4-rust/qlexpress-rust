@@ -112,7 +112,7 @@ impl DataValue {
     /// 返回实际 Java 运行时类型名。
     ///
     /// 与 [`Self::data_type_name`] 的静态枚举标签不同，宿主对象返回
-    /// [`NativeObject::native_type_name`](crate::runtime::native_object::NativeObject::native_type_name)；
+    /// [`NativeObject::native_type_name`]；
     /// 对应 Java `value.getClass().getName()`。
     pub fn runtime_type_name(&self) -> String {
         match self {

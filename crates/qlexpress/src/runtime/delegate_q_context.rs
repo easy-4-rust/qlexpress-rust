@@ -2,7 +2,7 @@
 //! operations to a current scope, mirroring Java
 //! `com.alibaba.qlexpress4.runtime.DelegateQContext`.
 
-use std::cell::{Ref, RefCell};
+use std::cell::{Ref, RefCell, RefMut};
 use std::rc::Rc;
 
 use crate::exception::QLException;
@@ -60,6 +60,10 @@ impl QContext for DelegateQContext {
 
     fn attachment(&self) -> Ref<'_, Attachments> {
         self.q_runtime.attachment()
+    }
+
+    fn attachment_mut(&self) -> RefMut<'_, Attachments> {
+        self.q_runtime.attachment_mut()
     }
 
     fn registry(&self) -> &Rc<NativeRegistry> {
@@ -139,12 +143,33 @@ impl QContext for DelegateQContext {
 
     /// Java `qScope = qScope.getParent()`.
     fn close_scope(&mut self) {
-        if let Some(parent) = QScope::parent(&self.q_scope) {
-            self.q_scope = parent;
-        }
+        self.q_scope =
+            QScope::parent(&self.q_scope).expect("QvmGlobalScope.getParent is unsupported");
     }
 
     fn set_current_scope(&mut self, scope: ScopeRef) {
         self.q_scope = scope;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn root_context() -> DelegateQContext {
+        let registry = Rc::new(NativeRegistry::with_builtins());
+        let runtime = Rc::new(QvmRuntime::for_test(registry));
+        DelegateQContext::new(
+            runtime,
+            QScope::global(crate::runtime::QvmGlobalScope::empty()),
+        )
+    }
+
+    /// Java `DelegateQContext.closeScope()` 委托全局作用域的 `getParent()`；
+    /// `QvmGlobalScope` 明确抛 `UnsupportedOperationException`，不能静默 no-op。
+    #[test]
+    #[should_panic(expected = "QvmGlobalScope.getParent is unsupported")]
+    fn close_global_scope_is_unsupported_like_java() {
+        root_context().close_scope();
     }
 }

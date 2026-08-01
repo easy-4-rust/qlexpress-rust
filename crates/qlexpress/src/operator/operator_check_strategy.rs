@@ -178,7 +178,8 @@ impl OperatorCheckStrategy {
     /// 使用宿主闭包创建自定义操作符检查策略。
     ///
     /// Java `OperatorCheckStrategy` 是公开接口，宿主可以从动态配置决定每个
-    /// 操作符是否允许；闭包捕获的共享状态会被已构造的 [`CheckOptions`]
+    /// 操作符是否允许；闭包捕获的共享状态会被已构造的
+    /// [`CheckOptions`](crate::check_options::CheckOptions)
     /// 持续观察。
     ///
     /// # 参数

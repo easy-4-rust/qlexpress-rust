@@ -457,6 +457,30 @@ fn set_scale_half_up(d: &Decimal, new_scale: i64) -> Decimal {
 }
 
 impl BigDecimalMath {
+    /// 执行 Java `BigDecimal#divide(BigDecimal)` 的无舍入精确除法。
+    ///
+    /// 与 QL 二元 `/` 不同，Java 实例方法不会在循环小数时回退到引擎默认
+    /// 精度，而是抛出 `ArithmeticException`。这一区别决定 try/catch 的可观察
+    /// 行为，不能复用 [`Self::divide_impl`] 的规则语言算术语义。
+    /// 对应 Java：`java.math.BigDecimal#divide(BigDecimal)`。
+    pub fn divide_exact_method(
+        left: &DataValue,
+        right: &DataValue,
+    ) -> Result<DataValue, QLException> {
+        let big_left = dec_of(left);
+        let big_right = dec_of(right);
+        if big_right.is_zero() {
+            return Err(number_math::arithmetic_exception("Division by zero"));
+        }
+        divide_exact(&big_left, &big_right)
+            .map(|result| DataValue::BigDec(result.to_java_string()))
+            .ok_or_else(|| {
+                number_math::arithmetic_exception(
+                    "Non-terminating decimal expansion; no exact representable decimal result.",
+                )
+            })
+    }
+
     /// 返回当前数值域的绝对值。
     /// 参数：`number`；返回：`Result<DataValue, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/operator/number/BigDecimalMath.java`，方法 `absImpl`；Rust 侧按所有权与 `Result` 语义适配。

@@ -1,0 +1,1 @@
+{"id":"java-4.2.0-beta-trace-map-literal-npe","script":"m={}; k='😀'.substring(0,1); m.put(k,7); m.get(k)","reason":"固定 Java 4.2.0-beta 基线在 InitOptions.traceExpression=true 时，将 map literal 的 {} 误走 BlockExpr trace 路径；TraceExpressionVisitor#visitBlockExpr 对缺失 blockStatements 调用 accept，抛出 NullPointerException。该异常发生在 Java 基线的 trace 采集阶段，非 Rust 执行结果。"}
