@@ -2,7 +2,7 @@
   "schema_version": 1,
   "java_baseline": "9065b9ac5d985dcd02e627239aa9cdb78fb2f7f3",
   "rust_baseline": "982f449b470fdd2f949555015ab13d7aa82ec45d",
-  "rust_source_fingerprint": "sha256:4a58522618da47209e173f653c4456bd36c37cdd3348525f032ca3013e9381d9",
+  "rust_source_fingerprint": "sha256:b43c59cca1103f9e3725afa9a7a95ac04643081d81991416b5d3850bbdb1de3d",
   "objects": [
     {
       "java_key": "com.alibaba.qlexpress4.aparser::SyntaxTreeFactory|",

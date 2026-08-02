@@ -208,10 +208,35 @@ fn builtin_assignable_from(handler_type: &ClassRef, thrown_type: &ClassRef) -> b
                 | "java.lang.ReflectiveOperationException"
                 | "com.alibaba.qlexpress4.exception.UserDefineException"
         );
+    let java_error = matches!(
+        thrown_name,
+        "java.lang.Error"
+            | "java.lang.AssertionError"
+            | "java.lang.LinkageError"
+            | "java.lang.BootstrapMethodError"
+            | "java.lang.ClassCircularityError"
+            | "java.lang.ClassFormatError"
+            | "java.lang.ExceptionInInitializerError"
+            | "java.lang.IncompatibleClassChangeError"
+            | "java.lang.AbstractMethodError"
+            | "java.lang.IllegalAccessError"
+            | "java.lang.InstantiationError"
+            | "java.lang.NoClassDefFoundError"
+            | "java.lang.NoSuchFieldError"
+            | "java.lang.NoSuchMethodError"
+            | "java.lang.UnsatisfiedLinkError"
+            | "java.lang.VerifyError"
+            | "java.lang.ThreadDeath"
+            | "java.lang.VirtualMachineError"
+            | "java.lang.InternalError"
+            | "java.lang.OutOfMemoryError"
+            | "java.lang.StackOverflowError"
+            | "java.lang.UnknownError"
+    );
     match handler_name {
         "java.lang.RuntimeException" => java_runtime_exception,
         "java.lang.Exception" => java_exception,
-        "java.lang.Throwable" => java_exception || thrown_name.ends_with("Error"),
+        "java.lang.Throwable" => java_exception || java_error,
         "com.alibaba.qlexpress4.exception.QLException" => ql_runtime_exception,
         "com.alibaba.qlexpress4.exception.QLRuntimeException" => matches!(
             thrown_name,
