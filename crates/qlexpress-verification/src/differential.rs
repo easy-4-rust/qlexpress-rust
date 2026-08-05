@@ -8,8 +8,10 @@ use std::rc::Rc;
 
 use qlexpress::aparser::operator_factory::OperatorFactory;
 use qlexpress::aparser::parser_operator_manager::{OpType, ParserOperatorManager};
+use qlexpress::api::{BatchAddFunctionResult, QLFunctionalVarargs};
 use qlexpress::exception::pure_err_reporter::PureErrReporter;
 use qlexpress::init_options::InitOptions;
+use qlexpress::lsp::{Diagnostic, Position, Range};
 use qlexpress::number::big_decimal_math::BigDecimalMath;
 use qlexpress::number::big_integer_math::BigIntegerMath;
 use qlexpress::number::floating_point_math::FloatingPointMath;
@@ -48,6 +50,16 @@ struct DifferentialCase {
     number_math: Option<NumberMathInvocation>,
     #[serde(default)]
     operator_manager: Option<OperatorManagerInvocation>,
+    #[serde(default)]
+    batch_add_function_result: Option<BatchAddFunctionResultInvocation>,
+    #[serde(default)]
+    ql_functional_varargs: Option<QLFunctionalVarargsInvocation>,
+    #[serde(default)]
+    lsp_position: Option<LspPositionInvocation>,
+    #[serde(default)]
+    lsp_range: Option<LspRangeInvocation>,
+    #[serde(default)]
+    lsp_diagnostic: Option<LspDiagnosticInvocation>,
     #[serde(default)]
     delegate_context: Option<DelegateContextInvocation>,
     #[serde(default)]
@@ -98,6 +110,31 @@ struct OperatorManagerInvocation {
     right: Option<TypedNumber>,
     #[serde(default)]
     setup: Vec<OperatorManagerSetup>,
+}
+
+#[derive(Debug, Deserialize)]
+struct BatchAddFunctionResultInvocation {
+    scenario: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct QLFunctionalVarargsInvocation {
+    scenario: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct LspPositionInvocation {
+    scenario: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct LspRangeInvocation {
+    scenario: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct LspDiagnosticInvocation {
+    scenario: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -191,6 +228,21 @@ fn execute_case(case: DifferentialCase) -> Result<DifferentialRecord, String> {
     if let Some(invocation) = case.operator_manager {
         return execute_operator_manager(case.id, invocation);
     }
+    if let Some(invocation) = case.batch_add_function_result {
+        return execute_batch_add_function_result(case.id, invocation);
+    }
+    if let Some(invocation) = case.ql_functional_varargs {
+        return execute_ql_functional_varargs(case.id, invocation);
+    }
+    if let Some(invocation) = case.lsp_position {
+        return execute_lsp_position(case.id, invocation);
+    }
+    if let Some(invocation) = case.lsp_range {
+        return execute_lsp_range(case.id, invocation);
+    }
+    if let Some(invocation) = case.lsp_diagnostic {
+        return execute_lsp_diagnostic(case.id, invocation);
+    }
     if let Some(invocation) = case.delegate_context {
         return execute_delegate_context(case.id, invocation);
     }
@@ -237,6 +289,306 @@ fn execute_case(case: DifferentialCase) -> Result<DifferentialRecord, String> {
             trace_count: 0,
         }),
     }
+}
+
+fn execute_batch_add_function_result(
+    id: String,
+    invocation: BatchAddFunctionResultInvocation,
+) -> Result<DifferentialRecord, String> {
+    if invocation.scenario != "full_contract" {
+        return Err(format!(
+            "unsupported batch_add_function_result scenario: {}",
+            invocation.scenario
+        ));
+    }
+
+    let mut result = BatchAddFunctionResult::new();
+    let mut observed = IndexMap::new();
+    observed.insert(
+        DataValue::string("initial_succ"),
+        string_list(result.succ()),
+    );
+    observed.insert(
+        DataValue::string("initial_fail"),
+        string_list(result.fail()),
+    );
+    observed.insert(
+        DataValue::string("initial_all_succ"),
+        DataValue::Bool(result.is_all_succ()),
+    );
+
+    result.succ_mut().push("external-success".to_string());
+    result.fail_mut().push("external-failure".to_string());
+    result.add_succ("runner-success");
+    result.add_fail("runner-failure");
+
+    observed.insert(DataValue::string("succ"), string_list(result.succ()));
+    observed.insert(DataValue::string("fail"), string_list(result.fail()));
+    observed.insert(
+        DataValue::string("all_succ_after_failure"),
+        DataValue::Bool(result.is_all_succ()),
+    );
+    Ok(DifferentialRecord {
+        id,
+        outcome: "ok",
+        normalized: Some(normalize(&DataValue::map(observed))),
+        error_code: None,
+        line: None,
+        column: None,
+        trace_count: 0,
+    })
+}
+
+fn string_list(values: &[String]) -> DataValue {
+    DataValue::list(
+        values
+            .iter()
+            .map(|value| DataValue::string(value.clone()))
+            .collect(),
+    )
+}
+
+// QLFunctionalVarargs 的迁移契约固定返回 QLException；本差分函数必须直接
+// 构造该 trait 闭包，不能为了测试规避而改用较小的非契约错误类型。
+#[allow(clippy::result_large_err)]
+fn execute_ql_functional_varargs(
+    id: String,
+    invocation: QLFunctionalVarargsInvocation,
+) -> Result<DifferentialRecord, String> {
+    if invocation.scenario != "full_contract" {
+        return Err(format!(
+            "unsupported ql_functional_varargs scenario: {}",
+            invocation.scenario
+        ));
+    }
+
+    let count = |params: &[DataValue]| {
+        Ok::<DataValue, qlexpress::exception::QLException>(DataValue::Int(params.len() as i32))
+    };
+    let collect = |params: &[DataValue]| {
+        Ok::<DataValue, qlexpress::exception::QLException>(DataValue::list(params.to_vec()))
+    };
+    let returns_null =
+        |_params: &[DataValue]| Ok::<DataValue, qlexpress::exception::QLException>(DataValue::Null);
+    let parameters = [DataValue::Int(1), DataValue::string("x"), DataValue::Null];
+    let mut observed = IndexMap::new();
+    observed.insert(
+        DataValue::string("empty_count"),
+        QLFunctionalVarargs::call(&count, &[]).map_err(|error| error.to_string())?,
+    );
+    observed.insert(
+        DataValue::string("ordered_values"),
+        QLFunctionalVarargs::call(&collect, &parameters).map_err(|error| error.to_string())?,
+    );
+    observed.insert(
+        DataValue::string("null_result"),
+        QLFunctionalVarargs::call(&returns_null, &parameters).map_err(|error| error.to_string())?,
+    );
+    Ok(DifferentialRecord {
+        id,
+        outcome: "ok",
+        normalized: Some(normalize(&DataValue::map(observed))),
+        error_code: None,
+        line: None,
+        column: None,
+        trace_count: 0,
+    })
+}
+
+fn execute_lsp_position(
+    id: String,
+    invocation: LspPositionInvocation,
+) -> Result<DifferentialRecord, String> {
+    if invocation.scenario != "full_contract" {
+        return Err(format!(
+            "unsupported lsp_position scenario: {}",
+            invocation.scenario
+        ));
+    }
+
+    let normal = Position::new(7, 99);
+    let negative = Position::new(-1, -2);
+    let mut observed = IndexMap::new();
+    observed.insert(
+        DataValue::string("normal_line"),
+        DataValue::Int(normal.line()),
+    );
+    observed.insert(
+        DataValue::string("normal_character"),
+        DataValue::Int(normal.character()),
+    );
+    observed.insert(
+        DataValue::string("negative_line"),
+        DataValue::Int(negative.line()),
+    );
+    observed.insert(
+        DataValue::string("negative_character"),
+        DataValue::Int(negative.character()),
+    );
+    Ok(DifferentialRecord {
+        id,
+        outcome: "ok",
+        normalized: Some(normalize(&DataValue::map(observed))),
+        error_code: None,
+        line: None,
+        column: None,
+        trace_count: 0,
+    })
+}
+
+fn execute_lsp_range(
+    id: String,
+    invocation: LspRangeInvocation,
+) -> Result<DifferentialRecord, String> {
+    if invocation.scenario != "full_contract" {
+        return Err(format!(
+            "unsupported lsp_range scenario: {}",
+            invocation.scenario
+        ));
+    }
+
+    let range = Range::new(Position::new(1, 2), Position::new(3, 4));
+    let nullable = Range::from_options(None, None);
+    let mut observed = IndexMap::new();
+    observed.insert(
+        DataValue::string("start_line"),
+        range
+            .start()
+            .map(|position| DataValue::Int(position.line()))
+            .unwrap_or(DataValue::Null),
+    );
+    observed.insert(
+        DataValue::string("start_character"),
+        range
+            .start()
+            .map(|position| DataValue::Int(position.character()))
+            .unwrap_or(DataValue::Null),
+    );
+    observed.insert(
+        DataValue::string("end_line"),
+        range
+            .end()
+            .map(|position| DataValue::Int(position.line()))
+            .unwrap_or(DataValue::Null),
+    );
+    observed.insert(
+        DataValue::string("end_character"),
+        range
+            .end()
+            .map(|position| DataValue::Int(position.character()))
+            .unwrap_or(DataValue::Null),
+    );
+    observed.insert(
+        DataValue::string("null_start"),
+        nullable
+            .start()
+            .map(|_| DataValue::Bool(false))
+            .unwrap_or(DataValue::Null),
+    );
+    observed.insert(
+        DataValue::string("null_end"),
+        nullable
+            .end()
+            .map(|_| DataValue::Bool(false))
+            .unwrap_or(DataValue::Null),
+    );
+    Ok(DifferentialRecord {
+        id,
+        outcome: "ok",
+        normalized: Some(normalize(&DataValue::map(observed))),
+        error_code: None,
+        line: None,
+        column: None,
+        trace_count: 0,
+    })
+}
+
+fn execute_lsp_diagnostic(
+    id: String,
+    invocation: LspDiagnosticInvocation,
+) -> Result<DifferentialRecord, String> {
+    if invocation.scenario != "full_contract" {
+        return Err(format!(
+            "unsupported lsp_diagnostic scenario: {}",
+            invocation.scenario
+        ));
+    }
+
+    let diagnostic = Diagnostic::new(
+        12,
+        Range::new(Position::new(1, 2), Position::new(1, 5)),
+        "abc",
+        "E001",
+        "bad input",
+        "a = abc",
+    );
+    let nullable = Diagnostic::from_options(-5, None, None, None, None, None);
+    let mut observed = IndexMap::new();
+    observed.insert(DataValue::string("pos"), DataValue::Int(diagnostic.pos()));
+    observed.insert(
+        DataValue::string("range_start_line"),
+        diagnostic
+            .range()
+            .and_then(Range::start)
+            .map(|position| DataValue::Int(position.line()))
+            .unwrap_or(DataValue::Null),
+    );
+    observed.insert(
+        DataValue::string("lexeme"),
+        optional_string(diagnostic.lexeme()),
+    );
+    observed.insert(
+        DataValue::string("code"),
+        optional_string(diagnostic.code()),
+    );
+    observed.insert(
+        DataValue::string("message"),
+        optional_string(diagnostic.message()),
+    );
+    observed.insert(
+        DataValue::string("snippet"),
+        optional_string(diagnostic.snippet()),
+    );
+    observed.insert(
+        DataValue::string("nullable_pos"),
+        DataValue::Int(nullable.pos()),
+    );
+    observed.insert(
+        DataValue::string("nullable_range"),
+        nullable
+            .range()
+            .map(|_| DataValue::Bool(false))
+            .unwrap_or(DataValue::Null),
+    );
+    observed.insert(
+        DataValue::string("nullable_lexeme"),
+        optional_string(nullable.lexeme()),
+    );
+    observed.insert(
+        DataValue::string("nullable_code"),
+        optional_string(nullable.code()),
+    );
+    observed.insert(
+        DataValue::string("nullable_message"),
+        optional_string(nullable.message()),
+    );
+    observed.insert(
+        DataValue::string("nullable_snippet"),
+        optional_string(nullable.snippet()),
+    );
+    Ok(DifferentialRecord {
+        id,
+        outcome: "ok",
+        normalized: Some(normalize(&DataValue::map(observed))),
+        error_code: None,
+        line: None,
+        column: None,
+        trace_count: 0,
+    })
+}
+
+fn optional_string(value: Option<&str>) -> DataValue {
+    value.map(DataValue::string).unwrap_or(DataValue::Null)
 }
 
 fn execute_exception_table(
@@ -886,11 +1238,37 @@ fn execute_operator_manager(
                 };
                 normalize(&DataValue::Bool(manager.is_op_type(lexeme()?, op_type)))
             }
-            "precedence" => manager
-                .precedence(lexeme()?)
-                .map(DataValue::Int)
-                .map(|value| normalize(&value))
-                .unwrap_or_else(|| normalize(&DataValue::Null)),
+            "precedence" => {
+                let lexeme = lexeme()?;
+                let previous_hook = std::panic::take_hook();
+                std::panic::set_hook(Box::new(|_| {}));
+                let observed = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    manager.precedence(lexeme)
+                }));
+                std::panic::set_hook(previous_hook);
+                match observed {
+                    Ok(precedence) => precedence
+                        .map(DataValue::Int)
+                        .map(|value| normalize(&value))
+                        .unwrap_or_else(|| normalize(&DataValue::Null)),
+                    Err(payload) => {
+                        let reason = payload
+                            .downcast_ref::<&str>()
+                            .copied()
+                            .or_else(|| payload.downcast_ref::<String>().map(String::as_str))
+                            .unwrap_or_default();
+                        return Ok(DifferentialRecord {
+                            id,
+                            outcome: "error",
+                            normalized: Some(format!("error:NullPointerException:{reason}")),
+                            error_code: Some("NullPointerException".to_string()),
+                            line: Some(0),
+                            column: Some(0),
+                            trace_count: 0,
+                        });
+                    }
+                }
+            }
             "getAlias" => manager
                 .get_alias(lexeme()?)
                 .map(DataValue::Int)

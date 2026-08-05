@@ -132,7 +132,14 @@ mod tests {
         assert_eq!(error.line_no(), 1);
         assert_eq!(error.col_no(), 1);
         assert_eq!(error.err_lexeme(), "😀");
-        assert_eq!(error.diagnostic().range().end().character(), 2);
+        assert_eq!(
+            error
+                .diagnostic()
+                .range()
+                .and_then(Range::end)
+                .map(Position::character),
+            Some(2)
+        );
     }
 
     /// SOURCE_PARITY: Java null script/source 分别归一为空脚本和默认位置。

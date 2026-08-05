@@ -29,12 +29,14 @@ pub type ScopeRef = Rc<RefCell<QScope>>;
 pub type SymbolTable = HashMap<String, Rc<RefCell<dyn LeftValue>>>;
 
 /// 当前作用域自身的函数表。
+/// 对应 Java: `QScope` 的 `Map<String, CustomFunction> functionTable`。
 pub type FunctionTable = HashMap<String, Rc<dyn CustomFunction>>;
 
 /// Java `Map<String, CustomFunction>` 的共享可变引用。
 ///
 /// `QScope#getFunctionTable()` 返回实际函数表而非副本；Rust 使用该句柄保留
 /// 宿主函数通过运行时上下文动态登记函数的写穿语义。
+/// 对应 Java: `com.alibaba.qlexpress4.runtime.scope.QScope#getFunctionTable()`。
 pub type SharedFunctionTable = Rc<RefCell<FunctionTable>>;
 
 /// 作用域链上的一个节点。对应 Java: com.alibaba.qlexpress4.runtime.scope.QScope

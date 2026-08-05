@@ -282,3 +282,9 @@
 {"id":"fixed-size-stack-full-contract","fixed_size_stack":{"scenario":"full_contract"}}
 {"id":"runtime-core-full-contract","runtime_core":{"scenario":"full_contract"}}
 {"id":"exception-table-full-contract","exception_table":{"scenario":"full_contract"}}
+{"id":"operator-manager-precedence-missing-java-implementation-divergence","operator_manager":{"operation":"precedence","lexeme":"missing"}}
+{"id":"batch-add-function-result-full-contract","batch_add_function_result":{"scenario":"full_contract"}}
+{"id":"ql-functional-varargs-full-contract","ql_functional_varargs":{"scenario":"full_contract"}}
+{"id":"lsp-position-full-contract","lsp_position":{"scenario":"full_contract"}}
+{"id":"lsp-range-full-contract","lsp_range":{"scenario":"full_contract"}}
+{"id":"lsp-diagnostic-full-contract","lsp_diagnostic":{"scenario":"full_contract"}}

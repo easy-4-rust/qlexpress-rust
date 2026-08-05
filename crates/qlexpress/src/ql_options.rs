@@ -16,6 +16,7 @@ pub type Attachments = HashMap<String, DataValue>;
 ///
 /// Java `QLOptions.Builder#attachments(Map)` 保存调用方传入的同一个 Map
 /// 引用；Rust 通过 `Rc<RefCell<_>>` 保留相同的单线程引用与可变性语义。
+/// 对应 Java: `com.alibaba.qlexpress4.QLOptions#getAttachments()` 返回的 Map 引用。
 pub type SharedAttachments = Rc<RefCell<Attachments>>;
 
 /// 单次脚本执行的 Java 兼容选项集合。

@@ -148,7 +148,9 @@ impl QLException {
     /// The unformatted reason of this error.
     /// 对应 Java：`QLException#getDiagnostic().getMessage()`。
     pub fn reason(&self) -> &str {
-        self.diagnostic.message()
+        self.diagnostic
+            .message()
+            .expect("Diagnostic.getMessage() is null")
     }
 
     /// 返回异常对应的一基源码行号。
@@ -157,7 +159,13 @@ impl QLException {
     /// Line no, 1-based.
     /// 对应 Java: com.alibaba.qlexpress4.exception.QLException#lineNo。
     pub fn line_no(&self) -> i32 {
-        self.diagnostic.range().start().line() + 1
+        self.diagnostic
+            .range()
+            .expect("QLException.getDiagnostic().getRange() is null")
+            .start()
+            .expect("Diagnostic.range.getStart() is null")
+            .line()
+            + 1
     }
 
     /// 返回异常对应的一基源码列号。
@@ -166,19 +174,29 @@ impl QLException {
     /// Column no, 1-based.
     /// 对应 Java: com.alibaba.qlexpress4.exception.QLException#colNo。
     pub fn col_no(&self) -> i32 {
-        self.diagnostic.range().start().character() + 1
+        self.diagnostic
+            .range()
+            .expect("QLException.getDiagnostic().getRange() is null")
+            .start()
+            .expect("Diagnostic.range.getStart() is null")
+            .character()
+            + 1
     }
 
     /// 返回触发错误的词素。
     /// 对应 Java: `QLException#getErrLexeme`。
     pub fn err_lexeme(&self) -> &str {
-        self.diagnostic.lexeme()
+        self.diagnostic
+            .lexeme()
+            .expect("Diagnostic.getLexeme() is null")
     }
 
     /// 返回稳定的 QLExpress 错误码。
     /// 对应 Java: `QLException#getErrorCode`。
     pub fn error_code(&self) -> &str {
-        self.diagnostic.code()
+        self.diagnostic
+            .code()
+            .expect("Diagnostic.getCode() is null")
     }
 
     /// 返回脚本 throw 携带的可选捕获值。
@@ -333,8 +351,20 @@ mod tests {
         assert_eq!(err.error_code(), error_codes::SYNTAX_ERROR);
         assert_eq!(err.reason(), "unexpected char");
         // Diagnostic stores zero-based positions (Java toDiagnostic).
-        assert_eq!(err.diagnostic().range().start().line(), 0);
-        assert_eq!(err.diagnostic().range().end().character(), 5);
+        assert_eq!(
+            err.diagnostic()
+                .range()
+                .and_then(Range::start)
+                .map(Position::line),
+            Some(0)
+        );
+        assert_eq!(
+            err.diagnostic()
+                .range()
+                .and_then(Range::end)
+                .map(Position::character),
+            Some(5)
+        );
     }
 
     /// 逐项对应 Java `QLExceptionTest#reportTest`。

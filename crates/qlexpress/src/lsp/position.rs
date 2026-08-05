@@ -28,3 +28,20 @@ impl Position {
         self.character
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::Position;
+
+    #[test]
+    fn constructor_and_accessors_preserve_raw_java_int_values() {
+        let position = Position::new(7, 99);
+        assert_eq!(position.line(), 7);
+        assert_eq!(position.character(), 99);
+
+        // Java 构造器只保存字段，不会替调用方截断超长列或拒绝负数。
+        let negative = Position::new(-1, -2);
+        assert_eq!(negative.line(), -1);
+        assert_eq!(negative.character(), -2);
+    }
+}

@@ -25,11 +25,16 @@ import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONWriter;
 import com.alibaba.fastjson2.JSONObject;
 import com.alibaba.qlexpress4.Express4Runner;
+import com.alibaba.qlexpress4.api.BatchAddFunctionResult;
+import com.alibaba.qlexpress4.api.QLFunctionalVarargs;
 import com.alibaba.qlexpress4.InitOptions;
 import com.alibaba.qlexpress4.QLOptions;
 import com.alibaba.qlexpress4.QLResult;
 import com.alibaba.qlexpress4.exception.QLException;
 import com.alibaba.qlexpress4.exception.PureErrReporter;
+import com.alibaba.qlexpress4.exception.lsp.Diagnostic;
+import com.alibaba.qlexpress4.exception.lsp.Position;
+import com.alibaba.qlexpress4.exception.lsp.Range;
 import com.alibaba.qlexpress4.aparser.ParserOperatorManager.OpType;
 import com.alibaba.qlexpress4.runtime.Value;
 import com.alibaba.qlexpress4.runtime.DelegateQContext;
@@ -100,6 +105,26 @@ public final class JavaDifferentialRunner {
         if (operatorManager != null) {
             return executeOperatorManager(id, operatorManager);
         }
+        JSONObject batchAddFunctionResult = testCase.getJSONObject("batch_add_function_result");
+        if (batchAddFunctionResult != null) {
+            return executeBatchAddFunctionResult(id, batchAddFunctionResult);
+        }
+        JSONObject qlFunctionalVarargs = testCase.getJSONObject("ql_functional_varargs");
+        if (qlFunctionalVarargs != null) {
+            return executeQLFunctionalVarargs(id, qlFunctionalVarargs);
+        }
+        JSONObject lspPosition = testCase.getJSONObject("lsp_position");
+        if (lspPosition != null) {
+            return executeLspPosition(id, lspPosition);
+        }
+        JSONObject lspRange = testCase.getJSONObject("lsp_range");
+        if (lspRange != null) {
+            return executeLspRange(id, lspRange);
+        }
+        JSONObject lspDiagnostic = testCase.getJSONObject("lsp_diagnostic");
+        if (lspDiagnostic != null) {
+            return executeLspDiagnostic(id, lspDiagnostic);
+        }
         JSONObject delegateContext = testCase.getJSONObject("delegate_context");
         if (delegateContext != null) {
             return executeDelegateContext(id, delegateContext);
@@ -148,6 +173,156 @@ public final class JavaDifferentialRunner {
             record.put("trace_count", 0);
         }
         return record;
+    }
+
+    /**
+     * 直接比较批量注册结果两个列表的顺序、隔离性和写回语义。
+     *
+     * @param id 差分用例标识
+     * @param invocation 场景描述
+     * @return 规范化的有序观察结果
+     */
+    private static Map<String, Object> executeBatchAddFunctionResult(
+        String id,
+        JSONObject invocation) {
+        String scenario = invocation.getString("scenario");
+        if (!"full_contract".equals(scenario)) {
+            throw new IllegalArgumentException(
+                "unsupported batch_add_function_result scenario: " + scenario);
+        }
+
+        BatchAddFunctionResult result = new BatchAddFunctionResult();
+        Map<String, Object> observed = new LinkedHashMap<>();
+        observed.put("initial_succ", new ArrayList<>(result.getSucc()));
+        observed.put("initial_fail", new ArrayList<>(result.getFail()));
+        observed.put("initial_all_succ", result.getFail().isEmpty());
+
+        result.getSucc().add("external-success");
+        result.getFail().add("external-failure");
+        result.getSucc().add("runner-success");
+        result.getFail().add("runner-failure");
+
+        observed.put("succ", new ArrayList<>(result.getSucc()));
+        observed.put("fail", new ArrayList<>(result.getFail()));
+        observed.put("all_succ_after_failure", result.getFail().isEmpty());
+        return successRecord(id, observed);
+    }
+
+    /**
+     * 直接比较函数式变参接口的空参数、顺序、null 参数和 null 返回值。
+     *
+     * @param id 差分用例标识
+     * @param invocation 场景描述
+     * @return 规范化的有序观察结果
+     */
+    private static Map<String, Object> executeQLFunctionalVarargs(
+        String id,
+        JSONObject invocation) {
+        String scenario = invocation.getString("scenario");
+        if (!"full_contract".equals(scenario)) {
+            throw new IllegalArgumentException(
+                "unsupported ql_functional_varargs scenario: " + scenario);
+        }
+
+        QLFunctionalVarargs count = params -> params.length;
+        QLFunctionalVarargs collect = params -> {
+            List<Object> values = new ArrayList<>(params.length);
+            Collections.addAll(values, params);
+            return values;
+        };
+        QLFunctionalVarargs returnsNull = params -> null;
+        Object[] parameters = new Object[] {1, "x", null};
+        Map<String, Object> observed = new LinkedHashMap<>();
+        observed.put("empty_count", count.call());
+        observed.put("ordered_values", collect.call(parameters));
+        observed.put("null_result", returnsNull.call(parameters));
+        return successRecord(id, observed);
+    }
+
+    /**
+     * 直接比较 LSP Position 构造器与两个零基坐标访问器。
+     *
+     * @param id 差分用例标识
+     * @param invocation 场景描述
+     * @return 规范化的有序观察结果
+     */
+    private static Map<String, Object> executeLspPosition(String id, JSONObject invocation) {
+        String scenario = invocation.getString("scenario");
+        if (!"full_contract".equals(scenario)) {
+            throw new IllegalArgumentException("unsupported lsp_position scenario: " + scenario);
+        }
+
+        Position normal = new Position(7, 99);
+        Position negative = new Position(-1, -2);
+        Map<String, Object> observed = new LinkedHashMap<>();
+        observed.put("normal_line", normal.getLine());
+        observed.put("normal_character", normal.getCharacter());
+        observed.put("negative_line", negative.getLine());
+        observed.put("negative_character", negative.getCharacter());
+        return successRecord(id, observed);
+    }
+
+    /**
+     * 直接比较 LSP Range 的非空坐标与 Java 可空端点语义。
+     *
+     * @param id 差分用例标识
+     * @param invocation 场景描述
+     * @return 规范化的有序观察结果
+     */
+    private static Map<String, Object> executeLspRange(String id, JSONObject invocation) {
+        String scenario = invocation.getString("scenario");
+        if (!"full_contract".equals(scenario)) {
+            throw new IllegalArgumentException("unsupported lsp_range scenario: " + scenario);
+        }
+
+        Range range = new Range(new Position(1, 2), new Position(3, 4));
+        Range nullable = new Range(null, null);
+        Map<String, Object> observed = new LinkedHashMap<>();
+        observed.put("start_line", range.getStart().getLine());
+        observed.put("start_character", range.getStart().getCharacter());
+        observed.put("end_line", range.getEnd().getLine());
+        observed.put("end_character", range.getEnd().getCharacter());
+        observed.put("null_start", nullable.getStart());
+        observed.put("null_end", nullable.getEnd());
+        return successRecord(id, observed);
+    }
+
+    /**
+     * 直接比较 LSP Diagnostic 的全部字段及 Java 可空引用语义。
+     *
+     * @param id 差分用例标识
+     * @param invocation 场景描述
+     * @return 规范化的有序观察结果
+     */
+    private static Map<String, Object> executeLspDiagnostic(String id, JSONObject invocation) {
+        String scenario = invocation.getString("scenario");
+        if (!"full_contract".equals(scenario)) {
+            throw new IllegalArgumentException(
+                "unsupported lsp_diagnostic scenario: " + scenario);
+        }
+
+        Diagnostic diagnostic = new Diagnostic(
+            12,
+            new Range(new Position(1, 2), new Position(1, 5)),
+            "abc",
+            "E001",
+            "bad input",
+            "a = abc");
+        Diagnostic nullable = new Diagnostic(-5, null, null, null, null, null);
+        Map<String, Object> observed = new LinkedHashMap<>();
+        observed.put("pos", diagnostic.getPos());
+        observed.put("range_start_line", diagnostic.getRange().getStart().getLine());
+        observed.put("lexeme", diagnostic.getLexeme());
+        observed.put("code", diagnostic.getCode());
+        observed.put("message", diagnostic.getMessage());
+        observed.put("snippet", diagnostic.getSnippet());
+        observed.put("nullable_pos", nullable.getPos());
+        observed.put("nullable_range", nullable.getRange());
+        observed.put("nullable_lexeme", nullable.getLexeme());
+        observed.put("nullable_code", nullable.getCode());
+        observed.put("nullable_message", nullable.getMessage());
+        observed.put("nullable_snippet", nullable.getSnippet());
+        return successRecord(id, observed);
     }
 
     /**

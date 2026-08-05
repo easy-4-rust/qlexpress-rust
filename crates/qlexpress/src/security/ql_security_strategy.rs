@@ -12,6 +12,7 @@ use std::rc::Rc;
 pub use super::native_member::NativeMember;
 
 /// 在宿主、安全策略和 runner 之间共享的原生成员集合。
+/// 对应 Java: `QLSecurityStrategy.blackList(Set<Member>)` 与 `whiteList(Set<Member>)` 的集合引用。
 pub type SharedNativeMembers = Rc<RefCell<HashSet<NativeMember>>>;
 
 impl NativeMember {

@@ -23,12 +23,46 @@ impl BatchAddFunctionResult {
         }
     }
 
-    /// 成功函数名列表。对应 Java 方法 `getSucc()`。
+    /// 返回成功函数名列表。
+    ///
+    /// 对应 Java: `BatchAddFunctionResult#getSucc()`。
+    pub fn succ(&self) -> &[String] {
+        &self.succ
+    }
+
+    /// 返回可修改的成功函数名列表。
+    ///
+    /// 对应 Java: `BatchAddFunctionResult#getSucc()` 返回的可变 `List`；对返回值的修改
+    /// 会立即反映到当前结果对象中。
+    pub fn succ_mut(&mut self) -> &mut Vec<String> {
+        &mut self.succ
+    }
+
+    /// 返回成功函数名列表的 Java 命名兼容视图。
+    ///
+    /// 新代码优先使用 [`Self::succ`]。对应 Java: `BatchAddFunctionResult#getSucc()`。
     pub fn get_succ(&self) -> &Vec<String> {
         &self.succ
     }
 
-    /// 失败函数名列表。对应 Java 方法 `getFail()`。
+    /// 返回失败函数名列表。
+    ///
+    /// 对应 Java: `BatchAddFunctionResult#getFail()`。
+    pub fn fail(&self) -> &[String] {
+        &self.fail
+    }
+
+    /// 返回可修改的失败函数名列表。
+    ///
+    /// 对应 Java: `BatchAddFunctionResult#getFail()` 返回的可变 `List`；对返回值的修改
+    /// 会立即反映到当前结果对象中。
+    pub fn fail_mut(&mut self) -> &mut Vec<String> {
+        &mut self.fail
+    }
+
+    /// 返回失败函数名列表的 Java 命名兼容视图。
+    ///
+    /// 新代码优先使用 [`Self::fail`]。对应 Java: `BatchAddFunctionResult#getFail()`。
     pub fn get_fail(&self) -> &Vec<String> {
         &self.fail
     }
@@ -67,5 +101,18 @@ mod tests {
         assert_eq!(result.get_succ(), &vec!["f1".to_string(), "f3".to_string()]);
         assert_eq!(result.get_fail(), &vec!["f2".to_string()]);
         assert!(!result.is_all_succ());
+    }
+
+    #[test]
+    fn java_getters_expose_live_mutable_lists_via_rust_mut_accessors() {
+        let mut result = BatchAddFunctionResult::new();
+
+        result.succ_mut().push("external-success".to_string());
+        result.fail_mut().push("external-failure".to_string());
+
+        assert_eq!(result.succ(), ["external-success"]);
+        assert_eq!(result.fail(), ["external-failure"]);
+        assert_eq!(result.get_succ(), result.succ());
+        assert_eq!(result.get_fail(), result.fail());
     }
 }

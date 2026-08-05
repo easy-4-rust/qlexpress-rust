@@ -2,7 +2,7 @@
   "schema_version": 1,
   "java_baseline": "9065b9ac5d985dcd02e627239aa9cdb78fb2f7f3",
   "rust_baseline": "982f449b470fdd2f949555015ab13d7aa82ec45d",
-  "rust_source_fingerprint": "sha256:b43c59cca1103f9e3725afa9a7a95ac04643081d81991416b5d3850bbdb1de3d",
+  "rust_source_fingerprint": "sha256:0e2d594db25ccd70adc0fbd0a56e6b53b28f972321e816256482009f2361594b",
   "objects": [
     {
       "java_key": "com.alibaba.qlexpress4.aparser::SyntaxTreeFactory|",
@@ -758,12 +758,22 @@
       ],
       "test_evidence": [
         {
+          "file": "verification/corpus/differential.jsonl",
+          "test": "ql-functional-varargs-full-contract",
+          "level": "V4_LIVE_DIFF"
+        },
+        {
           "file": "crates/qlexpress/src/api/ql_functional_varargs.rs",
           "test": "closure_as_varargs_function",
           "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/src/api/ql_functional_varargs.rs",
+          "test": "preserves_parameter_order_values_and_null_result",
+          "level": "V2_MIRRORED"
         }
       ],
-      "review_note": "测试覆盖空参数与异构多参数。"
+      "review_note": "Java/Rust 直接差分覆盖空参数、异构参数顺序、null 参数与 null 返回值。"
     },
     {
       "java_key": "com.alibaba.qlexpress4.api.parsecache::SerializableParseCacheException|",
@@ -1166,15 +1176,15 @@
     },
     {
       "java_key": "com.alibaba.qlexpress4.runtime.operator::OperatorManager|",
-      "state": "PARTIAL",
+      "state": "IMPLEMENTED",
       "classification": "ADAPTED",
-      "semantic_evidence": ["15/16 个公开及匿名适配器方法已由 44 条 OperatorManager 直接 Java/Rust oracle 核验；未知词素 precedence 仍存在 Java 实现抛 NullPointerException、Rust 按接口契约返回 None 的可观察差异。"],
+      "semantic_evidence": ["16/16 个公开及匿名适配器方法已由 45 条 OperatorManager 直接 Java/Rust oracle 核验；未知词素 precedence 已对齐 Java 当前实现的 NullPointerException 行为。"],
       "rust_evidence": [{"file": "crates/qlexpress/src/operator/operator_manager.rs", "symbol": "pub struct OperatorManager"}],
       "test_evidence": [
         {"file": "verification/corpus/differential.jsonl", "test": "operator-manager-", "level": "V4_LIVE_DIFF"},
-        {"file": "verification/corpus/operator-manager-java-contract-divergences.jsonl", "test": "operator-manager-precedence-missing-java-implementation-divergence", "level": "V4_LIVE_DIFF"}
+        {"file": "crates/qlexpress/src/operator/operator_manager.rs", "test": "precedence_for_unknown_lexeme_panics_like_java_operator_manager", "level": "V2_MIRRORED"}
       ],
-      "review_note": "对象不能标记 IMPLEMENTED：正常契约 284/284 中的 OperatorManager 44 项一致，但单独的未知 precedence 探针稳定产生 0/1 mismatch。"
+      "review_note": "未知 precedence 探针已迁入正式差分集；Java NPE 与 Rust 对应 panic 被统一记录为 NullPointerException，290/290 实时差分一致。"
     },
     {
       "java_key": "com.alibaba.qlexpress4.runtime::DelegateQContext|",
@@ -1332,6 +1342,88 @@
         {"file": "crates/qlexpress/src/runtime/exception_table.rs", "test": "registered_assignability_can_select_parent_handler", "level": "V1_RUST_LOCAL"}
       ],
       "review_note": "Rust 早期 PC 区间 entries 是附加 API，不替代也不削弱 Java 三个公开成员的有序表语义。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.api::BatchAddFunctionResult|",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Rust 以两个有序 Vec<String> 保存 Java 的 succ/fail ArrayList，默认构造为空且成功、失败列表互不混合。",
+        "succ_mut/fail_mut 保留 Java getter 返回可变实时 List 的写回语义；succ/fail 是 Rust 惯用只读切片接口，get_succ/get_fail 作为 Java 命名兼容视图。"
+      ],
+      "rust_evidence": [
+        {"file": "crates/qlexpress/src/api/batch_add_function_result.rs", "symbol": "pub struct BatchAddFunctionResult"},
+        {"file": "crates/qlexpress/src/api/batch_add_function_result.rs", "symbol": "pub fn succ_mut("},
+        {"file": "crates/qlexpress/src/api/batch_add_function_result.rs", "symbol": "pub fn fail_mut("}
+      ],
+      "test_evidence": [
+        {"file": "verification/corpus/differential.jsonl", "test": "batch-add-function-result-full-contract", "level": "V4_LIVE_DIFF"},
+        {"file": "crates/qlexpress/src/api/batch_add_function_result.rs", "test": "java_getters_expose_live_mutable_lists_via_rust_mut_accessors", "level": "V2_MIRRORED"},
+        {"file": "crates/qlexpress/tests/stage5c_runner.rs", "test": "batch_add_function_partial_failure", "level": "V2_MIRRORED"}
+      ],
+      "review_note": "对象 3/3 Java 构造/公开方法由直接跨语言状态、顺序和可变写回比较证明；Rust 便捷方法不替代 Java 合同。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.exception.lsp::Position|",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Rust Position 保存与 Java 相同的两个 i32 坐标；line()/character() 是 getLine()/getCharacter() 的 Rust 惯用只读属性访问形式。",
+        "构造器与 Java 一样只保存原始 int，不主动截断超长 character，也不额外拒绝负值；零基含义由调用方契约保持。"
+      ],
+      "rust_evidence": [
+        {"file": "crates/qlexpress/src/lsp/position.rs", "symbol": "pub struct Position"},
+        {"file": "crates/qlexpress/src/lsp/position.rs", "symbol": "pub fn new("},
+        {"file": "crates/qlexpress/src/lsp/position.rs", "symbol": "pub fn line("},
+        {"file": "crates/qlexpress/src/lsp/position.rs", "symbol": "pub fn character("}
+      ],
+      "test_evidence": [
+        {"file": "verification/corpus/differential.jsonl", "test": "lsp-position-full-contract", "level": "V4_LIVE_DIFF"},
+        {"file": "crates/qlexpress/src/lsp/position.rs", "test": "constructor_and_accessors_preserve_raw_java_int_values", "level": "V2_MIRRORED"}
+      ],
+      "review_note": "3/3 构造/公开访问器已由 Java 现场 oracle 与 Rust 同结构输出验证。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.exception.lsp::Range|",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Rust 以 Option<Position> 保存 Java Range 的两个可空引用端点；new 构造常规非空范围，from_options 原样保留 null。",
+        "start()/end() 返回 Option<&Position>，既遵循 Rust 可空引用惯例，也避免此前用 (0,0) 默认值掩盖 Java null 状态。"
+      ],
+      "rust_evidence": [
+        {"file": "crates/qlexpress/src/lsp/range.rs", "symbol": "pub struct Range"},
+        {"file": "crates/qlexpress/src/lsp/range.rs", "symbol": "pub fn new("},
+        {"file": "crates/qlexpress/src/lsp/range.rs", "symbol": "pub fn from_options("},
+        {"file": "crates/qlexpress/src/lsp/range.rs", "symbol": "pub fn start("},
+        {"file": "crates/qlexpress/src/lsp/range.rs", "symbol": "pub fn end("}
+      ],
+      "test_evidence": [
+        {"file": "verification/corpus/differential.jsonl", "test": "lsp-range-full-contract", "level": "V4_LIVE_DIFF"},
+        {"file": "crates/qlexpress/src/lsp/range.rs", "test": "preserves_non_null_and_null_java_endpoints", "level": "V2_MIRRORED"}
+      ],
+      "review_note": "直接差分发现并修复 Rust 无法表示 Java null 端点的真实语义缺口；3/3 成员现已验证。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.exception.lsp::Diagnostic|",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Rust 保留 pos 原始 i32，并以 Option 保存 Java 可空的 Range、lexeme、code、message、snippet 引用；常规 new 与可空 from_options 分离。",
+        "全部访问器以 Option<&T> 返回 Java getter 的 null/非 null 状态；此前强制非空、无法表达公开构造器输入的差异已修复。"
+      ],
+      "rust_evidence": [
+        {"file": "crates/qlexpress/src/lsp/diagnostic.rs", "symbol": "pub struct Diagnostic"},
+        {"file": "crates/qlexpress/src/lsp/diagnostic.rs", "symbol": "pub fn new("},
+        {"file": "crates/qlexpress/src/lsp/diagnostic.rs", "symbol": "pub fn from_options("},
+        {"file": "crates/qlexpress/src/lsp/diagnostic.rs", "symbol": "pub fn range("},
+        {"file": "crates/qlexpress/src/lsp/diagnostic.rs", "symbol": "pub fn snippet("}
+      ],
+      "test_evidence": [
+        {"file": "verification/corpus/differential.jsonl", "test": "lsp-diagnostic-full-contract", "level": "V4_LIVE_DIFF"},
+        {"file": "crates/qlexpress/src/lsp/diagnostic.rs", "test": "preserves_non_null_and_null_java_reference_fields", "level": "V2_MIRRORED"}
+      ],
+      "review_note": "7/7 构造/公开访问器由正常字段与全 null 字段的 Java/Rust 现场输出共同证明。"
     }
   ],
   "nested_java_types": [
@@ -3617,12 +3709,22 @@
       ],
       "test_evidence": [
         {
+          "file": "verification/corpus/differential.jsonl",
+          "test": "ql-functional-varargs-full-contract",
+          "level": "V4_LIVE_DIFF"
+        },
+        {
           "file": "crates/qlexpress/src/api/ql_functional_varargs.rs",
           "test": "closure_as_varargs_function",
           "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/src/api/ql_functional_varargs.rs",
+          "test": "preserves_parameter_order_values_and_null_result",
+          "level": "V2_MIRRORED"
         }
       ],
-      "review_note": "空与多参数分支均验证。"
+      "review_note": "现场 Java oracle 与 Rust 对端逐字段比较空参数、参数顺序、null 输入和 null 输出。"
     },
     {
       "java_key": "com.alibaba.qlexpress4.api.parsecache::SerializableParseCacheException::SerializableParseCacheException|(String script, SerializableSource source, String errorCode, String reason)",
@@ -4414,7 +4516,7 @@
       ],
       "rust_evidence": [{"file": "crates/qlexpress/src/express4_runner.rs", "symbol": "pub fn execute("}],
       "test_evidence": [
-        {"file": "verification/corpus/README.md", "test": "284 个用例 Java/Rust 完全一致", "level": "V4_LIVE_DIFF"},
+        {"file": "verification/corpus/README.md", "test": "290 个用例 Java/Rust 完全一致", "level": "V4_LIVE_DIFF"},
         {"file": "crates/qlexpress/tests/alignment_runner_basics.rs", "test": "doc_quick_start", "level": "V2_MIRRORED"},
         {"file": "crates/qlexpress/tests/alignment_expression_trace.rs", "test": "java_expression_trace_test_complete_contract", "level": "V2_MIRRORED"}
       ],
@@ -5551,15 +5653,16 @@
     },
     {
       "java_key": "com.alibaba.qlexpress4.runtime.operator::OperatorManager::precedence|Integer (String lexeme)",
-      "state": "PARTIAL",
+      "state": "IMPLEMENTED",
       "classification": "ADAPTED",
-      "semantic_evidence": ["已知操作符返回相同优先级；未知操作符时 Java 4.2.0-beta 当前实现对 null 调用 getPriority() 并抛 NullPointerException，Rust 根据 ParserOperatorManager 的 null 契约返回 None。"],
+      "semantic_evidence": ["已知操作符返回相同优先级；未知操作符时 Java 4.2.0-beta 当前实现对 null 调用 getPriority() 并抛 NullPointerException，Rust OperatorManager 保留同一可观察失败语义。"],
       "rust_evidence": [{"file": "crates/qlexpress/src/operator/operator_manager.rs", "symbol": "fn precedence("}],
       "test_evidence": [
         {"file": "verification/corpus/differential.jsonl", "test": "operator-manager-precedence-default", "level": "V4_LIVE_DIFF"},
-        {"file": "verification/corpus/operator-manager-java-contract-divergences.jsonl", "test": "operator-manager-precedence-missing-java-implementation-divergence", "level": "V4_LIVE_DIFF"}
+        {"file": "verification/corpus/differential.jsonl", "test": "operator-manager-precedence-missing-java-implementation-divergence", "level": "V4_LIVE_DIFF"},
+        {"file": "crates/qlexpress/src/operator/operator_manager.rs", "test": "precedence_for_unknown_lexeme_panics_like_java_operator_manager", "level": "V2_MIRRORED"}
       ],
-      "review_note": "必须先决定兼容 Java 实现缺陷还是遵循其接口 Javadoc；决定前保持 PARTIAL，不得计入完成。"
+      "review_note": "按无损迁移规则选择兼容 Java 当前实现；该差异已清零并纳入正式绿色差分集。"
     },
     {
       "java_keys": [
@@ -5732,6 +5835,107 @@
         {"file": "verification/corpus/differential.jsonl", "test": "exception-table-full-contract", "level": "V4_LIVE_DIFF"}
       ],
       "review_note": "3/3 构造/公开方法由直接跨语言结果和声明顺序证明。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.api::BatchAddFunctionResult::BatchAddFunctionResult|()",
+        "com.alibaba.qlexpress4.api::BatchAddFunctionResult::getSucc|List<String> ()",
+        "com.alibaba.qlexpress4.api::BatchAddFunctionResult::getFail|List<String> ()"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "full_contract 在 Java/Rust 中直接构造空结果，比较两个初始空列表，再通过公开可变访问路径追加外部值与 runner 值，比较写回后的顺序、隔离性和失败状态。",
+        "Rust 用 succ/fail 与 succ_mut/fail_mut 表达属性的只读/可变借用，避免把 JavaBean get/set 风格作为 Rust 主 API，同时保留 get_succ/get_fail 兼容入口。"
+      ],
+      "rust_evidence": [
+        {"file": "crates/qlexpress/src/api/batch_add_function_result.rs", "symbol": "pub fn new("},
+        {"file": "crates/qlexpress/src/api/batch_add_function_result.rs", "symbol": "pub fn succ("},
+        {"file": "crates/qlexpress/src/api/batch_add_function_result.rs", "symbol": "pub fn succ_mut("},
+        {"file": "crates/qlexpress/src/api/batch_add_function_result.rs", "symbol": "pub fn fail("},
+        {"file": "crates/qlexpress/src/api/batch_add_function_result.rs", "symbol": "pub fn fail_mut("}
+      ],
+      "test_evidence": [
+        {"file": "verification/corpus/differential.jsonl", "test": "batch-add-function-result-full-contract", "level": "V4_LIVE_DIFF"},
+        {"file": "crates/qlexpress/src/api/batch_add_function_result.rs", "test": "java_getters_expose_live_mutable_lists_via_rust_mut_accessors", "level": "V2_MIRRORED"}
+      ],
+      "review_note": "3/3 方法已由 Java 4.2.0-beta oracle 与 Rust 同结构输出逐字段比对。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.exception.lsp::Position::Position|(int line, int character)",
+        "com.alibaba.qlexpress4.exception.lsp::Position::getLine|int ()",
+        "com.alibaba.qlexpress4.exception.lsp::Position::getCharacter|int ()"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "full_contract 在两端以 (7,99) 与 (-1,-2) 直接构造对象并读取全部字段，证明正常、超长列和负边界均原样保存。",
+        "Rust line()/character() 遵循 Rust 属性访问惯例，但返回值、零基坐标和无校验副作用与 Java getter 完全一致。"
+      ],
+      "rust_evidence": [
+        {"file": "crates/qlexpress/src/lsp/position.rs", "symbol": "pub fn new("},
+        {"file": "crates/qlexpress/src/lsp/position.rs", "symbol": "pub fn line("},
+        {"file": "crates/qlexpress/src/lsp/position.rs", "symbol": "pub fn character("}
+      ],
+      "test_evidence": [
+        {"file": "verification/corpus/differential.jsonl", "test": "lsp-position-full-contract", "level": "V4_LIVE_DIFF"},
+        {"file": "crates/qlexpress/src/lsp/position.rs", "test": "constructor_and_accessors_preserve_raw_java_int_values", "level": "V2_MIRRORED"}
+      ],
+      "review_note": "3/3 构造/访问器由直接跨语言原始 int 值比较证明。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.exception.lsp::Range::Range|(Position start, Position end)",
+        "com.alibaba.qlexpress4.exception.lsp::Range::getStart|Position ()",
+        "com.alibaba.qlexpress4.exception.lsp::Range::getEnd|Position ()"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Java/Rust 直接构造正常端点 (1,2)/(3,4) 并逐坐标读取，同时构造两个 null 端点并比较 getter/Option 均为空。",
+        "Option<&Position> 明确表达 Java nullable getter；不再把缺失位置错误归一为默认零坐标。"
+      ],
+      "rust_evidence": [
+        {"file": "crates/qlexpress/src/lsp/range.rs", "symbol": "pub fn new("},
+        {"file": "crates/qlexpress/src/lsp/range.rs", "symbol": "pub fn from_options("},
+        {"file": "crates/qlexpress/src/lsp/range.rs", "symbol": "pub fn start("},
+        {"file": "crates/qlexpress/src/lsp/range.rs", "symbol": "pub fn end("}
+      ],
+      "test_evidence": [
+        {"file": "verification/corpus/differential.jsonl", "test": "lsp-range-full-contract", "level": "V4_LIVE_DIFF"},
+        {"file": "crates/qlexpress/src/lsp/range.rs", "test": "preserves_non_null_and_null_java_endpoints", "level": "V2_MIRRORED"}
+      ],
+      "review_note": "3/3 构造/访问器包含 Java null 输入边界，均已直接差分。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.exception.lsp::Diagnostic::Diagnostic|(int pos, Range range, String lexeme, String code, String message, String snippet)",
+        "com.alibaba.qlexpress4.exception.lsp::Diagnostic::getPos|int ()",
+        "com.alibaba.qlexpress4.exception.lsp::Diagnostic::getRange|Range ()",
+        "com.alibaba.qlexpress4.exception.lsp::Diagnostic::getLexeme|String ()",
+        "com.alibaba.qlexpress4.exception.lsp::Diagnostic::getCode|String ()",
+        "com.alibaba.qlexpress4.exception.lsp::Diagnostic::getMessage|String ()",
+        "com.alibaba.qlexpress4.exception.lsp::Diagnostic::getSnippet|String ()"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "full_contract 直接比较正常 pos/range/lexeme/code/message/snippet，并以 (-5,null,null,null,null,null) 验证公开构造器不校验且 getter 原样返回 null。",
+        "Rust from_options 和 Option 访问器完整表达 Java 引用空值，常规 new 保持引擎内部非空构造便利性。"
+      ],
+      "rust_evidence": [
+        {"file": "crates/qlexpress/src/lsp/diagnostic.rs", "symbol": "pub fn new("},
+        {"file": "crates/qlexpress/src/lsp/diagnostic.rs", "symbol": "pub fn from_options("},
+        {"file": "crates/qlexpress/src/lsp/diagnostic.rs", "symbol": "pub fn pos("},
+        {"file": "crates/qlexpress/src/lsp/diagnostic.rs", "symbol": "pub fn range("},
+        {"file": "crates/qlexpress/src/lsp/diagnostic.rs", "symbol": "pub fn snippet("}
+      ],
+      "test_evidence": [
+        {"file": "verification/corpus/differential.jsonl", "test": "lsp-diagnostic-full-contract", "level": "V4_LIVE_DIFF"},
+        {"file": "crates/qlexpress/src/lsp/diagnostic.rs", "test": "preserves_non_null_and_null_java_reference_fields", "level": "V2_MIRRORED"}
+      ],
+      "review_note": "7/7 构造/公开访问器由非空与全空两组 Java/Rust 可观察结果证明。"
     }
   ]
 }

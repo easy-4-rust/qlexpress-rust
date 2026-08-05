@@ -257,8 +257,8 @@ Production-readiness CI additionally runs the pinned Java suite, Java/Rust diffe
 official script replay, runner-per-worker concurrency, deterministic security fuzzing, a
 business-host scenario, canary/rollback simulation, load acceptance, and libFuzzer.
 
-The recorded audit found 803 Rust test functions and passed the full workspace,
-284/284 current live Java/Rust differential cases, 225 Maven tests, and 151/151 independent
+The current strict inventory records 1,118 Rust test functions and passes the full workspace,
+290/290 current live Java/Rust differential cases, 225 Maven tests, and 151/151 independent
 Java resource-script replays. Differential parity—not Rust code coverage—is the semantic
 acceptance criterion.
 The extended production run also records 228/228 Java official-suite cases, 16,000 concurrent

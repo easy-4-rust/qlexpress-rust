@@ -73,7 +73,10 @@ fn assert_parse_cache_error(
         Err(error) => error,
     };
     assert_eq!(error.error_code(), expected);
-    assert!(!error.diagnostic().code().is_empty());
+    assert!(error
+        .diagnostic()
+        .code()
+        .is_some_and(|code| !code.is_empty()));
 }
 
 /// Java `SerializableParseCacheTest#jsonRoundTripImportAndExecute`。
@@ -167,8 +170,22 @@ fn java_runtime_error_location_survives_json_round_trip() {
     assert_eq!(error.line_no(), 2);
     assert_eq!(error.col_no(), 1);
     assert_eq!(error.err_lexeme(), "missing");
-    assert_eq!(error.diagnostic().range().start().line(), 1);
-    assert_eq!(error.diagnostic().range().start().character(), 0);
+    assert_eq!(
+        error
+            .diagnostic()
+            .range()
+            .and_then(qlexpress::lsp::Range::start)
+            .map(qlexpress::lsp::Position::line),
+        Some(1)
+    );
+    assert_eq!(
+        error
+            .diagnostic()
+            .range()
+            .and_then(qlexpress::lsp::Range::start)
+            .map(qlexpress::lsp::Position::character),
+        Some(0)
+    );
 }
 
 /// Java `SerializableParseCacheTest#functionsLoopsCollectionsAndCustomOperatorRoundTrip`。

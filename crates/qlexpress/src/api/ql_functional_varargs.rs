@@ -45,4 +45,20 @@ mod tests {
             Some(DataValue::Int(0))
         );
     }
+
+    #[test]
+    fn preserves_parameter_order_values_and_null_result() {
+        let collect = |params: &[DataValue]| Ok(DataValue::list(params.to_vec()));
+        let parameters = [DataValue::Int(1), DataValue::string("x"), DataValue::Null];
+        assert_eq!(
+            QLFunctionalVarargs::call(&collect, &parameters).expect("collect parameters"),
+            DataValue::list(parameters.to_vec())
+        );
+
+        let returns_null = |_params: &[DataValue]| Ok(DataValue::Null);
+        assert_eq!(
+            QLFunctionalVarargs::call(&returns_null, &[]).expect("return null"),
+            DataValue::Null
+        );
+    }
 }

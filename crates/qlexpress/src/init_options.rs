@@ -17,6 +17,7 @@ pub type DebugInfoConsumer = Rc<dyn Fn(String)>;
 ///
 /// Java `InitOptions#getDefaultImport()` 返回构建器创建的实际可变 List；
 /// Rust 通过该句柄保留 runner 创建后继续追加导入的可见性。
+/// 对应 Java: `com.alibaba.qlexpress4.InitOptions#getDefaultImport()` 的共享引用语义。
 pub type SharedDefaultImports = Rc<RefCell<Vec<QLImport>>>;
 
 /// 创建 [`Express4Runner`](crate::Express4Runner) 时固定的解析、调试与安全选项。

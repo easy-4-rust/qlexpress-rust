@@ -324,8 +324,17 @@ impl ParserOperatorManager for OperatorManager {
     }
 
     /// Java `precedence`(`getBinaryOperator(lexeme).getPriority()`)。
+    ///
+    /// Java 接口声明未知词素可返回 `null`，但当前基线 `OperatorManager`
+    /// 实现会直接解引用查询结果并抛出 `NullPointerException`。这里保留该
+    /// 可观察实现语义；解析器只会在 [`Self::is_op_type`] 已确认后查询优先级。
     fn precedence(&self, lexeme: &str) -> Option<i32> {
-        self.get_binary_operator(lexeme).map(|op| op.priority())
+        let operator = self.get_binary_operator(lexeme).unwrap_or_else(|| {
+            panic!(
+                "Cannot invoke \"com.alibaba.qlexpress4.runtime.operator.BinaryOperator.getPriority()\" because the return value of \"com.alibaba.qlexpress4.runtime.operator.OperatorManager.getBinaryOperator(String)\" is null"
+            )
+        });
+        Some(operator.priority())
     }
 
     /// Java `getAlias`。
@@ -500,6 +509,15 @@ mod tests {
         // 后缀一元:++/--。
         assert!(manager.is_op_type("++", OpType::Suffix));
         assert!(manager.is_op_type("--", OpType::Suffix));
+    }
+
+    #[test]
+    #[should_panic(
+        expected = "Cannot invoke \"com.alibaba.qlexpress4.runtime.operator.BinaryOperator.getPriority()\" because the return value of \"com.alibaba.qlexpress4.runtime.operator.OperatorManager.getBinaryOperator(String)\" is null"
+    )]
+    fn precedence_for_unknown_lexeme_panics_like_java_operator_manager() {
+        let manager = OperatorManager::new();
+        let _ = manager.precedence("missing");
     }
 
     #[test]

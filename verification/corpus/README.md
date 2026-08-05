@@ -8,7 +8,7 @@ Java `4.2.0-beta` 的可复现基线缺陷：`java-4.2.0-beta-trace-map-literal-
 trace 时于 Java `TraceExpressionVisitor` 内部抛出 `NullPointerException`。该用例保留原始
 脚本和故障原因，待上游基线修复或项目明确决定兼容此缺陷后，才能重新进入共享差分语料。
 
-当前已验证 `differential.jsonl` 的 284 个用例 Java/Rust 完全一致。其中普通记录以
+当前已验证 `differential.jsonl` 的 290 个用例 Java/Rust 完全一致。其中普通记录以
 `script` 执行完整语言链路；`number_math` 记录以显式 Java `Number` 子类型直接调用
 Java oracle。后者可选 `implementation`：未指定时调用 `NumberMath` 门面，指定
 `IntegerMath`、`LongMath`、`BigIntegerMath`、`BigDecimalMath` 或
@@ -18,13 +18,16 @@ Java oracle。后者可选 `implementation`：未指定时调用 `NumberMath` �
 `fixed_size_stack` 记录直接比较栈顺序、参数容器、显式/越界 null 与 Java
 `StackSwapParameters` 对原栈数组的实时窗口副作用；`runtime_core` 记录直接
 比较 `QRuntime`/`QvmRuntime`/`QContext` 的构造、委托、对象身份与附件双向写穿；
-`exception_table` 记录直接比较 catch 声明顺序、Java 类型可赋值关系与可空 finally 位置。
+`exception_table` 记录直接比较 catch 声明顺序、Java 类型可赋值关系与可空 finally 位置；
+`batch_add_function_result` 记录直接比较成功/失败列表的顺序、隔离性与可变写回；
+`ql_functional_varargs` 记录直接比较空参数、异构参数顺序、null 参数和 null 返回值；
+`lsp_position` 记录直接比较零基坐标、超长列和负数原样保存语义；`lsp_range`
+与 `lsp_diagnostic` 记录直接比较正常字段以及 Java 可空引用的原样返回语义。
 
-`operator-manager-java-contract-divergences.jsonl` 单独保存已知不一致，不计入 284 个
-绿色用例：Java `OperatorManager.precedence("missing")` 当前实现抛
-`NullPointerException`，Rust 按 Java 接口 Javadoc 的 null 契约返回 `None`。该条在
-兼容策略决定和实现完成前保持 `PARTIAL`，不得被主语料的绿色结果掩盖。上述基线缺陷
-不得计入“已实现 Java 语义”的证据。
+Java `OperatorManager.precedence("missing")` 当前实现抛 `NullPointerException`；
+Rust 已保留同一可观察失败语义，并将该用例迁入 `differential.jsonl`。
+`operator-manager-java-contract-divergences.jsonl` 只保留历史分类说明，不再含失败用例。
+上述 trace 基线缺陷仍不得计入“已实现 Java 语义”的证据。
 
 Java `src/test/resources/testsuite/**/*.ql` 的完整内容副本位于
 `crates/qlexpress/tests/fixtures/java-testsuite/`。使用下列命令校验路径、数量和内容

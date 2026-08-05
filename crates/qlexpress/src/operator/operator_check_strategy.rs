@@ -29,6 +29,7 @@ pub use super::default_operator_check_strategy::DefaultOperatorCheckStrategy;
 pub use super::white_operator_check_strategy::WhiteOperatorCheckStrategy;
 
 /// 在宿主、检查选项和静态检查器之间共享的操作符集合。
+/// 对应 Java: `OperatorCheckStrategy.whitelist(Set)` 与 `blacklist(Set)` 保存的集合引用。
 pub type SharedOperators = Rc<RefCell<HashSet<String>>>;
 
 /// 枚举形态的策略入口，对齐 Java `OperatorCheckStrategy` 接口的三个静态工厂。
