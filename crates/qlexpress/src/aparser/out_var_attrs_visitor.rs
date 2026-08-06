@@ -21,7 +21,9 @@ use crate::utils::ql_string_utils::QLStringUtils;
 /// Java `parseFieldId`.
 fn parse_field_id(ctx: &FieldIdContext) -> String {
     if let Some(quote) = ctx.quote_string_literal() {
-        return QLStringUtils::parse_string_escape(quote.text());
+        return QLStringUtils::parse_string_escape(quote.text())
+            .to_rust_string()
+            .expect("quoted Rust source must remain valid UTF-8");
     }
     ctx.token
         .as_ref()
@@ -125,7 +127,7 @@ impl<'a> OutVarAttrsVisitor<'a> {
         let result = self.import_manager.load_part_qualified(&head_ids);
         if result.cls().is_some() {
             result.rest_index().saturating_sub(1)
-        } else if self.stack.stack().exist(&primary_id) {
+        } else if self.stack.stack().exist(Some(&primary_id)) {
             0
         } else {
             self.add_attrs(&primary_id, path_parts)
@@ -201,7 +203,7 @@ impl Visitor for OutVarAttrsVisitor<'_> {
         &mut self,
         ctx: &FormalOrInferredParameterContext,
     ) -> Self::T {
-        self.stack.stack_mut().add(var_id_text(&ctx.var_id));
+        self.stack.stack_mut().add(Some(var_id_text(&ctx.var_id)));
     }
 
     fn visit_variable_declarator(&mut self, ctx: &VariableDeclaratorContext) -> Self::T {
@@ -212,7 +214,7 @@ impl Visitor for OutVarAttrsVisitor<'_> {
     }
 
     fn visit_variable_declarator_id(&mut self, ctx: &VariableDeclaratorIdContext) -> Self::T {
-        self.stack.stack_mut().add(var_id_text(&ctx.var_id));
+        self.stack.stack_mut().add(Some(var_id_text(&ctx.var_id)));
     }
 
     fn visit_expression(&mut self, ctx: &ExpressionContext) -> Self::T {
@@ -233,13 +235,13 @@ impl Visitor for OutVarAttrsVisitor<'_> {
                 ctx.assign_operator.as_deref(),
                 Some(Node::AssignOperator(op)) if op.token.symbol().token_type() == tk::EQ as i32
             );
-            if !is_plain_assign && !self.stack.stack().exist(&left_var_name) {
+            if !is_plain_assign && !self.stack.stack().exist(Some(&left_var_name)) {
                 self.add_attrs(&left_var_name, &left_hand_side.path_parts);
             }
             if let Some(expression) = &ctx.expression {
                 expression.accept(self);
             }
-            self.stack.stack_mut().add(left_var_name);
+            self.stack.stack_mut().add(Some(left_var_name));
             return;
         }
 
@@ -252,8 +254,8 @@ impl Visitor for OutVarAttrsVisitor<'_> {
     fn visit_left_hand_side(&mut self, ctx: &LeftHandSideContext) -> Self::T {
         let left_var_name = var_id_text(&ctx.var_id);
         if ctx.path_parts.is_empty() {
-            self.stack.stack_mut().add(left_var_name);
-        } else if !self.stack.stack().exist(&left_var_name) {
+            self.stack.stack_mut().add(Some(left_var_name));
+        } else if !self.stack.stack().exist(Some(&left_var_name)) {
             self.add_attrs(&left_var_name, &ctx.path_parts);
         }
     }

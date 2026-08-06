@@ -288,3 +288,8 @@
 {"id":"lsp-position-full-contract","lsp_position":{"scenario":"full_contract"}}
 {"id":"lsp-range-full-contract","lsp_range":{"scenario":"full_contract"}}
 {"id":"lsp-diagnostic-full-contract","lsp_diagnostic":{"scenario":"full_contract"}}
+{"id":"exist-stack-full-contract","exist_stack":{"scenario":"full_contract"}}
+{"id":"macro-define-full-contract","macro_define":{"scenario":"full_contract"}}
+{"id":"user-define-exception-full-contract","user_define_exception":{"scenario":"full_contract"}}
+{"id":"security-strategies-full-contract","security_strategies":{"scenario":"full_contract"}}
+{"id":"ql-string-utils-full-contract","ql_string_utils":{"scenario":"full_contract"}}

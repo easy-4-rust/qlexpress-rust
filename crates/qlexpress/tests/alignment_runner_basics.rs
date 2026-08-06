@@ -487,3 +487,27 @@ fn script_timeout() {
         .unwrap_err();
     assert_eq!(err.error_code(), error_codes::SCRIPT_TIME_OUT);
 }
+
+/// libFuzzer 回归：经典 for 的空循环体也必须在循环回边检查超时。
+#[test]
+fn script_timeout_cannot_be_bypassed_by_empty_for_body() {
+    let timeout = QLOptions::builder().timeout_millis(5).build();
+    let err = Express4Runner::new()
+        .execute(
+            "sum = 0; for (i = 0; i < 80;) { };i =6>m\n",
+            HashMap::new(),
+            &timeout,
+        )
+        .unwrap_err();
+    assert_eq!(err.error_code(), error_codes::SCRIPT_TIME_OUT);
+}
+
+/// 与 for 使用同一复合指令边界的 while 空体必须同样受超时限制。
+#[test]
+fn script_timeout_cannot_be_bypassed_by_empty_while_body() {
+    let timeout = QLOptions::builder().timeout_millis(5).build();
+    let err = Express4Runner::new()
+        .execute("while (true) {}", HashMap::new(), &timeout)
+        .unwrap_err();
+    assert_eq!(err.error_code(), error_codes::SCRIPT_TIME_OUT);
+}

@@ -12,6 +12,7 @@ use crate::runtime::member::ClassRef;
 use crate::runtime::q_result::QResult;
 use crate::runtime::qcontext::QContext;
 use crate::runtime::qlambda_definition::QLambdaDefinition;
+use crate::runtime::qvm_runtime::check_loop_iteration;
 use crate::runtime::value::DataValue;
 use crate::utils::println_utils::PrintlnUtils;
 use std::cell::RefCell;
@@ -180,6 +181,7 @@ impl QLInstruction for ForEachInstruction {
         let body_lambda = Rc::clone(&self.body).to_lambda(q_context, ql_options, true);
         // forEachBody:
         while items.has_next() {
+            check_loop_iteration(q_context, ql_options, &*self.error_reporter)?;
             // Java 增强 for 在进入循环体的 try/catch 之前调用
             // Iterator.next()，因此 fail-fast 异常不应被循环体异常映射吞掉。
             let item = items.next_item()?;

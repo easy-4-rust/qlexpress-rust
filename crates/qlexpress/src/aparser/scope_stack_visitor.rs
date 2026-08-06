@@ -21,7 +21,7 @@ impl<S: ExistStack> ScopeStack<S> {
     /// 使用根变量存在性栈创建作用域状态。
     /// 对应 Java: `ScopeStackVisitor` 初始化 `existStack` 字段。
     pub fn new(stack: S) -> Self {
-        ScopeStack { stack }
+        ScopeStack { stack: Some(stack) }
     }
 
     /// 将一个元素压入当前栈。
@@ -30,7 +30,12 @@ impl<S: ExistStack> ScopeStack<S> {
     /// Java `push()`.
     /// 对应 Java：`ScopeStackVisitor#push()`。
     pub fn push(&mut self) {
-        self.stack = self.stack.push();
+        self.stack = Some(
+            self.stack
+                .as_ref()
+                .expect("ScopeStackVisitor.push on null stack")
+                .push(),
+        );
     }
 
     /// 弹出并返回当前栈顶元素。
@@ -39,7 +44,7 @@ impl<S: ExistStack> ScopeStack<S> {
     /// Java `pop()`.
     /// 对应 Java: com.alibaba.qlexpress4.aparser.ScopeStackVisitor#pop。
     pub fn pop(&mut self) {
-        self.stack = self.stack.pop();
+        self.stack = self.stack.take().and_then(|stack| stack.pop());
     }
 
     /// 返回当前内部栈的只读视图。
@@ -48,7 +53,9 @@ impl<S: ExistStack> ScopeStack<S> {
     /// Java `getStack()`.
     /// 对应 Java: com.alibaba.qlexpress4.aparser.ScopeStackVisitor#stack。
     pub fn stack(&self) -> &S {
-        &self.stack
+        self.stack
+            .as_ref()
+            .expect("ScopeStackVisitor.getStack returned null")
     }
 
     /// 返回当前内部栈的可变视图。
@@ -57,7 +64,15 @@ impl<S: ExistStack> ScopeStack<S> {
     /// Java `getStack()` mutable (for `add`).
     /// 对应 Java: com.alibaba.qlexpress4.aparser.ScopeStackVisitor#stackMut。
     pub fn stack_mut(&mut self) -> &mut S {
-        &mut self.stack
+        self.stack
+            .as_mut()
+            .expect("ScopeStackVisitor.getStack returned null")
+    }
+
+    /// 返回 Java `getStack()` 的可空结果；根栈执行 `pop()` 后为 `None`。
+    /// 对应 Java: com.alibaba.qlexpress4.aparser.ScopeStackVisitor#getStack。
+    pub fn get_stack(&self) -> Option<&S> {
+        self.stack.as_ref()
     }
 }
 

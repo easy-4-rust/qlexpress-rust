@@ -1,5 +1,6 @@
 //! Rust 侧差分语料执行器。
 
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader, BufWriter, Write};
@@ -8,8 +9,10 @@ use std::rc::Rc;
 
 use qlexpress::aparser::operator_factory::OperatorFactory;
 use qlexpress::aparser::parser_operator_manager::{OpType, ParserOperatorManager};
+use qlexpress::aparser::{ExistStack, ExistVarStack, MacroDefine};
 use qlexpress::api::{BatchAddFunctionResult, QLFunctionalVarargs};
 use qlexpress::exception::pure_err_reporter::PureErrReporter;
+use qlexpress::exception::{ExceptionType, UserDefineException};
 use qlexpress::init_options::InitOptions;
 use qlexpress::lsp::{Diagnostic, Position, Range};
 use qlexpress::number::big_decimal_math::BigDecimalMath;
@@ -36,6 +39,10 @@ use qlexpress::runtime::scope::QScope;
 use qlexpress::runtime::trace::QTraces;
 use qlexpress::runtime::value::{DataValue, QValue};
 use qlexpress::security::ql_security_strategy::QLSecurityStrategy;
+use qlexpress::security::{
+    NativeMember, StrategyBlackList, StrategyIsolation, StrategyOpen, StrategyWhiteList,
+};
+use qlexpress::utils::ql_string_utils::QLStringUtils;
 use qlexpress::Express4Runner;
 use serde::{Deserialize, Serialize};
 
@@ -60,6 +67,16 @@ struct DifferentialCase {
     lsp_range: Option<LspRangeInvocation>,
     #[serde(default)]
     lsp_diagnostic: Option<LspDiagnosticInvocation>,
+    #[serde(default)]
+    exist_stack: Option<ExistStackInvocation>,
+    #[serde(default)]
+    macro_define: Option<MacroDefineInvocation>,
+    #[serde(default)]
+    user_define_exception: Option<UserDefineExceptionInvocation>,
+    #[serde(default)]
+    security_strategies: Option<SecurityStrategiesInvocation>,
+    #[serde(default)]
+    ql_string_utils: Option<QLStringUtilsInvocation>,
     #[serde(default)]
     delegate_context: Option<DelegateContextInvocation>,
     #[serde(default)]
@@ -134,6 +151,31 @@ struct LspRangeInvocation {
 
 #[derive(Debug, Deserialize)]
 struct LspDiagnosticInvocation {
+    scenario: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct ExistStackInvocation {
+    scenario: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct MacroDefineInvocation {
+    scenario: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct UserDefineExceptionInvocation {
+    scenario: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct SecurityStrategiesInvocation {
+    scenario: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct QLStringUtilsInvocation {
     scenario: String,
 }
 
@@ -242,6 +284,21 @@ fn execute_case(case: DifferentialCase) -> Result<DifferentialRecord, String> {
     }
     if let Some(invocation) = case.lsp_diagnostic {
         return execute_lsp_diagnostic(case.id, invocation);
+    }
+    if let Some(invocation) = case.exist_stack {
+        return execute_exist_stack(case.id, invocation);
+    }
+    if let Some(invocation) = case.macro_define {
+        return execute_macro_define(case.id, invocation);
+    }
+    if let Some(invocation) = case.user_define_exception {
+        return execute_user_define_exception(case.id, invocation);
+    }
+    if let Some(invocation) = case.security_strategies {
+        return execute_security_strategies(case.id, invocation);
+    }
+    if let Some(invocation) = case.ql_string_utils {
+        return execute_ql_string_utils(case.id, invocation);
     }
     if let Some(invocation) = case.delegate_context {
         return execute_delegate_context(case.id, invocation);
@@ -434,6 +491,526 @@ fn execute_lsp_position(
         column: None,
         trace_count: 0,
     })
+}
+
+fn execute_exist_stack(
+    id: String,
+    invocation: ExistStackInvocation,
+) -> Result<DifferentialRecord, String> {
+    if invocation.scenario != "full_contract" {
+        return Err(format!(
+            "unsupported exist_stack scenario: {}",
+            invocation.scenario
+        ));
+    }
+
+    let mut root = ExistVarStack::root();
+    let mut observed = IndexMap::new();
+    observed.insert(
+        DataValue::string("initial_root"),
+        DataValue::Bool(root.exist(Some("root"))),
+    );
+    observed.insert(
+        DataValue::string("initial_null"),
+        DataValue::Bool(root.exist(None)),
+    );
+    observed.insert(
+        DataValue::string("root_pop_is_null"),
+        DataValue::Bool(root.pop().is_none()),
+    );
+
+    root.add(Some("root".to_string()));
+    root.add(Some("root".to_string()));
+    root.add(None);
+    observed.insert(
+        DataValue::string("root_after_add"),
+        DataValue::Bool(root.exist(Some("root"))),
+    );
+    observed.insert(
+        DataValue::string("null_after_add"),
+        DataValue::Bool(root.exist(None)),
+    );
+
+    let mut child = root.push();
+    observed.insert(
+        DataValue::string("child_sees_root"),
+        DataValue::Bool(child.exist(Some("root"))),
+    );
+    child.add(Some("child".to_string()));
+    observed.insert(
+        DataValue::string("child_local"),
+        DataValue::Bool(child.exist(Some("child"))),
+    );
+    let parent = child
+        .pop()
+        .ok_or_else(|| "child stack lost its parent".to_string())?;
+    observed.insert(
+        DataValue::string("parent_has_root"),
+        DataValue::Bool(parent.exist(Some("root"))),
+    );
+    observed.insert(
+        DataValue::string("parent_has_child"),
+        DataValue::Bool(parent.exist(Some("child"))),
+    );
+    observed.insert(
+        DataValue::string("parent_has_null"),
+        DataValue::Bool(parent.exist(None)),
+    );
+
+    Ok(DifferentialRecord {
+        id,
+        outcome: "ok",
+        normalized: Some(normalize(&DataValue::map(observed))),
+        error_code: None,
+        line: None,
+        column: None,
+        trace_count: 0,
+    })
+}
+
+fn execute_macro_define(
+    id: String,
+    invocation: MacroDefineInvocation,
+) -> Result<DifferentialRecord, String> {
+    if invocation.scenario != "full_contract" {
+        return Err(format!(
+            "unsupported macro_define scenario: {}",
+            invocation.scenario
+        ));
+    }
+
+    let shared = Rc::new(RefCell::new(vec!["first".to_string()]));
+    let define = MacroDefine::from_shared(Some(Rc::clone(&shared)), false);
+    let mut observed = IndexMap::new();
+    observed.insert(
+        DataValue::string("initial_size"),
+        DataValue::Int(
+            define
+                .macro_instructions()
+                .expect("non-null instructions")
+                .len() as i32,
+        ),
+    );
+    observed.insert(
+        DataValue::string("same_instance"),
+        DataValue::Bool(Rc::strong_count(&shared) == 2),
+    );
+    shared.borrow_mut().push("external".to_string());
+    observed.insert(
+        DataValue::string("external_mutation_size"),
+        DataValue::Int(
+            define
+                .macro_instructions()
+                .expect("non-null instructions")
+                .len() as i32,
+        ),
+    );
+    define
+        .macro_instructions_mut()
+        .expect("non-null instructions")
+        .push("getter".to_string());
+    observed.insert(
+        DataValue::string("getter_mutation_size"),
+        DataValue::Int(shared.borrow().len() as i32),
+    );
+    observed.insert(
+        DataValue::string("last_stmt_express"),
+        DataValue::Bool(define.is_last_stmt_express()),
+    );
+
+    let null_define = MacroDefine::<String>::from_shared(None, true);
+    observed.insert(
+        DataValue::string("null_list"),
+        DataValue::Bool(null_define.macro_instructions().is_none()),
+    );
+    observed.insert(
+        DataValue::string("null_last_stmt_express"),
+        DataValue::Bool(null_define.is_last_stmt_express()),
+    );
+
+    Ok(DifferentialRecord {
+        id,
+        outcome: "ok",
+        normalized: Some(normalize(&DataValue::map(observed))),
+        error_code: None,
+        line: None,
+        column: None,
+        trace_count: 0,
+    })
+}
+
+fn execute_user_define_exception(
+    id: String,
+    invocation: UserDefineExceptionInvocation,
+) -> Result<DifferentialRecord, String> {
+    if invocation.scenario != "full_contract" {
+        return Err(format!(
+            "unsupported user_define_exception scenario: {}",
+            invocation.scenario
+        ));
+    }
+
+    let default_error = UserDefineException::new("business");
+    let explicit_error = UserDefineException::with_type(ExceptionType::InvalidArgument, "argument");
+    let null_error = UserDefineException::from_options(None, None);
+    let mut observed = IndexMap::new();
+    observed.insert(
+        DataValue::string("default_type"),
+        optional_exception_type(default_error.get_type()),
+    );
+    observed.insert(
+        DataValue::string("default_message"),
+        optional_string(default_error.message()),
+    );
+    observed.insert(
+        DataValue::string("explicit_type"),
+        optional_exception_type(explicit_error.get_type()),
+    );
+    observed.insert(
+        DataValue::string("explicit_message"),
+        optional_string(explicit_error.message()),
+    );
+    observed.insert(
+        DataValue::string("null_type"),
+        optional_exception_type(null_error.get_type()),
+    );
+    observed.insert(
+        DataValue::string("null_message"),
+        optional_string(null_error.message()),
+    );
+
+    Ok(DifferentialRecord {
+        id,
+        outcome: "ok",
+        normalized: Some(normalize(&DataValue::map(observed))),
+        error_code: None,
+        line: None,
+        column: None,
+        trace_count: 0,
+    })
+}
+
+fn optional_exception_type(value: Option<ExceptionType>) -> DataValue {
+    match value {
+        Some(ExceptionType::InvalidArgument) => DataValue::string("INVALID_ARGUMENT"),
+        Some(ExceptionType::BizException) => DataValue::string("BIZ_EXCEPTION"),
+        None => DataValue::Null,
+    }
+}
+
+fn execute_security_strategies(
+    id: String,
+    invocation: SecurityStrategiesInvocation,
+) -> Result<DifferentialRecord, String> {
+    if invocation.scenario != "full_contract" {
+        return Err(format!(
+            "unsupported security_strategies scenario: {}",
+            invocation.scenario
+        ));
+    }
+
+    let member = NativeMember::new("java.lang.String", "length");
+    let other = NativeMember::new("java.lang.String", "substring");
+    let mut observed = IndexMap::new();
+
+    let open = StrategyOpen::instance();
+    observed.insert(
+        DataValue::string("open_singleton"),
+        DataValue::Bool(open == StrategyOpen::instance()),
+    );
+    observed.insert(
+        DataValue::string("open_member"),
+        DataValue::Bool(open.check(Some(&member))),
+    );
+    observed.insert(
+        DataValue::string("open_null"),
+        DataValue::Bool(open.check(None)),
+    );
+
+    let isolation = StrategyIsolation::instance();
+    observed.insert(
+        DataValue::string("isolation_singleton"),
+        DataValue::Bool(isolation == StrategyIsolation::instance()),
+    );
+    observed.insert(
+        DataValue::string("isolation_member_error"),
+        DataValue::string(
+            isolation
+                .check(Some(&member))
+                .expect_err("isolation always throws")
+                .error_code(),
+        ),
+    );
+    observed.insert(
+        DataValue::string("isolation_null_error"),
+        DataValue::string(
+            isolation
+                .check(None)
+                .expect_err("isolation always throws")
+                .error_code(),
+        ),
+    );
+
+    let black_members = Rc::new(RefCell::new(std::collections::HashSet::new()));
+    let black = StrategyBlackList::from_shared(Some(Rc::clone(&black_members)));
+    observed.insert(
+        DataValue::string("black_empty_member"),
+        DataValue::Bool(
+            black
+                .check(Some(&member))
+                .map_err(|error| error.to_string())?,
+        ),
+    );
+    observed.insert(
+        DataValue::string("black_empty_null"),
+        DataValue::Bool(black.check(None).map_err(|error| error.to_string())?),
+    );
+    black_members.borrow_mut().insert(Some(member.clone()));
+    black_members.borrow_mut().insert(None);
+    observed.insert(
+        DataValue::string("black_added_member"),
+        DataValue::Bool(
+            black
+                .check(Some(&member))
+                .map_err(|error| error.to_string())?,
+        ),
+    );
+    observed.insert(
+        DataValue::string("black_added_null"),
+        DataValue::Bool(black.check(None).map_err(|error| error.to_string())?),
+    );
+
+    let white_members = Rc::new(RefCell::new(std::collections::HashSet::new()));
+    let white = StrategyWhiteList::from_shared(Some(Rc::clone(&white_members)));
+    observed.insert(
+        DataValue::string("white_empty_member"),
+        DataValue::Bool(
+            white
+                .check(Some(&member))
+                .map_err(|error| error.to_string())?,
+        ),
+    );
+    observed.insert(
+        DataValue::string("white_empty_null"),
+        DataValue::Bool(white.check(None).map_err(|error| error.to_string())?),
+    );
+    white_members.borrow_mut().insert(Some(member.clone()));
+    white_members.borrow_mut().insert(None);
+    observed.insert(
+        DataValue::string("white_added_member"),
+        DataValue::Bool(
+            white
+                .check(Some(&member))
+                .map_err(|error| error.to_string())?,
+        ),
+    );
+    observed.insert(
+        DataValue::string("white_added_null"),
+        DataValue::Bool(white.check(None).map_err(|error| error.to_string())?),
+    );
+
+    let black_null = StrategyBlackList::from_shared(None);
+    observed.insert(
+        DataValue::string("black_null_set_error"),
+        DataValue::string(
+            black_null
+                .check(Some(&other))
+                .expect_err("null Java set must fail")
+                .error_code(),
+        ),
+    );
+    let white_null = StrategyWhiteList::from_shared(None);
+    observed.insert(
+        DataValue::string("white_null_set_error"),
+        DataValue::string(
+            white_null
+                .check(Some(&other))
+                .expect_err("null Java set must fail")
+                .error_code(),
+        ),
+    );
+
+    let facade_open = QLSecurityStrategy::open();
+    observed.insert(
+        DataValue::string("facade_open_impl"),
+        DataValue::Bool(facade_open == QLSecurityStrategy::open()),
+    );
+    observed.insert(
+        DataValue::string("facade_open_member"),
+        DataValue::Bool(
+            facade_open
+                .check(Some(&member))
+                .map_err(|error| error.to_string())?,
+        ),
+    );
+    observed.insert(
+        DataValue::string("facade_open_null"),
+        DataValue::Bool(facade_open.check(None).map_err(|error| error.to_string())?),
+    );
+
+    let facade_isolation = QLSecurityStrategy::isolation();
+    observed.insert(
+        DataValue::string("facade_isolation_impl"),
+        DataValue::Bool(facade_isolation == QLSecurityStrategy::isolation()),
+    );
+    observed.insert(
+        DataValue::string("facade_isolation_member_error"),
+        DataValue::string(
+            facade_isolation
+                .check(Some(&member))
+                .expect_err("isolation always throws")
+                .error_code(),
+        ),
+    );
+    observed.insert(
+        DataValue::string("facade_isolation_null_error"),
+        DataValue::string(
+            facade_isolation
+                .check(None)
+                .expect_err("isolation always throws")
+                .error_code(),
+        ),
+    );
+
+    let facade_black_members = Rc::new(RefCell::new(std::collections::HashSet::new()));
+    let facade_black = QLSecurityStrategy::shared_black_list(Rc::clone(&facade_black_members));
+    observed.insert(
+        DataValue::string("facade_black_empty"),
+        DataValue::Bool(
+            facade_black
+                .check(Some(&member))
+                .map_err(|error| error.to_string())?,
+        ),
+    );
+    facade_black_members.borrow_mut().insert(member.clone());
+    observed.insert(
+        DataValue::string("facade_black_added"),
+        DataValue::Bool(
+            facade_black
+                .check(Some(&member))
+                .map_err(|error| error.to_string())?,
+        ),
+    );
+    observed.insert(
+        DataValue::string("facade_black_null"),
+        DataValue::Bool(
+            facade_black
+                .check(None)
+                .map_err(|error| error.to_string())?,
+        ),
+    );
+
+    let facade_white_members = Rc::new(RefCell::new(std::collections::HashSet::new()));
+    let facade_white = QLSecurityStrategy::shared_white_list(Rc::clone(&facade_white_members));
+    observed.insert(
+        DataValue::string("facade_white_empty"),
+        DataValue::Bool(
+            facade_white
+                .check(Some(&member))
+                .map_err(|error| error.to_string())?,
+        ),
+    );
+    facade_white_members.borrow_mut().insert(member.clone());
+    observed.insert(
+        DataValue::string("facade_white_added"),
+        DataValue::Bool(
+            facade_white
+                .check(Some(&member))
+                .map_err(|error| error.to_string())?,
+        ),
+    );
+    observed.insert(
+        DataValue::string("facade_white_null"),
+        DataValue::Bool(
+            facade_white
+                .check(None)
+                .map_err(|error| error.to_string())?,
+        ),
+    );
+
+    Ok(DifferentialRecord {
+        id,
+        outcome: "ok",
+        normalized: Some(normalize(&DataValue::map(observed))),
+        error_code: None,
+        line: None,
+        column: None,
+        trace_count: 0,
+    })
+}
+
+fn execute_ql_string_utils(
+    id: String,
+    invocation: QLStringUtilsInvocation,
+) -> Result<DifferentialRecord, String> {
+    if invocation.scenario != "full_contract" {
+        return Err(format!(
+            "unsupported ql_string_utils scenario: {}",
+            invocation.scenario
+        ));
+    }
+
+    let mut observed = IndexMap::new();
+    observed.insert(
+        DataValue::string("standard"),
+        DataValue::string(QLStringUtils::parse_string_escape(
+            r#""a\nb\t\r\f\b\"\'\\\$z""#,
+        )),
+    );
+    observed.insert(
+        DataValue::string("unknown"),
+        DataValue::string(QLStringUtils::parse_string_escape(r#""a\xb""#)),
+    );
+    observed.insert(
+        DataValue::string("trailing"),
+        DataValue::string(QLStringUtils::parse_string_escape(r#""abc\""#)),
+    );
+    observed.insert(
+        DataValue::string("supplementary"),
+        DataValue::string(QLStringUtils::parse_string_escape("\"😀\"")),
+    );
+    observed.insert(
+        DataValue::string("split_high"),
+        DataValue::string(QLStringUtils::parse_string_escape_start_end("😀", 0, 1)),
+    );
+    observed.insert(
+        DataValue::string("reverse"),
+        DataValue::string(QLStringUtils::parse_string_escape_start_end("a", 3, 2)),
+    );
+    observed.insert(
+        DataValue::string("negative_error"),
+        DataValue::string(catch_string_index_error(|| {
+            QLStringUtils::parse_string_escape_start_end("a", -1, 1);
+        })),
+    );
+    observed.insert(
+        DataValue::string("overflow_error"),
+        DataValue::string(catch_string_index_error(|| {
+            QLStringUtils::parse_string_escape_start_end("a", 0, 2);
+        })),
+    );
+
+    Ok(DifferentialRecord {
+        id,
+        outcome: "ok",
+        normalized: Some(normalize(&DataValue::map(observed))),
+        error_code: None,
+        line: None,
+        column: None,
+        trace_count: 0,
+    })
+}
+
+fn catch_string_index_error(action: impl FnOnce()) -> &'static str {
+    let previous_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(|_| {}));
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(action));
+    std::panic::set_hook(previous_hook);
+    if result.is_err() {
+        "java.lang.StringIndexOutOfBoundsException"
+    } else {
+        ""
+    }
 }
 
 fn execute_lsp_range(

@@ -97,6 +97,12 @@ fn rejects_fuel_call_depth_collection_string_and_output_budgets() {
             .error_code(),
         "SANDBOX_FUEL_EXCEEDED"
     );
+    assert_eq!(
+        execute(&runner, "for (;;) {}", &fuel_profile)
+            .unwrap_err()
+            .error_code(),
+        "SANDBOX_FUEL_EXCEEDED"
+    );
 
     let call_profile = profile_with(|profile| profile.limits.max_call_depth = 8);
     assert_eq!(

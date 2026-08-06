@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-08-05T02:29:55.550986+00:00",
+  "generated_at": "2026-08-05T03:17:32.346689+00:00",
   "policy": {
     "source": "rust-java-migration + rust-java-migration-testing",
     "retain_package_segments": 1,
@@ -73,29 +73,31 @@
     },
     "rust": {
       "root": "/Users/wandl/workspaces/workspace-github-easy-4-rust/qlexpress-rust",
-      "source_fingerprint": "sha256:0e2d594db25ccd70adc0fbd0a56e6b53b28f972321e816256482009f2361594b",
-      "sha": "41b24714d90c12b57f0cc7dedcd35555f9fa5693",
+      "source_fingerprint": "sha256:e7630d4c5013a9d4a99fd9b06cde9c38db6942e15a45af911212464f442736a0",
+      "sha": "81d104daa3f914c970d4f1335d951af993f4436e",
       "branch": "dev",
       "dirty": true,
       "status": [
         "M README.md",
         " M crates/qlexpress-verification/src/differential.rs",
-        " M crates/qlexpress/src/aparser/parse_fail.rs",
-        " M crates/qlexpress/src/aparser/parser_operator_manager.rs",
-        " M crates/qlexpress/src/api/batch_add_function_result.rs",
-        " M crates/qlexpress/src/api/ql_functional_varargs.rs",
-        " M crates/qlexpress/src/exception/ql_exception.rs",
-        " M crates/qlexpress/src/init_options.rs",
-        " M crates/qlexpress/src/lsp/diagnostic.rs",
-        " M crates/qlexpress/src/lsp/position.rs",
-        " M crates/qlexpress/src/lsp/range.rs",
-        " M crates/qlexpress/src/operator/operator_check_strategy.rs",
-        " M crates/qlexpress/src/operator/operator_manager.rs",
-        " M crates/qlexpress/src/parsecache/serializable_parse_cache_exception.rs",
-        " M crates/qlexpress/src/ql_options.rs",
-        " M crates/qlexpress/src/scope/q_scope.rs",
+        " M crates/qlexpress/src/aparser/exist_stack.rs",
+        " M crates/qlexpress/src/aparser/exist_var_stack.rs",
+        " M crates/qlexpress/src/aparser/generator_scope.rs",
+        " M crates/qlexpress/src/aparser/macro_define.rs",
+        " M crates/qlexpress/src/aparser/out_function_visitor.rs",
+        " M crates/qlexpress/src/aparser/out_var_attrs_visitor.rs",
+        " M crates/qlexpress/src/aparser/out_var_names_visitor.rs",
+        " M crates/qlexpress/src/aparser/qvm_instruction_visitor.rs",
+        " M crates/qlexpress/src/aparser/scope_stack.rs",
+        " M crates/qlexpress/src/aparser/scope_stack_visitor.rs",
+        " M crates/qlexpress/src/exception/user_define_exception.rs",
+        " M crates/qlexpress/src/runtime/native_registry.rs",
         " M crates/qlexpress/src/security/ql_security_strategy.rs",
-        " M crates/qlexpress/tests/alignment_serializable_parse_cache.rs",
+        " M crates/qlexpress/src/security/strategy_black_list.rs",
+        " M crates/qlexpress/src/security/strategy_isolation.rs",
+        " M crates/qlexpress/src/security/strategy_open.rs",
+        " M crates/qlexpress/src/security/strategy_white_list.rs",
+        " M crates/qlexpress/src/utils/ql_string_utils.rs",
         " M \"docs/\\345\\257\\271\\350\\261\\241\\345\\220\\215\\347\\247\\260\\344\\270\\200\\350\\207\\264\\346\\200\\247\\346\\243\\200\\346\\237\\245.md\"",
         " M \"docs/\\345\\257\\271\\350\\261\\241\\347\\272\\247\\345\\257\\271\\347\\205\\247\\350\\241\\250.md\"",
         " M \"docs/\\347\\224\\237\\344\\272\\247\\351\\252\\214\\346\\224\\266.md\"",
@@ -104,7 +106,6 @@
         " M \"docs/\\350\\277\\201\\347\\247\\273\\350\\267\\257\\347\\272\\277\\345\\233\\276.md\"",
         " M verification/corpus/README.md",
         " M verification/corpus/differential.jsonl",
-        " M verification/corpus/operator-manager-java-contract-divergences.jsonl",
         " M verification/java/src/main/java/com/easy4rust/qlexpress/JavaDifferentialRunner.java",
         " M verification/migration-dispositions.json",
         " M verification/migration-manifest-summary.json"
@@ -114,11 +115,11 @@
         "version": "1.4.1",
         "projectPath": "/Users/wandl/workspaces/workspace-github-easy-4-rust/qlexpress-rust",
         "indexPath": "/Users/wandl/workspaces/workspace-github-easy-4-rust/qlexpress-rust/.codegraph",
-        "lastIndexed": "2026-08-05T01:41:04.091Z",
+        "lastIndexed": "2026-08-05T03:11:37.970Z",
         "fileCount": 524,
-        "nodeCount": 9143,
-        "edgeCount": 31542,
-        "dbSizeBytes": 33341440,
+        "nodeCount": 9238,
+        "edgeCount": 32149,
+        "dbSizeBytes": 34709504,
         "backend": "node-sqlite",
         "journalMode": "wal",
         "nodesByKind": {
@@ -127,14 +128,14 @@
           "enum_member": 284,
           "field": 1,
           "file": 522,
-          "function": 1747,
-          "import": 3305,
-          "method": 2565,
+          "function": 1770,
+          "import": 3340,
+          "method": 2590,
           "namespace": 2,
-          "struct": 326,
+          "struct": 335,
           "trait": 32,
           "type_alias": 41,
-          "variable": 274
+          "variable": 277
         },
         "languages": [
           "java",
@@ -145,7 +146,7 @@
         ],
         "pendingChanges": {
           "added": 0,
-          "modified": 18,
+          "modified": 6,
           "removed": 0
         },
         "worktreeMismatch": null,
@@ -166,36 +167,36 @@
     "java_anonymous_types": 5,
     "java_public_or_protected_methods": 1814,
     "rust_production_types": 447,
-    "rust_production_methods": 2839,
+    "rust_production_methods": 2801,
     "object_states": {
-      "IMPLEMENTED": 65,
-      "UNVERIFIED": 172
+      "IMPLEMENTED": 74,
+      "UNVERIFIED": 163
     },
     "nested_type_states": {
-      "IMPLEMENTED": 6,
+      "IMPLEMENTED": 10,
       "PLATFORM_NA": 3,
-      "UNVERIFIED": 127
+      "UNVERIFIED": 123
     },
     "method_states": {
-      "IMPLEMENTED": 514,
+      "IMPLEMENTED": 551,
       "PLATFORM_NA": 13,
-      "UNVERIFIED": 1287
+      "UNVERIFIED": 1250
     },
     "reviewed_dispositions": {
       "objects": {
-        "provided": 65,
-        "matched": 65,
-        "handled": 65
+        "provided": 74,
+        "matched": 74,
+        "handled": 74
       },
       "nested_java_types": {
-        "provided": 9,
-        "matched": 9,
-        "handled": 9
+        "provided": 13,
+        "matched": 13,
+        "handled": 13
       },
       "methods": {
-        "provided": 527,
-        "matched": 527,
-        "handled": 527
+        "provided": 564,
+        "matched": 564,
+        "handled": 564
       }
     },
     "explicit_test_marker_keys": 353,
@@ -205,21 +206,21 @@
       "rust_object_candidates_with_chinese_doc": 439,
       "rust_object_candidates_with_java_source_trace": 432,
       "java_methods_with_doc": 90,
-      "rust_method_candidates": 2438,
-      "rust_method_candidates_with_chinese_doc": 1854,
-      "rust_method_candidates_with_java_source_trace": 1610
+      "rust_method_candidates": 2365,
+      "rust_method_candidates_with_chinese_doc": 1732,
+      "rust_method_candidates_with_java_source_trace": 1489
     },
     "evidence_coverage": {
       "java_methods_with_member_candidate": 1716,
       "java_methods_with_method_candidate": 1542,
-      "rust_member_candidates": 4452,
-      "java_methods_with_explicit_test_marker": 85,
+      "rust_member_candidates": 4379,
+      "java_methods_with_explicit_test_marker": 86,
       "java_methods_with_direct_call_graph": 835,
       "direct_java_call_edges_recorded": 2257
     },
     "tests": {
       "java_tests": 223,
-      "rust_tests": 1118,
+      "rust_tests": 1124,
       "java_case_expansion_candidates": 0,
       "rust_review_candidates": 272
     },

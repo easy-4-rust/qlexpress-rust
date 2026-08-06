@@ -12,6 +12,7 @@ use crate::runtime::q_result::QResult;
 use crate::runtime::qcontext::QContext;
 use crate::runtime::qlambda::QLambda;
 use crate::runtime::qlambda_definition::QLambdaDefinition;
+use crate::runtime::qvm_runtime::check_loop_iteration;
 use crate::runtime::scope::QScope;
 use crate::runtime::util::throw_utils::wrap_throwable;
 use crate::runtime::value::DataValue;
@@ -180,6 +181,7 @@ impl QLInstruction for ForInstruction {
             Some(condition) => self.eval_condition(condition)?,
             None => true,
         } {
+            check_loop_iteration(q_context, ql_options, &*self.error_reporter)?;
             match body_lambda.call(&[]) {
                 Ok(body_result) => match body_result {
                     QResult::Return(_) => return Ok(body_result),

@@ -14,8 +14,8 @@ const ILLEGAL_STATE_EXCEPTION: &str = "java.lang.IllegalStateException";
 /// 一旦走到即属引擎内部错误。Rust 版将 Java 的
 /// `IllegalStateException` 映射为 [`QLException`]，避免公开 API 因宿主
 /// 误用而终止进程。
-/// 需要「默认拒绝、返回 false」的可组合语义时,请使用外观枚举
-/// [`QLSecurityStrategy::Isolation`] 的 `check`(返回 `false`)。
+/// 需要「默认拒绝、返回 false」的可组合语义时,请使用外观枚举的
+/// [`QLSecurityStrategy::is_allowed`] 运行时适配入口。
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub struct StrategyIsolation;
 
@@ -39,7 +39,7 @@ impl StrategyIsolation {
     ///
     /// 始终返回 `java.lang.IllegalStateException`，对应 Java 方法无条件抛出
     /// 同类异常；该错误表示隔离策略被错误地用于成员解析路径。
-    pub fn check(&self, _member: &NativeMember) -> Result<bool, QLException> {
+    pub fn check(&self, _member: Option<&NativeMember>) -> Result<bool, QLException> {
         // Java: throw new IllegalStateException();
         Err(QLException::host_error(
             QLExceptionKind::Runtime,
@@ -64,18 +64,21 @@ mod tests {
     fn check_returns_java_illegal_state_exception() {
         // Java: check 抛 IllegalStateException；Rust 以 Result 保留异常类别。
         let error = StrategyIsolation::instance()
-            .check(&NativeMember::new("java.lang.String", "length"))
+            .check(Some(&NativeMember::new("java.lang.String", "length")))
             .expect_err("isolation strategy must reject direct member checks");
         assert_eq!(error.kind(), QLExceptionKind::Runtime);
         assert_eq!(error.error_code(), ILLEGAL_STATE_EXCEPTION);
         assert_eq!(error.reason(), ILLEGAL_STATE_EXCEPTION);
+        assert!(StrategyIsolation::instance().check(None).is_err());
     }
 
     #[test]
     fn facade_enum_isolation_denies() {
         let as_enum: QLSecurityStrategy = StrategyIsolation::instance().into();
         assert_eq!(as_enum, QLSecurityStrategy::isolation());
-        // 外观枚举语义:默认拒绝(不 panic)
-        assert!(!as_enum.check(&NativeMember::new("java.lang.String", "length")));
+        let member = NativeMember::new("java.lang.String", "length");
+        assert!(as_enum.check(Some(&member)).is_err());
+        // 运行时适配语义:默认拒绝(不 panic)
+        assert!(!as_enum.is_allowed(&member));
     }
 }

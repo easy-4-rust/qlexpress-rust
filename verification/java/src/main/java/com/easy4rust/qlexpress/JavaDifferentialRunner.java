@@ -4,7 +4,9 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.lang.reflect.Array;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Member;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -17,9 +19,11 @@ import java.util.AbstractMap;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONWriter;
@@ -31,11 +35,14 @@ import com.alibaba.qlexpress4.InitOptions;
 import com.alibaba.qlexpress4.QLOptions;
 import com.alibaba.qlexpress4.QLResult;
 import com.alibaba.qlexpress4.exception.QLException;
+import com.alibaba.qlexpress4.exception.UserDefineException;
+import com.alibaba.qlexpress4.exception.UserDefineException.ExceptionType;
 import com.alibaba.qlexpress4.exception.PureErrReporter;
 import com.alibaba.qlexpress4.exception.lsp.Diagnostic;
 import com.alibaba.qlexpress4.exception.lsp.Position;
 import com.alibaba.qlexpress4.exception.lsp.Range;
 import com.alibaba.qlexpress4.aparser.ParserOperatorManager.OpType;
+import com.alibaba.qlexpress4.aparser.MacroDefine;
 import com.alibaba.qlexpress4.runtime.Value;
 import com.alibaba.qlexpress4.runtime.DelegateQContext;
 import com.alibaba.qlexpress4.runtime.ExceptionTable;
@@ -61,6 +68,11 @@ import com.alibaba.qlexpress4.runtime.operator.number.IntegerMath;
 import com.alibaba.qlexpress4.runtime.operator.number.LongMath;
 import com.alibaba.qlexpress4.runtime.operator.number.NumberMath;
 import com.alibaba.qlexpress4.security.QLSecurityStrategy;
+import com.alibaba.qlexpress4.security.StrategyBlackList;
+import com.alibaba.qlexpress4.security.StrategyIsolation;
+import com.alibaba.qlexpress4.security.StrategyOpen;
+import com.alibaba.qlexpress4.security.StrategyWhiteList;
+import com.alibaba.qlexpress4.utils.QLStringUtils;
 
 /**
  * Java 4.2.0-beta 差分执行器。输出格式与 Rust verification crate 一致。
@@ -124,6 +136,26 @@ public final class JavaDifferentialRunner {
         JSONObject lspDiagnostic = testCase.getJSONObject("lsp_diagnostic");
         if (lspDiagnostic != null) {
             return executeLspDiagnostic(id, lspDiagnostic);
+        }
+        JSONObject existStack = testCase.getJSONObject("exist_stack");
+        if (existStack != null) {
+            return executeExistStack(id, existStack);
+        }
+        JSONObject macroDefine = testCase.getJSONObject("macro_define");
+        if (macroDefine != null) {
+            return executeMacroDefine(id, macroDefine);
+        }
+        JSONObject userDefineException = testCase.getJSONObject("user_define_exception");
+        if (userDefineException != null) {
+            return executeUserDefineException(id, userDefineException);
+        }
+        JSONObject securityStrategies = testCase.getJSONObject("security_strategies");
+        if (securityStrategies != null) {
+            return executeSecurityStrategies(id, securityStrategies);
+        }
+        JSONObject qlStringUtils = testCase.getJSONObject("ql_string_utils");
+        if (qlStringUtils != null) {
+            return executeQLStringUtils(id, qlStringUtils);
         }
         JSONObject delegateContext = testCase.getJSONObject("delegate_context");
         if (delegateContext != null) {
@@ -206,6 +238,239 @@ public final class JavaDifferentialRunner {
         observed.put("fail", new ArrayList<>(result.getFail()));
         observed.put("all_succ_after_failure", result.getFail().isEmpty());
         return successRecord(id, observed);
+    }
+
+    /**
+     * 通过反射直接调用 Java Visitor 内真实的私有 ExistVarStack 实现。
+     *
+     * @param id 差分用例标识
+     * @param invocation 场景描述
+     * @return 根/子作用域、重复名称及 null 名称的可观察结果
+     */
+    private static Map<String, Object> executeExistStack(String id, JSONObject invocation) {
+        String scenario = invocation.getString("scenario");
+        if (!"full_contract".equals(scenario)) {
+            throw new IllegalArgumentException("unsupported exist_stack scenario: " + scenario);
+        }
+
+        try {
+            Class<?> stackClass =
+                Class.forName("com.alibaba.qlexpress4.aparser.OutVarNamesVisitor$ExistVarStack");
+            Constructor<?> constructor = stackClass.getDeclaredConstructor(stackClass);
+            Method add = stackClass.getDeclaredMethod("add", String.class);
+            Method exist = stackClass.getDeclaredMethod("exist", String.class);
+            Method push = stackClass.getDeclaredMethod("push");
+            Method pop = stackClass.getDeclaredMethod("pop");
+            constructor.setAccessible(true);
+            add.setAccessible(true);
+            exist.setAccessible(true);
+            push.setAccessible(true);
+            pop.setAccessible(true);
+
+            Object root = constructor.newInstance(new Object[] {null});
+            Map<String, Object> observed = new LinkedHashMap<>();
+            observed.put("initial_root", exist.invoke(root, "root"));
+            observed.put("initial_null", exist.invoke(root, new Object[] {null}));
+            observed.put("root_pop_is_null", pop.invoke(root) == null);
+
+            add.invoke(root, "root");
+            add.invoke(root, "root");
+            add.invoke(root, new Object[] {null});
+            observed.put("root_after_add", exist.invoke(root, "root"));
+            observed.put("null_after_add", exist.invoke(root, new Object[] {null}));
+
+            Object child = push.invoke(root);
+            observed.put("child_sees_root", exist.invoke(child, "root"));
+            add.invoke(child, "child");
+            observed.put("child_local", exist.invoke(child, "child"));
+            Object parent = pop.invoke(child);
+            observed.put("parent_has_root", exist.invoke(parent, "root"));
+            observed.put("parent_has_child", exist.invoke(parent, "child"));
+            observed.put("parent_has_null", exist.invoke(parent, new Object[] {null}));
+            return successRecord(id, observed);
+        }
+        catch (ReflectiveOperationException error) {
+            throw new IllegalStateException("cannot invoke Java ExistVarStack", error);
+        }
+    }
+
+    /**
+     * 直接比较 MacroDefine 保存传入 List 引用、getter 可变写回、null 及布尔标志。
+     *
+     * @param id 差分用例标识
+     * @param invocation 场景描述
+     * @return 宏定义可观察状态
+     */
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static Map<String, Object> executeMacroDefine(String id, JSONObject invocation) {
+        String scenario = invocation.getString("scenario");
+        if (!"full_contract".equals(scenario)) {
+            throw new IllegalArgumentException("unsupported macro_define scenario: " + scenario);
+        }
+
+        List shared = new ArrayList();
+        shared.add("first");
+        MacroDefine define = new MacroDefine(shared, false);
+        List getter = define.getMacroInstructions();
+        Map<String, Object> observed = new LinkedHashMap<>();
+        observed.put("initial_size", getter.size());
+        observed.put("same_instance", getter == shared);
+        shared.add("external");
+        observed.put("external_mutation_size", define.getMacroInstructions().size());
+        getter.add("getter");
+        observed.put("getter_mutation_size", shared.size());
+        observed.put("last_stmt_express", define.isLastStmtExpress());
+
+        MacroDefine nullDefine = new MacroDefine(null, true);
+        observed.put("null_list", nullDefine.getMacroInstructions() == null);
+        observed.put("null_last_stmt_express", nullDefine.isLastStmtExpress());
+        return successRecord(id, observed);
+    }
+
+    /**
+     * 直接比较 UserDefineException 的默认类别、显式类别以及可空构造参数。
+     *
+     * @param id 差分用例标识
+     * @param invocation 场景描述
+     * @return 异常类别和消息状态
+     */
+    private static Map<String, Object> executeUserDefineException(String id, JSONObject invocation) {
+        String scenario = invocation.getString("scenario");
+        if (!"full_contract".equals(scenario)) {
+            throw new IllegalArgumentException(
+                "unsupported user_define_exception scenario: " + scenario);
+        }
+
+        UserDefineException defaultError = new UserDefineException("business");
+        UserDefineException explicitError =
+            new UserDefineException(ExceptionType.INVALID_ARGUMENT, "argument");
+        UserDefineException nullError = new UserDefineException(null, null);
+        Map<String, Object> observed = new LinkedHashMap<>();
+        observed.put("default_type", defaultError.getType().name());
+        observed.put("default_message", defaultError.getMessage());
+        observed.put("explicit_type", explicitError.getType().name());
+        observed.put("explicit_message", explicitError.getMessage());
+        observed.put("null_type", nullError.getType());
+        observed.put("null_message", nullError.getMessage());
+        return successRecord(id, observed);
+    }
+
+    /**
+     * 直接比较四个成员安全策略的单例、null、共享集合和异常行为。
+     *
+     * @param id 差分用例标识
+     * @param invocation 场景描述
+     * @return 四个策略的可观察结果
+     */
+    private static Map<String, Object> executeSecurityStrategies(String id, JSONObject invocation) {
+        String scenario = invocation.getString("scenario");
+        if (!"full_contract".equals(scenario)) {
+            throw new IllegalArgumentException(
+                "unsupported security_strategies scenario: " + scenario);
+        }
+
+        try {
+            Member member = String.class.getMethod("length");
+            Member other = String.class.getMethod("substring", int.class);
+            Map<String, Object> observed = new LinkedHashMap<>();
+
+            StrategyOpen open = StrategyOpen.getInstance();
+            observed.put("open_singleton", open == StrategyOpen.getInstance());
+            observed.put("open_member", open.check(member));
+            observed.put("open_null", open.check(null));
+
+            StrategyIsolation isolation = StrategyIsolation.getInstance();
+            observed.put("isolation_singleton", isolation == StrategyIsolation.getInstance());
+            observed.put("isolation_member_error", thrownClass(() -> isolation.check(member)));
+            observed.put("isolation_null_error", thrownClass(() -> isolation.check(null)));
+
+            Set<Member> blackMembers = new HashSet<>();
+            StrategyBlackList black = new StrategyBlackList(blackMembers);
+            observed.put("black_empty_member", black.check(member));
+            observed.put("black_empty_null", black.check(null));
+            blackMembers.add(member);
+            blackMembers.add(null);
+            observed.put("black_added_member", black.check(member));
+            observed.put("black_added_null", black.check(null));
+
+            Set<Member> whiteMembers = new HashSet<>();
+            StrategyWhiteList white = new StrategyWhiteList(whiteMembers);
+            observed.put("white_empty_member", white.check(member));
+            observed.put("white_empty_null", white.check(null));
+            whiteMembers.add(member);
+            whiteMembers.add(null);
+            observed.put("white_added_member", white.check(member));
+            observed.put("white_added_null", white.check(null));
+
+            observed.put("black_null_set_error",
+                thrownClass(() -> new StrategyBlackList(null).check(other)));
+            observed.put("white_null_set_error",
+                thrownClass(() -> new StrategyWhiteList(null).check(other)));
+
+            QLSecurityStrategy facadeOpen = QLSecurityStrategy.open();
+            observed.put("facade_open_impl", facadeOpen == open);
+            observed.put("facade_open_member", facadeOpen.check(member));
+            observed.put("facade_open_null", facadeOpen.check(null));
+
+            QLSecurityStrategy facadeIsolation = QLSecurityStrategy.isolation();
+            observed.put("facade_isolation_impl", facadeIsolation == isolation);
+            observed.put("facade_isolation_member_error",
+                thrownClass(() -> facadeIsolation.check(member)));
+            observed.put("facade_isolation_null_error",
+                thrownClass(() -> facadeIsolation.check(null)));
+
+            Set<Member> facadeBlackMembers = new HashSet<>();
+            QLSecurityStrategy facadeBlack = QLSecurityStrategy.blackList(facadeBlackMembers);
+            observed.put("facade_black_empty", facadeBlack.check(member));
+            facadeBlackMembers.add(member);
+            observed.put("facade_black_added", facadeBlack.check(member));
+            observed.put("facade_black_null", facadeBlack.check(null));
+
+            Set<Member> facadeWhiteMembers = new HashSet<>();
+            QLSecurityStrategy facadeWhite = QLSecurityStrategy.whiteList(facadeWhiteMembers);
+            observed.put("facade_white_empty", facadeWhite.check(member));
+            facadeWhiteMembers.add(member);
+            observed.put("facade_white_added", facadeWhite.check(member));
+            observed.put("facade_white_null", facadeWhite.check(null));
+            return successRecord(id, observed);
+        }
+        catch (NoSuchMethodException error) {
+            throw new IllegalStateException("cannot locate Java security strategy member", error);
+        }
+    }
+
+    /** 直接比较字符串转义、UTF-16 下标、代理项和越界行为。 */
+    private static Map<String, Object> executeQLStringUtils(String id, JSONObject invocation) {
+        String scenario = invocation.getString("scenario");
+        if (!"full_contract".equals(scenario)) {
+            throw new IllegalArgumentException(
+                "unsupported ql_string_utils scenario: " + scenario);
+        }
+
+        Map<String, Object> observed = new LinkedHashMap<>();
+        observed.put("standard",
+            QLStringUtils.parseStringEscape("\"a\\nb\\t\\r\\f\\b\\\"\\'\\\\\\$z\""));
+        observed.put("unknown", QLStringUtils.parseStringEscape("\"a\\xb\""));
+        observed.put("trailing", QLStringUtils.parseStringEscape("\"abc\\\""));
+        observed.put("supplementary", QLStringUtils.parseStringEscape("\"😀\""));
+        observed.put("split_high", QLStringUtils.parseStringEscapeStartEnd("😀", 0, 1));
+        observed.put("reverse", QLStringUtils.parseStringEscapeStartEnd("a", 3, 2));
+        observed.put("negative_error",
+            thrownClass(() -> QLStringUtils.parseStringEscapeStartEnd("a", -1, 1)));
+        observed.put("overflow_error",
+            thrownClass(() -> QLStringUtils.parseStringEscapeStartEnd("a", 0, 2)));
+        return successRecord(id, observed);
+    }
+
+    /** 执行操作并返回抛出异常的 Java 类名，正常返回则为 null。 */
+    private static String thrownClass(Runnable action) {
+        try {
+            action.run();
+            return null;
+        }
+        catch (RuntimeException error) {
+            return error.getClass().getName();
+        }
     }
 
     /**

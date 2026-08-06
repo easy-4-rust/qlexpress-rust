@@ -120,7 +120,7 @@ impl NativeRegistry {
     fn check_member(&self, type_name: &str, member_name: &str) -> bool {
         self.security_strategy
             .borrow()
-            .check(&NativeMember::new(type_name, member_name))
+            .is_allowed(&NativeMember::new(type_name, member_name))
     }
 
     /// 判断原生成员是否被当前安全策略允许。

@@ -11,5 +11,5 @@ use std::rc::Rc;
 #[derive(Clone, Debug, Default)]
 pub struct ExistVarStack {
     pub(crate) parent: Option<Rc<ExistVarStack>>,
-    pub(crate) exist_vars: HashSet<String>,
+    pub(crate) exist_vars: HashSet<Option<String>>,
 }

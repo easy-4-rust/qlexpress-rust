@@ -10,6 +10,9 @@ use std::fmt;
 use std::rc::Rc;
 
 pub use super::native_member::NativeMember;
+use crate::exception::{QLException, QLExceptionKind};
+
+const ILLEGAL_STATE_EXCEPTION: &str = "java.lang.IllegalStateException";
 
 /// 在宿主、安全策略和 runner 之间共享的原生成员集合。
 /// 对应 Java: `QLSecurityStrategy.blackList(Set<Member>)` 与 `whiteList(Set<Member>)` 的集合引用。
@@ -176,23 +179,56 @@ impl QLSecurityStrategy {
         Self::Custom(Rc::new(check))
     }
 
-    /// 依据当前配置执行校验。
-    /// 参数：`member`；返回：`bool`。
+    /// 依据 Java 接口契约执行校验。
+    /// 参数：`member`；返回：成员是否允许访问，或 Java 对应异常。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/security/QLSecurityStrategy.java`，方法 `check`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `check(Member)`: true when the member is secure to access.
+    /// `Isolation` 必须抛出 `IllegalStateException`，不能与运行时的“拒绝访问”
+    /// 布尔适配混为一谈；Java 的黑白名单允许传入 `null` 成员。
+    ///
+    /// # 错误
+    ///
+    /// 隔离策略始终返回 `java.lang.IllegalStateException` 对应的 [`QLException`]。
     /// 对应 Java: com.alibaba.qlexpress4.security.QLSecurityStrategy#check。
-    pub fn check(&self, member: &NativeMember) -> bool {
+    pub fn check(&self, member: Option<&NativeMember>) -> Result<bool, QLException> {
         match self {
-            QLSecurityStrategy::Open => true,
-            QLSecurityStrategy::Isolation => false,
-            QLSecurityStrategy::BlackList(black_list) => !black_list.contains(member),
-            QLSecurityStrategy::WhiteList(white_list) => white_list.contains(member),
-            QLSecurityStrategy::SharedBlackList(black_list) => {
-                !black_list.borrow().contains(member)
+            QLSecurityStrategy::Open => Ok(true),
+            QLSecurityStrategy::Isolation => Err(QLException::host_error(
+                QLExceptionKind::Runtime,
+                ILLEGAL_STATE_EXCEPTION,
+                ILLEGAL_STATE_EXCEPTION,
+            )),
+            QLSecurityStrategy::BlackList(black_list) => {
+                Ok(!member.is_some_and(|member| black_list.contains(member)))
             }
-            QLSecurityStrategy::SharedWhiteList(white_list) => white_list.borrow().contains(member),
-            QLSecurityStrategy::Custom(check) => check(member),
+            QLSecurityStrategy::WhiteList(white_list) => {
+                Ok(member.is_some_and(|member| white_list.contains(member)))
+            }
+            QLSecurityStrategy::SharedBlackList(black_list) => {
+                Ok(!member.is_some_and(|member| black_list.borrow().contains(member)))
+            }
+            QLSecurityStrategy::SharedWhiteList(white_list) => {
+                Ok(member.is_some_and(|member| white_list.borrow().contains(member)))
+            }
+            QLSecurityStrategy::Custom(check) => Ok(member.is_some_and(|member| check(member))),
         }
+    }
+
+    /// 将 Java 策略契约适配为引擎成员解析所需的安全布尔值。
+    ///
+    /// 隔离策略的 Java `check` 会抛异常，但 `ReflectLoader` 会在普通字段和
+    /// 方法解析前识别隔离策略并直接拒绝。Rust 注册表使用本入口表达同一
+    /// “不允许解析”结果，同时保留 [`Self::check`] 的原始异常契约。
+    ///
+    /// # 参数
+    ///
+    /// - `member`：已由 NativeRegistry 解析出的非空宿主成员。
+    ///
+    /// # 返回值
+    ///
+    /// 允许访问返回 `true`；策略拒绝或策略检查失败返回 `false`。
+    pub fn is_allowed(&self, member: &NativeMember) -> bool {
+        self.check(Some(member)).unwrap_or(false)
     }
 }
 
@@ -203,15 +239,38 @@ mod tests {
     #[test]
     fn strategy_semantics() {
         let member = NativeMember::new("java.lang.Runtime", "exec");
-        assert!(QLSecurityStrategy::open().check(&member));
-        assert!(!QLSecurityStrategy::isolation().check(&member));
+        assert!(QLSecurityStrategy::open()
+            .check(Some(&member))
+            .expect("open strategy"));
+        assert_eq!(
+            QLSecurityStrategy::isolation()
+                .check(Some(&member))
+                .expect_err("isolation strategy")
+                .error_code(),
+            ILLEGAL_STATE_EXCEPTION
+        );
+        assert!(!QLSecurityStrategy::isolation().is_allowed(&member));
 
         let black: HashSet<_> = [member.clone()].into_iter().collect();
-        assert!(!QLSecurityStrategy::black_list(black).check(&member));
-        assert!(!QLSecurityStrategy::white_list(HashSet::new()).check(&member));
+        assert!(!QLSecurityStrategy::black_list(black)
+            .check(Some(&member))
+            .expect("black list"));
+        assert!(!QLSecurityStrategy::white_list(HashSet::new())
+            .check(Some(&member))
+            .expect("white list"));
 
         let white: HashSet<_> = [member.clone()].into_iter().collect();
-        assert!(QLSecurityStrategy::white_list(white).check(&member));
+        assert!(QLSecurityStrategy::white_list(white)
+            .check(Some(&member))
+            .expect("white list"));
+
+        assert!(QLSecurityStrategy::open().check(None).expect("open null"));
+        assert!(QLSecurityStrategy::black_list(HashSet::new())
+            .check(None)
+            .expect("black null"));
+        assert!(!QLSecurityStrategy::white_list(HashSet::new())
+            .check(None)
+            .expect("white null"));
     }
 
     #[test]
@@ -221,9 +280,9 @@ mod tests {
         let strategy = QLSecurityStrategy::custom(move |member| captured.borrow().contains(member));
         let member = NativeMember::new("com.example.Service", "run");
 
-        assert!(!strategy.check(&member));
+        assert!(!strategy.is_allowed(&member));
         allowed.borrow_mut().insert(member.clone());
-        assert!(strategy.check(&member));
+        assert!(strategy.is_allowed(&member));
         assert_eq!(strategy.clone(), strategy);
     }
 
@@ -233,11 +292,11 @@ mod tests {
         let strategy = QLSecurityStrategy::shared_white_list(Rc::clone(&members));
         let member = NativeMember::new("com.example.Service", "run");
 
-        assert!(!strategy.check(&member));
+        assert!(!strategy.is_allowed(&member));
         members.borrow_mut().insert(member.clone());
-        assert!(strategy.check(&member));
+        assert!(strategy.is_allowed(&member));
         members.borrow_mut().remove(&member);
-        assert!(!strategy.check(&member));
+        assert!(!strategy.is_allowed(&member));
     }
 
     #[test]
@@ -245,9 +304,9 @@ mod tests {
         let member = NativeMember::new("com.example.Service", "run");
         let members = Rc::new(RefCell::new(HashSet::new()));
         let blacklist = QLSecurityStrategy::shared_black_list(Rc::clone(&members));
-        assert!(blacklist.check(&member));
+        assert!(blacklist.is_allowed(&member));
         members.borrow_mut().insert(member.clone());
-        assert!(!blacklist.check(&member));
+        assert!(!blacklist.is_allowed(&member));
 
         assert_ne!(QLSecurityStrategy::open(), QLSecurityStrategy::isolation());
         assert_ne!(

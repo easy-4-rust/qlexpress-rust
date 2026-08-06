@@ -6,5 +6,5 @@ use super::exist_stack::ExistStack;
 /// 对应 Java：`com.alibaba.qlexpress4.aparser.ScopeStackVisitor`。
 #[derive(Clone, Debug)]
 pub struct ScopeStack<S: ExistStack> {
-    pub(crate) stack: S,
+    pub(crate) stack: Option<S>,
 }

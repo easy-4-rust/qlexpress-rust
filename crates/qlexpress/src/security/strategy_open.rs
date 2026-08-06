@@ -19,7 +19,7 @@ impl StrategyOpen {
 
     /// 检查成员是否安全:恒为 `true`(全部放行)。
     /// 对应 Java 方法 `check(Member)`(实现 `return true`)。
-    pub fn check(&self, _member: &NativeMember) -> bool {
+    pub fn check(&self, _member: Option<&NativeMember>) -> bool {
         true
     }
 }
@@ -40,8 +40,11 @@ mod tests {
     fn allows_everything() {
         let strategy = StrategyOpen::instance();
         // 任意成员(含危险成员)均放行
-        assert!(strategy.check(&NativeMember::new("java.lang.Runtime", "exec")));
-        assert!(strategy.check(&NativeMember::new("java.lang.System", "exit")));
+        let runtime_exec = NativeMember::new("java.lang.Runtime", "exec");
+        let system_exit = NativeMember::new("java.lang.System", "exit");
+        assert!(strategy.check(Some(&runtime_exec)));
+        assert!(strategy.check(Some(&system_exit)));
+        assert!(strategy.check(None));
         let as_enum: QLSecurityStrategy = strategy.into();
         assert_eq!(as_enum, QLSecurityStrategy::open());
     }

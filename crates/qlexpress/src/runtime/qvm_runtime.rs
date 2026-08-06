@@ -11,6 +11,8 @@ use std::rc::Rc;
 use std::time::Instant;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use crate::exception::error_codes;
+use crate::exception::error_reporter::ErrorReporter;
 use crate::exception::QLException;
 use crate::ql_options::{Attachments, QLOptions, SharedAttachments};
 use crate::runtime::delegate_qcontext::DelegateQContext;
@@ -37,6 +39,34 @@ pub fn current_time_millis() -> i64 {
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_millis() as i64)
         .unwrap_or(0)
+}
+
+/// 在复合循环的每次迭代入口消耗安全 fuel，并执行 Java 兼容超时检查。
+///
+/// `for`、`while` 和 `for-each` 在 QVM 中各自是一条复合指令。空循环体不会
+/// 进入普通取指循环，因此必须在循环回边显式建立检查点，否则可能绕过
+/// `SandboxProfile` 的 fuel，或绕过 `QLOptions.timeout_millis`。
+///
+/// 对应 Java：`CheckTimeOutInstruction#execute` 的超时错误契约；fuel 为 Rust
+/// 安全增强。默认 `timeout_millis <= 0` 时仍保持 Java 兼容的不限制行为。
+pub(crate) fn check_loop_iteration(
+    q_context: &dyn QContext,
+    ql_options: &QLOptions,
+    error_reporter: &dyn ErrorReporter,
+) -> Result<(), QLException> {
+    if let Some(budget) = q_context.q_runtime().execution_budget() {
+        budget.consume_fuel(1)?;
+    }
+    if ql_options.timeout_millis() > 0
+        && current_time_millis() - q_context.script_start_time_stamp() > ql_options.timeout_millis()
+    {
+        return Err(error_reporter.report_format(
+            error_codes::SCRIPT_TIME_OUT,
+            error_codes::error_msg(error_codes::SCRIPT_TIME_OUT),
+            &[ql_options.timeout_millis().to_string()],
+        ));
+    }
+    Ok(())
 }
 
 /// 保存一次 QVM 执行共享的注册表、追踪状态、安全预算和能力策略。

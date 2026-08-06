@@ -2,7 +2,7 @@
   "schema_version": 1,
   "java_baseline": "9065b9ac5d985dcd02e627239aa9cdb78fb2f7f3",
   "rust_baseline": "982f449b470fdd2f949555015ab13d7aa82ec45d",
-  "rust_source_fingerprint": "sha256:0e2d594db25ccd70adc0fbd0a56e6b53b28f972321e816256482009f2361594b",
+  "rust_source_fingerprint": "sha256:e7630d4c5013a9d4a99fd9b06cde9c38db6942e15a45af911212464f442736a0",
   "objects": [
     {
       "java_key": "com.alibaba.qlexpress4.aparser::SyntaxTreeFactory|",
@@ -1184,7 +1184,7 @@
         {"file": "verification/corpus/differential.jsonl", "test": "operator-manager-", "level": "V4_LIVE_DIFF"},
         {"file": "crates/qlexpress/src/operator/operator_manager.rs", "test": "precedence_for_unknown_lexeme_panics_like_java_operator_manager", "level": "V2_MIRRORED"}
       ],
-      "review_note": "未知 precedence 探针已迁入正式差分集；Java NPE 与 Rust 对应 panic 被统一记录为 NullPointerException，290/290 实时差分一致。"
+      "review_note": "未知 precedence 探针已迁入正式差分集；Java NPE 与 Rust 对应 panic 被统一记录为 NullPointerException，294/294 实时差分一致。"
     },
     {
       "java_key": "com.alibaba.qlexpress4.runtime::DelegateQContext|",
@@ -1424,6 +1424,111 @@
         {"file": "crates/qlexpress/src/lsp/diagnostic.rs", "test": "preserves_non_null_and_null_java_reference_fields", "level": "V2_MIRRORED"}
       ],
       "review_note": "7/7 构造/公开访问器由正常字段与全 null 字段的 Java/Rust 现场输出共同证明。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.aparser::ExistStack|",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Rust ExistStack 以 Option<String> 保留 Java HashSet<String> 可存储和查询 null 的行为，并以 Option<Self> 原样表达根栈 pop 返回 null。",
+        "push 创建空子作用域并保留父链，exist 先查本地再递归父级，add 的重复值由集合去重；三个 Java 私有实现源码一致。"
+      ],
+      "rust_evidence": [
+        {"file": "crates/qlexpress/src/aparser/exist_stack.rs", "symbol": "pub trait ExistStack"},
+        {"file": "crates/qlexpress/src/aparser/exist_var_stack.rs", "symbol": "pub struct ExistVarStack"}
+      ],
+      "test_evidence": [
+        {"file": "verification/corpus/differential.jsonl", "test": "exist-stack-full-contract", "level": "V4_LIVE_DIFF"},
+        {"file": "crates/qlexpress/src/aparser/exist_stack.rs", "test": "preserves_java_scope_chain_duplicates_and_null_names", "level": "V2_MIRRORED"}
+      ],
+      "review_note": "CodeGraph 对照发现并修复了根栈 pop 被误实现为 panic 的差异；4/4 接口方法及可空边界已由 Java 真实私有实现反射调用与 Rust 同结构输出验证。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.aparser::MacroDefine|",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Rust 以 Option<Rc<RefCell<Vec<I>>>> 保存 Java 可空 List 引用；from_shared 保留调用方与 getter 观察同一实时列表，new 为引擎常规非空便捷入口。",
+        "is_last_stmt_express 原样保存布尔值；getter 的只读与可变借用拆分遵循 Rust 借用规则，但 null、身份和双向写回均保持 Java 可观察行为。"
+      ],
+      "rust_evidence": [
+        {"file": "crates/qlexpress/src/aparser/macro_define.rs", "symbol": "pub struct MacroDefine"},
+        {"file": "crates/qlexpress/src/aparser/macro_define.rs", "symbol": "pub fn from_shared("},
+        {"file": "crates/qlexpress/src/aparser/macro_define.rs", "symbol": "pub fn macro_instructions_mut("}
+      ],
+      "test_evidence": [
+        {"file": "verification/corpus/differential.jsonl", "test": "macro-define-full-contract", "level": "V4_LIVE_DIFF"},
+        {"file": "crates/qlexpress/src/aparser/macro_define.rs", "test": "preserves_java_live_list_identity_and_nullability", "level": "V2_MIRRORED"}
+      ],
+      "review_note": "直接差分发现并修复此前 Rust 复制 Vec、不可表示 null 且无法通过 getter 写回的差异；3/3 成员已验证。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.exception::UserDefineException|",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Rust UserDefineException 保存与 Java 相同的 ExceptionType 和 message；单参数构造默认 BIZ_EXCEPTION，双参数构造保留显式类别。",
+        "Option<ExceptionType>/Option<String> 保留 Java 公开构造器允许 null 的行为，get_type/message 返回相同空值状态。"
+      ],
+      "rust_evidence": [
+        {"file": "crates/qlexpress/src/exception/user_define_exception.rs", "symbol": "pub struct UserDefineException"},
+        {"file": "crates/qlexpress/src/exception/user_define_exception.rs", "symbol": "pub fn from_options("},
+        {"file": "crates/qlexpress/src/exception/exception_type.rs", "symbol": "pub enum ExceptionType"}
+      ],
+      "test_evidence": [
+        {"file": "verification/corpus/differential.jsonl", "test": "user-define-exception-full-contract", "level": "V4_LIVE_DIFF"},
+        {"file": "crates/qlexpress/src/exception/user_define_exception.rs", "test": "preserves_java_null_type_and_message", "level": "V2_MIRRORED"}
+      ],
+      "review_note": "直接差分覆盖默认、显式和全 null 构造；3/3 自有公开成员已验证，继承的 Throwable API 不伪装成 Rust 同名方法。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.security::QLSecurityStrategy|",
+        "com.alibaba.qlexpress4.security::StrategyOpen|",
+        "com.alibaba.qlexpress4.security::StrategyIsolation|",
+        "com.alibaba.qlexpress4.security::StrategyBlackList|",
+        "com.alibaba.qlexpress4.security::StrategyWhiteList|"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "QLSecurityStrategy 四个静态工厂委托到对应策略；外观 check 保留 Open/null、Isolation IllegalStateException 以及黑白名单共享 Set 的 Java 行为，is_allowed 仅作为 Rust 引擎内部安全布尔适配。",
+        "Open 对任意及 null Member 恒放行；Isolation 对任意及 null Member 均产生 java.lang.IllegalStateException，两个无状态单例在 Rust 中适配为 Copy 单元值。",
+        "BlackList/WhiteList 以 Option<Rc<RefCell<HashSet<Option<NativeMember>>>>> 保留 Java 可空 Set、null Member 和构造后共享集合实时变更；null Set 在 check 时返回对应 NullPointerException。"
+      ],
+      "rust_evidence": [
+        {"file": "crates/qlexpress/src/security/ql_security_strategy.rs", "symbol": "pub enum QLSecurityStrategy"},
+        {"file": "crates/qlexpress/src/security/ql_security_strategy.rs", "symbol": "pub fn check("},
+        {"file": "crates/qlexpress/src/security/strategy_open.rs", "symbol": "pub struct StrategyOpen"},
+        {"file": "crates/qlexpress/src/security/strategy_isolation.rs", "symbol": "pub struct StrategyIsolation"},
+        {"file": "crates/qlexpress/src/security/strategy_black_list.rs", "symbol": "pub struct StrategyBlackList"},
+        {"file": "crates/qlexpress/src/security/strategy_white_list.rs", "symbol": "pub struct StrategyWhiteList"}
+      ],
+      "test_evidence": [
+        {"file": "verification/corpus/differential.jsonl", "test": "security-strategies-full-contract", "level": "V4_LIVE_DIFF"},
+        {"file": "crates/qlexpress/src/security/strategy_black_list.rs", "test": "preserves_shared_set_null_member_and_null_set_semantics", "level": "V2_MIRRORED"},
+        {"file": "crates/qlexpress/src/security/strategy_white_list.rs", "test": "preserves_shared_set_null_member_and_null_set_semantics", "level": "V2_MIRRORED"}
+      ],
+      "review_note": "CodeGraph 对照后修复了外观 Isolation.check 返回 false、standalone 黑白名单复制集合及无法表达 null Member/Set 的差异；五对象 13/13 自有成员已现场验证。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.utils::QLStringUtils|",
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Java/Rust 直接比较全部九种已知转义、未知转义丢弃、尾随反斜杠、补充字符、UTF-16 半个代理项、反向区间与两种越界异常。",
+        "Rust 返回 JavaString 而非 UTF-8 String，以原始 u16 序列保存 Java String 可表达的未配对代理项；循环严格按 Java charAt 的 UTF-16 下标和异常边界执行。"
+      ],
+      "rust_evidence": [
+        {"file": "crates/qlexpress/src/utils/ql_string_utils.rs", "symbol": "pub struct QLStringUtils"},
+        {"file": "crates/qlexpress/src/utils/ql_string_utils.rs", "symbol": "pub fn parse_string_escape_start_end("},
+        {"file": "crates/qlexpress/src/data/java_string.rs", "symbol": "pub struct JavaString"}
+      ],
+      "test_evidence": [
+        {"file": "verification/corpus/differential.jsonl", "test": "ql-string-utils-full-contract", "level": "V4_LIVE_DIFF"},
+        {"file": "crates/qlexpress/src/utils/ql_string_utils.rs", "test": "uses_java_utf16_indices_and_preserves_unpaired_surrogates", "level": "V2_MIRRORED"}
+      ],
+      "review_note": "CodeGraph 发现并修复 Rust Unicode scalar 下标和越界 clamp 偏差；2/2 静态方法由 Java 4.2.0-beta 现场 oracle 验证。"
     }
   ],
   "nested_java_types": [
@@ -1598,6 +1703,44 @@
         {"file": "crates/qlexpress/src/runtime/fixed_size_stack.rs", "test": "popped_parameters_observe_reused_stack_slots_like_java_array_view", "level": "V2_MIRRORED"}
       ],
       "review_note": "没有伪造第二个公开 Parameters 类型；Java 私有内部实现按同一职责适配为 Parameters 的私有存储变体。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.aparser::OutFunctionVisitor::ExistFunctionStack|",
+        "com.alibaba.qlexpress4.aparser::OutVarAttrsVisitor::ExistVarStack|",
+        "com.alibaba.qlexpress4.aparser::OutVarNamesVisitor::ExistVarStack|"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Java 三个 private static 栈类型字段、构造器与 add/exist/push/pop 实现逐行相同，Rust 合并为一个 ExistVarStack，避免复制三份逻辑而不改变各 Visitor 行为。",
+        "差分执行器反射调用 Java OutVarNamesVisitor$ExistVarStack 的真实私有实现；另两个实现由 CodeGraph 源码一致性证明共享同一验证结果。"
+      ],
+      "rust_evidence": [
+        {"file": "crates/qlexpress/src/aparser/exist_var_stack.rs", "symbol": "pub struct ExistVarStack"},
+        {"file": "crates/qlexpress/src/aparser/exist_stack.rs", "symbol": "impl ExistStack for ExistVarStack"}
+      ],
+      "test_evidence": [
+        {"file": "verification/corpus/differential.jsonl", "test": "exist-stack-full-contract", "level": "V4_LIVE_DIFF"},
+        {"file": "crates/qlexpress/src/aparser/exist_stack.rs", "test": "preserves_java_scope_chain_duplicates_and_null_names", "level": "V2_MIRRORED"}
+      ],
+      "review_note": "3/3 私有嵌套类型按相同职责合并；null 名称、重复名称、父链可见性和根 pop 均纳入证据。"
+    },
+    {
+      "java_key": "com.alibaba.qlexpress4.exception::UserDefineException::ExceptionType|",
+      "state": "IMPLEMENTED",
+      "classification": "EXACT",
+      "semantic_evidence": [
+        "Rust ExceptionType 精确保留 Java 声明顺序和两个枚举值 INVALID_ARGUMENT、BIZ_EXCEPTION；Rust 命名采用 PascalCase，差分按 Java name 规范化。"
+      ],
+      "rust_evidence": [
+        {"file": "crates/qlexpress/src/exception/exception_type.rs", "symbol": "pub enum ExceptionType"}
+      ],
+      "test_evidence": [
+        {"file": "verification/corpus/differential.jsonl", "test": "user-define-exception-full-contract", "level": "V4_LIVE_DIFF"},
+        {"file": "crates/qlexpress/src/exception/user_define_exception.rs", "test": "get_type_preserves_java_constructor_contract", "level": "V2_MIRRORED"}
+      ],
+      "review_note": "2/2 枚举成员均由构造与 getType 现场结果覆盖。"
     }
   ],
   "methods": [
@@ -4516,7 +4659,7 @@
       ],
       "rust_evidence": [{"file": "crates/qlexpress/src/express4_runner.rs", "symbol": "pub fn execute("}],
       "test_evidence": [
-        {"file": "verification/corpus/README.md", "test": "290 个用例 Java/Rust 完全一致", "level": "V4_LIVE_DIFF"},
+        {"file": "verification/corpus/README.md", "test": "294 个用例 Java/Rust 完全一致", "level": "V4_LIVE_DIFF"},
         {"file": "crates/qlexpress/tests/alignment_runner_basics.rs", "test": "doc_quick_start", "level": "V2_MIRRORED"},
         {"file": "crates/qlexpress/tests/alignment_expression_trace.rs", "test": "java_expression_trace_test_complete_contract", "level": "V2_MIRRORED"}
       ],
@@ -5936,6 +6079,149 @@
         {"file": "crates/qlexpress/src/lsp/diagnostic.rs", "test": "preserves_non_null_and_null_java_reference_fields", "level": "V2_MIRRORED"}
       ],
       "review_note": "7/7 构造/公开访问器由非空与全空两组 Java/Rust 可观察结果证明。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.aparser::ExistStack::push|ExistStack ()",
+        "com.alibaba.qlexpress4.aparser::ExistStack::pop|ExistStack ()",
+        "com.alibaba.qlexpress4.aparser::ExistStack::exist|boolean (String varName)",
+        "com.alibaba.qlexpress4.aparser::ExistStack::add|void (String varName)",
+        "com.alibaba.qlexpress4.aparser::OutFunctionVisitor::ExistFunctionStack::add|void (String varName)",
+        "com.alibaba.qlexpress4.aparser::OutFunctionVisitor::ExistFunctionStack::exist|boolean (String varName)",
+        "com.alibaba.qlexpress4.aparser::OutFunctionVisitor::ExistFunctionStack::push|ExistFunctionStack ()",
+        "com.alibaba.qlexpress4.aparser::OutFunctionVisitor::ExistFunctionStack::pop|ExistFunctionStack ()",
+        "com.alibaba.qlexpress4.aparser::OutVarAttrsVisitor::ExistVarStack::add|void (String varName)",
+        "com.alibaba.qlexpress4.aparser::OutVarAttrsVisitor::ExistVarStack::exist|boolean (String varName)",
+        "com.alibaba.qlexpress4.aparser::OutVarAttrsVisitor::ExistVarStack::push|ExistVarStack ()",
+        "com.alibaba.qlexpress4.aparser::OutVarAttrsVisitor::ExistVarStack::pop|ExistVarStack ()",
+        "com.alibaba.qlexpress4.aparser::OutVarNamesVisitor::ExistVarStack::add|void (String varName)",
+        "com.alibaba.qlexpress4.aparser::OutVarNamesVisitor::ExistVarStack::exist|boolean (String varName)",
+        "com.alibaba.qlexpress4.aparser::OutVarNamesVisitor::ExistVarStack::push|ExistVarStack ()",
+        "com.alibaba.qlexpress4.aparser::OutVarNamesVisitor::ExistVarStack::pop|ExistVarStack ()"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Java/Rust 直接比较初始不存在、添加与重复添加、null 名称、子栈继承、子栈局部隔离、子栈回父和根栈 pop=null。",
+        "三个 Java 私有实现方法体完全相同，Rust 单一 impl 覆盖全部 12 个嵌套方法，顶层接口四个方法由同一真实实现调用验证。"
+      ],
+      "rust_evidence": [
+        {"file": "crates/qlexpress/src/aparser/exist_stack.rs", "symbol": "impl ExistStack for ExistVarStack"}
+      ],
+      "test_evidence": [
+        {"file": "verification/corpus/differential.jsonl", "test": "exist-stack-full-contract", "level": "V4_LIVE_DIFF"},
+        {"file": "crates/qlexpress/src/aparser/exist_stack.rs", "test": "preserves_java_scope_chain_duplicates_and_null_names", "level": "V2_MIRRORED"}
+      ],
+      "review_note": "16/16 接口及嵌套实现方法已验证；根 pop 差异是本轮由现场 oracle 发现并修复的真实缺口。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.aparser::MacroDefine::MacroDefine|(List<QLInstruction> instructions, boolean lastStmtExpress)",
+        "com.alibaba.qlexpress4.aparser::MacroDefine::getMacroInstructions|List<QLInstruction> ()",
+        "com.alibaba.qlexpress4.aparser::MacroDefine::isLastStmtExpress|boolean ()"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Java/Rust 直接比较初始列表长度、同一共享实例、构造后外部追加、getter 追加后的反向可见性、false 标志以及 null 列表与 true 标志。",
+        "Rust Option 和 Ref/RefMut 是 Java nullable live List 的所有权安全表达，不将列表复制或降级为只读快照。"
+      ],
+      "rust_evidence": [
+        {"file": "crates/qlexpress/src/aparser/macro_define.rs", "symbol": "pub fn from_shared("},
+        {"file": "crates/qlexpress/src/aparser/macro_define.rs", "symbol": "pub fn macro_instructions("},
+        {"file": "crates/qlexpress/src/aparser/macro_define.rs", "symbol": "pub fn macro_instructions_mut("},
+        {"file": "crates/qlexpress/src/aparser/macro_define.rs", "symbol": "pub fn is_last_stmt_express("}
+      ],
+      "test_evidence": [
+        {"file": "verification/corpus/differential.jsonl", "test": "macro-define-full-contract", "level": "V4_LIVE_DIFF"},
+        {"file": "crates/qlexpress/src/aparser/macro_define.rs", "test": "preserves_java_live_list_identity_and_nullability", "level": "V2_MIRRORED"}
+      ],
+      "review_note": "3/3 构造/公开方法已由 Java 4.2.0-beta 现场 oracle 与 Rust 同结构输出证明。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.exception::UserDefineException::UserDefineException|(String message)",
+        "com.alibaba.qlexpress4.exception::UserDefineException::UserDefineException|(ExceptionType type, String message)",
+        "com.alibaba.qlexpress4.exception::UserDefineException::getType|ExceptionType ()"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Java/Rust 直接比较单参默认 BIZ_EXCEPTION、显式 INVALID_ARGUMENT、两种消息，以及双参数全 null 后的 getType/getMessage 空值。",
+        "Rust from_options 是 Java 可空构造器的明确入口；new/with_type 保持常规非空调用的人体工学。"
+      ],
+      "rust_evidence": [
+        {"file": "crates/qlexpress/src/exception/user_define_exception.rs", "symbol": "pub fn new("},
+        {"file": "crates/qlexpress/src/exception/user_define_exception.rs", "symbol": "pub fn with_type("},
+        {"file": "crates/qlexpress/src/exception/user_define_exception.rs", "symbol": "pub fn from_options("},
+        {"file": "crates/qlexpress/src/exception/user_define_exception.rs", "symbol": "pub fn get_type("}
+      ],
+      "test_evidence": [
+        {"file": "verification/corpus/differential.jsonl", "test": "user-define-exception-full-contract", "level": "V4_LIVE_DIFF"},
+        {"file": "crates/qlexpress/src/exception/user_define_exception.rs", "test": "preserves_java_null_type_and_message", "level": "V2_MIRRORED"}
+      ],
+      "review_note": "3/3 构造/自有公开方法已验证；ThrowUtils 转换另行保留为独立未验证方法。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.security::QLSecurityStrategy::open|QLSecurityStrategy ()",
+        "com.alibaba.qlexpress4.security::QLSecurityStrategy::isolation|QLSecurityStrategy ()",
+        "com.alibaba.qlexpress4.security::QLSecurityStrategy::blackList|QLSecurityStrategy (Set<Member> blackList)",
+        "com.alibaba.qlexpress4.security::QLSecurityStrategy::whiteList|QLSecurityStrategy (Set<Member> whiteList)",
+        "com.alibaba.qlexpress4.security::QLSecurityStrategy::check|boolean (Member member)",
+        "com.alibaba.qlexpress4.security::StrategyBlackList::StrategyBlackList|(Set<Member> blackList)",
+        "com.alibaba.qlexpress4.security::StrategyBlackList::check|boolean (Member member)",
+        "com.alibaba.qlexpress4.security::StrategyIsolation::getInstance|StrategyIsolation ()",
+        "com.alibaba.qlexpress4.security::StrategyIsolation::check|boolean (Member member)",
+        "com.alibaba.qlexpress4.security::StrategyOpen::getInstance|StrategyOpen ()",
+        "com.alibaba.qlexpress4.security::StrategyOpen::check|boolean (Member member)",
+        "com.alibaba.qlexpress4.security::StrategyWhiteList::StrategyWhiteList|(Set<Member> whiteList)",
+        "com.alibaba.qlexpress4.security::StrategyWhiteList::check|boolean (Member member)"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Java/Rust 直接比较 QLSecurityStrategy 四个工厂的具体策略身份、普通/null Member、Isolation IllegalStateException 及工厂创建后共享 Set 的实时变更。",
+        "Java/Rust 直接比较 Open/Isolation 单例与 null Member；Isolation 精确比较 IllegalStateException 类名。",
+        "黑白名单从空共享 Set 开始比较普通/null Member，随后外部加入普通/null 元素再次比较，并验证 null Set 在 check 时精确产生 NullPointerException。"
+      ],
+      "rust_evidence": [
+        {"file": "crates/qlexpress/src/security/ql_security_strategy.rs", "symbol": "pub fn open("},
+        {"file": "crates/qlexpress/src/security/ql_security_strategy.rs", "symbol": "pub fn isolation("},
+        {"file": "crates/qlexpress/src/security/ql_security_strategy.rs", "symbol": "pub fn black_list("},
+        {"file": "crates/qlexpress/src/security/ql_security_strategy.rs", "symbol": "pub fn white_list("},
+        {"file": "crates/qlexpress/src/security/ql_security_strategy.rs", "symbol": "pub fn check("},
+        {"file": "crates/qlexpress/src/security/strategy_open.rs", "symbol": "pub fn check("},
+        {"file": "crates/qlexpress/src/security/strategy_isolation.rs", "symbol": "pub fn check("},
+        {"file": "crates/qlexpress/src/security/strategy_black_list.rs", "symbol": "pub fn from_shared("},
+        {"file": "crates/qlexpress/src/security/strategy_white_list.rs", "symbol": "pub fn from_shared("}
+      ],
+      "test_evidence": [
+        {"file": "verification/corpus/differential.jsonl", "test": "security-strategies-full-contract", "level": "V4_LIVE_DIFF"},
+        {"file": "crates/qlexpress/src/security/strategy_isolation.rs", "test": "check_returns_java_illegal_state_exception", "level": "V2_MIRRORED"}
+      ],
+      "review_note": "13/13 工厂/构造/单例/检查方法由 Java 4.2.0-beta 现场 oracle 与 Rust 同结构输出证明。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.utils::QLStringUtils::parseStringEscape|String (String originStr)",
+        "com.alibaba.qlexpress4.utils::QLStringUtils::parseStringEscapeStartEnd|String (String originStr, int start, int end)"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "parseStringEscape 使用 UTF-16 length 去除首尾引号；parseStringEscapeStartEnd 逐 code unit 运行 INIT/ESCAPE 状态机，未知转义和尾随反斜杠均与 Java 一致。",
+        "JavaString 使切分代理项仍可无损返回；负 start 与超长 end 在实际 charAt 时映射 StringIndexOutOfBoundsException，start >= end 与 Java 一样直接返回空串。"
+      ],
+      "rust_evidence": [
+        {"file": "crates/qlexpress/src/utils/ql_string_utils.rs", "symbol": "pub fn parse_string_escape("},
+        {"file": "crates/qlexpress/src/utils/ql_string_utils.rs", "symbol": "pub fn parse_string_escape_start_end("}
+      ],
+      "test_evidence": [
+        {"file": "verification/corpus/differential.jsonl", "test": "ql-string-utils-full-contract", "level": "V4_LIVE_DIFF"},
+        {"file": "crates/qlexpress/src/utils/ql_string_utils.rs", "test": "uses_java_utf16_indices_and_preserves_unpaired_surrogates", "level": "V2_MIRRORED"}
+      ],
+      "review_note": "2/2 方法的值、UTF-16 内容和异常边界均已直接对照；覆盖率不作为完成依据。"
     }
   ]
 }

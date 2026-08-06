@@ -9,8 +9,8 @@ pub use super::exception_type::ExceptionType;
 #[derive(Clone, Debug, PartialEq, Eq)]
 /// 对应 Java: com.alibaba.qlexpress4.exception.UserDefineException。
 pub struct UserDefineException {
-    exception_type: ExceptionType,
-    message: String,
+    exception_type: Option<ExceptionType>,
+    message: Option<String>,
 }
 
 impl UserDefineException {
@@ -30,14 +30,23 @@ impl UserDefineException {
     /// 对应 Java: com.alibaba.qlexpress4.exception.UserDefineException#withType。
     pub fn with_type(exception_type: ExceptionType, message: impl Into<String>) -> Self {
         UserDefineException {
+            exception_type: Some(exception_type),
+            message: Some(message.into()),
+        }
+    }
+
+    /// 从 Java 构造器允许的可空类型和消息创建异常。
+    /// 对应 Java: com.alibaba.qlexpress4.exception.UserDefineException#UserDefineException。
+    pub fn from_options(exception_type: Option<ExceptionType>, message: Option<String>) -> Self {
+        UserDefineException {
             exception_type,
-            message: message.into(),
+            message,
         }
     }
 
     /// 返回脚本声明的用户异常类型。
     /// 对应 Java: `UserDefineException#getExceptionType`。
-    pub fn exception_type(&self) -> ExceptionType {
+    pub fn exception_type(&self) -> Option<ExceptionType> {
         self.exception_type
     }
 
@@ -47,20 +56,24 @@ impl UserDefineException {
     ///
     /// # 返回值
     /// 返回构造异常时指定的 [`ExceptionType`]。
-    pub fn get_type(&self) -> ExceptionType {
+    pub fn get_type(&self) -> Option<ExceptionType> {
         self.exception_type
     }
 
     /// 返回用户异常消息。
     /// 对应 Java: `UserDefineException#getMessage`。
-    pub fn message(&self) -> &str {
-        &self.message
+    pub fn message(&self) -> Option<&str> {
+        self.message.as_deref()
     }
 }
 
 impl fmt::Display for UserDefineException {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.message)
+        if let Some(message) = &self.message {
+            f.write_str(message)
+        } else {
+            Ok(())
+        }
     }
 }
 
@@ -76,11 +89,19 @@ mod tests {
     fn get_type_preserves_java_constructor_contract() {
         assert_eq!(
             UserDefineException::new("business").get_type(),
-            ExceptionType::BizException
+            Some(ExceptionType::BizException)
         );
         assert_eq!(
             UserDefineException::with_type(ExceptionType::InvalidArgument, "argument").get_type(),
-            ExceptionType::InvalidArgument
+            Some(ExceptionType::InvalidArgument)
         );
+    }
+
+    #[test]
+    fn preserves_java_null_type_and_message() {
+        let error = UserDefineException::from_options(None, None);
+        assert_eq!(error.get_type(), None);
+        assert_eq!(error.message(), None);
+        assert_eq!(error.to_string(), "");
     }
 }

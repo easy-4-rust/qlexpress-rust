@@ -22,7 +22,9 @@ use crate::utils::ql_string_utils::QLStringUtils;
 /// Java `parseFieldId`.
 fn parse_field_id(ctx: &FieldIdContext) -> String {
     if let Some(quote) = ctx.quote_string_literal() {
-        return QLStringUtils::parse_string_escape(quote.text());
+        return QLStringUtils::parse_string_escape(quote.text())
+            .to_rust_string()
+            .expect("quoted Rust source must remain valid UTF-8");
     }
     ctx.token
         .as_ref()
@@ -127,7 +129,7 @@ impl<'a> OutVarNamesVisitor<'a> {
         if result.cls().is_some() {
             result.rest_index().saturating_sub(1)
         } else {
-            if !self.stack.stack().exist(&primary_id) {
+            if !self.stack.stack().exist(Some(&primary_id)) {
                 self.out_vars.insert(primary_id);
             }
             0
@@ -180,7 +182,7 @@ impl Visitor for OutVarNamesVisitor<'_> {
         &mut self,
         ctx: &FormalOrInferredParameterContext,
     ) -> Self::T {
-        self.stack.stack_mut().add(var_id_text(&ctx.var_id));
+        self.stack.stack_mut().add(Some(var_id_text(&ctx.var_id)));
     }
 
     fn visit_variable_declarator(&mut self, ctx: &VariableDeclaratorContext) -> Self::T {
@@ -191,7 +193,7 @@ impl Visitor for OutVarNamesVisitor<'_> {
     }
 
     fn visit_variable_declarator_id(&mut self, ctx: &VariableDeclaratorIdContext) -> Self::T {
-        self.stack.stack_mut().add(var_id_text(&ctx.var_id));
+        self.stack.stack_mut().add(Some(var_id_text(&ctx.var_id)));
     }
 
     fn visit_expression(&mut self, ctx: &ExpressionContext) -> Self::T {
@@ -212,13 +214,13 @@ impl Visitor for OutVarNamesVisitor<'_> {
                 ctx.assign_operator.as_deref(),
                 Some(Node::AssignOperator(op)) if op.token.symbol().token_type() == tk::EQ as i32
             );
-            if !is_plain_assign && !self.stack.stack().exist(&left_var_name) {
+            if !is_plain_assign && !self.stack.stack().exist(Some(&left_var_name)) {
                 self.out_vars.insert(left_var_name.clone());
             }
             if let Some(expression) = &ctx.expression {
                 expression.accept(self);
             }
-            self.stack.stack_mut().add(left_var_name);
+            self.stack.stack_mut().add(Some(left_var_name));
             return;
         }
 
@@ -231,15 +233,15 @@ impl Visitor for OutVarNamesVisitor<'_> {
     fn visit_left_hand_side(&mut self, ctx: &LeftHandSideContext) -> Self::T {
         let left_var_name = var_id_text(&ctx.var_id);
         if ctx.path_parts.is_empty() {
-            self.stack.stack_mut().add(left_var_name);
-        } else if !self.stack.stack().exist(&left_var_name) {
+            self.stack.stack_mut().add(Some(left_var_name));
+        } else if !self.stack.stack().exist(Some(&left_var_name)) {
             self.out_vars.insert(left_var_name);
         }
     }
 
     fn visit_context_select_expr(&mut self, ctx: &ContextSelectExprContext) -> Self::T {
         let variable_name = ctx.selector_variable.text().trim().to_string();
-        if !self.stack.stack().exist(&variable_name) {
+        if !self.stack.stack().exist(Some(&variable_name)) {
             self.out_vars.insert(variable_name);
         }
     }
@@ -257,7 +259,7 @@ impl Visitor for OutVarNamesVisitor<'_> {
 
     fn visit_var_id_expr(&mut self, ctx: &VarIdExprContext) -> Self::T {
         let var_name = var_id_text(&ctx.var_id);
-        if !self.stack.stack().exist(&var_name) {
+        if !self.stack.stack().exist(Some(&var_name)) {
             self.out_vars.insert(var_name);
         }
     }

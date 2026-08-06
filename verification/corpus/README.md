@@ -8,7 +8,7 @@ Java `4.2.0-beta` 的可复现基线缺陷：`java-4.2.0-beta-trace-map-literal-
 trace 时于 Java `TraceExpressionVisitor` 内部抛出 `NullPointerException`。该用例保留原始
 脚本和故障原因，待上游基线修复或项目明确决定兼容此缺陷后，才能重新进入共享差分语料。
 
-当前已验证 `differential.jsonl` 的 290 个用例 Java/Rust 完全一致。其中普通记录以
+当前已验证 `differential.jsonl` 的 295 个用例 Java/Rust 完全一致。其中普通记录以
 `script` 执行完整语言链路；`number_math` 记录以显式 Java `Number` 子类型直接调用
 Java oracle。后者可选 `implementation`：未指定时调用 `NumberMath` 门面，指定
 `IntegerMath`、`LongMath`、`BigIntegerMath`、`BigDecimalMath` 或

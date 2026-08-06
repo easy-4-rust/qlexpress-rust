@@ -103,7 +103,7 @@ impl Visitor for OutFunctionVisitor {
     fn visit_var_id_expr(&mut self, ctx: &VarIdExprContext) -> Self::T {
         if ctx.lparen.is_some() {
             let function_name = var_id_text(&ctx.var_id);
-            if !self.stack.stack().exist(&function_name) {
+            if !self.stack.stack().exist(Some(&function_name)) {
                 self.out_functions.insert(function_name);
             }
         }
@@ -113,7 +113,7 @@ impl Visitor for OutFunctionVisitor {
     fn visit_left_hand_side(&mut self, ctx: &LeftHandSideContext) -> Self::T {
         if ctx.lparen.is_some() {
             let function_name = var_id_text(&ctx.var_id);
-            if !self.stack.stack().exist(&function_name) {
+            if !self.stack.stack().exist(Some(&function_name)) {
                 self.out_functions.insert(function_name);
             }
         }
@@ -122,7 +122,7 @@ impl Visitor for OutFunctionVisitor {
 
     fn visit_function_statement(&mut self, ctx: &FunctionStatementContext) -> Self::T {
         let function_name = var_id_text(&ctx.var_id);
-        self.stack.stack_mut().add(function_name.clone());
+        self.stack.stack_mut().add(Some(function_name.clone()));
 
         if let Some(params) = &ctx.params {
             params.accept(self);
@@ -131,7 +131,7 @@ impl Visitor for OutFunctionVisitor {
         if let Some(block_statements) = &ctx.block_statements {
             self.stack.push();
             // Recursion scene: the function can call itself.
-            self.stack.stack_mut().add(function_name);
+            self.stack.stack_mut().add(Some(function_name));
             block_statements.accept(self);
             self.stack.pop();
         }

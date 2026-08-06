@@ -13,15 +13,14 @@ pub trait ExistStack: Sized {
     /// 压入一个子作用域。对应 Java 方法 `push`。
     /// Java `push`: a child scope.
     fn push(&self) -> Self;
-    /// 弹出到父作用域;在根作用域上调用会 panic(Java 会 NPE)。对应 Java 方法 `pop`。
-    /// Java `pop`: the parent scope; panics on the root (Java would NPE).
-    fn pop(&self) -> Self;
-    /// `var_name` 在此作用域链中是否可见?对应 Java 方法 `exist`。
+    /// 弹出到父作用域；根作用域返回 `None`，对应 Java 实现返回 `null`。
+    fn pop(&self) -> Option<Self>;
+    /// `var_name` 在此作用域链中是否可见？Java `HashSet` 允许保存并查询 `null`。
     /// Java `exist`: is `var_name` visible in this scope chain?
-    fn exist(&self, var_name: &str) -> bool;
+    fn exist(&self, var_name: Option<&str>) -> bool;
     /// 在当前(栈顶)作用域声明 `var_name`。对应 Java 方法 `add`。
     /// Declare `var_name` in the current (top) scope.
-    fn add(&mut self, var_name: String);
+    fn add(&mut self, var_name: Option<String>);
 }
 
 pub use super::exist_var_stack::ExistVarStack;
@@ -42,16 +41,16 @@ impl ExistStack for ExistVarStack {
         }
     }
 
-    fn pop(&self) -> Self {
-        match &self.parent {
-            Some(parent) => (**parent).clone(),
-            // Java 在根上 pop 会 NPE;Rust 显式 panic,语义等价(编译期不会发生)
-            None => panic!("ExistStack.pop on root scope"),
-        }
+    fn pop(&self) -> Option<Self> {
+        self.parent.as_ref().map(|parent| (**parent).clone())
     }
 
-    fn exist(&self, var_name: &str) -> bool {
-        if self.exist_vars.contains(var_name) {
+    fn exist(&self, var_name: Option<&str>) -> bool {
+        if self
+            .exist_vars
+            .iter()
+            .any(|candidate| candidate.as_deref() == var_name)
+        {
             return true;
         }
         self.parent
@@ -60,7 +59,35 @@ impl ExistStack for ExistVarStack {
             .unwrap_or(false)
     }
 
-    fn add(&mut self, var_name: String) {
+    fn add(&mut self, var_name: Option<String>) {
         self.exist_vars.insert(var_name);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn preserves_java_scope_chain_duplicates_and_null_names() {
+        let mut root = ExistVarStack::root();
+        assert!(!root.exist(Some("root")));
+        assert!(!root.exist(None));
+        assert!(root.pop().is_none());
+
+        root.add(Some("root".to_string()));
+        root.add(Some("root".to_string()));
+        root.add(None);
+        assert!(root.exist(Some("root")));
+        assert!(root.exist(None));
+
+        let mut child = root.push();
+        assert!(child.exist(Some("root")));
+        child.add(Some("child".to_string()));
+        assert!(child.exist(Some("child")));
+        let parent = child.pop().expect("child must retain its parent");
+        assert!(parent.exist(Some("root")));
+        assert!(!parent.exist(Some("child")));
+        assert!(parent.exist(None));
     }
 }

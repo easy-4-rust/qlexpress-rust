@@ -896,8 +896,10 @@ impl<'a> QvmInstructionVisitor<'a> {
                 .unwrap_or_default()
                 .to_string();
             if let Some(macro_define) = self.generator_scope.get_macro_instructions(&macro_name) {
-                for instruction in macro_define.macro_instructions() {
-                    self.pure_add_shared(Rc::clone(instruction));
+                if let Some(instructions) = macro_define.macro_instructions() {
+                    for instruction in instructions.iter() {
+                        self.pure_add_shared(Rc::clone(instruction));
+                    }
                 }
                 self.add_timeout_instruction();
                 return macro_define.is_last_stmt_express();
@@ -2514,7 +2516,8 @@ impl<'a> Visitor for QvmInstructionVisitor<'a> {
                         DataValue::string(QLStringUtils::parse_string_escape_start_end(
                             text,
                             0,
-                            text.chars().count(),
+                            i32::try_from(text.encode_utf16().count())
+                                .expect("Java String length exceeds i32"),
                         )),
                         None,
                     )));
@@ -2533,7 +2536,8 @@ impl<'a> Visitor for QvmInstructionVisitor<'a> {
                 DataValue::string(QLStringUtils::parse_string_escape_start_end(
                     &text,
                     0,
-                    text.chars().count(),
+                    i32::try_from(text.encode_utf16().count())
+                        .expect("Java String length exceeds i32"),
                 )),
                 trace_key,
             )));
@@ -2569,7 +2573,8 @@ impl<'a> Visitor for QvmInstructionVisitor<'a> {
                             DataValue::string(QLStringUtils::parse_string_escape_start_end(
                                 origin_str,
                                 0,
-                                origin_str.chars().count(),
+                                i32::try_from(origin_str.encode_utf16().count())
+                                    .expect("Java String length exceeds i32"),
                             )),
                             trace_key,
                         )));
@@ -2612,7 +2617,9 @@ impl<'a> QvmInstructionVisitor<'a> {
     fn parse_field_id(field_id: &Node) -> String {
         if let Node::FieldId(ctx) = field_id {
             if let Some(quote) = ctx.quote_string_literal() {
-                return QLStringUtils::parse_string_escape(quote.text());
+                return QLStringUtils::parse_string_escape(quote.text())
+                    .to_rust_string()
+                    .expect("quoted Rust source must remain valid UTF-8");
             }
         }
         field_id
@@ -2826,6 +2833,8 @@ impl<'a> QvmInstructionVisitor<'a> {
             Node::IdKey(_) => map_key.text(),
             Node::StringKey(_) | Node::QuoteStringKey(_) => {
                 QLStringUtils::parse_string_escape(&map_key.text())
+                    .to_rust_string()
+                    .expect("quoted Rust source must remain valid UTF-8")
             }
             // shouldn't run here
             _ => panic!("unexpected map key node"),
