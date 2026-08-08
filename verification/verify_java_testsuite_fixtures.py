@@ -21,11 +21,6 @@ def inventory(root: Path) -> dict[str, bytes]:
     }
 
 
-def logical_fixture_bytes(content: bytes) -> bytes:
-    """Normalize the sole EOF-LF difference that the repository patch format cannot retain."""
-    return content[:-1] if content.endswith(b"\n") else content
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="compare Java QL testsuite fixtures with Rust's vendored copy"
@@ -52,13 +47,7 @@ def main() -> int:
     changed = sorted(
         path
         for path in set(java_files) & set(rust_files)
-        if logical_fixture_bytes(java_files[path]) != logical_fixture_bytes(rust_files[path])
-    )
-    eof_normalized = sorted(
-        path
-        for path in set(java_files) & set(rust_files)
         if java_files[path] != rust_files[path]
-        and logical_fixture_bytes(java_files[path]) == logical_fixture_bytes(rust_files[path])
     )
     if missing or unexpected or changed:
         for label, paths in (("missing", missing), ("unexpected", unexpected), ("changed", changed)):
@@ -66,10 +55,7 @@ def main() -> int:
                 print(f"{label}: {path}", file=sys.stderr)
         return 1
 
-    print(
-        f"fixtures match: {len(java_files)} QL scripts "
-        f"(exact={len(java_files) - len(eof_normalized)}, eof-lf-normalized={len(eof_normalized)})"
-    )
+    print(f"fixtures match exactly: {len(java_files)} QL scripts")
     return 0
 
 

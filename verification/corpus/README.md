@@ -30,9 +30,8 @@ Rust 已保留同一可观察失败语义，并将该用例迁入 `differential.
 上述 trace 基线缺陷仍不得计入“已实现 Java 语义”的证据。
 
 Java `src/test/resources/testsuite/**/*.ql` 的完整内容副本位于
-`crates/qlexpress/tests/fixtures/java-testsuite/`。使用下列命令校验路径、数量和内容
-均与 Java 基线一致。因仓库补丁格式不能保留“仅缺少末尾 LF”的文件状态，校验会单独报告
-这类 EOF 规范化，不将其误报为脚本内容差异：
+`crates/qlexpress/tests/fixtures/java-testsuite/`。使用下列命令按原始字节校验路径、
+数量和内容均与 Java 基线一致；尾随 LF、编码或任何内容差异都会使门禁失败：
 
 ```bash
 python3 verification/verify_java_testsuite_fixtures.py \

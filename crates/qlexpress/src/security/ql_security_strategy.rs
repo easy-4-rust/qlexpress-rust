@@ -227,6 +227,7 @@ impl QLSecurityStrategy {
     /// # 返回值
     ///
     /// 允许访问返回 `true`；策略拒绝或策略检查失败返回 `false`。
+    /// 对应 Java：`ReflectLoader` 调用 `QLSecurityStrategy#check` 的准入分支。
     pub fn is_allowed(&self, member: &NativeMember) -> bool {
         self.check(Some(member)).unwrap_or(false)
     }

@@ -35,6 +35,7 @@ impl Parameters {
     ///
     /// Java `Parameters` 是接口，没有构造器；该 Rust 便捷入口供宿主适配器
     /// 直接提供参数值，栈弹出路径则使用内部 `Parameters::stack_view`。
+    /// 对应 Java：`Parameters` 宿主实现的参数序列构造职责。
     pub fn new(values: Vec<QValue>) -> Self {
         Parameters {
             storage: ParameterStorage::Owned(values),
@@ -45,6 +46,7 @@ impl Parameters {
     ///
     /// 后续操作数栈写入相同槽位时，读取结果同步变化，与 Java 内部类持有
     /// 原始 `Value[]` 引用的副作用一致。
+    /// 对应 Java：`FixedSizeStack.StackSwapParameters(Value[], int, int)`。
     pub(crate) fn stack_view(
         elements: Rc<RefCell<Vec<Option<QValue>>>>,
         start: usize,

@@ -4,6 +4,21 @@
 它约束的是外部可观察语义和生产质量，不以“存在同名文件”“能够编译”或
 “Rust 测试数量更多”替代完成度证明。
 
+## 2026-08-08 当前核对结论
+
+当前工作树已通过 Java 17 的 225 次测试、Rust workspace/all-features、
+295/295 共享语料实时差分、151/151 Java 物理目录脚本回放、223/223 源测试
+接受映射及 236/236 测试资源原始字节校验。核心生产代码行覆盖率为
+26,383/29,795（88.55%），分支为 2,699/3,536（76.33%）。
+
+这些结果证明已登记行为没有发现差异，但**全量迁移完成仍未被证明**。当前
+未套用旧处置的机器清单为：主对象 237 `UNVERIFIED`，具名内部类型 136
+`UNVERIFIED`，公开/受保护方法 1,678 `UNVERIFIED`、136 `MISSING` 候选。
+其中 `MISSING` 表示静态生成器尚未找到方法级候选，包含合并 Visitor、生成式
+Parser 访问器、字段承接和 Rust 平台适配等需要人工处置的项目，不可直接解释为
+函数体缺失。权威当前清单为 `verification/migration-manifest-current.json`；旧
+`migration-dispositions.json` 的源码指纹已过期，只保留历史审核价值。
+
 ## 1. 固定审计基线
 
 | 项目 | 固定值 |
@@ -149,7 +164,12 @@ python3 /Users/wandl/.agents/skills/rust-java-migration/scripts/audit_migration_
   --rust-root .
 python3 /Users/wandl/.agents/skills/rust-java-migration-testing/scripts/audit_migration_tests.py \
   --java-root /Users/wandl/workspaces/workspace-github/QLExpress \
-  --rust-root . --format json
+  --rust-root . --object-ledger docs/对象级对照表.md \
+  --parity-manifest docs/source-test-parity.json --format json
+
+# 223 个 Java 源测试的 reviewed-contract + 双端实际执行接受层（JDK 17）
+python3 verification/run_source_test_parity.py \
+  --java-root /Users/wandl/workspaces/workspace-github/QLExpress
 
 # Rust 质量门禁
 cargo fmt --all -- --check
@@ -178,6 +198,28 @@ cargo +nightly llvm-cov --workspace --all-features --branch --json \
 
 Java Maven 测试必须使用 JDK 17 运行；当前 JaCoCo 0.8.7 不能对 JDK 21
 生成可信基线。cargo-llvm-cov 报告与完整命令应作为 CI artifact 保留。
+
+### 6.1 501–800 行职责内聚复核
+
+2026-08-08 已逐项复核布局审计报告中的 35 个软阈值文件。生产代码均围绕单一
+Java 对象或同一对象的一个实现面（Parser statements/expressions、Visitor
+dispatch/helpers、数值域、缓存导入导出、Runner execution）组织；测试代码均为
+同一 Java 测试类或同一官方脚本主题的断言集合。继续拆分会切断同一对象的实现或
+让测试夹具跨文件往返，因此按技能规则登记为已审核。所有文件均不超过 800 行；
+14 个原超限文件已经按职责拆为 `include!` 片段，未新增代理对象、stub 或
+`compat.rs`。对应门禁：
+
+```bash
+python3 /Users/wandl/.agents/skills/rust-java-migration/scripts/audit_migration_layout.py \
+  --rust-root crates/qlexpress \
+  --java-package-root /Users/wandl/workspaces/workspace-github/QLExpress/src/main/java/com/alibaba/qlexpress4 \
+  --retain-segments 1 --require-source-comments \
+  --reviewed-large-file src --reviewed-large-file tests \
+  --fail-on-warning --summary-only
+```
+
+结果：`errors=0 warnings=0 acknowledged=35 strict_blockers=0`。该确认只处理文件
+内聚性，不升级任何对象或方法的语义状态。
 
 ## 7. 生产运行与回滚
 

@@ -4,12 +4,12 @@
 mod business_host;
 mod canary;
 mod concurrency;
-mod differential;
 mod lexer_differential;
 mod load;
-mod normalization;
 mod replay;
 mod security_fuzz;
+
+use qlexpress_verification::differential;
 
 use std::env;
 use std::path::PathBuf;

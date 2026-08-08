@@ -5,6 +5,7 @@ members = [
     "crates/qlexpress-derive",
     "crates/qlexpress-verification",
     "crates/qlexpress-process",
+    "qlexpress-test",
 ]
 
 [workspace.package]
@@ -25,6 +26,7 @@ serde_json = "1"
 num-bigint = "0.4"
 num-traits = "0.2"
 regex = "1"
+sha2 = "0.10"
 proc-macro2 = "1"
 quote = "1"
 syn = { version = "2", features = ["full", "extra-traits"] }
