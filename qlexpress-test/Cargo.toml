@@ -1,0 +1,17 @@
+[package]
+name = "qlexpress-test"
+description = "Whole-project Java-to-Rust migration acceptance harness for qlexpress"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+qlexpress = { path = "../crates/qlexpress" }
+qlexpress-verification = { path = "../crates/qlexpress-verification" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
