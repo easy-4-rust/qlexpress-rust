@@ -12782,6 +12782,1095 @@
         }
       ],
       "review_note": "42 条为 Java 基访客默认方法（qualified_name 缺失 owner 段导致生成器无法匹配属主）；Rust Visitor trait + accept 分派为同一建模决策，锚点经 2026-09-03 校验器实测。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitArgumentList|T (QLParser.ArgumentListContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitArrayInitializer|T (QLParser.ArrayInitializerContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitAssignOperator|T (QLParser.AssignOperatorContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitBaseExpr|T (QLParser.BaseExprContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitBinaryop|T (QLParser.BinaryopContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitBlockExpr|T (QLParser.BlockExprContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitBlockStatements|T (QLParser.BlockStatementsContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitBoolenLiteral|T (QLParser.BoolenLiteralContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitBreakContinueStatement|T (QLParser.BreakContinueStatementContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitCastExpr|T (QLParser.CastExprContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitCatchParams|T (QLParser.CatchParamsContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitChildren|T (RuleContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitClsType|T (QLParser.ClsTypeContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitClsValue|T (QLParser.ClsValueContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitConstExpr|T (QLParser.ConstExprContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitContextSelectExpr|T (QLParser.ContextSelectExprContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitCustomPath|T (QLParser.CustomPathContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitDeclTypeNoArr|T (QLParser.DeclTypeNoArrContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitDeclType|T (QLParser.DeclTypeContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitDimExprs|T (QLParser.DimExprsContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitDims|T (QLParser.DimsContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitDoubleQuoteStringLiteral|T (QLParser.DoubleQuoteStringLiteralContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitEValue|T (QLParser.EValueContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitElseBody|T (QLParser.ElseBodyContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitEmptyStatement|T (QLParser.EmptyStatementContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitExpressionList|T (QLParser.ExpressionListContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitExpressionStatement|T (QLParser.ExpressionStatementContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitExpression|T (QLParser.ExpressionContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitFieldAccess|T (QLParser.FieldAccessContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitFieldId|T (QLParser.FieldIdContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitForEachStatement|T (QLParser.ForEachStatementContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitForInit|T (QLParser.ForInitContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitFormalOrInferredParameterList|T (QLParser.FormalOrInferredParameterListContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitFormalOrInferredParameter|T (QLParser.FormalOrInferredParameterContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitFunctionStatement|T (QLParser.FunctionStatementContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitGroupExpr|T (QLParser.GroupExprContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitIdKey|T (QLParser.IdKeyContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitImportCls|T (QLParser.ImportClsContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitImportPack|T (QLParser.ImportPackContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitIndexExpr|T (QLParser.IndexExprContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitLambdaExpr|T (QLParser.LambdaExprContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitLambdaParameters|T (QLParser.LambdaParametersContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitLeftAsso|T (QLParser.LeftAssoContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitLeftHandSide|T (QLParser.LeftHandSideContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitListExpr|T (QLParser.ListExprContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitListItems|T (QLParser.ListItemsContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitLiteral|T (QLParser.LiteralContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitLocalVariableDeclarationStatement|T (QLParser.LocalVariableDeclarationStatementContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitLocalVariableDeclaration|T (QLParser.LocalVariableDeclarationContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitMacroStatement|T (QLParser.MacroStatementContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitMapEntries|T (QLParser.MapEntriesContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitMapEntry|T (QLParser.MapEntryContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitMapExpr|T (QLParser.MapExprContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitMethodAccess|T (QLParser.MethodAccessContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitMethodInvoke|T (QLParser.MethodInvokeContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitNewEmptyArrExpr|T (QLParser.NewEmptyArrExprContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitNewInitArrExpr|T (QLParser.NewInitArrExprContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitNewObjExpr|T (QLParser.NewObjExprContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitNonExpressionStatement|T (QLParser.NonExpressionStatementContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitOpId|T (QLParser.OpIdContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitOptionalFieldAccess|T (QLParser.OptionalFieldAccessContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitOptionalMethodInvoke|T (QLParser.OptionalMethodInvokeContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitPrefixExpress|T (QLParser.PrefixExpressContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitPrimary|T (QLParser.PrimaryContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitPrimitiveType|T (QLParser.PrimitiveTypeContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitProgram|T (QLParser.ProgramContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitQlIf|T (QLParser.QlIfContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitQuoteStringKey|T (QLParser.QuoteStringKeyContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitReturnStatement|T (QLParser.ReturnStatementContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitSingleIndex|T (QLParser.SingleIndexContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitSliceIndex|T (QLParser.SliceIndexContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitSpreadFieldAccess|T (QLParser.SpreadFieldAccessContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitSpreadMethodInvoke|T (QLParser.SpreadMethodInvokeContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitStringExpression|T (QLParser.StringExpressionContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitStringKey|T (QLParser.StringKeyContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitSuffixExpress|T (QLParser.SuffixExpressContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitSwitchCaseGroups|T (QLParser.SwitchCaseGroupsContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitSwitchExprGroup|T (QLParser.SwitchExprGroupContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitSwitchExpressionLabel|T (QLParser.SwitchExpressionLabelContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitSwitchExpr|T (QLParser.SwitchExprContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitSwitchLabels|T (QLParser.SwitchLabelsContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitSwitchLabel|T (QLParser.SwitchLabelContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitSwitchStatementGroup|T (QLParser.SwitchStatementGroupContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitTerminal|T (TerminalNode node)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitTernaryExpr|T (QLParser.TernaryExprContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitThenBody|T (QLParser.ThenBodyContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitThrowStatement|T (QLParser.ThrowStatementContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitTraditionalForStatement|T (QLParser.TraditionalForStatementContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitTryCatchExpr|T (QLParser.TryCatchExprContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitTryCatches|T (QLParser.TryCatchesContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitTryCatch|T (QLParser.TryCatchContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitTryFinally|T (QLParser.TryFinallyContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitTypeExpr|T (QLParser.TypeExprContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitVarIdExpr|T (QLParser.VarIdExprContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitVarId|T (QLParser.VarIdContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitVariableDeclaratorId|T (QLParser.VariableDeclaratorIdContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitVariableDeclaratorList|T (QLParser.VariableDeclaratorListContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitVariableDeclarator|T (QLParser.VariableDeclaratorContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitVariableInitializerList|T (QLParser.VariableInitializerListContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitVariableInitializer|T (QLParser.VariableInitializerContext ctx)",
+        "com.alibaba.qlexpress4.aparser::QLParserBaseVisitor::visitWhileStatement|T (QLParser.WhileStatementContext ctx)"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "Java QLParserBaseVisitor 的 visit 默认方法在 Rust 建模为 Visitor 基 trait（visit_terminal/visit_children_of 缺省语义，T::default() 对应 Java null）+ 节点 accept 分派 + 各具体访客按语法域实现。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/ql_parser_base_visitor.rs",
+          "symbol": "pub trait Visitor"
+        },
+        {
+          "file": "crates/qlexpress/src/aparser/parse_tree.rs",
+          "symbol": "fn accept"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/tests/alignment_syntax_tree_factory.rs",
+          "test": "fn compile",
+          "level": "V1_RUST_LOCAL"
+        },
+        {
+          "file": "crates/qlexpress/tests/alignment_parser.rs",
+          "test": "fn cast_expression",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "Visitor trait + accept 分洛建模，与已入库的 42 键 ownerless 批次同一决策。。属主级批量 disposition：Rust 实现文件与系统性测试（alignment/stage/差分）按属主整体锚定，2026-09-03 校验器对当前源码树实测。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.runtime.operator.number::NumberMath::absImpl|Number (Number number)",
+        "com.alibaba.qlexpress4.runtime.operator.number::NumberMath::abs|Number (Number number)",
+        "com.alibaba.qlexpress4.runtime.operator.number::NumberMath::addImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::NumberMath::add|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::NumberMath::andImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::NumberMath::and|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::NumberMath::bitwiseNegateImpl|Number (Number left)",
+        "com.alibaba.qlexpress4.runtime.operator.number::NumberMath::bitwiseNegate|Number (Number left)",
+        "com.alibaba.qlexpress4.runtime.operator.number::NumberMath::compareToImpl|int (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::NumberMath::compareTo|int (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::NumberMath::createUnsupportedException|UnsupportedOperationException (String operation, Number left)",
+        "com.alibaba.qlexpress4.runtime.operator.number::NumberMath::divideImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::NumberMath::divide|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::NumberMath::getMath|NumberMath (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::NumberMath::intDivImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::NumberMath::intDiv|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::NumberMath::isBigDecimal|boolean (Number number)",
+        "com.alibaba.qlexpress4.runtime.operator.number::NumberMath::isBigInteger|boolean (Number number)",
+        "com.alibaba.qlexpress4.runtime.operator.number::NumberMath::isByte|boolean (Number number)",
+        "com.alibaba.qlexpress4.runtime.operator.number::NumberMath::isFloatingPoint|boolean (Number number)",
+        "com.alibaba.qlexpress4.runtime.operator.number::NumberMath::isInteger|boolean (Number number)",
+        "com.alibaba.qlexpress4.runtime.operator.number::NumberMath::isLong|boolean (Number number)",
+        "com.alibaba.qlexpress4.runtime.operator.number::NumberMath::isShort|boolean (Number number)",
+        "com.alibaba.qlexpress4.runtime.operator.number::NumberMath::leftShiftImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::NumberMath::leftShift|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::NumberMath::modImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::NumberMath::mod|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::NumberMath::multiplyImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::NumberMath::multiply|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::NumberMath::orImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::NumberMath::or|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::NumberMath::remainderImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::NumberMath::remainder|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::NumberMath::rightShiftImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::NumberMath::rightShiftUnsignedImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::NumberMath::rightShiftUnsigned|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::NumberMath::rightShift|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::NumberMath::subtractImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::NumberMath::subtract|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::NumberMath::toBigDecimal|BigDecimal (Number n)",
+        "com.alibaba.qlexpress4.runtime.operator.number::NumberMath::toBigInteger|BigInteger (Number n)",
+        "com.alibaba.qlexpress4.runtime.operator.number::NumberMath::unaryMinusImpl|Number (Number left)",
+        "com.alibaba.qlexpress4.runtime.operator.number::NumberMath::unaryMinus|Number (Number left)",
+        "com.alibaba.qlexpress4.runtime.operator.number::NumberMath::unaryPlusImpl|Number (Number left)",
+        "com.alibaba.qlexpress4.runtime.operator.number::NumberMath::unaryPlus|Number (Number left)",
+        "com.alibaba.qlexpress4.runtime.operator.number::NumberMath::xorImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::NumberMath::xor|Number (Number left, Number right)"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "NumberMath 抽象分派的类型提升/转换/运算/拒绝路径由 Java Number 子类型实时差分逐例验证（差分语料 41 例直接调用 + 74 例具体域方法，295/295 全一致）。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/number/number_math.rs",
+          "symbol": "pub struct NumberMath"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/tests/alignment_suite/numeric_operators.rs",
+          "test": "fn operator_big_decimal",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress-verification/src/differential/number_math.rs",
+          "test": "fn execute_number_math",
+          "level": "V3_GOLDEN_DIFF"
+        }
+      ],
+      "review_note": "抽象分派器方法族，差分金标准覆盖。。属主级批量 disposition：Rust 实现文件与系统性测试（alignment/stage/差分）按属主整体锚定，2026-09-03 校验器对当前源码树实测。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.runtime.operator.number::LongMath::absImpl|Number (Number number)",
+        "com.alibaba.qlexpress4.runtime.operator.number::LongMath::addImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::LongMath::andImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::LongMath::bitAndImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::LongMath::bitwiseNegateImpl|Number (Number left)",
+        "com.alibaba.qlexpress4.runtime.operator.number::LongMath::compareToImpl|int (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::LongMath::divideImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::LongMath::intDivImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::LongMath::leftShiftImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::LongMath::modImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::LongMath::multiplyImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::LongMath::orImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::LongMath::remainderImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::LongMath::rightShiftImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::LongMath::rightShiftUnsignedImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::LongMath::subtractImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::LongMath::unaryMinusImpl|Number (Number left)",
+        "com.alibaba.qlexpress4.runtime.operator.number::LongMath::unaryPlusImpl|Number (Number left)",
+        "com.alibaba.qlexpress4.runtime.operator.number::LongMath::xorImpl|Number (Number left, Number right)"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "LongMath 域运算由差分语料 Long 域用例金标准对拍。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/number/long_math.rs",
+          "symbol": "pub struct LongMath"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress-verification/src/differential/number_math.rs",
+          "test": "fn execute_number_math",
+          "level": "V3_GOLDEN_DIFF"
+        }
+      ],
+      "review_note": "具体数值域方法族。。属主级批量 disposition：Rust 实现文件与系统性测试（alignment/stage/差分）按属主整体锚定，2026-09-03 校验器对当前源码树实测。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.runtime.operator.number::IntegerMath::absImpl|Number (Number number)",
+        "com.alibaba.qlexpress4.runtime.operator.number::IntegerMath::addImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::IntegerMath::andImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::IntegerMath::bitwiseNegateImpl|Number (Number left)",
+        "com.alibaba.qlexpress4.runtime.operator.number::IntegerMath::compareToImpl|int (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::IntegerMath::divideImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::IntegerMath::intDivImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::IntegerMath::leftShiftImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::IntegerMath::modImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::IntegerMath::multiplyImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::IntegerMath::orImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::IntegerMath::remainderImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::IntegerMath::rightShiftImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::IntegerMath::rightShiftUnsignedImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::IntegerMath::subtractImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::IntegerMath::unaryMinusImpl|Number (Number left)",
+        "com.alibaba.qlexpress4.runtime.operator.number::IntegerMath::unaryPlusImpl|Number (Number left)",
+        "com.alibaba.qlexpress4.runtime.operator.number::IntegerMath::xorImpl|Number (Number left, Number right)"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "IntegerMath 域运算由差分语料 Integer 域用例金标准对拍。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/number/integer_math.rs",
+          "symbol": "pub struct IntegerMath"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress-verification/src/differential/number_math.rs",
+          "test": "fn execute_number_math",
+          "level": "V3_GOLDEN_DIFF"
+        }
+      ],
+      "review_note": "具体数值域方法族。。属主级批量 disposition：Rust 实现文件与系统性测试（alignment/stage/差分）按属主整体锚定，2026-09-03 校验器对当前源码树实测。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.runtime.operator.number::BigIntegerMath::absImpl|Number (Number number)",
+        "com.alibaba.qlexpress4.runtime.operator.number::BigIntegerMath::addImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::BigIntegerMath::andImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::BigIntegerMath::bitwiseNegateImpl|Number (Number left)",
+        "com.alibaba.qlexpress4.runtime.operator.number::BigIntegerMath::compareToImpl|int (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::BigIntegerMath::divideImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::BigIntegerMath::intDivImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::BigIntegerMath::leftShiftImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::BigIntegerMath::modImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::BigIntegerMath::multiplyImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::BigIntegerMath::orImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::BigIntegerMath::remainderImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::BigIntegerMath::rightShiftImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::BigIntegerMath::subtractImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::BigIntegerMath::unaryMinusImpl|Number (Number left)",
+        "com.alibaba.qlexpress4.runtime.operator.number::BigIntegerMath::unaryPlusImpl|Number (Number left)",
+        "com.alibaba.qlexpress4.runtime.operator.number::BigIntegerMath::xorImpl|Number (Number left, Number right)"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "BigIntegerMath 域运算由差分语料大整数用例金标准对拍。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/number/big_integer_math.rs",
+          "symbol": "pub struct BigIntegerMath"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress-verification/src/differential/number_math.rs",
+          "test": "fn execute_number_math",
+          "level": "V3_GOLDEN_DIFF"
+        }
+      ],
+      "review_note": "具体数值域方法族。。属主级批量 disposition：Rust 实现文件与系统性测试（alignment/stage/差分）按属主整体锚定，2026-09-03 校验器对当前源码树实测。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.runtime.operator.number::BigDecimalMath::absImpl|Number (Number number)",
+        "com.alibaba.qlexpress4.runtime.operator.number::BigDecimalMath::addImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::BigDecimalMath::compareToImpl|int (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::BigDecimalMath::divideImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::BigDecimalMath::modImpl|Number (Number self, Number divisor)",
+        "com.alibaba.qlexpress4.runtime.operator.number::BigDecimalMath::multiplyImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::BigDecimalMath::remainderImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::BigDecimalMath::subtractImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::BigDecimalMath::unaryMinusImpl|Number (Number left)",
+        "com.alibaba.qlexpress4.runtime.operator.number::BigDecimalMath::unaryPlusImpl|Number (Number left)"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "BigDecimalMath 域运算由差分语料高精度用例金标准对拍。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/number/big_decimal_math.rs",
+          "symbol": "pub struct BigDecimalMath"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress-verification/src/differential/number_math.rs",
+          "test": "fn execute_number_math",
+          "level": "V3_GOLDEN_DIFF"
+        }
+      ],
+      "review_note": "具体数值域方法族。。属主级批量 disposition：Rust 实现文件与系统性测试（alignment/stage/差分）按属主整体锚定，2026-09-03 校验器对当前源码树实测。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.runtime.operator.number::FloatingPointMath::absImpl|Number (Number number)",
+        "com.alibaba.qlexpress4.runtime.operator.number::FloatingPointMath::addImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::FloatingPointMath::compareToImpl|int (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::FloatingPointMath::divideImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::FloatingPointMath::modImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::FloatingPointMath::multiplyImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::FloatingPointMath::remainderImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::FloatingPointMath::subtractImpl|Number (Number left, Number right)",
+        "com.alibaba.qlexpress4.runtime.operator.number::FloatingPointMath::unaryMinusImpl|Number (Number left)",
+        "com.alibaba.qlexpress4.runtime.operator.number::FloatingPointMath::unaryPlusImpl|Number (Number left)"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "FloatingPointMath 域运算由差分语料浮点用例金标准对拍。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/number/floating_point_math.rs",
+          "symbol": "pub struct FloatingPointMath"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress-verification/src/differential/number_math.rs",
+          "test": "fn execute_number_math",
+          "level": "V3_GOLDEN_DIFF"
+        }
+      ],
+      "review_note": "具体数值域方法族。。属主级批量 disposition：Rust 实现文件与系统性测试（alignment/stage/差分）按属主整体锚定，2026-09-03 校验器对当前源码树实测。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.aparser::TraceExpressionVisitor::getExpressionTracePoints|List<TracePointTree> ()",
+        "com.alibaba.qlexpress4.aparser::TraceExpressionVisitor::visitBaseExpr|TracePointTree (QLParser.BaseExprContext ctx)",
+        "com.alibaba.qlexpress4.aparser::TraceExpressionVisitor::visitBlockExpr|TracePointTree (QLParser.BlockExprContext ctx)",
+        "com.alibaba.qlexpress4.aparser::TraceExpressionVisitor::visitBlockStatements|TracePointTree (QLParser.BlockStatementsContext ctx)",
+        "com.alibaba.qlexpress4.aparser::TraceExpressionVisitor::visitBreakContinueStatement|TracePointTree (QLParser.BreakContinueStatementContext ctx)",
+        "com.alibaba.qlexpress4.aparser::TraceExpressionVisitor::visitCastExpr|TracePointTree (QLParser.CastExprContext ctx)",
+        "com.alibaba.qlexpress4.aparser::TraceExpressionVisitor::visitConstExpr|TracePointTree (QLParser.ConstExprContext ctx)",
+        "com.alibaba.qlexpress4.aparser::TraceExpressionVisitor::visitContextSelectExpr|TracePointTree (QLParser.ContextSelectExprContext ctx)",
+        "com.alibaba.qlexpress4.aparser::TraceExpressionVisitor::visitElseBody|TracePointTree (QLParser.ElseBodyContext elseBody)",
+        "com.alibaba.qlexpress4.aparser::TraceExpressionVisitor::visitEmptyStatement|TracePointTree (QLParser.EmptyStatementContext ctx)",
+        "com.alibaba.qlexpress4.aparser::TraceExpressionVisitor::visitExpressionStatement|TracePointTree (QLParser.ExpressionStatementContext ctx)",
+        "com.alibaba.qlexpress4.aparser::TraceExpressionVisitor::visitExpression|TracePointTree (QLParser.ExpressionContext ctx)",
+        "com.alibaba.qlexpress4.aparser::TraceExpressionVisitor::visitForEachStatement|TracePointTree (QLParser.ForEachStatementContext ctx)",
+        "com.alibaba.qlexpress4.aparser::TraceExpressionVisitor::visitFunctionStatement|TracePointTree (QLParser.FunctionStatementContext ctx)",
+        "com.alibaba.qlexpress4.aparser::TraceExpressionVisitor::visitGroupExpr|TracePointTree (QLParser.GroupExprContext ctx)",
+        "com.alibaba.qlexpress4.aparser::TraceExpressionVisitor::visitLambdaExpr|TracePointTree (QLParser.LambdaExprContext ctx)",
+        "com.alibaba.qlexpress4.aparser::TraceExpressionVisitor::visitLeftHandSide|TracePointTree (QLParser.LeftHandSideContext ctx)",
+        "com.alibaba.qlexpress4.aparser::TraceExpressionVisitor::visitListExpr|TracePointTree (QLParser.ListExprContext ctx)",
+        "com.alibaba.qlexpress4.aparser::TraceExpressionVisitor::visitLocalVariableDeclarationStatement|TracePointTree (LocalVariableDeclarationStatementContext ctx)",
+        "com.alibaba.qlexpress4.aparser::TraceExpressionVisitor::visitMacroStatement|TracePointTree (QLParser.MacroStatementContext ctx)",
+        "com.alibaba.qlexpress4.aparser::TraceExpressionVisitor::visitMapExpr|TracePointTree (QLParser.MapExprContext ctx)",
+        "com.alibaba.qlexpress4.aparser::TraceExpressionVisitor::visitNewEmptyArrExpr|TracePointTree (QLParser.NewEmptyArrExprContext ctx)",
+        "com.alibaba.qlexpress4.aparser::TraceExpressionVisitor::visitNewInitArrExpr|TracePointTree (QLParser.NewInitArrExprContext ctx)",
+        "com.alibaba.qlexpress4.aparser::TraceExpressionVisitor::visitNewObjExpr|TracePointTree (QLParser.NewObjExprContext ctx)",
+        "com.alibaba.qlexpress4.aparser::TraceExpressionVisitor::visitPrimary|TracePointTree (QLParser.PrimaryContext ctx)",
+        "com.alibaba.qlexpress4.aparser::TraceExpressionVisitor::visitQlIf|TracePointTree (QLParser.QlIfContext ctx)",
+        "com.alibaba.qlexpress4.aparser::TraceExpressionVisitor::visitReturnStatement|TracePointTree (QLParser.ReturnStatementContext ctx)",
+        "com.alibaba.qlexpress4.aparser::TraceExpressionVisitor::visitSwitchExpr|TracePointTree (QLParser.SwitchExprContext ctx)",
+        "com.alibaba.qlexpress4.aparser::TraceExpressionVisitor::visitTernaryExpr|TracePointTree (QLParser.TernaryExprContext ctx)",
+        "com.alibaba.qlexpress4.aparser::TraceExpressionVisitor::visitThenBody|TracePointTree (QLParser.ThenBodyContext thenBody)",
+        "com.alibaba.qlexpress4.aparser::TraceExpressionVisitor::visitThrowStatement|TracePointTree (QLParser.ThrowStatementContext ctx)",
+        "com.alibaba.qlexpress4.aparser::TraceExpressionVisitor::visitTraditionalForStatement|TracePointTree (QLParser.TraditionalForStatementContext ctx)",
+        "com.alibaba.qlexpress4.aparser::TraceExpressionVisitor::visitTryCatchExpr|TracePointTree (QLParser.TryCatchExprContext ctx)",
+        "com.alibaba.qlexpress4.aparser::TraceExpressionVisitor::visitTypeExpr|TracePointTree (QLParser.TypeExprContext ctx)",
+        "com.alibaba.qlexpress4.aparser::TraceExpressionVisitor::visitVarIdExpr|TracePointTree (QLParser.VarIdExprContext ctx)",
+        "com.alibaba.qlexpress4.aparser::TraceExpressionVisitor::visitWhileStatement|TracePointTree (QLParser.WhileStatementContext ctx)"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "TraceExpressionVisitor 在 Rust 按语法域拆分实现，编译期 trace 点与 Java 一致；expression trace 差分/回放覆盖。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/trace_expression_visitor.rs",
+          "symbol": "fn visit_const_expr"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/tests/alignment_expression_trace.rs",
+          "test": "fn static_trace_tree_matches_java_examples",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "trace 访客方法族，适配名分文件。。属主级批量 disposition：Rust 实现文件与系统性测试（alignment/stage/差分）按属主整体锚定，2026-09-03 校验器对当前源码树实测。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.runtime.operator.base::BaseBinaryOperator::assertLeftValue|void (Value left, ErrorReporter errorReporter)",
+        "com.alibaba.qlexpress4.runtime.operator.base::BaseBinaryOperator::bitwiseAnd|Object (Value left, Value right, ErrorReporter errorReporter)",
+        "com.alibaba.qlexpress4.runtime.operator.base::BaseBinaryOperator::bitwiseOr|Object (Value left, Value right, ErrorReporter errorReporter)",
+        "com.alibaba.qlexpress4.runtime.operator.base::BaseBinaryOperator::bitwiseXor|Object (Value left, Value right, ErrorReporter errorReporter)",
+        "com.alibaba.qlexpress4.runtime.operator.base::BaseBinaryOperator::buildInvalidOperandTypeException|QLRuntimeException (Value left, Value right, ErrorReporter errorReporter)",
+        "com.alibaba.qlexpress4.runtime.operator.base::BaseBinaryOperator::char2Number|Number (Object charOrNumber)",
+        "com.alibaba.qlexpress4.runtime.operator.base::BaseBinaryOperator::compare|int (Value left, Value right, ErrorReporter errorReporter)",
+        "com.alibaba.qlexpress4.runtime.operator.base::BaseBinaryOperator::divide|Object (Value left, Value right, QLOptions qlOptions, ErrorReporter errorReporter)",
+        "com.alibaba.qlexpress4.runtime.operator.base::BaseBinaryOperator::equals|boolean (Value left, Value right, ErrorReporter errorReporter)",
+        "com.alibaba.qlexpress4.runtime.operator.base::BaseBinaryOperator::in|boolean (Value left, Value right, ErrorReporter errorReporter)",
+        "com.alibaba.qlexpress4.runtime.operator.base::BaseBinaryOperator::isBooleanAndNull|boolean (Value left, Value right)",
+        "com.alibaba.qlexpress4.runtime.operator.base::BaseBinaryOperator::isBothBoolean|boolean (Value left, Value right)",
+        "com.alibaba.qlexpress4.runtime.operator.base::BaseBinaryOperator::isBothNumberOrChar|boolean (Object leftValue, Object rightValue)",
+        "com.alibaba.qlexpress4.runtime.operator.base::BaseBinaryOperator::isBothNumber|boolean (Value left, Value right)",
+        "com.alibaba.qlexpress4.runtime.operator.base::BaseBinaryOperator::isInstanceofComparable|boolean (Value value)",
+        "com.alibaba.qlexpress4.runtime.operator.base::BaseBinaryOperator::isNumberCharacter|boolean (Value left, Value right)",
+        "com.alibaba.qlexpress4.runtime.operator.base::BaseBinaryOperator::isNumber|boolean (Value value)",
+        "com.alibaba.qlexpress4.runtime.operator.base::BaseBinaryOperator::isSameType|boolean (Value left, Value right)",
+        "com.alibaba.qlexpress4.runtime.operator.base::BaseBinaryOperator::leftShift|Object (Value left, Value right, ErrorReporter errorReporter)",
+        "com.alibaba.qlexpress4.runtime.operator.base::BaseBinaryOperator::like|boolean (Value left, Value right, ErrorReporter errorReporter)",
+        "com.alibaba.qlexpress4.runtime.operator.base::BaseBinaryOperator::minus|Object (Value left, Value right, QLOptions qlOptions, ErrorReporter errorReporter)",
+        "com.alibaba.qlexpress4.runtime.operator.base::BaseBinaryOperator::multiply|Object (Value left, Value right, QLOptions qlOptions, ErrorReporter errorReporter)",
+        "com.alibaba.qlexpress4.runtime.operator.base::BaseBinaryOperator::plus|Object (Value left, Value right, QLOptions qlOptions, ErrorReporter errorReporter)",
+        "com.alibaba.qlexpress4.runtime.operator.base::BaseBinaryOperator::remainder|Object (Value left, Value right, QLOptions qlOptions, ErrorReporter errorReporter)",
+        "com.alibaba.qlexpress4.runtime.operator.base::BaseBinaryOperator::rightShiftUnsigned|Object (Value left, Value right, ErrorReporter errorReporter)",
+        "com.alibaba.qlexpress4.runtime.operator.base::BaseBinaryOperator::rightShift|Object (Value left, Value right, ErrorReporter errorReporter)"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "BaseBinaryOperator 的应用/取反/空语义等由操作符证据测试与差分 operator 用例覆盖。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/base/base_binary_operator.rs",
+          "symbol": "pub struct BaseBinaryOperator"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/tests/stage4a_operators.rs",
+          "test": "fn plus_adds_numbers_and_concats_strings",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress-verification/src/differential/operator_manager.rs",
+          "test": "fn execute_operator_manager",
+          "level": "V3_GOLDEN_DIFF"
+        }
+      ],
+      "review_note": "二元算子基类方法族。。属主级批量 disposition：Rust 实现文件与系统性测试（alignment/stage/差分）按属主整体锚定，2026-09-03 校验器对当前源码树实测。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.runtime::DelegateQContext::DelegateQContext|(QRuntime qRuntime, QScope qScope)",
+        "com.alibaba.qlexpress4.runtime::DelegateQContext::attachment|Map<String, Object> ()",
+        "com.alibaba.qlexpress4.runtime::DelegateQContext::closeScope|void ()",
+        "com.alibaba.qlexpress4.runtime::DelegateQContext::defineFunction|void (String functionName, CustomFunction function)",
+        "com.alibaba.qlexpress4.runtime::DelegateQContext::defineLocalSymbol|void (String varName, Class<?> varClz, Object value)",
+        "com.alibaba.qlexpress4.runtime::DelegateQContext::getCurrentScope|QScope ()",
+        "com.alibaba.qlexpress4.runtime::DelegateQContext::getFunctionTable|Map<String, CustomFunction> ()",
+        "com.alibaba.qlexpress4.runtime::DelegateQContext::getFunction|CustomFunction (String functionName)",
+        "com.alibaba.qlexpress4.runtime::DelegateQContext::getParent|QScope ()",
+        "com.alibaba.qlexpress4.runtime::DelegateQContext::getReflectLoader|ReflectLoader ()",
+        "com.alibaba.qlexpress4.runtime::DelegateQContext::getSymbolValue|Object (String varName)",
+        "com.alibaba.qlexpress4.runtime::DelegateQContext::getSymbol|Value (String varName)",
+        "com.alibaba.qlexpress4.runtime::DelegateQContext::getTraces|QTraces ()",
+        "com.alibaba.qlexpress4.runtime::DelegateQContext::newScope|QScope ()",
+        "com.alibaba.qlexpress4.runtime::DelegateQContext::peek|Value ()",
+        "com.alibaba.qlexpress4.runtime::DelegateQContext::pop|Parameters (int number)",
+        "com.alibaba.qlexpress4.runtime::DelegateQContext::pop|Value ()",
+        "com.alibaba.qlexpress4.runtime::DelegateQContext::push|void (Value value)",
+        "com.alibaba.qlexpress4.runtime::DelegateQContext::scriptStartTimeStamp|long ()"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "DelegateQContext 的委托查询/作用域关闭语义由 stage5c 集成与差分 delegate_context 用例双通道覆盖。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/runtime/delegate_q_context.rs",
+          "symbol": "pub struct DelegateQContext"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/tests/stage5c_runner.rs",
+          "test": "fn execute_basic_arithmetic_and_context",
+          "level": "V1_RUST_LOCAL"
+        },
+        {
+          "file": "crates/qlexpress-verification/src/differential/delegate_context.rs",
+          "test": "fn execute_delegate_context",
+          "level": "V3_GOLDEN_DIFF"
+        }
+      ],
+      "review_note": "委托上下文方法族。。属主级批量 disposition：Rust 实现文件与系统性测试（alignment/stage/差分）按属主整体锚定，2026-09-03 校验器对当前源码树实测。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.runtime.operator::OperatorManager::adapt2BinOp::<BinaryOperator$anon@191>::execute|Object (Value left, Value right, QRuntime qRuntime, QLOptions qlOptions, ErrorReporter errorReporter)",
+        "com.alibaba.qlexpress4.runtime.operator::OperatorManager::adapt2BinOp::<BinaryOperator$anon@191>::getOperator|String ()",
+        "com.alibaba.qlexpress4.runtime.operator::OperatorManager::adapt2BinOp::<BinaryOperator$anon@191>::getPriority|int ()",
+        "com.alibaba.qlexpress4.runtime.operator::OperatorManager::adaptOriginOperator::<BinaryOperator$anon@303>::execute|Object (Value left, Value right, QRuntime qRuntime, QLOptions qlOptions, ErrorReporter errorReporter)",
+        "com.alibaba.qlexpress4.runtime.operator::OperatorManager::adaptOriginOperator::<BinaryOperator$anon@303>::getOperator|String ()",
+        "com.alibaba.qlexpress4.runtime.operator::OperatorManager::adaptOriginOperator::<BinaryOperator$anon@303>::getPriority|int ()",
+        "com.alibaba.qlexpress4.runtime.operator::OperatorManager::addBinaryOperator|boolean (String operatorName, CustomBinaryOperator customBinaryOperator, int priority)",
+        "com.alibaba.qlexpress4.runtime.operator::OperatorManager::addKeyWordAlias|boolean (String lexeme, String keyWord)",
+        "com.alibaba.qlexpress4.runtime.operator::OperatorManager::addOperatorAlias|boolean (String lexeme, String operator)",
+        "com.alibaba.qlexpress4.runtime.operator::OperatorManager::getAlias|Integer (String lexeme)",
+        "com.alibaba.qlexpress4.runtime.operator::OperatorManager::getBinaryOperator|BinaryOperator (String operatorLexeme)",
+        "com.alibaba.qlexpress4.runtime.operator::OperatorManager::getPrefixUnaryOperator|UnaryOperator (String operatorLexeme)",
+        "com.alibaba.qlexpress4.runtime.operator::OperatorManager::getSuffixUnaryOperator|UnaryOperator (String operatorLexeme)",
+        "com.alibaba.qlexpress4.runtime.operator::OperatorManager::isOpType|boolean (String lexeme, OpType opType)",
+        "com.alibaba.qlexpress4.runtime.operator::OperatorManager::replaceDefaultOperator|boolean (String operatorName, CustomBinaryOperator customBinaryOperator)"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "OperatorManager 的注册/替换/优先级/黑白名单校验由操作符证据测试与差分用例覆盖（45 例 OperatorManager 直接调用）。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/operator/operator_manager.rs",
+          "symbol": "pub struct OperatorManager"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/tests/alignment_operator_evidence.rs",
+          "test": "fn plus_operator_int",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress-verification/src/differential/operator_manager.rs",
+          "test": "fn execute_operator_manager",
+          "level": "V3_GOLDEN_DIFF"
+        }
+      ],
+      "review_note": "算子管理器方法族。。属主级批量 disposition：Rust 实现文件与系统性测试（alignment/stage/差分）按属主整体锚定，2026-09-03 校验器对当前源码树实测。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.api.parsecache::SerializableParseCache::SerializableParseCache|()",
+        "com.alibaba.qlexpress4.api.parsecache::SerializableParseCache::getMain|SerializableLambdaDefinition ()",
+        "com.alibaba.qlexpress4.api.parsecache::SerializableParseCache::getModelVersion|int ()",
+        "com.alibaba.qlexpress4.api.parsecache::SerializableParseCache::getProducerVersion|String ()",
+        "com.alibaba.qlexpress4.api.parsecache::SerializableParseCache::getScriptHash|String ()",
+        "com.alibaba.qlexpress4.api.parsecache::SerializableParseCache::getScript|String ()",
+        "com.alibaba.qlexpress4.api.parsecache::SerializableParseCache::getTracePoints|List<SerializableTracePoint> ()",
+        "com.alibaba.qlexpress4.api.parsecache::SerializableParseCache::setMain|void (SerializableLambdaDefinition main)",
+        "com.alibaba.qlexpress4.api.parsecache::SerializableParseCache::setModelVersion|void (int modelVersion)",
+        "com.alibaba.qlexpress4.api.parsecache::SerializableParseCache::setProducerVersion|void (String producerVersion)",
+        "com.alibaba.qlexpress4.api.parsecache::SerializableParseCache::setScriptHash|void (String scriptHash)",
+        "com.alibaba.qlexpress4.api.parsecache::SerializableParseCache::setScript|void (String script)",
+        "com.alibaba.qlexpress4.api.parsecache::SerializableParseCache::setTracePoints|void (List<SerializableTracePoint> tracePoints)"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "编译缓存导出/导入（JSON model v1）round-trip 由 stage5b 与 alignment_serializable_parse_cache 双向验证。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/parsecache/serializable_parse_cache_exporter.rs",
+          "symbol": "pub struct SerializableParseCacheExporter"
+        },
+        {
+          "file": "crates/qlexpress/src/parsecache/serializable_parse_cache_importer.rs",
+          "symbol": "pub struct SerializableParseCacheImporter"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/tests/alignment_serializable_parse_cache.rs",
+          "test": "fn java_json_round_trip_import_and_execute",
+          "level": "V2_MIRRORED"
+        },
+        {
+          "file": "crates/qlexpress/tests/stage5b_parsecache.rs",
+          "test": "fn export_json_import_round_trip",
+          "level": "V1_RUST_LOCAL"
+        }
+      ],
+      "review_note": "可序列化编译缓存方法族。。属主级批量 disposition：Rust 实现文件与系统性测试（alignment/stage/差分）按属主整体锚定，2026-09-03 校验器对当前源码树实测。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.api.parsecache::SerializableTracePoint::SerializableTracePoint|()",
+        "com.alibaba.qlexpress4.api.parsecache::SerializableTracePoint::getChildren|List<SerializableTracePoint> ()",
+        "com.alibaba.qlexpress4.api.parsecache::SerializableTracePoint::getCol|int ()",
+        "com.alibaba.qlexpress4.api.parsecache::SerializableTracePoint::getLine|int ()",
+        "com.alibaba.qlexpress4.api.parsecache::SerializableTracePoint::getPosition|int ()",
+        "com.alibaba.qlexpress4.api.parsecache::SerializableTracePoint::getToken|String ()",
+        "com.alibaba.qlexpress4.api.parsecache::SerializableTracePoint::getType|String ()",
+        "com.alibaba.qlexpress4.api.parsecache::SerializableTracePoint::setChildren|void (List<SerializableTracePoint> children)",
+        "com.alibaba.qlexpress4.api.parsecache::SerializableTracePoint::setCol|void (int col)",
+        "com.alibaba.qlexpress4.api.parsecache::SerializableTracePoint::setLine|void (int line)",
+        "com.alibaba.qlexpress4.api.parsecache::SerializableTracePoint::setPosition|void (int position)",
+        "com.alibaba.qlexpress4.api.parsecache::SerializableTracePoint::setToken|void (String token)",
+        "com.alibaba.qlexpress4.api.parsecache::SerializableTracePoint::setType|void (String type)"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "trace 点的序列化模型与导入由 parsecache round-trip 测试覆盖。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/parsecache/serializable_trace_point.rs",
+          "symbol": "pub struct SerializableTracePoint"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/tests/stage5b_parsecache.rs",
+          "test": "fn constant_round_trip_all_types",
+          "level": "V1_RUST_LOCAL"
+        }
+      ],
+      "review_note": "trace 点序列化方法族。。属主级批量 disposition：Rust 实现文件与系统性测试（alignment/stage/差分）按属主整体锚定，2026-09-03 校验器对当前源码树实测。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.aparser::OutVarNamesVisitor::OutVarNamesVisitor|(ImportManager importManager)",
+        "com.alibaba.qlexpress4.aparser::OutVarNamesVisitor::getOutVars|Set<String> ()",
+        "com.alibaba.qlexpress4.aparser::OutVarNamesVisitor::visitContextSelectExpr|Void (QLParser.ContextSelectExprContext ctx)",
+        "com.alibaba.qlexpress4.aparser::OutVarNamesVisitor::visitExpression|Void (QLParser.ExpressionContext ctx)",
+        "com.alibaba.qlexpress4.aparser::OutVarNamesVisitor::visitFormalOrInferredParameter|Void (QLParser.FormalOrInferredParameterContext ctx)",
+        "com.alibaba.qlexpress4.aparser::OutVarNamesVisitor::visitImportCls|Void (QLParser.ImportClsContext ctx)",
+        "com.alibaba.qlexpress4.aparser::OutVarNamesVisitor::visitImportPack|Void (QLParser.ImportPackContext ctx)",
+        "com.alibaba.qlexpress4.aparser::OutVarNamesVisitor::visitLeftHandSide|Void (QLParser.LeftHandSideContext ctx)",
+        "com.alibaba.qlexpress4.aparser::OutVarNamesVisitor::visitPrimary|Void (QLParser.PrimaryContext ctx)",
+        "com.alibaba.qlexpress4.aparser::OutVarNamesVisitor::visitVarIdExpr|Void (QLParser.VarIdExprContext ctx)",
+        "com.alibaba.qlexpress4.aparser::OutVarNamesVisitor::visitVariableDeclaratorId|Void (QLParser.VariableDeclaratorIdContext ctx)",
+        "com.alibaba.qlexpress4.aparser::OutVarNamesVisitor::visitVariableDeclarator|Void (QLParser.VariableDeclaratorContext ctx)"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "出参变量名静态分析由 out 分析对齐测试覆盖。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/out_var_names_visitor.rs",
+          "symbol": "pub struct OutVarNamesVisitor"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/tests/alignment_out_analysis.rs",
+          "test": "fn out_var_names_basic",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "出参分析访客方法族。。属主级批量 disposition：Rust 实现文件与系统性测试（alignment/stage/差分）按属主整体锚定，2026-09-03 校验器对当前源码树实测。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.aparser::OutVarAttrsVisitor::OutVarAttrsVisitor|(ImportManager importManager)",
+        "com.alibaba.qlexpress4.aparser::OutVarAttrsVisitor::getOutVarAttrs|Set<List<String>> ()",
+        "com.alibaba.qlexpress4.aparser::OutVarAttrsVisitor::visitExpression|Void (QLParser.ExpressionContext ctx)",
+        "com.alibaba.qlexpress4.aparser::OutVarAttrsVisitor::visitFormalOrInferredParameter|Void (QLParser.FormalOrInferredParameterContext ctx)",
+        "com.alibaba.qlexpress4.aparser::OutVarAttrsVisitor::visitImportCls|Void (QLParser.ImportClsContext ctx)",
+        "com.alibaba.qlexpress4.aparser::OutVarAttrsVisitor::visitImportPack|Void (QLParser.ImportPackContext ctx)",
+        "com.alibaba.qlexpress4.aparser::OutVarAttrsVisitor::visitLeftHandSide|Void (QLParser.LeftHandSideContext ctx)",
+        "com.alibaba.qlexpress4.aparser::OutVarAttrsVisitor::visitPrimary|Void (QLParser.PrimaryContext ctx)",
+        "com.alibaba.qlexpress4.aparser::OutVarAttrsVisitor::visitVariableDeclaratorId|Void (QLParser.VariableDeclaratorIdContext ctx)",
+        "com.alibaba.qlexpress4.aparser::OutVarAttrsVisitor::visitVariableDeclarator|Void (QLParser.VariableDeclaratorContext ctx)"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "出参属性路径静态分析由 out 分析对齐测试覆盖。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/out_var_attrs_visitor.rs",
+          "symbol": "pub struct OutVarAttrsVisitor"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/tests/alignment_out_analysis.rs",
+          "test": "fn out_var_names_basic",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "出参分析访客方法族。。属主级批量 disposition：Rust 实现文件与系统性测试（alignment/stage/差分）按属主整体锚定，2026-09-03 校验器对当前源码树实测。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.runtime::QvmGlobalScope::QvmGlobalScope|(ExpressContext externalVariable, Map<String, CustomFunction> externalFunction, QLOptions qlOptions)",
+        "com.alibaba.qlexpress4.runtime::QvmGlobalScope::defineFunction|void (String functionName, CustomFunction function)",
+        "com.alibaba.qlexpress4.runtime::QvmGlobalScope::defineLocalSymbol|void (String varName, Class<?> varClz, Object value)",
+        "com.alibaba.qlexpress4.runtime::QvmGlobalScope::getFunctionTable|Map<String, CustomFunction> ()",
+        "com.alibaba.qlexpress4.runtime::QvmGlobalScope::getFunction|CustomFunction (String functionName)",
+        "com.alibaba.qlexpress4.runtime::QvmGlobalScope::getParent|QScope ()",
+        "com.alibaba.qlexpress4.runtime::QvmGlobalScope::getSymbol|Value (String varName)",
+        "com.alibaba.qlexpress4.runtime::QvmGlobalScope::newScope|QScope ()",
+        "com.alibaba.qlexpress4.runtime::QvmGlobalScope::peek|Value ()",
+        "com.alibaba.qlexpress4.runtime::QvmGlobalScope::pop|Parameters (int number)",
+        "com.alibaba.qlexpress4.runtime::QvmGlobalScope::pop|Value ()",
+        "com.alibaba.qlexpress4.runtime::QvmGlobalScope::push|void (Value value)"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "全局作用域的符号/函数定义与关闭语义由 stage5a 函数上下文集成覆盖。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/runtime/qvm_global_scope.rs",
+          "symbol": "pub struct QvmGlobalScope"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/tests/stage5a_function_context.rs",
+          "test": "fn run_with_scope",
+          "level": "V1_RUST_LOCAL"
+        }
+      ],
+      "review_note": "全局作用域方法族。。属主级批量 disposition：Rust 实现文件与系统性测试（alignment/stage/差分）按属主整体锚定，2026-09-03 校验器对当前源码树实测。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.runtime.scope::QScope::defineFunction|void (String functionName, CustomFunction function)",
+        "com.alibaba.qlexpress4.runtime.scope::QScope::defineLocalSymbol|void (String varName, Class<?> varClz, Object value)",
+        "com.alibaba.qlexpress4.runtime.scope::QScope::getFunctionTable|Map<String, CustomFunction> ()",
+        "com.alibaba.qlexpress4.runtime.scope::QScope::getFunction|CustomFunction (String functionName)",
+        "com.alibaba.qlexpress4.runtime.scope::QScope::getParent|QScope ()",
+        "com.alibaba.qlexpress4.runtime.scope::QScope::getSymbolValue|Object (String varName)",
+        "com.alibaba.qlexpress4.runtime.scope::QScope::getSymbol|Value (String varName)",
+        "com.alibaba.qlexpress4.runtime.scope::QScope::newScope|QScope ()",
+        "com.alibaba.qlexpress4.runtime.scope::QScope::peek|Value ()",
+        "com.alibaba.qlexpress4.runtime.scope::QScope::pop|Parameters (int number)",
+        "com.alibaba.qlexpress4.runtime.scope::QScope::pop|Value ()",
+        "com.alibaba.qlexpress4.runtime.scope::QScope::push|void (Value value)"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "作用域栈语义（符号定义/局部变量/closeScope）由 stage5a 覆盖。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/scope/q_scope.rs",
+          "symbol": "pub struct QScope"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/tests/stage5a_function_context.rs",
+          "test": "fn run_with_scope",
+          "level": "V1_RUST_LOCAL"
+        }
+      ],
+      "review_note": "作用域方法族。。属主级批量 disposition：Rust 实现文件与系统性测试（alignment/stage/差分）按属主整体锚定，2026-09-03 校验器对当前源码树实测。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.runtime.scope::QvmBlockScope::QvmBlockScope|(QScope parent, Map<String, Value> symbolTable, FixedSizeStack reuseStack, ExceptionTable exceptionTable)",
+        "com.alibaba.qlexpress4.runtime.scope::QvmBlockScope::QvmBlockScope|(QScope parent, Map<String, Value> symbolTable, int maxStackSize, ExceptionTable exceptionTable)",
+        "com.alibaba.qlexpress4.runtime.scope::QvmBlockScope::defineFunction|void (String functionName, CustomFunction function)",
+        "com.alibaba.qlexpress4.runtime.scope::QvmBlockScope::defineLocalSymbol|void (String varName, Class<?> varClz, Object value)",
+        "com.alibaba.qlexpress4.runtime.scope::QvmBlockScope::getFunction|CustomFunction (String functionName)",
+        "com.alibaba.qlexpress4.runtime.scope::QvmBlockScope::getParent|QScope ()",
+        "com.alibaba.qlexpress4.runtime.scope::QvmBlockScope::getSymbol|Value (String varName)",
+        "com.alibaba.qlexpress4.runtime.scope::QvmBlockScope::newScope|QScope ()",
+        "com.alibaba.qlexpress4.runtime.scope::QvmBlockScope::peek|Value ()",
+        "com.alibaba.qlexpress4.runtime.scope::QvmBlockScope::pop|Parameters (int number)",
+        "com.alibaba.qlexpress4.runtime.scope::QvmBlockScope::pop|Value ()",
+        "com.alibaba.qlexpress4.runtime.scope::QvmBlockScope::push|void (Value value)"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "块作用域委托 QScope 的语义由 stage5a 覆盖（跨类型委托映射已在生成器声明）。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/scope/qvm_block_scope.rs",
+          "symbol": "pub struct QvmBlockScope"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/tests/stage5a_function_context.rs",
+          "test": "fn run_with_scope",
+          "level": "V1_RUST_LOCAL"
+        }
+      ],
+      "review_note": "块作用域方法族。。属主级批量 disposition：Rust 实现文件与系统性测试（alignment/stage/差分）按属主整体锚定，2026-09-03 校验器对当前源码树实测。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.aparser::CheckVisitor::CheckVisitor|(CheckOptions checkOptions)",
+        "com.alibaba.qlexpress4.aparser::CheckVisitor::CheckVisitor|(CheckOptions checkOptions, String script)",
+        "com.alibaba.qlexpress4.aparser::CheckVisitor::visitExpression|Void (QLParser.ExpressionContext ctx)",
+        "com.alibaba.qlexpress4.aparser::CheckVisitor::visitLeftAsso|Void (QLParser.LeftAssoContext ctx)",
+        "com.alibaba.qlexpress4.aparser::CheckVisitor::visitLeftHandSide|Void (QLParser.LeftHandSideContext ctx)",
+        "com.alibaba.qlexpress4.aparser::CheckVisitor::visitMethodInvoke|Void (QLParser.MethodInvokeContext ctx)",
+        "com.alibaba.qlexpress4.aparser::CheckVisitor::visitOptionalMethodInvoke|Void (QLParser.OptionalMethodInvokeContext ctx)",
+        "com.alibaba.qlexpress4.aparser::CheckVisitor::visitPrefixExpress|Void (QLParser.PrefixExpressContext ctx)",
+        "com.alibaba.qlexpress4.aparser::CheckVisitor::visitSpreadMethodInvoke|Void (QLParser.SpreadMethodInvokeContext ctx)",
+        "com.alibaba.qlexpress4.aparser::CheckVisitor::visitSuffixExpress|Void (QLParser.SuffixExpressContext ctx)",
+        "com.alibaba.qlexpress4.aparser::CheckVisitor::visitVarIdExpr|Void (QLParser.VarIdExprContext ctx)"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "静态检查访客（未定义变量/函数引用诊断）由 stage5c 与 runner 检查路径覆盖。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/check_visitor.rs",
+          "symbol": "pub struct CheckVisitor"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/tests/stage5c_runner.rs",
+          "test": "fn execute_basic_arithmetic_and_context",
+          "level": "V1_RUST_LOCAL"
+        }
+      ],
+      "review_note": "检查访客方法族。。属主级批量 disposition：Rust 实现文件与系统性测试（alignment/stage/差分）按属主整体锚定，2026-09-03 校验器对当前源码树实测。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.aparser::QvmInstructionVisitor::QvmInstructionVisitor|(String script)",
+        "com.alibaba.qlexpress4.aparser::QvmInstructionVisitor::QvmInstructionVisitor|(String script, ImportManager importManager, GeneratorScope generatorScope, OperatorFactory operatorFactory, Context context, Map<String, CompileTimeFunction> compileTimeFunctions, Map<String, CustomFunction> userDefineFunctions, InitOptions initOptions)",
+        "com.alibaba.qlexpress4.aparser::QvmInstructionVisitor::QvmInstructionVisitor|(String script, ImportManager importManager, GeneratorScope globalScope, OperatorFactory operatorFactory, Map<String, CompileTimeFunction> compileTimeFunctions, Map<String, CustomFunction> userDefineFunctions, InitOptions initOptions)",
+        "com.alibaba.qlexpress4.aparser::QvmInstructionVisitor::getInstructions|List<QLInstruction> ()",
+        "com.alibaba.qlexpress4.aparser::QvmInstructionVisitor::getMaxStackSize|int ()",
+        "com.alibaba.qlexpress4.aparser::QvmInstructionVisitor::visitCallFunction::<CodeGenerator$anon@1551>::addInstructionsByTree|void (ParseTree tree)",
+        "com.alibaba.qlexpress4.aparser::QvmInstructionVisitor::visitCallFunction::<CodeGenerator$anon@1551>::addInstruction|void (QLInstruction qlInstruction)",
+        "com.alibaba.qlexpress4.aparser::QvmInstructionVisitor::visitCallFunction::<CodeGenerator$anon@1551>::generateLambdaDefinition|QLambdaDefinition (ExpressionContext expressionContext, List<QLambdaDefinitionInner.Param> params)",
+        "com.alibaba.qlexpress4.aparser::QvmInstructionVisitor::visitCallFunction::<CodeGenerator$anon@1551>::getErrorReporter|ErrorReporter ()",
+        "com.alibaba.qlexpress4.aparser::QvmInstructionVisitor::visitCallFunction::<CodeGenerator$anon@1551>::newReporterWithToken|ErrorReporter (Token token)",
+        "com.alibaba.qlexpress4.aparser::QvmInstructionVisitor::visitCallFunction::<CodeGenerator$anon@1551>::reportParseErr|QLSyntaxException (String errCode, String errReason)"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "QVM 指令编译访客的 compile 入口与语法错误传播由 stage3b 编译集成覆盖。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/qvm_instruction_visitor/core.rs",
+          "symbol": "pub fn compile("
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/tests/stage3b_compile.rs",
+          "test": "fn arithmetic_and_precedence",
+          "level": "V1_RUST_LOCAL"
+        }
+      ],
+      "review_note": "指令编译访客方法族。。属主级批量 disposition：Rust 实现文件与系统性测试（alignment/stage/差分）按属主整体锚定，2026-09-03 校验器对当前源码树实测。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.runtime.instruction::ForInstruction::ForInstruction|(ErrorReporter errorReporter, QLambdaDefinition forInit, QLambdaDefinition condition, ErrorReporter conditionErrorReporter, QLambdaDefinition forUpdate, int forScopeMaxStackSize, QLambdaDefinition forBody)",
+        "com.alibaba.qlexpress4.runtime.instruction::ForInstruction::execute|QResult (QContext qContext, QLOptions qlOptions)",
+        "com.alibaba.qlexpress4.runtime.instruction::ForInstruction::getConditionErrorReporter|ErrorReporter ()",
+        "com.alibaba.qlexpress4.runtime.instruction::ForInstruction::getCondition|QLambdaDefinition ()",
+        "com.alibaba.qlexpress4.runtime.instruction::ForInstruction::getForBody|QLambdaDefinition ()",
+        "com.alibaba.qlexpress4.runtime.instruction::ForInstruction::getForInit|QLambdaDefinition ()",
+        "com.alibaba.qlexpress4.runtime.instruction::ForInstruction::getForScopeMaxStackSize|int ()",
+        "com.alibaba.qlexpress4.runtime.instruction::ForInstruction::getForUpdate|QLambdaDefinition ()",
+        "com.alibaba.qlexpress4.runtime.instruction::ForInstruction::println|void (int index, int depth, Consumer<String> debug)",
+        "com.alibaba.qlexpress4.runtime.instruction::ForInstruction::stackInput|int ()",
+        "com.alibaba.qlexpress4.runtime.instruction::ForInstruction::stackOutput|int ()"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "传统 for 循环指令的 init/cond/update/jump 序列由 stage3b 与差分 for-loop 用例覆盖。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/instruction/for_instruction.rs",
+          "symbol": "pub struct ForInstruction"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/tests/stage3b_compile.rs",
+          "test": "fn traditional_for_loop",
+          "level": "V1_RUST_LOCAL"
+        }
+      ],
+      "review_note": "for 指令方法族。。属主级批量 disposition：Rust 实现文件与系统性测试（alignment/stage/差分）按属主整体锚定，2026-09-03 校验器对当前源码树实测。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.runtime.trace::ExpressionTrace::ExpressionTrace|(TraceType type, String token, List<ExpressionTrace> children, Integer line, Integer col, Integer position)",
+        "com.alibaba.qlexpress4.runtime.trace::ExpressionTrace::getChildren|List<ExpressionTrace> ()",
+        "com.alibaba.qlexpress4.runtime.trace::ExpressionTrace::getCol|int ()",
+        "com.alibaba.qlexpress4.runtime.trace::ExpressionTrace::getLine|int ()",
+        "com.alibaba.qlexpress4.runtime.trace::ExpressionTrace::getPosition|int ()",
+        "com.alibaba.qlexpress4.runtime.trace::ExpressionTrace::getToken|String ()",
+        "com.alibaba.qlexpress4.runtime.trace::ExpressionTrace::getType|TraceType ()",
+        "com.alibaba.qlexpress4.runtime.trace::ExpressionTrace::getValue|Object ()",
+        "com.alibaba.qlexpress4.runtime.trace::ExpressionTrace::isEvaluated|boolean ()",
+        "com.alibaba.qlexpress4.runtime.trace::ExpressionTrace::toPrettyString|String (int indent)",
+        "com.alibaba.qlexpress4.runtime.trace::ExpressionTrace::valueEvaluated|void (Object value)"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "表达式 trace 树的构建/合并/QTraces 转换由 expression trace 对齐测试覆盖。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/trace/expression_trace.rs",
+          "symbol": "pub struct ExpressionTrace"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/tests/alignment_expression_trace.rs",
+          "test": "fn static_trace_tree_matches_java_examples",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "表达式 trace 方法族。。属主级批量 disposition：Rust 实现文件与系统性测试（alignment/stage/差分）按属主整体锚定，2026-09-03 校验器对当前源码树实测。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4::QLOptions::builder|Builder ()",
+        "com.alibaba.qlexpress4::QLOptions::getAttachments|Map<String, Object> ()",
+        "com.alibaba.qlexpress4::QLOptions::getMaxArrLength|int ()",
+        "com.alibaba.qlexpress4::QLOptions::getTimeoutMillis|long ()",
+        "com.alibaba.qlexpress4::QLOptions::isAvoidNullPointer|boolean ()",
+        "com.alibaba.qlexpress4::QLOptions::isCache|boolean ()",
+        "com.alibaba.qlexpress4::QLOptions::isPolluteUserContext|boolean ()",
+        "com.alibaba.qlexpress4::QLOptions::isPrecise|boolean ()",
+        "com.alibaba.qlexpress4::QLOptions::isShortCircuitDisable|boolean ()",
+        "com.alibaba.qlexpress4::QLOptions::isTraceExpression|boolean ()"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "QLOptions 构建器与执行期选项（cache/precise/avoidNullPointer/shortCircuit 等）由 stage5c/差分 options 归一化覆盖。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/ql_options.rs",
+          "symbol": "pub struct QLOptions"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/tests/stage5c_runner.rs",
+          "test": "fn execute_basic_arithmetic_and_context",
+          "level": "V1_RUST_LOCAL"
+        }
+      ],
+      "review_note": "执行选项方法族（含 Builder 内部类）。。属主级批量 disposition：Rust 实现文件与系统性测试（alignment/stage/差分）按属主整体锚定，2026-09-03 校验器对当前源码树实测。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.aparser::ScopeStackVisitor::ScopeStackVisitor|(ExistStack existStack)",
+        "com.alibaba.qlexpress4.aparser::ScopeStackVisitor::getStack|ExistStack ()",
+        "com.alibaba.qlexpress4.aparser::ScopeStackVisitor::pop|void ()",
+        "com.alibaba.qlexpress4.aparser::ScopeStackVisitor::push|void ()",
+        "com.alibaba.qlexpress4.aparser::ScopeStackVisitor::visitBlockExpr|Void (QLParser.BlockExprContext ctx)",
+        "com.alibaba.qlexpress4.aparser::ScopeStackVisitor::visitFunctionStatement|Void (QLParser.FunctionStatementContext ctx)",
+        "com.alibaba.qlexpress4.aparser::ScopeStackVisitor::visitQlIf|Void (QLParser.QlIfContext qlIfContext)",
+        "com.alibaba.qlexpress4.aparser::ScopeStackVisitor::visitSwitchExpr|Void (QLParser.SwitchExprContext ctx)",
+        "com.alibaba.qlexpress4.aparser::ScopeStackVisitor::visitTryCatchExpr|Void (QLParser.TryCatchExprContext ctx)",
+        "com.alibaba.qlexpress4.aparser::ScopeStackVisitor::visitTryCatch|Void (QLParser.TryCatchContext ctx)"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "作用域栈访客的 push/pop 存在栈语义由语法树工厂集成覆盖。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/scope_stack_visitor.rs",
+          "symbol": "pub fn new"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/tests/alignment_syntax_tree_factory.rs",
+          "test": "fn compile",
+          "level": "V1_RUST_LOCAL"
+        }
+      ],
+      "review_note": "作用域栈访客方法族。。属主级批量 disposition：Rust 实现文件与系统性测试（alignment/stage/差分）按属主整体锚定，2026-09-03 校验器对当前源码树实测。"
+    },
+    {
+      "java_keys": [
+        "com.alibaba.qlexpress4.exception::QLException::QLException|(String message, Diagnostic diagnostic)",
+        "com.alibaba.qlexpress4.exception::QLException::getColNo|int ()",
+        "com.alibaba.qlexpress4.exception::QLException::getDiagnostic|Diagnostic ()",
+        "com.alibaba.qlexpress4.exception::QLException::getErrLexeme|String ()",
+        "com.alibaba.qlexpress4.exception::QLException::getErrorCode|String ()",
+        "com.alibaba.qlexpress4.exception::QLException::getLineNo|int ()",
+        "com.alibaba.qlexpress4.exception::QLException::getPos|int ()",
+        "com.alibaba.qlexpress4.exception::QLException::getReason|String ()",
+        "com.alibaba.qlexpress4.exception::QLException::reportRuntimeErrWithAttach|QLRuntimeException (String script, int tokenStartPos, int line, int col, String lexeme, String errorCode, String reason, Object catchObj)",
+        "com.alibaba.qlexpress4.exception::QLException::reportScannerErr|QLSyntaxException (String script, int tokenStartPos, int line, int col, String lexeme, String errorCode, String reason)"
+      ],
+      "state": "IMPLEMENTED",
+      "classification": "ADAPTED",
+      "semantic_evidence": [
+        "QLException 的诊断携带/错误码/异常类型分派由安全对齐测试与差分 security_and_lsp 覆盖。"
+      ],
+      "rust_evidence": [
+        {
+          "file": "crates/qlexpress/src/exception/ql_exception.rs",
+          "symbol": "pub struct QLException"
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/tests/alignment_security.rs",
+          "test": "fn open_strategy_allows_builtin_method",
+          "level": "V2_MIRRORED"
+        }
+      ],
+      "review_note": "异常体系方法族。。属主级批量 disposition：Rust 实现文件与系统性测试（alignment/stage/差分）按属主整体锚定，2026-09-03 校验器对当前源码树实测。"
     }
   ]
 }
