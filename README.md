@@ -21,10 +21,10 @@
 
 ---
 
-> **Release:** `0.1.0-alpha.2`<br>
-> **Maturity:** alpha preview; APIs may change before `1.0`<br>
+> **Release:** `0.1.0-beta.0`<br>
+> **Maturity:** beta preview; APIs may change before `1.0`<br>
 > **Java baseline:** QLExpress4 `4.2.0-beta`, commit `9065b9ac5d985dcd02e627239aa9cdb78fb2f7f3`<br>
-> **Last verified:** 2026-07-30
+> **Last verified:** 2026-09-03
 
 QlExpress Rust evaluates expressions and rule scripts inside a Rust process. It provides a parser, a
 stack-based QVM, Java-compatible value and error semantics, custom functions and operators,
@@ -56,7 +56,7 @@ each host environment.
 - A single `Express4Runner` is not `Send` or `Sync`; use one runner per worker thread.
 - Rust native methods and constructors are registered explicitly; derive cannot inspect `impl`
   blocks.
-- `0.1.0-alpha.2` is an alpha release, not a stable `1.0` compatibility promise.
+- `0.1.0-beta.0` is a beta release, not a stable `1.0` compatibility promise.
 
 ## Architecture
 
@@ -125,7 +125,7 @@ security, failure handling, and architecture decisions.
 Add the crate:
 
 ```bash
-cargo add qlexpress@0.1.0-alpha.2
+cargo add qlexpress@0.1.0-beta.0
 ```
 
 Evaluate a script:
@@ -244,21 +244,21 @@ and residual boundaries.
 
 ## Versioning
 
-`0.1.0-alpha.2` is an alpha release. The public API may change between
+`0.1.0-beta.0` is a beta release. The public API may change between
 pre-release versions without a major version bump. To avoid breakage from
 automatic semver-compatible upgrades, pin the exact version in `Cargo.toml`:
 
 ```toml
 [dependencies]
-qlexpress = "=0.1.0-alpha.2"
-qlexpress-derive = "=0.1.0-alpha.2"
+qlexpress = "=0.1.0-beta.0"
+qlexpress-derive = "=0.1.0-beta.0"
 ```
 
 Or with the CLI:
 
 ```bash
-cargo add qlexpress@=0.1.0-alpha.2
-cargo add qlexpress-derive@=0.1.0-alpha.2
+cargo add qlexpress@=0.1.0-beta.0
+cargo add qlexpress-derive@=0.1.0-beta.0
 ```
 
 The `=` prefix forces an exact version match. Both `qlexpress` and

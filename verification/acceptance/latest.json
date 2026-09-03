@@ -1,6 +1,8 @@
 {
-  "date": "2026-07-30",
-  "coverage_summary": "Java 核心行基线 7,764/9,151=84.84%；Rust 核心行 21,667/24,822=87.29%、分支 2,346/3,118=75.24%；Rust workspace 行 21,948/25,843=84.93%、分支 2,378/3,164=75.16%。",
+  "date": "2026-09-03",
+  "release": "0.1.0-beta.0",
+  "coverage_summary": "Rust workspace 行 85.83%；分支 85.96%；区域 86.77%（cargo-llvm-cov，含 2026-09-03 当周新增代码）。",
+  "evidence": "docs/生产验收.md「2026-09-03 本轮验收证据（0.1.0-beta.0 晋级）」；Production Readiness run 33761080208（9/9 job 绿）",
   "statuses": {
     "OWN-01": "PASS",
     "ERR-01": "PASS",
