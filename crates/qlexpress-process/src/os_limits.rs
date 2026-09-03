@@ -24,9 +24,9 @@ fn env_u64(name: &str, default: u64) -> u64 {
 #[cfg(unix)]
 pub fn apply(limits: &WorkerLimits) -> Result<(), String> {
     set_memory_limit(limits.memory_bytes)?;
-    set_limit(libc::RLIMIT_CPU, limits.cpu_seconds, "cpu")?;
-    set_limit(libc::RLIMIT_FSIZE, limits.file_size_bytes, "file size")?;
-    set_limit(libc::RLIMIT_NOFILE, limits.open_files, "open files")?;
+    set_limit(libc::RLIMIT_CPU as _, limits.cpu_seconds, "cpu")?;
+    set_limit(libc::RLIMIT_FSIZE as _, limits.file_size_bytes, "file size")?;
+    set_limit(libc::RLIMIT_NOFILE as _, limits.open_files, "open files")?;
     Ok(())
 }
 
@@ -40,7 +40,7 @@ fn set_memory_limit(_memory_bytes: u64) -> Result<(), String> {
 
 #[cfg(all(unix, not(target_os = "macos")))]
 fn set_memory_limit(memory_bytes: u64) -> Result<(), String> {
-    set_limit(libc::RLIMIT_AS, memory_bytes, "address space")
+    set_limit(libc::RLIMIT_AS as _, memory_bytes, "address space")
 }
 
 /// 非 Unix 平台必须由容器或 Job Object 提供硬限制。
@@ -58,7 +58,7 @@ fn set_limit(resource: libc::c_int, value: u64, name: &str) -> Result<(), String
         rlim_max: 0,
     };
     // SAFETY: `current` 是有效可写的 `rlimit`，resource 来自 RLIMIT_*。
-    if unsafe { libc::getrlimit(resource, &mut current) } != 0 {
+    if unsafe { libc::getrlimit(resource as _, &mut current) } != 0 {
         return Err(format!(
             "failed to read {name} limit: {}",
             std::io::Error::last_os_error()
@@ -71,7 +71,7 @@ fn set_limit(resource: libc::c_int, value: u64, name: &str) -> Result<(), String
         rlim_max: current.rlim_max,
     };
     // SAFETY: `limit` 指向有效且已初始化的 `rlimit`，调用只影响当前 Worker。
-    let result = unsafe { libc::setrlimit(resource, &limit) };
+    let result = unsafe { libc::setrlimit(resource as _, &limit) };
     if result == 0 {
         Ok(())
     } else {
