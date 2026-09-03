@@ -3,7 +3,9 @@
 use std::time::Duration;
 
 use qlexpress_process::{ProcessWorker, WorkerLimits, WorkerRequest};
-use serde_json::{Map, Value};
+use serde_json::Map;
+#[cfg(unix)]
+use serde_json::Value;
 
 fn worker_binary() -> &'static str {
     env!("CARGO_BIN_EXE_qlexpress-process")
