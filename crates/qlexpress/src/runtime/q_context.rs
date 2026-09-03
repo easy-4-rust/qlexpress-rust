@@ -8,6 +8,7 @@ use std::time::Instant;
 use crate::exception::QLException;
 use crate::ql_options::Attachments;
 use crate::runtime::class_ref::ClassRef;
+use crate::runtime::execution_budget::ExecutionBudget;
 use crate::runtime::function::CustomFunction;
 use crate::runtime::left_value::LeftValue;
 use crate::runtime::member::NativeRegistry;
@@ -76,6 +77,17 @@ pub trait QContext {
     /// 返回外部协作式取消令牌；普通兼容执行返回 `None`。
     fn cancellation_token(&self) -> Option<&CancellationToken> {
         self.q_runtime().cancellation_token()
+    }
+
+    /// 返回沙箱截止时间是否已过期；普通兼容执行始终返回 `false`。
+    ///
+    /// 宿主函数在阻塞 I/O 前后调用此方法可快速判断是否应中止执行。
+    /// 若返回 `true`，宿主函数应返回带 `SANDBOX_DEADLINE_EXCEEDED`
+    /// 错误码的 [`QLException`]（`Timeout` 类型）。
+    fn is_expired(&self) -> bool {
+        self.q_runtime()
+            .execution_budget()
+            .is_some_and(ExecutionBudget::is_expired)
     }
 
     // ---- Java QScope ----

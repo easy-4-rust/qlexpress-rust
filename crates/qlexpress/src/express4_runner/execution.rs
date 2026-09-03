@@ -132,6 +132,8 @@ impl Express4Runner {
         context: Rc<dyn ExpressContext>,
         ql_options: &QLOptions,
     ) -> Result<QLResult, QLException> {
+        #[cfg(feature = "tracing")]
+        let _guard = tracing::info_span!("execute", script_len = script.len()).entered();
         // Java: qlOptions.isCache() ? parseToDefinitionWithCache : parseDefinition
         let compile_cache = if ql_options.is_cache() {
             self.parse_to_definition_with_cache(script)
@@ -139,7 +141,18 @@ impl Express4Runner {
             self.parse_definition(script).map(Rc::new)
         }
         .map_err(QLSyntaxException::into_exception)?;
-        self.execute_definition(&compile_cache, true, context, ql_options)
+        let result = self.execute_definition(&compile_cache, true, context, ql_options);
+        match &result {
+            Ok(_) => {
+                #[cfg(feature = "tracing")]
+                tracing::info!("execute completed");
+            }
+            Err(_e) => {
+                #[cfg(feature = "tracing")]
+                tracing::warn!(error = %_e, "execute failed");
+            }
+        }
+        result
     }
 
     /// 使用有限预算、静态检查、统一 capability 白名单和租户缓存执行脚本。

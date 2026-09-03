@@ -236,6 +236,30 @@ runner，再在线程内长期复用以获得编译缓存收益。不要给单�
 Worker。预算、能力白名单、取消、操作系统限制和剩余边界见
 [安全沙箱](docs/Security-Sandbox.zh_CN.md)。
 
+## 版本锁定
+
+`0.1.0-alpha.2` 是 Alpha 预览版本。预发布版本之间的公共 API 可能发生变化，且不受
+semver 大版本号约束。为避免自动升级导致编译失败，建议在 `Cargo.toml` 中精确锁定版本：
+
+```toml
+[dependencies]
+qlexpress = "=0.1.0-alpha.2"
+qlexpress-derive = "=0.1.0-alpha.2"
+```
+
+或使用命令行：
+
+```bash
+cargo add qlexpress@=0.1.0-alpha.2
+cargo add qlexpress-derive@=0.1.0-alpha.2
+```
+
+`=` 前缀强制精确版本匹配。`qlexpress` 与 `qlexpress-derive` 必须使用相同版本——
+二者同步发布，混用版本会导致编译错误。
+
+升级前请先阅读 [CHANGELOG.md](CHANGELOG.md) 中的破坏性变更说明。
+`1.0` 正式发布后将遵循标准 semver 保证。
+
 ## 验证
 
 当前仓库的基础门禁：

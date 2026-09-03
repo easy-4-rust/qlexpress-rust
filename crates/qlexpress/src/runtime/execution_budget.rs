@@ -44,6 +44,30 @@ impl ExecutionBudget {
         self.deadline
     }
 
+    /// 返回截止时间是否已经到期。
+    ///
+    /// 宿主函数可在阻塞调用前后调用此方法，快速判断是否仍可继续工作。
+    /// 若已过期，宿主函数应返回带 `SANDBOX_DEADLINE_EXCEEDED` 错误码
+    /// 的 [`QLException`]（`Timeout` 类型），避免继续执行无意义的 I/O。
+    ///
+    /// 对应 Java：无（Rust 安全增强的宿主自查 API）。
+    pub fn is_expired(&self) -> bool {
+        Instant::now() >= self.deadline
+    }
+
+    /// 返回距截止时间的剩余时长；若已过期则返回 [`Duration::ZERO`]。
+    ///
+    /// 宿主函数可将返回值直接传递给下游 HTTP/数据库客户端作为超时参数。
+    /// 返回 `Duration::ZERO` 表示已过期，宿主函数应立即中止并返回
+    /// `SANDBOX_DEADLINE_EXCEEDED` 错误。
+    ///
+    /// 对应 Java：无（Rust 安全增强的宿主自查 API）。
+    pub fn remaining(&self) -> Duration {
+        self.deadline
+            .checked_duration_since(Instant::now())
+            .unwrap_or(Duration::ZERO)
+    }
+
     /// 返回共享取消令牌。
     /// 对应 Java：无（Rust 安全增强的协作式取消能力）。
     pub fn cancellation_token(&self) -> &CancellationToken {
@@ -392,4 +416,69 @@ pub(crate) fn budget_error(
     reason: impl Into<String>,
 ) -> QLException {
     QLException::for_test(kind, reason, code)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_budget(timeout_millis: u64) -> ExecutionBudget {
+        let limits = ResourceLimits {
+            timeout_millis,
+            ..ResourceLimits::default()
+        };
+        ExecutionBudget::new(limits, CancellationToken::new())
+    }
+
+    #[test]
+    fn is_expired_returns_false_before_deadline() {
+        let budget = make_budget(10_000);
+        assert!(!budget.is_expired());
+    }
+
+    #[test]
+    fn is_expired_returns_true_after_deadline() {
+        // 使用极短的超时（1ms），等待后应过期
+        let budget = make_budget(1);
+        std::thread::sleep(Duration::from_millis(10));
+        assert!(budget.is_expired());
+    }
+
+    #[test]
+    fn remaining_returns_nonzero_before_deadline() {
+        let budget = make_budget(10_000);
+        let remaining = budget.remaining();
+        assert!(remaining > Duration::ZERO);
+        assert!(remaining <= Duration::from_millis(10_000));
+    }
+
+    #[test]
+    fn remaining_returns_zero_after_deadline() {
+        let budget = make_budget(1);
+        std::thread::sleep(Duration::from_millis(10));
+        assert_eq!(budget.remaining(), Duration::ZERO);
+    }
+
+    #[test]
+    fn checkpoint_detects_expired_deadline() {
+        let budget = make_budget(1);
+        std::thread::sleep(Duration::from_millis(10));
+        let err = budget.checkpoint().unwrap_err();
+        assert_eq!(err.kind(), QLExceptionKind::Timeout);
+        assert!(err.reason().contains("deadline exceeded"));
+    }
+
+    #[test]
+    fn checkpoint_detects_cancelled_token() {
+        let token = CancellationToken::new();
+        token.cancel();
+        let limits = ResourceLimits {
+            timeout_millis: 10_000,
+            ..ResourceLimits::default()
+        };
+        let budget = ExecutionBudget::new(limits, token);
+        let err = budget.checkpoint().unwrap_err();
+        assert_eq!(err.kind(), QLExceptionKind::Timeout);
+        assert!(err.reason().contains("cancelled"));
+    }
 }

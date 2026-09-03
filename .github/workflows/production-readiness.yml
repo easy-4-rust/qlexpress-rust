@@ -15,15 +15,66 @@ env:
   JAVA_BASELINE_SHA: 9065b9ac5d985dcd02e627239aa9cdb78fb2f7f3
 
 jobs:
-  verification:
+  # ── Rust native steps: cross-platform matrix ──────────────────────────
+  format:
+    name: Formatting
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master
+        with:
+          components: rustfmt
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+  rust-platform:
+    name: Rust (${{ matrix.os }})
+    needs: format
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master
+        with:
+          components: clippy
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+
+      - name: Tests
+        run: cargo test --workspace --all-features
+
+      - name: Rustdoc
+        env:
+          RUSTDOCFLAGS: -D warnings
+        run: cargo doc --workspace --all-features --no-deps
+
+  # ── Java baseline integration: Ubuntu only (Maven + Java 21) ─────────
+  java-integration:
+    name: Java Integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
       - name: Checkout qlexpress-rust
-        uses: actions/checkout@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Checkout pinned Java baseline
-        uses: actions/checkout@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: alibaba/QLExpress
           ref: ${{ env.JAVA_BASELINE_SHA }}
@@ -37,26 +88,12 @@ jobs:
           cache: maven
 
       - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master
         with:
-          components: rustfmt, clippy
-
-      - name: Formatting
-        run: cargo fmt --all -- --check
+          components: rustfmt
 
       - name: Rust documentation quality
         run: python3 scripts/check_rust_doc_quality.py
-
-      - name: Clippy
-        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
-
-      - name: Tests
-        run: cargo test --workspace --all-features
-
-      - name: Rustdoc
-        env:
-          RUSTDOCFLAGS: -D warnings
-        run: cargo doc --workspace --all-features --no-deps
 
       - name: Java official script suite
         run: mvn -q -f java-baseline/pom.xml -Djacoco.skip=true -Dtest=TestSuiteRunner#suiteTest test
@@ -66,6 +103,22 @@ jobs:
 
       - name: Replay official Java scripts in Rust
         run: cargo run -q -p qlexpress-verification -- replay java-baseline
+
+  # ── Verification suite: Ubuntu only (cargo run -p qlexpress-verification) ─
+  verification:
+    name: Verification Suite
+    needs: [rust-platform, java-integration]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
 
       - name: Concurrency acceptance
         run: cargo run -q -p qlexpress-verification -- concurrency 8 1000
@@ -82,15 +135,40 @@ jobs:
       - name: Load acceptance
         run: cargo run -q -p qlexpress-verification -- load 10 4
 
+  # ── Supply chain audit ────────────────────────────────────────────────
+  audit:
+    name: Supply Chain Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
+
+      - name: Run cargo audit
+        run: cargo audit
+
+  # ── libFuzzer: nightly, Ubuntu only ───────────────────────────────────
   libfuzzer:
+    name: libFuzzer
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - name: Checkout qlexpress-rust
-        uses: actions/checkout@v6
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up nightly Rust
-        uses: dtolnay/rust-toolchain@nightly
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master
+        with:
+          toolchain: nightly
 
       - name: Install cargo-fuzz
         run: cargo install cargo-fuzz --locked

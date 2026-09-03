@@ -242,6 +242,32 @@ use `execute_checked` or the supervised process worker. See the
 [Security Sandbox](docs/Security-Sandbox.md) for budgets, capabilities, cancellation, OS limits,
 and residual boundaries.
 
+## Versioning
+
+`0.1.0-alpha.2` is an alpha release. The public API may change between
+pre-release versions without a major version bump. To avoid breakage from
+automatic semver-compatible upgrades, pin the exact version in `Cargo.toml`:
+
+```toml
+[dependencies]
+qlexpress = "=0.1.0-alpha.2"
+qlexpress-derive = "=0.1.0-alpha.2"
+```
+
+Or with the CLI:
+
+```bash
+cargo add qlexpress@=0.1.0-alpha.2
+cargo add qlexpress-derive@=0.1.0-alpha.2
+```
+
+The `=` prefix forces an exact version match. Both `qlexpress` and
+`qlexpress-derive` must use the same version — they are published in
+lockstep and mixing versions will produce compile errors.
+
+Before upgrading, review [CHANGELOG.md](CHANGELOG.md) for breaking changes.
+Once `1.0` is released, standard semver guarantees will apply.
+
 ## Verification
 
 The current repository gates include:

@@ -153,6 +153,46 @@ where
 /// [`Express4Runner::execute_checked`] 为 Rust 增加静态检查、有限预算、
 /// capability 白名单和租户缓存隔离。字段与 Java 一一对应，见各字段注释。
 /// 对应 Java: com.alibaba.qlexpress4.Express4Runner。
+///
+/// # Thread safety: intentionally not `Send` or `Sync`
+///
+/// `Express4Runner` uses [`Rc`] and [`RefCell`] internally (compile cache,
+/// user-defined functions, global scope, registered capabilities). It is
+/// **intentionally** neither [`Send`] nor [`Sync`].
+///
+/// The design model is **one runner per worker thread**: create and configure
+/// an `Express4Runner` on the thread that will use it, then reuse that
+/// instance for all script evaluations on that thread. Sharing or moving a
+/// runner across thread boundaries will produce a compile-time error. This
+/// is a deliberate safety guarantee, not a limitation — it lets the engine
+/// avoid the overhead of `Arc<Mutex<...>>` while still preventing data
+/// races at compile time.
+///
+/// Multi-threaded hosts should create one runner per worker thread.
+/// Compilation artifacts can be shared across threads via
+/// [`ConcurrentParseCache`](crate::api::parsecache::ConcurrentParseCache)
+/// (pure data, no runtime state).
+///
+/// The following `compile_fail` doctests verify the non-`Send`/non-`Sync`
+/// contracts at compile time:
+///
+/// ```compile_fail
+/// use qlexpress::Express4Runner;
+///
+/// fn assert_send<T: Send>(_: &T) {}
+///
+/// let runner = Express4Runner::new();
+/// assert_send(&runner); // Express4Runner is intentionally not Send
+/// ```
+///
+/// ```compile_fail
+/// use qlexpress::Express4Runner;
+///
+/// fn assert_sync<T: Sync>(_: &T) {}
+///
+/// let runner = Express4Runner::new();
+/// assert_sync(&runner); // Express4Runner is intentionally not Sync
+/// ```
 pub struct Express4Runner {
     /// 操作符管理器。对应 Java 字段 `operatorManager`。
     operator_manager: OperatorManager,

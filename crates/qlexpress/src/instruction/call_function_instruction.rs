@@ -5,6 +5,7 @@
 use crate::exception::error_codes;
 use crate::exception::error_reporter::ErrorReporter;
 use crate::exception::QLException;
+use crate::exception::QLExceptionKind;
 use crate::ql_options::QLOptions;
 use crate::runtime::instruction::{with_trace, QLInstruction};
 use crate::runtime::q_result::QResult;
@@ -213,6 +214,10 @@ fn rethrow_call_error(
 ) -> QLException {
     if is_user_defined(&err) {
         report_user_defined_exception(&**error_reporter, &err)
+    } else if err.is_host_origin() && err.kind() == QLExceptionKind::Timeout {
+        // 协作式截止时间契约：宿主主动检测过期返回的 Timeout 错误原样传播，
+        // 不得被归一化掩码（宿主需按错误码识别超时并做出反应）。
+        err
     } else if err.is_host_origin() {
         error_reporter
             .report_format(wrap_code, wrap_msg, wrap_args)

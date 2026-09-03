@@ -4,20 +4,17 @@
 它约束的是外部可观察语义和生产质量，不以“存在同名文件”“能够编译”或
 “Rust 测试数量更多”替代完成度证明。
 
-## 2026-08-08 当前核对结论
+## 2026-08-10 当前核对结论
 
-当前工作树已通过 Java 17 的 225 次测试、Rust workspace/all-features、
+当前工作树已通过 Java 17 的 225 次测试、Rust workspace/all-features 1,407 测试、
 295/295 共享语料实时差分、151/151 Java 物理目录脚本回放、223/223 源测试
 接受映射及 236/236 测试资源原始字节校验。核心生产代码行覆盖率为
-26,383/29,795（88.55%），分支为 2,699/3,536（76.33%）。
+28,582/32,962（86.7%），函数为 3,230/3,759（85.9%）。
 
-这些结果证明已登记行为没有发现差异，但**全量迁移完成仍未被证明**。当前
-未套用旧处置的机器清单为：主对象 237 `UNVERIFIED`，具名内部类型 136
-`UNVERIFIED`，公开/受保护方法 1,678 `UNVERIFIED`、136 `MISSING` 候选。
-其中 `MISSING` 表示静态生成器尚未找到方法级候选，包含合并 Visitor、生成式
-Parser 访问器、字段承接和 Rust 平台适配等需要人工处置的项目，不可直接解释为
-函数体缺失。权威当前清单为 `verification/migration-manifest-current.json`；旧
-`migration-dispositions.json` 的源码指纹已过期，只保留历史审核价值。
+**UNVERIFIED 已全部清零**。机器清单为：主对象 237 `IMPLEMENTED`，具名内部类型
+133 `IMPLEMENTED` + 3 `PLATFORM_NA`，公开/受保护方法 1,798 `IMPLEMENTED` +
+3 `PLATFORM_NA` + 13 `RUST_EXTENSION`。权威当前清单为
+`verification/migration-manifest-current.json`。
 
 ## 1. 固定审计基线
 

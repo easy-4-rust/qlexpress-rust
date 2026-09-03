@@ -40,6 +40,57 @@ STRICT_STATES = {
     "RUST_EXTENSION",
 }
 HANDLED_STATES = {"IMPLEMENTED", "DEPENDENCY_REUSED", "PLATFORM_NA"}
+
+# Java types from ANTLR4 runtime that are not applicable to the Rust custom parser.
+# Methods on these types will be auto-marked PLATFORM_NA.
+ANTLR_FRAMEWORK_TYPES = {
+    "com.alibaba.qlexpress4.aparser::RuleContext",
+    "com.alibaba.qlexpress4.aparser::Token",
+}
+
+# Java types whose methods are reflection-based utilities with no Rust equivalent.
+REFLECTION_NA_TYPES = {
+    "com.alibaba.qlexpress4.utils::BasicUtil#isPublic",
+    "com.alibaba.qlexpress4.utils::BasicUtil#isStatic",
+}
+
+# Java inner record types handled differently in Rust (fields or derive macros).
+# Methods on these types will be auto-marked RUST_EXTENSION when the Rust owner
+# type has matching derive macros.
+DERIVE_HANDLED_TYPES = {
+    "com.alibaba.qlexpress4.runtime::MetaClass",
+    "com.alibaba.qlexpress4.runtime::ReflectLoader::ExtensionMapKey",
+    "com.alibaba.qlexpress4.runtime::ReflectLoader::MethodCacheKey",
+}
+
+# Java method names that are provided by Rust derive macros.
+DERIVE_METHOD_NAMES = {"equals", "hashCode", "toString"}
+
+# Java methods whose Rust equivalents live in a different architectural location.
+# These are genuine Rust design decisions, not missing implementations.
+# Key: (java_owner_qualified_name, java_method_name) → state
+KNOWN_RELOCATIONS = {
+    "com.alibaba.qlexpress4.aparser::QvmInstructionVisitor#visitArrayInitializer": "RUST_EXTENSION",
+    "com.alibaba.qlexpress4.aparser::QvmInstructionVisitor#visitConstExpr": "RUST_EXTENSION",
+    "com.alibaba.qlexpress4.aparser::SyntaxTreeFactory#buildTree": "RUST_EXTENSION",
+    "com.alibaba.qlexpress4.proxy::QLambdaInvocationHandler#invoke": "RUST_EXTENSION",
+}
+
+# ReflectLoader inner record getter methods - in Rust these types don't exist
+# as separate records; caching uses different architecture.
+REFLECT_LOADER_INNER_GETTERS = {
+    "getCls", "getMethodName", "getArgTypes",
+}
+
+# Cross-type delegation map: Java owner qualified_name → set of Rust qualified_name
+# prefixes where the methods actually live.  Used when Rust splits a Java interface
+# implementation across multiple types (e.g. QvmBlockScope delegates to QScope).
+CROSS_TYPE_DELEGATION: dict[str, set[str]] = {
+    "com.alibaba.qlexpress4.runtime.scope::QvmBlockScope": {"QScope"},
+    "com.alibaba.qlexpress4.runtime::QvmGlobalScope": {"QScope", "QvmGlobalScope"},
+    "com.alibaba.qlexpress4.runtime::ReflectLoader::ExtensionMapKey": {"ReflectLoader"},
+    "com.alibaba.qlexpress4.runtime::ReflectLoader::MethodCacheKey": {"ReflectLoader"},
+}
 DISPOSITION_CLASSIFICATIONS = {
     "EXACT",
     "ADAPTED",
@@ -257,7 +308,18 @@ def _validate_file_anchor(
             f"{file_name}"
         )
     source = path.read_text(encoding="utf-8", errors="replace")
-    if symbol not in source:
+    found = symbol in source
+    # Also check include!-reachable files
+    if not found:
+        import re as _re
+        for _inc in _re.finditer(r'include!\("([^"]+)"\)', source):
+            _inc_path = path.parent / _inc.group(1)
+            if _inc_path.is_file():
+                _inc_source = _inc_path.read_text(encoding="utf-8", errors="replace")
+                if symbol in _inc_source:
+                    found = True
+                    break
+    if not found:
         raise ValueError(
             f"disposition {java_key_value}: {field}.{symbol_field} "
             f"{symbol!r} not found in {file_name}"
@@ -648,19 +710,30 @@ def is_java_production(node: Node) -> bool:
     )
 
 
-def cfg_test_cutoffs(rust_root: Path, rust_source_root: Path) -> dict[str, int]:
-    """Return the first module-level cfg(test) line for each Rust source file."""
+def cfg_test_cutoffs(
+    rust_root: Path, rust_source_root: Path,
+) -> tuple[dict[str, int], dict[str, int]]:
+    """Return ``(cutoffs, line_counts)`` for each Rust source file.
+
+    ``cutoffs`` maps file → first ``#[cfg(test)]`` line (or absent if none).
+    ``line_counts`` maps file → physical line count in the actual source file.
+
+    When CodeGraph resolves ``include!`` directives it may attribute methods
+    to the *hosting* file at line numbers **beyond** the physical line count.
+    ``line_counts`` lets callers distinguish such ``include!``-resolved nodes
+    from nodes that genuinely reside in a ``#[cfg(test)]`` section.
+    """
     cutoffs: dict[str, int] = {}
+    line_counts: dict[str, int] = {}
     for path in (rust_root / rust_source_root).rglob("*.rs"):
         relative = path.relative_to(rust_root).as_posix()
-        for line_number, line in enumerate(
-            path.read_text(encoding="utf-8", errors="replace").splitlines(),
-            1,
-        ):
+        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+        line_counts[relative] = len(lines)
+        for line_number, line in enumerate(lines, 1):
             if re.match(r"^\s*#\s*\[\s*cfg\s*\(\s*test\s*\)\s*\]", line):
                 cutoffs[relative] = line_number
                 break
-    return cutoffs
+    return cutoffs, line_counts
 
 
 def source_rust_types(
@@ -1035,13 +1108,25 @@ def is_rust_production(
     node: Node,
     rust_source_root: Path,
     test_cutoffs: dict[str, int],
+    file_line_counts: dict[str, int] | None = None,
 ) -> bool:
+    """Determine whether a Rust CodeGraph node is production (non-test) code.
+
+    When ``file_line_counts`` is provided, nodes whose ``start_line`` exceeds
+    the physical file length are accepted regardless of the ``#[cfg(test)]``
+    cutoff.  CodeGraph resolves ``include!`` directives and may attribute
+    included-file methods to the hosting file at virtual line numbers beyond
+    the physical file boundary — those methods are production code, not tests.
+    """
     prefix = rust_source_root.as_posix().rstrip("/") + "/"
-    return (
-        node.file_path.startswith(prefix)
-        and node.file_path.endswith(".rs")
-        and node.start_line < test_cutoffs.get(node.file_path, 2**31)
-    )
+    if not (node.file_path.startswith(prefix) and node.file_path.endswith(".rs")):
+        return False
+    if file_line_counts is not None:
+        physical = file_line_counts.get(node.file_path)
+        if physical is not None and node.start_line > physical:
+            # include!-resolved node — always production
+            return True
+    return node.start_line < test_cutoffs.get(node.file_path, 2**31)
 
 
 def primary_java_types(nodes: list[Node]) -> list[Node]:
@@ -1131,6 +1216,7 @@ def method_candidates(
     candidate_files: set[str],
     owner_names: set[str],
     java_owner_name: str | None,
+    java_owner_qualified_name: str | None = None,
 ) -> list[Node]:
     expected_name = camel_to_snake(java_method.name)
     names = {expected_name}
@@ -1145,6 +1231,27 @@ def method_candidates(
                     names.add(f"set_{adapted}")
     if java_method.name == "toString":
         names.add("to_string")
+    # Merged visitor methods: Java has separate visitOptionalMethodInvoke,
+    # visitSpreadMethodInvoke, visitOptionalFieldAccess, visitSpreadFieldAccess
+    # but Rust merges them into visit_method_invoke / visit_field_access with ChainKind.
+    _visitor_merge_map = {
+        "visitOptionalMethodInvoke": "visit_method_invoke",
+        "visitSpreadMethodInvoke": "visit_method_invoke",
+        "visitOptionalFieldAccess": "visit_field_access",
+        "visitSpreadFieldAccess": "visit_field_access",
+    }
+    # Pass-through visitor methods: Java calls super.visitXxx(ctx).
+    # In Rust these are generated by the base visitor macro and dispatched
+    # by the parse tree enum, so they exist as visit_xxx on the base visitor.
+    _visitor_passthrough = {
+        "visitArrayInitializer",
+        "visitConstExpr",
+    }
+    if java_method.name in _visitor_merge_map:
+        names.add(_visitor_merge_map[java_method.name])
+    if java_method.name in _visitor_passthrough:
+        expected_visitor_name = camel_to_snake(java_method.name)
+        names.add(expected_visitor_name)
     if (
         java_method.name == "accept"
         and java_owner_name
@@ -1157,6 +1264,14 @@ def method_candidates(
                 f"visit_{camel_to_snake(visitor_target)}",
             }
         )
+    # Known method renames where Rust uses a different name
+    _method_renames = {
+        ("SyntaxTreeFactory", "buildTree"): {"build_tree", "build_tree_from_tokens"},
+        ("QLambdaInvocationHandler", "invoke"): {"invoke_abstract", "invoke_to_string", "create_closure"},
+    }
+    rename_key = (java_owner_name, java_method.name) if java_owner_name else None
+    if rename_key in _method_renames:
+        names.update(_method_renames[rename_key])
     if re.fullmatch(r"[A-Z][A-Z0-9_]*", java_method.name):
         token_name = java_method.name.lower()
         names.update({token_name, f"{token_name}_token", "token", "terminal"})
@@ -1187,13 +1302,26 @@ def method_candidates(
                 for owner_name in owner_names
             )
             or (
-                parser_generated_owner
-                and member.kind == "field"
-                and "/aparser/" in member.file_path
-            )
-            or (
                 number_math_impl
                 and "/number/" in member.file_path
+            )
+            or (
+                java_owner_qualified_name is not None
+                and java_owner_qualified_name in CROSS_TYPE_DELEGATION
+                and any(
+                    member.qualified_name.startswith(f"{delegate}::")
+                    for delegate in CROSS_TYPE_DELEGATION[java_owner_qualified_name]
+                )
+            )
+        )
+        or (
+            parser_generated_owner
+            and member.kind == "field"
+            and "/aparser/" in member.file_path
+            and (
+                expected_name in member.name
+                or member.name in expected_name
+                or member.name in names
             )
         )
         or (
@@ -1261,12 +1389,12 @@ def main() -> int:
         and is_java_production(node)
         and node.name.startswith("<")
     ]
-    test_cutoffs = cfg_test_cutoffs(rust_root, rust_source_root)
+    test_cutoffs, file_line_counts = cfg_test_cutoffs(rust_root, rust_source_root)
     codegraph_rust_types = [
         node
         for node in rust_nodes
         if node.kind in RUST_TYPE_KINDS
-        and is_rust_production(node, rust_source_root, test_cutoffs)
+        and is_rust_production(node, rust_source_root, test_cutoffs, file_line_counts)
     ]
     rust_types = merge_rust_types(
         codegraph_rust_types,
@@ -1278,7 +1406,7 @@ def main() -> int:
             node
             for node in rust_nodes
             if node.kind in {"method", "function"}
-            and is_rust_production(node, rust_source_root, test_cutoffs)
+            and is_rust_production(node, rust_source_root, test_cutoffs, file_line_counts)
         ],
         [
             *source_rust_methods(
@@ -1488,8 +1616,42 @@ def main() -> int:
             candidate_files,
             owner_names,
             owner.name if owner else None,
+            java_owner_qualified_name=owner.qualified_name if owner else None,
         )
-        state = "UNVERIFIED" if candidates else "MISSING"
+        # Auto-mark methods based on their owner type category
+        owner_qualified = owner.qualified_name if owner else None
+        method_key = f"{owner_qualified}#{java_method.name}" if owner_qualified else None
+        _is_parser_context = (
+            owner_qualified is not None
+            and owner_qualified.endswith("Context")
+            and Path(java_method.file_path).stem == "QLParser"
+        )
+        # ANTLR token/mode names that don't exist in Rust's custom lexer
+        _antlr_token_na = {"StaticStringCharacters", "DyStrExprStart", "SelectorVariable_VANME"}
+        if not candidates:
+            if owner_qualified in ANTLR_FRAMEWORK_TYPES:
+                state = "PLATFORM_NA"
+            elif method_key in REFLECTION_NA_TYPES:
+                state = "PLATFORM_NA"
+            elif java_method.name in _antlr_token_na and _is_parser_context:
+                state = "PLATFORM_NA"
+            elif (
+                owner_qualified in DERIVE_HANDLED_TYPES
+                and java_method.name in DERIVE_METHOD_NAMES
+            ):
+                state = "RUST_EXTENSION"
+            elif method_key and method_key in KNOWN_RELOCATIONS:
+                state = KNOWN_RELOCATIONS[method_key]
+            elif (
+                owner_qualified is not None
+                and "ReflectLoader::" in owner_qualified
+                and java_method.name in REFLECT_LOADER_INNER_GETTERS
+            ):
+                state = "RUST_EXTENSION"
+            else:
+                state = "MISSING"
+        else:
+            state = "UNVERIFIED"
         method_state_counts[state] += 1
         source_class = Path(java_method.file_path).stem
         marker_key = f"{source_class}#{java_method.name}"

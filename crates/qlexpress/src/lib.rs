@@ -37,6 +37,7 @@ pub mod logic;
 pub mod lsp;
 pub mod member;
 pub mod number;
+pub(crate) mod observability;
 pub mod operator;
 pub mod parsecache;
 pub mod proxy;
