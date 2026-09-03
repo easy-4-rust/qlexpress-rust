@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-09-03T17:59:09.400771+00:00",
+  "generated_at": "2026-09-03T18:26:33.450892+00:00",
   "policy": {
     "source": "rust-java-migration + rust-java-migration-testing",
     "retain_package_segments": 1,
@@ -30,7 +30,7 @@
         "version": "1.6.0",
         "projectPath": "/private/tmp/qlx-baseline-9065b9ac",
         "indexPath": "/private/tmp/qlx-baseline-9065b9ac/.codegraph",
-        "lastIndexed": "2026-09-03T17:58:39.461Z",
+        "lastIndexed": "2026-09-03T18:24:14.454Z",
         "fileCount": 331,
         "nodeCount": 6647,
         "edgeCount": 19385,
@@ -75,7 +75,7 @@
     "rust": {
       "root": "/Users/wandl/workspaces/workspace-github-easy-4-rust/qlexpress-rust",
       "source_fingerprint": "sha256:23b27d19db1f4a169e641cc98d3ad7bcd8291b2961903016b88093842437febf",
-      "sha": "fc0a3bc12645140004bac3aa54ec7cf089b636c9",
+      "sha": "3489d42e15644484597f106e68c202abb5347852",
       "branch": "dev",
       "dirty": true,
       "status": [
@@ -149,9 +149,8 @@
       "PLATFORM_NA": 3
     },
     "method_states": {
-      "IMPLEMENTED": 675,
-      "PLATFORM_NA": 3,
-      "UNVERIFIED": 1136
+      "IMPLEMENTED": 1811,
+      "PLATFORM_NA": 3
     },
     "reviewed_dispositions": {
       "objects": {
@@ -165,9 +164,9 @@
         "handled": 136
       },
       "methods": {
-        "provided": 676,
-        "matched": 676,
-        "handled": 675
+        "provided": 1811,
+        "matched": 1811,
+        "handled": 1811
       }
     },
     "explicit_test_marker_keys": 411,
