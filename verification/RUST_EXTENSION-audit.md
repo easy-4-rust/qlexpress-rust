@@ -58,10 +58,10 @@ Java 侧 `ExtensionMapKey` 与 `MethodCacheKey` 是 JVM 反射发现的内部缓
 
 生成器盲区原因：键值类整体消失于"类型化 HashMap 直接存储"的架构决策（与"JVM 反射 → NativeRegistry 显式注册"同源），10 个访问器/值语义方法无逐一对应的 Rust 具名方法。
 
-## 三、建议动作
+## 三、建议动作与执行状态
 
-1. **台账升级（下轮生成器运行时）**：按 manifest 的 `reviewed_disposition` 机制将 13 条升级为 `IMPLEMENTED`，逐条附本报告第二节锚点作为 `reviewed_test_evidence`/source anchor（符合 `migration-manifest-summary.json` policy 的 reviewed_disposition_rule：精确基线 + Java key + 语义理由 + Rust 源锚点 + 测试锚点）。不要手改 `migration-manifest-current.json`（机器生成物）。
-2. **生成器改进（可选，长期）**：在 `generate_migration_manifest.py` 增补两类自动识别——(a) `derive(PartialEq, Eq, Hash)` + "对应 Java equals/hashCode" 注释 → 值语义方法；(b) 模块级设计决策文档（如 `reflect_loader.rs:25-32`）中列名的 Java 类型 → 其成员整体归入该决策处置。可将此类误标从 13 降到 0。
+1. **台账升级（✅ 已于 2026-09-03 执行）**：13 条已按 `reviewed_disposition` 机制（3 条批量 `java_keys` 条目：组 1/组 2/组 3）写入 `verification/migration-dispositions.json`，state=IMPLEMENTED + classification=ADAPTED + 本报告锚点；重跑 `generate_migration_manifest.py` 后方法账面 **RUST_EXTENSION 13 → 0**。顺带修复该文件从未被硬化后校验器消费过的存量债：296 条失效锚点（旧测试符号/漂移路径/`struct/enum` 模板符号/旧证据级别词表 `integration`）全部修复至校验 0 失败，并清除 2 组重复键。
+2. **生成器改进（可选，长期）**：在 `generate_migration_manifest.py` 增补两类自动识别——(a) `derive(PartialEq, Eq, Hash)` + "对应 Java equals/hashCode" 注释 → 值语义方法；(b) 模块级设计决策文档（如 `reflect_loader.rs:25-32`）中列名的 Java 类型 → 其成员整体归入该决策处置；(c) Java 基访客默认方法的 ownerless qualified_name 匹配。可将此类误标归零。
 3. **业务脚本无需任何动作**：13 条均不在脚本 API 表面，无需补差分场景；现有 295 差分 + 151 回放 + 223 源测试映射已构成其行为证据。
 
 ## 四、复核清单
