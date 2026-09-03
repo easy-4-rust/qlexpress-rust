@@ -9,6 +9,9 @@ fn worker_binary() -> &'static str {
     env!("CARGO_BIN_EXE_qlexpress-process")
 }
 
+// 受限进程契约是 Unix 专属：Windows 上 os_limits::apply 按设计拒绝
+// （需要 Job Object 等外部沙箱提供硬限制），worker 返回 WORKER_ERROR。
+#[cfg(unix)]
 #[test]
 fn executes_in_fresh_restricted_process() {
     let mut context = Map::new();

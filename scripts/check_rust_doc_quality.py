@@ -46,34 +46,34 @@ class ImportantApi:
 
 
 IMPORTANT_APIS = (
-    ImportantApi("crates/qlexpress/src/express4_runner.rs", "new", ("# Returns",)),
+    ImportantApi("crates/qlexpress/src/express4_runner/execution.rs", "new", ("# Returns",)),
     ImportantApi(
-        "crates/qlexpress/src/express4_runner.rs",
+        "crates/qlexpress/src/express4_runner/execution.rs",
         "with_init_options",
         ("# Arguments", "# Returns"),
     ),
     ImportantApi(
-        "crates/qlexpress/src/express4_runner.rs",
+        "crates/qlexpress/src/express4_runner/execution.rs",
         "execute",
         ("# Arguments", "# Returns", "# Errors"),
     ),
     ImportantApi(
-        "crates/qlexpress/src/express4_runner.rs",
+        "crates/qlexpress/src/express4_runner/execution.rs",
         "execute_template",
         ("# Arguments", "# Returns", "# Errors"),
     ),
     ImportantApi(
-        "crates/qlexpress/src/express4_runner.rs",
+        "crates/qlexpress/src/express4_runner/execution.rs",
         "execute_with_context",
         ("# Arguments", "# Returns", "# Errors"),
     ),
     ImportantApi(
-        "crates/qlexpress/src/express4_runner.rs",
+        "crates/qlexpress/src/express4_runner/execution.rs",
         "execute_checked",
         ("# Arguments", "# Returns", "# Errors"),
     ),
     ImportantApi(
-        "crates/qlexpress/src/express4_runner.rs",
+        "crates/qlexpress/src/express4_runner/execution.rs",
         "execute_checked_with_context",
         ("# Arguments", "# Returns", "# Errors"),
     ),
@@ -125,27 +125,27 @@ IMPORTANT_APIS = (
         ("# Arguments", "# Returns"),
     ),
     ImportantApi(
-        "crates/qlexpress/src/runtime/native_registry.rs",
+        "crates/qlexpress/src/runtime/native_registry/registration_and_fields.rs",
         "register_type",
         ("# Arguments",),
     ),
     ImportantApi(
-        "crates/qlexpress/src/runtime/native_registry.rs",
+        "crates/qlexpress/src/runtime/native_registry/registration_and_fields.rs",
         "register_method",
         ("# Arguments",),
     ),
     ImportantApi(
-        "crates/qlexpress/src/runtime/native_registry.rs",
+        "crates/qlexpress/src/runtime/native_registry/registration_and_fields.rs",
         "load_constructor_for_args",
         ("# Arguments", "# Returns"),
     ),
     ImportantApi(
-        "crates/qlexpress/src/runtime/native_registry.rs",
+        "crates/qlexpress/src/runtime/native_registry/registration_and_fields.rs",
         "load_field_with_security",
         ("# Arguments", "# Returns"),
     ),
     ImportantApi(
-        "crates/qlexpress/src/runtime/native_registry.rs",
+        "crates/qlexpress/src/runtime/native_registry/method_resolution.rs",
         "resolve_method_for_args",
         ("# Arguments", "# Returns"),
     ),
