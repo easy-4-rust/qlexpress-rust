@@ -155,7 +155,7 @@ dependencies = [
 
 [[package]]
 name = "qlexpress"
-version = "0.1.0-alpha.2"
+version = "0.1.0-beta.0"
 dependencies = [
  "num-bigint",
  "num-traits",
@@ -169,7 +169,7 @@ dependencies = [
 
 [[package]]
 name = "qlexpress-derive"
-version = "0.1.0-alpha.2"
+version = "0.1.0-beta.0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -178,7 +178,7 @@ dependencies = [
 
 [[package]]
 name = "qlexpress-process"
-version = "0.1.0-alpha.2"
+version = "0.1.0-beta.0"
 dependencies = [
  "libc",
  "qlexpress",
@@ -188,7 +188,7 @@ dependencies = [
 
 [[package]]
 name = "qlexpress-test"
-version = "0.1.0-alpha.2"
+version = "0.1.0-beta.0"
 dependencies = [
  "qlexpress",
  "qlexpress-verification",
@@ -199,7 +199,7 @@ dependencies = [
 
 [[package]]
 name = "qlexpress-verification"
-version = "0.1.0-alpha.2"
+version = "0.1.0-beta.0"
 dependencies = [
  "num-bigint",
  "qlexpress",

@@ -2,6 +2,42 @@
 
 本项目遵循语义化版本，并将预发布版本用于兼容性与生产验收。
 
+## [0.1.0-beta.0] - 2026-09-03
+
+> 本版本相对 0.1.0-alpha.2：**可观测性 + 宿主协作式截止时间契约 +
+> 对齐证据台账 + 验收矩阵当日全绿**，通道由 alpha 晋级 beta。
+> 逐项证据见 [docs/生产验收.md](docs/生产验收.md) 2026-09-03 轮。
+
+### Added
+
+- **tracing 可观测性**（feature gate `tracing`，默认关闭零开销）：
+  parse/compile/execute 边界 span 与事件；`coverage.yml` 覆盖率工作流
+- **宿主协作式截止时间契约**：宿主函数可经 `QContext::is_expired()`
+  主动检测过期；返回的 `SANDBOX_DEADLINE_EXCEEDED`（Timeout）原样传播，
+  不被 `INVOKE_FUNCTION_INNER_ERROR` 归一化掩码；其余宿主错误仍包裹
+- **对齐证据体系**：alignment 标记/指令/操作符/运行时证据测试 8 文件、
+  `host_deadline_contract` 契约测试、perf fixtures（复杂数据处理/长行脚本）、
+  `migration-dispositions.json` 台账（237 对象 + 1,814 方法逐项处置）
+
+### Changed
+
+- 性能冒烟阈值 200ms→1000ms（fib/列表迭代）：CI 共享 runner debug
+  构建波动所致，release 实测 <50ms，仍拦截量级回归
+- libFuzzer 加 `-detect_leaks=0`：LSan 对退出时静态持有 ~2KB 分配误报；
+  fuzz 验收目标保持 crash/hang/OOM
+- Windows 平台声明：受限进程契约（os_limits）为 Unix 专属，Windows 由
+  Job Object 等外部沙箱承担硬限制，worker 返回 `WORKER_ERROR`
+
+### Fixed
+
+- Linux-gnu `libc::setrlimit/getrlimit` 首参类型（u32）与 macOS（i32）
+  差异导致 Linux 编译失败（6 处 E0308）
+- Windows checkout autocrlf 破坏不可变语料逐字节 SHA → `.gitattributes`
+  对 `qlexpress-test/tests/suite/source/**` 关闭文本变换
+- `*.json` 全局 ignore 吞掉 `docs/source-test-parity.json` 清单 → 反白入库
+- `dtolnay/rust-toolchain`（钉 SHA）将 `toolchain` 变必填后 5 处工作流
+  步骤失败（Production Readiness 自 08-08 红灯）→ 全部补齐
+
 ## [0.1.0-alpha.2] - 2026-07-30
 
 第二个公开 alpha 版本，继续对齐固定的 QLExpress Java `4.2.0-beta`
