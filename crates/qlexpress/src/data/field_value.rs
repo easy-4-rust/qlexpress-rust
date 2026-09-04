@@ -5,6 +5,7 @@ use std::cell::RefCell;
 
 use crate::exception::error_codes;
 use crate::exception::error_reporter::ErrorReporter;
+use crate::exception::pure_err_reporter::PureErrReporter;
 use crate::exception::QLException;
 use crate::runtime::class_ref::ClassRef;
 use crate::runtime::data::convert::obj_type_convertor::ObjTypeConvertor;
@@ -52,8 +53,27 @@ impl LeftValue for FieldValue {
         self.define_type.clone()
     }
 
-    fn set_inner(&mut self, new_value: DataValue) {
-        let _ = (self.set_op.borrow_mut())(new_value);
+    fn set_inner(&mut self, new_value: DataValue) -> Result<(), QLException> {
+        // Capture type name before `new_value` is moved into the setter closure.
+        let source_type = if new_value.is_null() {
+            "null".to_string()
+        } else {
+            new_value.data_type_name().to_string()
+        };
+        if !(self.set_op.borrow_mut())(new_value) {
+            let target_type = self
+                .define_type
+                .as_ref()
+                .map(ClassRef::java_name)
+                .unwrap_or_else(|| self.get().data_type_name())
+                .to_string();
+            return Err(PureErrReporter::INSTANCE.report_format(
+                error_codes::INCOMPATIBLE_ASSIGNMENT_TYPE,
+                error_codes::error_msg(error_codes::INCOMPATIBLE_ASSIGNMENT_TYPE),
+                &[source_type, target_type],
+            ));
+        }
+        Ok(())
     }
 
     /// Java returns `null`.
@@ -129,5 +149,51 @@ mod tests {
             .set(DataValue::Long(5), &PureErrReporter::INSTANCE)
             .unwrap();
         assert_eq!(*cell.borrow(), DataValue::Int(5));
+    }
+
+    /// `set_inner` with a setter returning `true` must succeed and write the
+    /// value through.
+    #[test]
+    fn set_inner_succeeds_when_setter_returns_true() {
+        let cell = Rc::new(RefCell::new(DataValue::Int(0)));
+        let getter = {
+            let cell = Rc::clone(&cell);
+            move || cell.borrow().clone()
+        };
+        let setter = {
+            let cell = Rc::clone(&cell);
+            move |v: DataValue| {
+                *cell.borrow_mut() = v;
+                true
+            }
+        };
+        let mut field = FieldValue::new(
+            Box::new(getter),
+            Box::new(setter),
+            Some(ClassRef::Primitive(
+                crate::runtime::data::convert::obj_type_convertor::TargetType::Int,
+            )),
+        );
+        field.set_inner(DataValue::Int(42)).unwrap();
+        assert_eq!(*cell.borrow(), DataValue::Int(42));
+    }
+
+    /// `set_inner` with a setter returning `false` must propagate an
+    /// `INCOMPATIBLE_ASSIGNMENT_TYPE` error -- the value must not be silently
+    /// lost.
+    #[test]
+    fn set_inner_reports_error_when_setter_returns_false() {
+        let getter = Box::new(|| DataValue::Int(0));
+        // Setter always rejects.
+        let setter = Box::new(|_v: DataValue| false);
+        let mut field = FieldValue::new(
+            getter,
+            setter,
+            Some(ClassRef::Primitive(
+                crate::runtime::data::convert::obj_type_convertor::TargetType::Int,
+            )),
+        );
+        let err = field.set_inner(DataValue::Str("nope".into())).unwrap_err();
+        assert_eq!(err.error_code(), error_codes::INCOMPATIBLE_ASSIGNMENT_TYPE);
     }
 }

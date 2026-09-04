@@ -2,6 +2,7 @@
 
 use std::rc::Rc;
 
+use crate::exception::QLException;
 use crate::runtime::class_ref::ClassRef;
 use crate::runtime::data::convert::obj_type_convertor::TargetType;
 use crate::runtime::left_value::LeftValue;
@@ -92,8 +93,9 @@ impl LeftValue for AssignableDataValue {
         self.type_registry.as_deref()
     }
 
-    fn set_inner(&mut self, new_value: DataValue) {
+    fn set_inner(&mut self, new_value: DataValue) -> Result<(), QLException> {
         self.value = new_value;
+        Ok(())
     }
 
     fn symbol_name(&self) -> Option<&str> {

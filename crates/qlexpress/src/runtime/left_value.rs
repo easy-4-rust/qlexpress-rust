@@ -28,10 +28,13 @@ pub trait LeftValue: Value {
     }
 
     /// 更新 inner。
-    /// 参数：`new_value`；返回：无。
+    /// 参数：`new_value`；返回：`Result<(), QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/LeftValue.java`，方法 `setInner`。
     /// Java `setInner`: assign without conversion.
-    fn set_inner(&mut self, new_value: DataValue);
+    ///
+    /// Returns an error when the underlying storage rejects the assignment
+    /// (e.g. a host-registered setter returns `false`).
+    fn set_inner(&mut self, new_value: DataValue) -> Result<(), QLException>;
 
     /// 处理 symbol name 对应的接口职责。
     /// 无显式参数；返回：`Option<&str>`。
@@ -72,8 +75,7 @@ pub trait LeftValue: Value {
                 &[value_type, define_type_name],
             ));
         }
-        self.set_inner(result.into_converted());
-        Ok(())
+        self.set_inner(result.into_converted())
     }
 }
 

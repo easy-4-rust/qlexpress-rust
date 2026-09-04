@@ -3,6 +3,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use crate::exception::QLException;
 use crate::runtime::class_ref::ClassRef;
 use crate::runtime::data::index_map::IndexMap;
 use crate::runtime::left_value::LeftValue;
@@ -72,8 +73,9 @@ impl LeftValue for MapItemValue {
     }
 
     /// Java `map.put(key, newValue)`.
-    fn set_inner(&mut self, new_value: DataValue) {
+    fn set_inner(&mut self, new_value: DataValue) -> Result<(), QLException> {
         self.map.borrow_mut().insert(self.key.clone(), new_value);
+        Ok(())
     }
 
     fn symbol_name(&self) -> Option<&str> {

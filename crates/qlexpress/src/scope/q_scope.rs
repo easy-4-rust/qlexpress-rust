@@ -370,7 +370,7 @@ mod tests {
     fn global_scope_autocreates_variables() {
         let global = root();
         let a = QScope::get_symbol(&global, "a").unwrap().expect("created");
-        a.borrow_mut().set_inner(DataValue::Long(5));
+        a.borrow_mut().set_inner(DataValue::Long(5)).unwrap();
         let b = QScope::get_symbol(&global, "a")
             .unwrap()
             .expect("same slot");

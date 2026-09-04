@@ -9,8 +9,6 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use regex::Regex;
-
 use crate::exception::error_codes;
 use crate::exception::ql_exception::QLExceptionKind;
 use crate::exception::QLException;

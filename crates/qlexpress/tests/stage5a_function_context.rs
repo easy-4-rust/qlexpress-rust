@@ -180,7 +180,7 @@ fn map_express_context_get_returns_map_item_left_value() {
     assert_eq!(value.get(), DataValue::Int(7));
     // 左值写入穿透(Java 靠 Map 引用别名实现)。
     if let QValue::Left(left) = value {
-        left.borrow_mut().set_inner(DataValue::Int(8));
+        left.borrow_mut().set_inner(DataValue::Int(8)).unwrap();
     } else {
         panic!("MapExpressContext must yield a LeftValue (MapItemValue)");
     }

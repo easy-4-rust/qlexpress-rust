@@ -3,6 +3,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use crate::exception::QLException;
 use crate::runtime::class_ref::ClassRef;
 use crate::runtime::data::JavaArray;
 use crate::runtime::left_value::LeftValue;
@@ -65,8 +66,9 @@ impl LeftValue for ArrayItemValue {
     }
 
     /// Java `Array.set(array, index, newValue)`.
-    fn set_inner(&mut self, new_value: DataValue) {
+    fn set_inner(&mut self, new_value: DataValue) -> Result<(), QLException> {
         self.array.borrow_mut().set(self.index, new_value);
+        Ok(())
     }
 
     /// Java returns `null`.
