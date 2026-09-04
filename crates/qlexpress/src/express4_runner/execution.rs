@@ -381,6 +381,10 @@ impl Express4Runner {
     /// 新代码应使用 [`Self::execute_with_alias_objects`]，以保持与 Java
     /// `executeWithAliasObjects` 的对象名称一致性。
     /// 对应 Java：`Express4Runner#executeWithAliasObjects`（Rust 早期兼容别名）。
+    #[deprecated(
+        since = "0.1.0-beta.1",
+        note = "use `execute_with_alias_objects` instead; this alias will be removed in 1.0"
+    )]
     pub fn execute_with_alias_values(
         &self,
         script: &str,

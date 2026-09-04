@@ -2,6 +2,23 @@
 
 本项目遵循语义化版本，并将预发布版本用于兼容性与生产验收。
 
+## [Unreleased]
+
+### Deprecated
+
+- **`Express4Runner::execute_with_alias_values`**：已标记 `#[deprecated]`，替代方法为
+  `execute_with_alias_objects`（保持与 Java `executeWithAliasObjects` 的名称一致性）。
+  计划在 1.0 移除。
+
+### API Stability
+
+- 建立 [API 稳定性承诺文档](docs/API-Stability.md)，涵盖：
+  - 公共 API 表面枚举（`lib.rs` 全部 re-export + 各模块主要公共类型）
+  - SemVer 策略与稳定性分类（stable / unstable）
+  - 1.0 之前可能变动的项清单
+  - 从 beta.0 到 1.0 的迁移指南
+  - API 问题报告指引
+
 ## [0.1.0-beta.0] - 2026-09-03
 
 > 本版本相对 0.1.0-alpha.2：**可观测性 + 宿主协作式截止时间契约 +
