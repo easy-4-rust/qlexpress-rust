@@ -221,13 +221,27 @@ impl NativeRegistry {
         );
         self.register_type(big_decimal);
 
-        for exception_name in [
-            "java.lang.Exception",
-            "java.lang.RuntimeException",
-            "java.lang.NullPointerException",
-            "java.lang.ArithmeticException",
-        ] {
+        // 注册 Java 异常层次结构，supertypes 链对齐 Java 继承关系。
+        // catch 匹配依赖 supertypes 遍历（见 try_catch_instruction::class_assignable_from）。
+        let exception_hierarchy: &[(&str, &[&str])] = &[
+            ("java.lang.Throwable", &["java.lang.Object"]),
+            ("java.lang.Exception", &["java.lang.Throwable"]),
+            ("java.lang.RuntimeException", &["java.lang.Exception"]),
+            ("java.lang.NullPointerException", &["java.lang.RuntimeException"]),
+            ("java.lang.ArithmeticException", &["java.lang.RuntimeException"]),
+            ("java.lang.Error", &["java.lang.Throwable"]),
+            (
+                "com.alibaba.qlexpress4.exception.QLException",
+                &["java.lang.RuntimeException"],
+            ),
+            (
+                "com.alibaba.qlexpress4.exception.QLRuntimeException",
+                &["java.lang.RuntimeException"],
+            ),
+        ];
+        for &(exception_name, supers) in exception_hierarchy {
             let mut exception_type = NativeType::named(exception_name);
+            exception_type.supertypes = supers.iter().map(|s| s.to_string()).collect();
             exception_type.constructor = Some(Rc::new(move |args| {
                 if args.is_empty() || matches!(args, [DataValue::Str(_)]) {
                     Ok(OpaqueNativeObject::new(exception_name).into_data_value())

@@ -201,3 +201,37 @@ fn timeout_works_under_1s() {
         "timeout should fire in < 1s, took {elapsed:?}"
     );
 }
+
+/// StringJoinInstruction 性能: 1000 个短字符串拼接。
+///
+/// 验证预分配优化后 O(n) 拼接在合理时间内完成。
+/// 优化前 concat 的 O(n²) 在 n=1000 时会显著变慢。
+#[test]
+fn string_join_1000_parts_under_50ms() {
+    let runner = Express4Runner::new();
+    // 构建 '0' + '1' + '2' + ... + '999' 的表达式
+    let mut script = String::from("'0'");
+    for i in 1..1000 {
+        script.push_str(&format!(" + '{i}'"));
+    }
+    let t0 = std::time::Instant::now();
+    let r = runner
+        .execute(&script, HashMap::new(), &opts())
+        .expect("ok")
+        .into_result();
+    let elapsed = t0.elapsed();
+    // 结果应该是 "012...999"
+    match &r {
+        DataValue::Str(s) => {
+            assert!(s.to_string_lossy().starts_with("012345"));
+            assert!(s.to_string_lossy().ends_with("999"));
+        }
+        other => panic!("expected Str, got {other:?}"),
+    }
+    if !coverage_instrumented() {
+        assert!(
+            elapsed.as_millis() < 50,
+            "string join 1000 parts should < 50ms, took {elapsed:?}"
+        );
+    }
+}

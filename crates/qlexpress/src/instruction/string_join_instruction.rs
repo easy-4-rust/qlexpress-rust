@@ -48,20 +48,28 @@ impl QLInstruction for StringJoinInstruction {
         _ql_options: &QLOptions,
     ) -> Result<QResult, QLException> {
         let arguments = q_context.pop_n(self.n);
-        let mut sb = JavaString::default();
-        for i in 0..self.n {
-            // Java StringBuilder.append(Object) → String.valueOf
-            let part = arguments.get_value(i).java_string_value_of();
-            if let Some(budget) = q_context.q_runtime().execution_budget() {
-                budget.check_string_bytes(
-                    sb.len()
-                        .saturating_add(part.len())
-                        .saturating_mul(std::mem::size_of::<u16>()),
-                )?;
-            }
-            sb = sb.concat(&part);
+
+        // 先收集各部分，避免 java_string_value_of() 被调用两次。
+        let parts: Vec<JavaString> = (0..self.n)
+            .map(|i| arguments.get_value(i).java_string_value_of())
+            .collect();
+
+        // 预计算总长度，单次分配——O(n) 替代 concat 的 O(n²)。
+        let total_len: usize = parts.iter().map(|p| p.len()).sum();
+
+        // Budget check: 一次检查总大小（check_string_bytes 是上限检查，非累积）。
+        if let Some(budget) = q_context.q_runtime().execution_budget() {
+            budget.check_string_bytes(total_len.saturating_mul(std::mem::size_of::<u16>()))?;
         }
-        q_context.push(QValue::Data(DataValue::Str(sb)));
+
+        let mut units = Vec::with_capacity(total_len);
+        for part in &parts {
+            // Java StringBuilder.append(Object) → String.valueOf
+            units.extend_from_slice(part.utf16_units());
+        }
+        q_context.push(QValue::Data(DataValue::Str(JavaString::from_utf16_units(
+            units,
+        ))));
         Ok(QResult::NEXT_INSTRUCTION)
     }
 
