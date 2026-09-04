@@ -86,7 +86,7 @@ impl CustomFunction for QMethodFunction {
         // Java: ParametersTypeConvertor.cast(params, method.getParameterTypes(), method.isVarArgs())。
         let parameter_types = self.method.parameter_types();
         let convert_result =
-            ParametersTypeConvertor::cast(&params, &parameter_types, self.method.is_var_args());
+            ParametersTypeConvertor::cast(&params, &parameter_types, self.method.is_var_args())?;
         // Java: MethodHandler.Access.accessMethodValue(method, object, convertResult)。
         Access::access_method_value(
             &self.method,

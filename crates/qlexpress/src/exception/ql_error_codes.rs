@@ -16,6 +16,10 @@ pub const CLASS_NOT_FOUND: &str = "CLASS_NOT_FOUND";
 /// Stage 6 / FixedSizeStack: emitted when an operand-stack push would
 /// exceed the declared capacity (mirrors Java's StackOverflowError).
 pub const STACK_OVERFLOW: &str = "STACK_OVERFLOW";
+/// `try_push` on a full operand stack returns this code.
+pub const OPERAND_STACK_OVERFLOW: &str = "OPERAND_STACK_OVERFLOW";
+/// `try_pop` / `try_peak` on an empty operand stack returns this code.
+pub const OPERAND_STACK_UNDERFLOW: &str = "OPERAND_STACK_UNDERFLOW";
 
 // ---- runtime error ----
 /// `INVALID_INDEX` 错误码或错误消息模板。
@@ -238,6 +242,8 @@ pub fn error_msg(code: &str) -> &'static str {
         INVALID_ARGUMENT => "",
         BIZ_EXCEPTION => "",
         QL_THROW => "qlexpress throw statement",
+        OPERAND_STACK_OVERFLOW => "operand stack overflow",
+        OPERAND_STACK_UNDERFLOW => "operand stack underflow",
         _ => "",
     }
 }
@@ -473,8 +479,10 @@ mod tests {
             (INVALID_ARGUMENT, ""),
             (BIZ_EXCEPTION, ""),
             (QL_THROW, "qlexpress throw statement"),
+            (OPERAND_STACK_OVERFLOW, "operand stack overflow"),
+            (OPERAND_STACK_UNDERFLOW, "operand stack underflow"),
         ];
-        assert_eq!(expected.len(), 63);
+        assert_eq!(expected.len(), 65);
         for (code, template) in expected {
             assert_eq!(error_msg(code), template, "error code {code}");
         }

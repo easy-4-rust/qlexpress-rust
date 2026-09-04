@@ -142,13 +142,37 @@ impl QContext for DelegateQContext {
     }
 
     /// Java `qScope = qScope.getParent()`.
+    ///
+    /// When called on the root (global) scope, this is a no-op: the current
+    /// scope remains unchanged. This mirrors the design choice that closing
+    /// the root scope should not panic or return an error, aligning with
+    /// defensive behavior against compiler bugs or malicious instruction
+    /// sequences.
     fn close_scope(&mut self) {
-        self.q_scope =
-            QScope::parent(&self.q_scope).expect("QvmGlobalScope.getParent is unsupported");
+        if let Some(parent) = QScope::parent(&self.q_scope) {
+            self.q_scope = parent;
+        }
     }
 
     fn set_current_scope(&mut self, scope: ScopeRef) {
         self.q_scope = scope;
+    }
+}
+
+impl DelegateQContext {
+    /// [`push`](QContext::push) 的 fallible 版本：栈满时返回 `Err` 而非 panic。
+    pub fn try_push(&mut self, value: QValue) -> Result<(), QLException> {
+        QScope::try_push(&self.q_scope, value)
+    }
+
+    /// [`pop`](QContext::pop) 的 fallible 版本：栈空时返回 `Err` 而非 panic。
+    pub fn try_pop(&mut self) -> Result<QValue, QLException> {
+        QScope::try_pop(&self.q_scope)
+    }
+
+    /// [`peek`](QContext::peek) 的 fallible 版本：栈空时返回 `Err` 而非 panic。
+    pub fn try_peek(&self) -> Result<QValue, QLException> {
+        QScope::try_peek(&self.q_scope)
     }
 }
 
@@ -166,10 +190,29 @@ mod tests {
     }
 
     /// Java `DelegateQContext.closeScope()` 委托全局作用域的 `getParent()`；
-    /// `QvmGlobalScope` 明确抛 `UnsupportedOperationException`，不能静默 no-op。
+    /// 根 scope 上 close 应为 no-op 而非 panic，与 Java 防御性行为对齐。
     #[test]
-    #[should_panic(expected = "QvmGlobalScope.getParent is unsupported")]
-    fn close_global_scope_is_unsupported_like_java() {
-        root_context().close_scope();
+    fn close_global_scope_is_noop() {
+        let mut ctx = root_context();
+        let scope_before = Rc::clone(&ctx.current_scope());
+        ctx.close_scope();
+        assert!(
+            Rc::ptr_eq(&ctx.current_scope(), &scope_before),
+            "close_scope on root scope should be a no-op"
+        );
+    }
+
+    /// 多次 close_scope 在根 scope 上不会 panic。
+    #[test]
+    fn close_global_scope_multiple_times_is_noop() {
+        let mut ctx = root_context();
+        let scope_before = Rc::clone(&ctx.current_scope());
+        ctx.close_scope();
+        ctx.close_scope();
+        ctx.close_scope();
+        assert!(
+            Rc::ptr_eq(&ctx.current_scope(), &scope_before),
+            "repeated close_scope on root scope should remain no-op"
+        );
     }
 }

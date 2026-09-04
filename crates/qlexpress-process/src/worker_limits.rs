@@ -19,6 +19,9 @@ pub struct WorkerLimits {
     pub file_size_bytes: u64,
     /// Worker 最大文件描述符数量。
     pub open_files: u64,
+    /// Worker 最大子进程数（仅 Unix，防止 fork-bomb）。
+    #[cfg(unix)]
+    pub nproc: u64,
 }
 
 impl Default for WorkerLimits {
@@ -29,6 +32,8 @@ impl Default for WorkerLimits {
             cpu_seconds: 2,
             file_size_bytes: 2 * 1024 * 1024,
             open_files: 32,
+            #[cfg(unix)]
+            nproc: 256,
         }
     }
 }

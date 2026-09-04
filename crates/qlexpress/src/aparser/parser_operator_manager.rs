@@ -27,9 +27,8 @@ pub trait ParserOperatorManager {
     /// 处理 precedence 对应的接口职责。
     /// 参数：`lexeme`；返回：`Option<i32>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/ParserOperatorManager.java`，方法 `precedence`。
-    /// Binary operator precedence of `lexeme`;接口允许非操作符返回 `None`。
-    /// Java 基线的 `OperatorManager` 实现实际会在该输入上抛 NPE，因此
-    /// Rust 的对应实现也保留该行为；其他 trait 实现仍可返回 `None`。
+    /// Binary operator precedence of `lexeme`; unknown lexemes return `None`
+    /// (Java baseline NPE expressed as `None` in Rust to avoid host-boundary panics).
     fn precedence(&self, lexeme: &str) -> Option<i32>;
 
     /// 查询 alias。

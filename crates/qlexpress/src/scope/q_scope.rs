@@ -310,6 +310,21 @@ impl QScope {
     pub fn stack_is_empty(this: &ScopeRef) -> bool {
         Self::stack(this).borrow().is_empty()
     }
+
+    /// [`push`](Self::push) 的 fallible 版本：栈满时返回 `Err` 而非 panic。
+    pub fn try_push(this: &ScopeRef, value: QValue) -> Result<(), QLException> {
+        Self::stack(this).borrow_mut().try_push(value)
+    }
+
+    /// [`pop`](Self::pop) 的 fallible 版本：栈空时返回 `Err` 而非 panic。
+    pub fn try_pop(this: &ScopeRef) -> Result<QValue, QLException> {
+        Self::stack(this).borrow_mut().try_pop()
+    }
+
+    /// [`peek`](Self::peek) 的 fallible 版本：栈空时返回 `Err` 而非 panic。
+    pub fn try_peek(this: &ScopeRef) -> Result<QValue, QLException> {
+        Self::stack(this).borrow().try_peak()
+    }
 }
 
 #[cfg(test)]

@@ -76,7 +76,7 @@ fn convert_candidate_arguments(
     arguments: &[DataValue],
     parameter_types: &[ClassRef],
     var_args: bool,
-) -> Vec<DataValue> {
+) -> Result<Vec<DataValue>, QLException> {
     ParametersTypeConvertor::cast(arguments, parameter_types, var_args)
 }
 
@@ -85,7 +85,7 @@ fn wrap_method_candidate(candidate: &NativeMethodCandidate) -> NativeMethod {
     let parameter_types = candidate.parameter_types.clone();
     let var_args = candidate.var_args;
     Rc::new(move |bean, arguments| {
-        let converted = convert_candidate_arguments(arguments, &parameter_types, var_args);
+        let converted = convert_candidate_arguments(arguments, &parameter_types, var_args)?;
         method(bean, &converted)
     })
 }

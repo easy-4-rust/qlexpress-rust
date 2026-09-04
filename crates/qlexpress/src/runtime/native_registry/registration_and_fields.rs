@@ -162,7 +162,7 @@ impl NativeRegistry {
             let parameter_types = candidate.parameter_types.clone();
             let var_args = candidate.var_args;
             return Some(Rc::new(move |values| {
-                let converted = convert_candidate_arguments(values, &parameter_types, var_args);
+                let converted = convert_candidate_arguments(values, &parameter_types, var_args)?;
                 constructor(&converted)
             }));
         }

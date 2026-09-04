@@ -44,7 +44,7 @@ pub fn invoke_i_method(
 ) -> Result<QValue, QLException> {
     let parameter_types = method.parameter_types();
     let convert_result =
-        ParametersTypeConvertor::cast(params, &parameter_types, method.is_var_args());
+        ParametersTypeConvertor::cast(params, &parameter_types, method.is_var_args())?;
     // Java: MethodHandler.Access.accessMethodValue(必要时 setAccessible(true))。
     if !method.is_access() {
         method.set_accessible(true);

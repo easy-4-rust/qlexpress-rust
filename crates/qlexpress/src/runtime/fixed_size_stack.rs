@@ -4,8 +4,45 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use crate::exception::error_codes;
+use crate::exception::{QLException, QLExceptionKind};
+use crate::lsp::{Diagnostic, Range};
 use crate::runtime::parameters::Parameters;
 use crate::runtime::value::QValue;
+
+fn stack_overflow_err() -> QLException {
+    let reason = "operand stack overflow";
+    QLException::new(
+        QLExceptionKind::Runtime,
+        reason,
+        Diagnostic::new(
+            0,
+            Range::default(),
+            "",
+            error_codes::OPERAND_STACK_OVERFLOW,
+            reason,
+            "",
+        ),
+        None,
+    )
+}
+
+fn stack_underflow_err() -> QLException {
+    let reason = "operand stack underflow";
+    QLException::new(
+        QLExceptionKind::Runtime,
+        reason,
+        Diagnostic::new(
+            0,
+            Range::default(),
+            "",
+            error_codes::OPERAND_STACK_UNDERFLOW,
+            reason,
+            "",
+        ),
+        None,
+    )
+}
 
 /// 按编译期最大栈深限制容量的 QVM 操作数栈。
 ///
@@ -96,6 +133,48 @@ impl FixedSizeStack {
         self.cursor -= n;
         Parameters::stack_view(Rc::clone(&self.elements), self.cursor, n)
     }
+
+    /// [`push`](Self::push) 的 fallible 版本：栈满时返回 `Err` 而非 panic。
+    ///
+    /// 生产路径（`execute_definition` / `execute_with_context` / sandbox）应使用
+    /// 本方法替代 `push`，避免恶意或病态脚本拖死 worker 进程。
+    /// 内部汇编路径（编译器已计算 `max_stack_size`）可继续使用 `push`。
+    pub fn try_push(&mut self, ele: QValue) -> Result<(), QLException> {
+        if self.is_full() {
+            Err(stack_overflow_err())
+        } else {
+            self.elements.borrow_mut()[self.cursor] = Some(ele);
+            self.cursor += 1;
+            Ok(())
+        }
+    }
+
+    /// [`pop`](Self::pop) 的 fallible 版本：栈空时返回 `Err` 而非 panic。
+    ///
+    /// 生产路径应使用本方法替代 `pop`，避免恶意或病态脚本拖死 worker 进程。
+    pub fn try_pop(&mut self) -> Result<QValue, QLException> {
+        if self.cursor == 0 {
+            Err(stack_underflow_err())
+        } else {
+            self.cursor -= 1;
+            Ok(self.elements.borrow()[self.cursor]
+                .clone()
+                .expect("initialized operand stack slot"))
+        }
+    }
+
+    /// [`peak`](Self::peak) 的 fallible 版本：栈空时返回 `Err` 而非 panic。
+    ///
+    /// 生产路径应使用本方法替代 `peak`，避免恶意或病态脚本拖死 worker 进程。
+    pub fn try_peak(&self) -> Result<QValue, QLException> {
+        if self.cursor == 0 {
+            Err(stack_underflow_err())
+        } else {
+            Ok(self.elements.borrow()[self.cursor - 1]
+                .clone()
+                .expect("operand stack underflow"))
+        }
+    }
 }
 
 #[cfg(test)]
@@ -178,5 +257,84 @@ mod tests {
         assert_eq!(parameters.get_value(1), DataValue::Int(5));
         assert_eq!(parameters.get_value(2), DataValue::Int(6));
         assert!(parameters.get(3).is_none());
+    }
+
+    // ---- try_push / try_pop / try_peak boundary tests ----
+
+    /// `try_push` on a full stack returns `Err` with `OPERAND_STACK_OVERFLOW`.
+    #[test]
+    fn try_push_full_stack_returns_err() {
+        let mut stack = FixedSizeStack::new(1);
+        assert!(stack.try_push(DataValue::Int(1).into()).is_ok());
+        let err = stack
+            .try_push(DataValue::Int(2).into())
+            .expect_err("expected overflow error");
+        assert_eq!(err.kind(), QLExceptionKind::Runtime);
+        assert_eq!(
+            err.diagnostic().code(),
+            Some(error_codes::OPERAND_STACK_OVERFLOW)
+        );
+        assert!(err.to_string().contains("operand stack overflow"));
+    }
+
+    /// `try_pop` on an empty stack returns `Err` with `OPERAND_STACK_UNDERFLOW`.
+    #[test]
+    fn try_pop_empty_stack_returns_err() {
+        let mut stack = FixedSizeStack::new(2);
+        let err = stack.try_pop().expect_err("expected underflow error");
+        assert_eq!(err.kind(), QLExceptionKind::Runtime);
+        assert_eq!(
+            err.diagnostic().code(),
+            Some(error_codes::OPERAND_STACK_UNDERFLOW)
+        );
+        assert!(err.to_string().contains("operand stack underflow"));
+    }
+
+    /// `try_peak` on an empty stack returns `Err` with `OPERAND_STACK_UNDERFLOW`.
+    #[test]
+    fn try_peak_empty_stack_returns_err() {
+        let stack = FixedSizeStack::new(2);
+        let err = stack.try_peak().expect_err("expected underflow error");
+        assert_eq!(err.kind(), QLExceptionKind::Runtime);
+        assert_eq!(
+            err.diagnostic().code(),
+            Some(error_codes::OPERAND_STACK_UNDERFLOW)
+        );
+        assert!(err.to_string().contains("operand stack underflow"));
+    }
+
+    /// `try_push` / `try_pop` / `try_peak` behave identically to `push` / `pop` /
+    /// `peak` on a non-empty, non-full stack.
+    #[test]
+    fn try_push_pop_peak_match_panic_variants_on_healthy_stack() {
+        let mut stack = FixedSizeStack::new(3);
+        stack.try_push(DataValue::Int(10).into()).unwrap();
+        stack.try_push(DataValue::Int(20).into()).unwrap();
+
+        assert_eq!(stack.try_peak().unwrap().get(), DataValue::Int(20));
+        assert_eq!(stack.try_pop().unwrap().get(), DataValue::Int(20));
+        assert_eq!(stack.try_peak().unwrap().get(), DataValue::Int(10));
+        assert_eq!(stack.try_pop().unwrap().get(), DataValue::Int(10));
+        assert!(stack.is_empty());
+    }
+
+    /// `try_push` followed by `try_pop` maintains correct cursor state after
+    /// overflow and underflow errors.
+    #[test]
+    fn try_push_pop_errors_do_not_corrupt_stack_state() {
+        let mut stack = FixedSizeStack::new(1);
+        stack.try_push(DataValue::Int(42).into()).unwrap();
+
+        // Overflow: stack stays at capacity 1.
+        assert!(stack.try_push(DataValue::Int(99).into()).is_err());
+        assert_eq!(stack.len(), 1);
+        assert_eq!(stack.try_peak().unwrap().get(), DataValue::Int(42));
+
+        // Pop the one element.
+        assert_eq!(stack.try_pop().unwrap().get(), DataValue::Int(42));
+
+        // Underflow: stack stays empty.
+        assert!(stack.try_pop().is_err());
+        assert!(stack.is_empty());
     }
 }

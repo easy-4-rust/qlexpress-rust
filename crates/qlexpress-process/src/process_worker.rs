@@ -53,23 +53,26 @@ impl ProcessWorker {
     /// 二进制无法启动、请求无法编码、标准流不可用、输出超过上限、读取线程
     /// 异常或响应不是合法 JSON 时返回 `Err(String)`。
     pub fn execute(&self, request: &WorkerRequest) -> Result<WorkerResponse, String> {
-        let mut child = Command::new(&self.program)
-            .env(
-                "QLEXPRESS_WORKER_MEMORY_BYTES",
-                self.limits.memory_bytes.to_string(),
-            )
-            .env(
-                "QLEXPRESS_WORKER_CPU_SECONDS",
-                self.limits.cpu_seconds.to_string(),
-            )
-            .env(
-                "QLEXPRESS_WORKER_FILE_SIZE_BYTES",
-                self.limits.file_size_bytes.to_string(),
-            )
-            .env(
-                "QLEXPRESS_WORKER_OPEN_FILES",
-                self.limits.open_files.to_string(),
-            )
+        let mut cmd = Command::new(&self.program);
+        cmd.env(
+            "QLEXPRESS_WORKER_MEMORY_BYTES",
+            self.limits.memory_bytes.to_string(),
+        )
+        .env(
+            "QLEXPRESS_WORKER_CPU_SECONDS",
+            self.limits.cpu_seconds.to_string(),
+        )
+        .env(
+            "QLEXPRESS_WORKER_FILE_SIZE_BYTES",
+            self.limits.file_size_bytes.to_string(),
+        )
+        .env(
+            "QLEXPRESS_WORKER_OPEN_FILES",
+            self.limits.open_files.to_string(),
+        );
+        #[cfg(unix)]
+        cmd.env("QLEXPRESS_WORKER_NPROC", self.limits.nproc.to_string());
+        let mut child = cmd
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())

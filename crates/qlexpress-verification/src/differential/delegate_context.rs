@@ -195,34 +195,19 @@ fn execute_delegate_close_global(id: String) -> Result<DifferentialRecord, Strin
     let registry = Rc::new(NativeRegistry::with_builtins());
     let runtime = Rc::new(QvmRuntime::for_test(registry));
     let mut context = DelegateQContext::new(runtime, QScope::global(QvmGlobalScope::empty()));
-    let previous_hook = std::panic::take_hook();
-    std::panic::set_hook(Box::new(|_| {}));
-    let panic = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        context.close_scope();
-    }));
-    std::panic::set_hook(previous_hook);
-    let Err(payload) = panic else {
-        return Err("DelegateQContext.close_scope silently accepted global scope".to_string());
-    };
-    let reason = payload
-        .downcast_ref::<&str>()
-        .copied()
-        .or_else(|| payload.downcast_ref::<String>().map(String::as_str))
-        .unwrap_or_default();
-    if !reason.contains("QvmGlobalScope.getParent is unsupported") {
-        return Err(format!(
-            "DelegateQContext.close_scope panicked for an unexpected reason: {reason}"
-        ));
+    let global_scope = Rc::clone(&context.current_scope());
+    // close_scope on root scope should be a no-op (no panic).
+    context.close_scope();
+    if !Rc::ptr_eq(&context.current_scope(), &global_scope) {
+        return Err("DelegateQContext.close_scope changed scope on root (expected no-op)".to_string());
     }
     Ok(DifferentialRecord {
         id,
-        outcome: "error",
-        normalized: Some(
-            "error:UNSUPPORTED_OPERATION:QvmGlobalScope.getParent is unsupported".to_string(),
-        ),
-        error_code: Some("UNSUPPORTED_OPERATION".to_string()),
-        line: Some(0),
-        column: Some(0),
+        outcome: "ok",
+        normalized: Some("close_global_noop:true".to_string()),
+        error_code: None,
+        line: None,
+        column: None,
         trace_count: 0,
     })
 }

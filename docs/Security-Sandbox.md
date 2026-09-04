@@ -10,7 +10,7 @@ sandbox.
 ```mermaid
 flowchart LR
     U["Untrusted source + JSON context"] --> W["One-shot worker"]
-    W --> O["OS limits<br/>CPU · memory · file · descriptors"]
+    W --> O["OS limits<br/>CPU · memory · file · descriptors · nproc"]
     W --> E["execute_checked"]
     E --> P["Source · Token · AST · instruction budgets"]
     E --> C["Unified capability allowlist"]
@@ -111,9 +111,11 @@ sequenceDiagram
 ```
 
 The worker has no registered host capabilities. It bounds stdin/stdout/stderr, applies Linux
-`RLIMIT_AS`, and applies Unix CPU, file-size, and file-descriptor limits. On macOS, lowering
-`RLIMIT_AS`/`RLIMIT_DATA` returns `EINVAL`; production must add a container, VM, or launchd memory
-limit. The supervisor wall timeout and the remaining engine/Unix limits still apply.
+`RLIMIT_AS`, and applies Unix CPU, file-size, file-descriptor, and process-count limits. On Linux
+and macOS, `RLIMIT_NPROC` (default 256) prevents fork-bomb scripts from exhausting the PID table.
+On macOS, lowering `RLIMIT_AS`/`RLIMIT_DATA` returns `EINVAL`; production must add a container,
+VM, or launchd memory limit. The supervisor wall timeout and the remaining engine/Unix limits
+still apply.
 
 ## Production requirements
 

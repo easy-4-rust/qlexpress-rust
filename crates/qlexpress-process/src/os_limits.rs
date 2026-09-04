@@ -9,6 +9,10 @@ pub fn limits_from_env() -> WorkerLimits {
     limits.cpu_seconds = env_u64("QLEXPRESS_WORKER_CPU_SECONDS", limits.cpu_seconds);
     limits.file_size_bytes = env_u64("QLEXPRESS_WORKER_FILE_SIZE_BYTES", limits.file_size_bytes);
     limits.open_files = env_u64("QLEXPRESS_WORKER_OPEN_FILES", limits.open_files);
+    #[cfg(unix)]
+    {
+        limits.nproc = env_u64("QLEXPRESS_WORKER_NPROC", limits.nproc);
+    }
     limits
 }
 
@@ -27,6 +31,7 @@ pub fn apply(limits: &WorkerLimits) -> Result<(), String> {
     set_limit(libc::RLIMIT_CPU as _, limits.cpu_seconds, "cpu")?;
     set_limit(libc::RLIMIT_FSIZE as _, limits.file_size_bytes, "file size")?;
     set_limit(libc::RLIMIT_NOFILE as _, limits.open_files, "open files")?;
+    set_nproc_limit(limits.nproc)?;
     Ok(())
 }
 
@@ -41,6 +46,20 @@ fn set_memory_limit(_memory_bytes: u64) -> Result<(), String> {
 #[cfg(all(unix, not(target_os = "macos")))]
 fn set_memory_limit(memory_bytes: u64) -> Result<(), String> {
     set_limit(libc::RLIMIT_AS as _, memory_bytes, "address space")
+}
+
+/// 设置 RLIMIT_NPROC（最大子进程数），防止 fork-bomb 耗尽 PID 表。
+///
+/// 仅 Linux 与 macOS 支持 `RLIMIT_NPROC`；其他 Unix 平台跳过。
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+fn set_nproc_limit(nproc: u64) -> Result<(), String> {
+    set_limit(libc::RLIMIT_NPROC as _, nproc, "nproc")
+}
+
+#[cfg(all(unix, not(any(target_os = "linux", target_os = "macos"))))]
+fn set_nproc_limit(_nproc: u64) -> Result<(), String> {
+    // 此 Unix 平台不支持 RLIMIT_NPROC，由容器或外部沙箱提供进程数限制。
+    Ok(())
 }
 
 /// 非 Unix 平台必须由容器或 Job Object 提供硬限制。
@@ -79,5 +98,63 @@ fn set_limit(resource: libc::c_int, value: u64, name: &str) -> Result<(), String
             "failed to set {name} limit: {}",
             std::io::Error::last_os_error()
         ))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::Duration;
+
+    /// 验证 `apply` 成功设置 RLIMIT_NPROC 并可读回。
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    #[test]
+    fn apply_sets_rlimit_nproc() {
+        // 读取当前 hard limit 以选择一个不超出的 soft 值。
+        let mut current = libc::rlimit {
+            rlim_cur: 0,
+            rlim_max: 0,
+        };
+        // SAFETY: `current` 是栈上有效可写的 rlimit。
+        let rc = unsafe { libc::getrlimit(libc::RLIMIT_NPROC as _, &mut current) };
+        assert_eq!(rc, 0, "getrlimit(RLIMIT_NPROC) failed");
+
+        let target = current.rlim_max.min(256);
+        let limits = WorkerLimits {
+            wall_timeout: Duration::from_secs(1),
+            memory_bytes: 256 * 1024 * 1024,
+            cpu_seconds: 2,
+            file_size_bytes: 2 * 1024 * 1024,
+            open_files: 32,
+            nproc: target,
+        };
+        apply(&limits).expect("apply should succeed");
+
+        let mut after = libc::rlimit {
+            rlim_cur: 0,
+            rlim_max: 0,
+        };
+        // SAFETY: `after` 是栈上有效可写的 rlimit。
+        let rc = unsafe { libc::getrlimit(libc::RLIMIT_NPROC as _, &mut after) };
+        assert_eq!(rc, 0, "getrlimit(RLIMIT_NPROC) failed after apply");
+        assert_eq!(
+            after.rlim_cur, target,
+            "RLIMIT_NPROC soft limit should equal requested value (clamped to hard limit)"
+        );
+    }
+
+    /// 验证 `limits_from_env` 读取 QLEXPRESS_WORKER_NPROC 环境变量。
+    #[cfg(unix)]
+    #[test]
+    fn limits_from_env_reads_nproc() {
+        // 清除可能残留的环境变量。
+        std::env::remove_var("QLEXPRESS_WORKER_NPROC");
+        let defaults = limits_from_env();
+        assert_eq!(defaults.nproc, 256, "default nproc should be 256");
+
+        std::env::set_var("QLEXPRESS_WORKER_NPROC", "128");
+        let custom = limits_from_env();
+        assert_eq!(custom.nproc, 128, "nproc should be read from env");
+        std::env::remove_var("QLEXPRESS_WORKER_NPROC");
     }
 }

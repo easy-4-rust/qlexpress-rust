@@ -325,16 +325,11 @@ impl ParserOperatorManager for OperatorManager {
 
     /// Java `precedence`(`getBinaryOperator(lexeme).getPriority()`)。
     ///
-    /// Java 接口声明未知词素可返回 `null`，但当前基线 `OperatorManager`
-    /// 实现会直接解引用查询结果并抛出 `NullPointerException`。这里保留该
-    /// 可观察实现语义；解析器只会在 [`Self::is_op_type`] 已确认后查询优先级。
+    /// 未知词素返回 `None`（trait 契约允许；Java 基线 NPE 在 Rust 侧以
+    /// `None` 表达，避免 host 边界 panic）。解析器在 [`Self::is_op_type`]
+    /// 确认后才查询优先级，因此 `None` 不会进入正常路径。
     fn precedence(&self, lexeme: &str) -> Option<i32> {
-        let operator = self.get_binary_operator(lexeme).unwrap_or_else(|| {
-            panic!(
-                "Cannot invoke \"com.alibaba.qlexpress4.runtime.operator.BinaryOperator.getPriority()\" because the return value of \"com.alibaba.qlexpress4.runtime.operator.OperatorManager.getBinaryOperator(String)\" is null"
-            )
-        });
-        Some(operator.priority())
+        self.get_binary_operator(lexeme).map(|op| op.priority())
     }
 
     /// Java `getAlias`。
@@ -512,12 +507,9 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(
-        expected = "Cannot invoke \"com.alibaba.qlexpress4.runtime.operator.BinaryOperator.getPriority()\" because the return value of \"com.alibaba.qlexpress4.runtime.operator.OperatorManager.getBinaryOperator(String)\" is null"
-    )]
-    fn precedence_for_unknown_lexeme_panics_like_java_operator_manager() {
+    fn precedence_for_unknown_lexeme_returns_none() {
         let manager = OperatorManager::new();
-        let _ = manager.precedence("missing");
+        assert_eq!(manager.precedence("missing"), None);
     }
 
     #[test]

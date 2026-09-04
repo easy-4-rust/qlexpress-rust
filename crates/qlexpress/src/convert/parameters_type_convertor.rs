@@ -1,6 +1,9 @@
 //! Method-parameter conversion (incl. varargs), mirroring Java
 //! `ParametersTypeConvertor`.
 
+use crate::exception::error_codes;
+use crate::exception::ql_exception::QLExceptionKind;
+use crate::exception::QLException;
 use crate::runtime::class_ref::ClassRef;
 use crate::runtime::value::DataValue;
 
@@ -12,7 +15,7 @@ pub struct ParametersTypeConvertor;
 
 impl ParametersTypeConvertor {
     /// 按 Java 类型转换规则转换输入值。
-    /// 参数：`arguments`、`param_types`、`is_var_arg`；返回：`Vec<DataValue>`。
+    /// 参数：`arguments`、`param_types`、`is_var_arg`；返回：`Result<Vec<DataValue>, QLException>`。
     /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/runtime/data/convert/ParametersTypeConvertor.java`，方法 `cast`；Rust 侧按所有权与 `Result` 语义适配。
     /// Java `ParametersTypeConvertor.cast(Object[], Class<?>[], boolean)`.
     ///
@@ -26,22 +29,47 @@ impl ParametersTypeConvertor {
         arguments: &[DataValue],
         param_types: &[ClassRef],
         is_var_arg: bool,
-    ) -> Vec<DataValue> {
+    ) -> Result<Vec<DataValue>, QLException> {
         if !is_var_arg {
             // Java allocates by `arguments.length` and indexes `paramTypes[i]`.
             // Do not use `zip`: it would silently discard an overlong argument
             // list, whereas Java throws ArrayIndexOutOfBoundsException.
-            return (0..arguments.len())
+            if arguments.len() > param_types.len() {
+                return Err(QLException::for_test(
+                    QLExceptionKind::Runtime,
+                    format!(
+                        "argument count {} exceeds declared parameter count {}",
+                        arguments.len(),
+                        param_types.len()
+                    ),
+                    error_codes::INVOKE_METHOD_WITH_WRONG_ARGUMENTS,
+                ));
+            }
+            return Ok((0..arguments.len())
                 .map(|index| cast_parameter(&arguments[index], &param_types[index]))
-                .collect();
+                .collect());
         }
 
         // These direct indexes intentionally preserve Java's invalid-shape
         // failure behavior. Normal runtime callers resolve arity first.
-        let var_arg_start = param_types
-            .len()
-            .checked_sub(1)
-            .expect("Java ParametersTypeConvertor requires a vararg array parameter");
+        let var_arg_start = param_types.len().checked_sub(1).ok_or_else(|| {
+            QLException::for_test(
+                QLExceptionKind::Runtime,
+                "Java ParametersTypeConvertor requires a vararg array parameter",
+                error_codes::INVOKE_METHOD_WITH_WRONG_ARGUMENTS,
+            )
+        })?;
+        if arguments.len() < var_arg_start {
+            return Err(QLException::for_test(
+                QLExceptionKind::Runtime,
+                format!(
+                    "argument count {} is less than fixed parameter count {}",
+                    arguments.len(),
+                    var_arg_start
+                ),
+                error_codes::INVOKE_METHOD_WITH_WRONG_ARGUMENTS,
+            ));
+        }
         let item_type = param_types[var_arg_start]
             .component_type()
             .unwrap_or_else(|| ClassRef::Named("java.lang.Object".to_string()));
@@ -55,7 +83,7 @@ impl ParametersTypeConvertor {
             .map(|index| cast_parameter(&arguments[index], &param_types[index]))
             .collect();
         result.push(DataValue::array_with_component(var_args, item_type));
-        result
+        Ok(result)
     }
 }
 
@@ -87,7 +115,8 @@ mod tests {
                 ClassRef::Primitive(TargetType::Int),
             ],
             false,
-        );
+        )
+        .expect("cast should succeed");
         assert_eq!(result, vec![DataValue::Long(1), DataValue::Int(2)]);
     }
 
@@ -95,7 +124,8 @@ mod tests {
     fn unconvertible_becomes_null_like_java() {
         let args = vec![DataValue::Str("x".into())];
         let result =
-            ParametersTypeConvertor::cast(&args, &[ClassRef::Primitive(TargetType::Int)], false);
+            ParametersTypeConvertor::cast(&args, &[ClassRef::Primitive(TargetType::Int)], false)
+                .expect("cast should succeed");
         assert_eq!(result, vec![DataValue::Null]);
     }
 
@@ -109,7 +139,8 @@ mod tests {
                 ClassRef::array_of(ClassRef::Primitive(TargetType::Int)),
             ],
             true,
-        );
+        )
+        .expect("cast should succeed");
         assert_eq!(result[0], DataValue::Long(1));
         let DataValue::Array(var_args) = &result[1] else {
             panic!("varargs array expected");
@@ -134,7 +165,8 @@ mod tests {
                 ClassRef::array_of(ClassRef::Primitive(TargetType::Int)),
             ],
             true,
-        );
+        )
+        .expect("cast should succeed");
         assert_eq!(result[0], DataValue::Long(1));
         let DataValue::Array(var_args) = &result[1] else {
             panic!("empty varargs array expected");
@@ -147,29 +179,48 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
-    fn non_vararg_overflow_is_not_silently_truncated() {
+    fn non_vararg_overflow_returns_error() {
         // Java source parity: ParametersTypeConvertor#cast indexes
         // paramTypes[i] for every argument and throws on this shape.
-        ParametersTypeConvertor::cast(
+        let err = ParametersTypeConvertor::cast(
             &[DataValue::Int(1), DataValue::Int(2)],
             &[ClassRef::Primitive(TargetType::Int)],
             false,
+        )
+        .expect_err("should fail on argument count overflow");
+        assert_eq!(
+            err.error_code(),
+            error_codes::INVOKE_METHOD_WITH_WRONG_ARGUMENTS
         );
     }
 
     #[test]
-    #[should_panic]
-    fn vararg_underflow_is_not_silently_normalized() {
+    fn vararg_underflow_returns_error() {
         // Java source parity: ParametersTypeConvertor#cast indexes
         // arguments[i] for every fixed parameter before the vararg tail.
-        ParametersTypeConvertor::cast(
+        let err = ParametersTypeConvertor::cast(
             &[],
             &[
                 ClassRef::Primitive(TargetType::Int),
                 ClassRef::array_of(ClassRef::Primitive(TargetType::Int)),
             ],
             true,
+        )
+        .expect_err("should fail on argument count underflow");
+        assert_eq!(
+            err.error_code(),
+            error_codes::INVOKE_METHOD_WITH_WRONG_ARGUMENTS
+        );
+    }
+
+    #[test]
+    fn vararg_with_empty_param_types_returns_error() {
+        // Empty param_types has no vararg array parameter to unpack.
+        let err = ParametersTypeConvertor::cast(&[DataValue::Int(1)], &[], true)
+            .expect_err("should fail when param_types is empty for vararg");
+        assert_eq!(
+            err.error_code(),
+            error_codes::INVOKE_METHOD_WITH_WRONG_ARGUMENTS
         );
     }
 }
