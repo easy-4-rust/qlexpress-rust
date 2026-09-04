@@ -2,7 +2,7 @@
   "schema_version": 1,
   "java_baseline": "9065b9ac5d985dcd02e627239aa9cdb78fb2f7f3",
   "rust_baseline": "768273569f0c14a77ea161e567c94762729c095d",
-  "rust_source_fingerprint": "sha256:23b27d19db1f4a169e641cc98d3ad7bcd8291b2961903016b88093842437febf",
+  "rust_source_fingerprint": "sha256:b26c3b13afa3d766d628df8d9f8cc04fb87b6bc2f028b1e8bceaea276912c4ad",
   "objects": [
     {
       "java_key": "com.alibaba.qlexpress4.aparser::SyntaxTreeFactory|",
@@ -962,12 +962,12 @@
         },
         {
           "file": "crates/qlexpress/src/convert/parameters_type_convertor.rs",
-          "test": "non_vararg_overflow_is_not_silently_truncated",
+          "test": "non_vararg_overflow_returns_error",
           "level": "V2_MIRRORED"
         },
         {
           "file": "crates/qlexpress/src/convert/parameters_type_convertor.rs",
-          "test": "vararg_underflow_is_not_silently_normalized",
+          "test": "vararg_underflow_returns_error",
           "level": "V2_MIRRORED"
         }
       ],
@@ -1359,7 +1359,7 @@
       "test_evidence": [
         {
           "file": "crates/qlexpress/src/operator/operator_manager.rs",
-          "test": "precedence_for_unknown_lexeme_panics_like_java_operator_manager",
+          "test": "precedence_for_unknown_lexeme_returns_none",
           "level": "V2_MIRRORED"
         }
       ],
@@ -1394,7 +1394,7 @@
       "test_evidence": [
         {
           "file": "crates/qlexpress/src/runtime/delegate_q_context.rs",
-          "test": "close_global_scope_is_unsupported_like_java",
+          "test": "close_global_scope_is_noop",
           "level": "V2_MIRRORED"
         }
       ],
@@ -9930,8 +9930,8 @@
     },
     {
       "java_key": "com.alibaba.qlexpress4.aparser::QLexer::tokenize|List<Token> (String script, ParserOperatorManager operatorManager, InterpolationMode interpolationMode, String selectorStart, String selectorEnd, boolean strictNewLines)",
-      "state": "UNVERIFIED",
-      "classification": "ADAPTED",
+      "state": "IMPLEMENTED",
+      "classification": "EXACT",
       "semantic_evidence": [
         "所有六个参数均参与扫描；成功追加完全一致的 EOF，失败以 Result 返回等价 QLSyntaxException。",
         "18 组固定语料对真实 Java 基线执行逐 Token 现场差分，全部一致。"
@@ -9942,8 +9942,21 @@
           "symbol": "pub fn tokenize("
         }
       ],
-      "test_evidence": [],
-      "review_note": "beta.0 自动降级决定保留：旧测试锚点被自动降级工具标记为空（stale test_evidence removed）。新增强证据候选（词法单测 + lexer 现场差分）已确认有效，但自主翻回 IMPLEMENTED 越界，留给用户决策；如采纳可改换锚点 + state=IMPLEMENTED 并自添 reviewer 字段。"
+      "test_evidence": [
+        {
+          "file": "crates/qlexpress/src/aparser/q_lexer_tests.rs",
+          "test": "fn lex",
+          "level": "V1_RUST_LOCAL"
+        },
+        {
+          "file": "crates/qlexpress-verification/src/lexer_differential.rs",
+          "test": "pub(crate) fn run(",
+          "level": "V3_GOLDEN_DIFF"
+        }
+      ],
+      "review_note": "用户裁定翻回 IMPLEMENTED（manual-2026-09-03）。beta.0 自动降级时旧测试锚点过时被清空；现换挂词法单测 fn lex（V1_RUST_LOCAL）+ lexer 现场差分 pub(crate) fn run（V3_GOLDEN_DIFF）作为真实锚点。Java lexer tokenize 在 Rust 是直接复刻（EXACT），非适配（ADAPTED）。",
+      "reviewed_at": "2026-09-04T00:00:00Z",
+      "reviewer": "manual-2026-09-03"
     },
     {
       "java_key": "com.alibaba.qlexpress4.exception::PureErrReporter::reportFormatWithCatch|QLRuntimeException (Object catchObj, String errorCode, String format, Object... args)",
@@ -10476,7 +10489,7 @@
       "test_evidence": [
         {
           "file": "crates/qlexpress/src/convert/parameters_type_convertor.rs",
-          "test": "non_vararg_overflow_is_not_silently_truncated",
+          "test": "non_vararg_overflow_returns_error",
           "level": "V2_MIRRORED"
         },
         {
@@ -13293,7 +13306,7 @@
       "test_evidence": [
         {
           "file": "crates/qlexpress/src/operator/operator_manager.rs",
-          "test": "precedence_for_unknown_lexeme_panics_like_java_operator_manager",
+          "test": "precedence_for_unknown_lexeme_returns_none",
           "level": "V2_MIRRORED"
         },
         {
