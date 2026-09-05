@@ -9,6 +9,7 @@ mod load;
 mod multi_process_isolation;
 mod replay;
 mod security_fuzz;
+mod stack_depth_probe;
 
 use qlexpress_verification::differential;
 
@@ -64,6 +65,11 @@ fn run() -> Result<(), String> {
             let seconds = optional_u64(args.next(), 30, "duration seconds")?;
             multi_process_isolation::run(processes, Duration::from_secs(seconds))
         }
+        "stack-depth-probe" => {
+            let max_depth = optional_usize(args.next(), 1000, "max_depth")?;
+            stack_depth_probe::run(max_depth)
+        }
+        "stack-depth-probe-single" => stack_depth_probe::run_single_probe(),
         "business-host" => business_host::run(),
         "canary" => canary::run(),
         _ => Err(usage()),
@@ -104,6 +110,7 @@ fn usage() -> String {
         "  qlexpress-verification load [duration-seconds] [threads]",
         "  qlexpress-verification security-fuzz [cases]",
         "  qlexpress-verification multi-process-isolation [processes] [duration-seconds]",
+        "  qlexpress-verification stack-depth-probe [max-depth]",
         "  qlexpress-verification business-host",
         "  qlexpress-verification canary",
     ]

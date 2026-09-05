@@ -4,6 +4,25 @@
 
 ## 已完成的验收面
 
+### Q1-biz: 错误码近似业务覆盖
+
+- 脚本：[scripts/generate_error_code_coverage.py](/Users/wandl/workspaces/workspace-github-easy-4-rust/qlexpress-rust/scripts/generate_error_code_coverage.py) + 68 条合成语料
+- 报告：[business-synthetic-coverage.md](/Users/wandl/workspaces/workspace-github-easy-4-rust/qlexpress-rust/docs/业务验收/business-synthetic-coverage.md)
+- 关键结论：66 错误码**全部构造了理论触发场景**（覆盖从 9/66 → 66/66）；59 条 QLExpress 脚本可触发，9 条需非脚本机制（parse cache 损坏 / 注册函数）
+- **能告诉你什么**：哪些错误码**可能**被业务踩到（按构造难度的优先级排序）
+- **不能告诉你什么**：业务真实频率——只有你的脚本能告诉我
+- 17 个 Python 单元测试
+
+### Q2: 调用栈深度（仓库级实测）
+
+- Harness: `cargo run --release -p qlexpress-verification -- stack-depth-probe`
+- 报告：[stack-depth-probe.md](/Users/wandl/workspaces/workspace-github-easy-4-rust/qlexpress-rust/docs/业务验收/stack-depth-probe.md)
+- 三类测试：
+  - **函数递归深度**：max_call_depth=128 精确执行；N≤128 OK，N≥129 触发 `SANDBOX_CALL_DEPTH_EXCEEDED`
+  - **操作数栈**：N≤114 OK；**N=115 触发 `PROCESS_STACK_OVERFLOW`**（Rust 进程栈）
+  - **嵌套 try-catch**：N≤100 OK；**N=105 同样触发进程栈溢出**
+- **关键发现**：QVM 操作数栈（max_stack_size + try_push）正确性 100%；但解析器递归下降**深度 ~115 即进程栈溢出**——**未修，新 P0**
+
 ### Q1: 错误码分布（仓库级基线）
 
 - 脚本：[scripts/analyze_error_distribution.py](/Users/wandl/workspaces/workspace-github-easy-4-rust/qlexpress-rust/scripts/analyze_error_distribution.py)
@@ -34,15 +53,18 @@
 
 ## 仍未完成的验收面（依赖用户提供业务脚本）
 
-### Q2: 调用栈深度
-
-- 状态：**可跳过**——`max_stack_size` 编译期计算、268 个 try_push/try_pop 测试覆盖正常路径；需要业务脚本的"最深深度"作为样本，仓库无此样本
-- 建议：业务脚本出现"接近预算"的场景时再回头跑
-
 ### Q1-biz: 业务脚本真实错误码分布
 
 - 仓库级 Q1 给出 295 差分基线，但**业务真实错误谱**未知
 - 建议：用户提供 100-1000 条脱敏业务脚本到 `scripts/business-corpus/`，跑 `scripts/analyze_error_distribution.py --corpus scripts/business-corpus/`，对比仓库基线
+- **本轮（不依赖业务脚本）的近似替代**：见 [business-synthetic-coverage.md](business-synthetic-coverage.md)——66 错误码全部构造了合成触发场景
+
+### Q2: 调用栈深度
+
+- 状态：**完成（仓库级实测）+ 暴露新风险**——见 [stack-depth-probe.md](stack-depth-probe.md)
+- **关键发现**：操作数栈预算（max_stack_size + try_push）100% 正确——深度 10-114 全部 OK；
+  - 但 **N=115 时** Rust 解析器递归下降**进程级栈溢出**——untrusted script 可让 worker 硬崩
+- 这是 **新发现的 P0 风险**（生产路径可触发），需修但工时 1-2 天；本轮记录未修
 
 ## 总体判断
 
