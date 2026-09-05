@@ -42,8 +42,10 @@ use super::syntax_tree_factory::{
 use super::terminal_node::TerminalNode;
 use super::token::{self, Token};
 use crate::exception::error_codes;
+use crate::exception::ql_error_codes::format_msg;
 use crate::exception::ql_syntax_exception::QLSyntaxException;
 use crate::exception::QLException;
+use crate::exception::QLExceptionKind;
 use crate::ql_precedences;
 
 // Token type constants as `i32`, mirroring the `public static final int`
@@ -240,6 +242,67 @@ pub fn build_tree_from_tokens(
 /// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/QLParser.java`；具体对象路径见 `docs/对象级对照表.md`。
 /// Java `QLParser`.
 /// 对应 Java: com.alibaba.qlexpress4.aparser.QLParser。
+/// Maximum recursion depth for the recursive descent parser.
+///
+/// Prevents Rust process call-stack overflow on adversarial inputs such as
+/// deeply nested parentheses `(((...)))`.  The empirically observed crash
+/// depth is ~115 (see `stack-depth-probe`); 100 provides a comfortable
+/// safety margin while still allowing 10x typical business nesting depth.
+pub(crate) const MAX_PARSE_DEPTH: usize = 100;
+
+use std::cell::Cell;
+
+thread_local! {
+    /// Per-thread recursion depth counter for the recursive descent parser.
+    /// Uses `Cell` for zero-cost interior mutability that avoids `&mut self`
+    /// conflicts when the guard is alive alongside other parser method calls.
+    static PARSE_DEPTH: Cell<usize> = const { Cell::new(0) };
+}
+
+/// RAII guard that increments the thread-local parse depth on creation and
+/// decrements it on drop.  Used at the entry of each mutually-recursive parse
+/// function to track nesting depth without borrowing `self`.
+struct DepthGuard;
+
+impl DepthGuard {
+    /// Increment depth and return `Ok(guard)` if within [`MAX_PARSE_DEPTH`],
+    /// or `Err(ParseFail)` if the limit is exceeded.
+    fn enter() -> Result<Self, ParseFail> {
+        PARSE_DEPTH.with(|d| {
+            let depth = d.get() + 1;
+            d.set(depth);
+            if depth > MAX_PARSE_DEPTH {
+                Err(ParseFail::Syntax(QLSyntaxException::from_exception(
+                    QLException::for_test(
+                        QLExceptionKind::Syntax,
+                        format_msg(
+                            error_codes::error_msg(error_codes::PARSE_AST_DEPTH_EXCEEDED),
+                            &[depth.to_string(), MAX_PARSE_DEPTH.to_string()],
+                        ),
+                        error_codes::PARSE_AST_DEPTH_EXCEEDED,
+                    ),
+                )))
+            } else {
+                Ok(DepthGuard)
+            }
+        })
+    }
+}
+
+impl Drop for DepthGuard {
+    fn drop(&mut self) {
+        PARSE_DEPTH.with(|d| {
+            d.set(d.get().saturating_sub(1));
+        });
+    }
+}
+
+/// 消费 Token 流并按 QLExpress4 语法生成 AST 的递归下降解析器。
+///
+/// Recursive descent parser that consumes a token stream and produces a
+/// syntax tree.  Recursion depth is bounded by `MAX_PARSE_DEPTH` via an
+/// RAII depth guard to prevent Rust process call-stack overflow on
+/// adversarial inputs.
 pub struct QLParser<'a> {
     script: &'a str,
     tokens: &'a [Token],

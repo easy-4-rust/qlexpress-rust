@@ -102,6 +102,10 @@ pub const CONDITION_BOOL_REQUIRED: &str = "CONDITION_BOOL_REQUIRED";
 pub const ARRAY_SIZE_NUM_REQUIRED: &str = "ARRAY_SIZE_NUM_REQUIRED";
 /// `EXCEED_MAX_ARR_LENGTH` 错误码或错误消息模板。
 pub const EXCEED_MAX_ARR_LENGTH: &str = "EXCEED_MAX_ARR_LENGTH";
+/// Parser AST recursion depth exceeded — emitted by the recursive descent
+/// parser when nesting exceeds `MAX_PARSE_DEPTH` (100), preventing Rust
+/// process call-stack overflow.
+pub const PARSE_AST_DEPTH_EXCEEDED: &str = "PARSE_AST_DEPTH_EXCEEDED";
 /// `INCOMPATIBLE_ARRAY_ITEM_TYPE` 错误码或错误消息模板。
 pub const INCOMPATIBLE_ARRAY_ITEM_TYPE: &str = "INCOMPATIBLE_ARRAY_ITEM_TYPE";
 /// `INVALID_ASSIGNMENT` 错误码或错误消息模板。
@@ -209,6 +213,7 @@ pub fn error_msg(code: &str) -> &'static str {
         CONDITION_BOOL_REQUIRED => "result of condition expression must be bool",
         ARRAY_SIZE_NUM_REQUIRED => "size of array must be number",
         EXCEED_MAX_ARR_LENGTH => "array length %d, exceed max allowed length %d",
+        PARSE_AST_DEPTH_EXCEEDED => "parse AST depth %d, exceed max allowed depth %d",
         INCOMPATIBLE_ARRAY_ITEM_TYPE => {
             "item %d with type %s incompatible with array type %s"
         }
@@ -294,7 +299,7 @@ fn utf8_len(first_byte: u8) -> usize {
 mod tests {
     use super::*;
 
-    /// SOURCE_PARITY: Java `QLErrorCodes#getErrorMsg` 的 63 个枚举项与消息模板
+    /// SOURCE_PARITY: Java `QLErrorCodes#getErrorMsg` 的 66 个枚举项与消息模板
     /// 必须逐项一致；这张表有意作为 Java 枚举的独立测试 oracle 保留。
     #[test]
     fn all_java_error_codes_and_templates_match() {
@@ -419,6 +424,10 @@ mod tests {
                 "array length %d, exceed max allowed length %d",
             ),
             (
+                PARSE_AST_DEPTH_EXCEEDED,
+                "parse AST depth %d, exceed max allowed depth %d",
+            ),
+            (
                 INCOMPATIBLE_ARRAY_ITEM_TYPE,
                 "item %d with type %s incompatible with array type %s",
             ),
@@ -482,7 +491,7 @@ mod tests {
             (OPERAND_STACK_OVERFLOW, "operand stack overflow"),
             (OPERAND_STACK_UNDERFLOW, "operand stack underflow"),
         ];
-        assert_eq!(expected.len(), 65);
+        assert_eq!(expected.len(), 66);
         for (code, template) in expected {
             assert_eq!(error_msg(code), template, "error code {code}");
         }

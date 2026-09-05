@@ -121,6 +121,7 @@ impl<'a> QLParser<'a> {
     // ------------------------------------------------------------------
 
     fn parse_block_statements_until(&mut self, end_type: i32) -> PResult<Node> {
+        let _guard = DepthGuard::enter()?;
         let mut ctx = BlockStatementsContext {
             statements: Vec::new(),
         };
@@ -135,6 +136,7 @@ impl<'a> QLParser<'a> {
     }
 
     fn parse_block_statement(&mut self) -> PResult<Node> {
+        let _guard = DepthGuard::enter()?;
         if self.la(NEWLINE) || self.la(SEMI) {
             return Ok(Node::EmptyStatement(EmptyStatementContext {
                 token: self.consume_node(),

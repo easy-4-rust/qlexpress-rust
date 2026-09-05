@@ -1,6 +1,6 @@
 //! Stack depth and sandbox budget boundary probes.
 //!
-//! Three independent probe functions that exercise the QLExpress engine's
+//! Four independent probe functions that exercise the QLExpress engine's
 //! resource limits without depending on any business script:
 //!
 //! 1. Recursive function call depth -- which N triggers
@@ -10,12 +10,16 @@
 //!    correct `max_stack_size`?
 //! 3. Nested try-catch -- does deeply nested error handling trigger any
 //!    budget limit?
+//! 4. Parse depth guard -- does the parser's `MAX_PARSE_DEPTH` guard
+//!    correctly return `PARSE_AST_DEPTH_EXCEEDED` instead of overflowing
+//!    the Rust call stack?
 //!
 //! Run via the `stack-depth-probe` verification subcommand.
 //!
-//! Probes 2 and 3 use subprocess isolation because deeply nested expressions
-//! or try-catch blocks can overflow the Rust process's own call stack during
-//! parsing, causing a hard abort that `catch_unwind` cannot intercept.
+//! Probes 2, 3, and 4 use subprocess isolation because deeply nested
+//! expressions or try-catch blocks can overflow the Rust process's own call
+//! stack during parsing, causing a hard abort that `catch_unwind` cannot
+//! intercept.
 
 use std::collections::HashMap;
 use std::panic::{catch_unwind, AssertUnwindSafe};
@@ -135,6 +139,18 @@ fn run_in_subprocess(script: &str) -> (String, String) {
                     "PROCESS_STACK_OVERFLOW".to_string(),
                     "Rust process call stack overflow during parsing".to_string(),
                 )
+            } else if stdout.contains("PARSE_AST_DEPTH_EXCEEDED") {
+                // The depth guard caught the nesting before the stack overflow.
+                if let Ok(v) = serde_json::from_str::<serde_json::Value>(&stdout) {
+                    let code = v["code"]
+                        .as_str()
+                        .unwrap_or("PARSE_AST_DEPTH_EXCEEDED")
+                        .to_string();
+                    let detail = v["detail"].as_str().unwrap_or("").to_string();
+                    (code, detail)
+                } else {
+                    ("PARSE_AST_DEPTH_EXCEEDED".to_string(), stdout)
+                }
             } else if stdout.is_empty() {
                 (
                     format!("EXIT_{}", out.status.code().unwrap_or(-1)),
@@ -288,10 +304,10 @@ pub fn probe_operand_stack_depth(max_depth: usize) -> Result<(), String> {
         probe: "operand_stack_depth".to_string(),
         description: "Deeply nested arithmetic expression (((...(1+1)+1)...)). \
              Tests whether the compiler's max_stack_size calculation is \
-             correct. If OPERAND_STACK_OVERFLOW never fires before the \
-             Rust process call stack overflows, the compiler is proven \
-             correct for this class of expressions. Uses subprocess \
-             isolation to safely detect process-level stack overflow."
+             correct AND whether the parser depth guard (MAX_PARSE_DEPTH=100) \
+             correctly intercepts deep nesting. Depths >100 should now \
+             return PARSE_AST_DEPTH_EXCEEDED instead of \
+             PROCESS_STACK_OVERFLOW. Uses subprocess isolation."
             .to_string(),
         results: rows,
     };
@@ -368,6 +384,84 @@ pub fn probe_nested_try_catch(max_depth: usize) -> Result<(), String> {
         probe: "nested_try_catch".to_string(),
         description: "Nested try-catch blocks with throw at the center. \
              Measures AST depth, token count, and call depth consumption. \
+             With the parser depth guard (MAX_PARSE_DEPTH=100), depths \
+             exceeding the guard limit return PARSE_AST_DEPTH_EXCEEDED \
+             instead of PROCESS_STACK_OVERFLOW. Uses subprocess isolation."
+            .to_string(),
+        results: rows,
+    };
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&report).map_err(|e| e.to_string())?
+    );
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Probe 4: Parse depth guard (subprocess isolated)
+// ---------------------------------------------------------------------------
+
+/// Generate a deeply nested parenthesized expression:
+///
+/// ```text
+/// (((...(1)...)))
+/// ```
+///
+/// Depth `n` produces `n` nested parentheses.  The parser's depth guard
+/// fires at `MAX_PARSE_DEPTH` (100), returning `PARSE_AST_DEPTH_EXCEEDED`
+/// instead of overflowing the Rust call stack.
+fn nested_parens_script(n: usize) -> String {
+    let mut script = "(".repeat(n);
+    script.push('1');
+    script.push_str(&")".repeat(n));
+    script
+}
+
+/// Probe whether deeply nested parenthesized expressions trigger
+/// `PARSE_AST_DEPTH_EXCEEDED` (as intended by the depth guard) instead of
+/// `PROCESS_STACK_OVERFLOW` (the old behavior).  Uses subprocess isolation
+/// because very large depths could still overflow the process stack if the
+/// guard did not exist.
+pub fn probe_parse_depth(max_depth: usize) -> Result<(), String> {
+    let depths: Vec<usize> = choose_depths(
+        max_depth,
+        &[10, 50, 80, 90, 100, 101, 110, 120, 150, 200, 500],
+    );
+    let mut rows = Vec::new();
+    let mut hit_process_limit = false;
+
+    for &n in &depths {
+        if hit_process_limit {
+            rows.push(ProbeRow {
+                n,
+                outcome: "SKIPPED".to_string(),
+                detail: "skipped: previous depth overflowed the Rust process call stack"
+                    .to_string(),
+                elapsed_us: 0,
+            });
+            continue;
+        }
+        let script = nested_parens_script(n);
+        let start = Instant::now();
+        let (outcome, detail) = run_in_subprocess(&script);
+        let elapsed_us = start.elapsed().as_micros() as u64;
+        if outcome == "PROCESS_STACK_OVERFLOW" {
+            hit_process_limit = true;
+        }
+        rows.push(ProbeRow {
+            n,
+            outcome,
+            detail,
+            elapsed_us,
+        });
+    }
+
+    let report = ProbeReport {
+        probe: "parse_depth".to_string(),
+        description: "Deeply nested parenthesized expressions (((...(1)...))). \
+             Tests the parser's depth guard (MAX_PARSE_DEPTH=100). \
+             Depths <=100 should succeed; depths >100 should return \
+             PARSE_AST_DEPTH_EXCEEDED instead of PROCESS_STACK_OVERFLOW. \
              Uses subprocess isolation for safety."
             .to_string(),
         results: rows,
@@ -424,7 +518,7 @@ pub fn run_single_probe() -> Result<(), String> {
 // Combined entry point
 // ---------------------------------------------------------------------------
 
-/// Run all three probes up to `max_depth` and emit JSON to stdout.
+/// Run all four probes up to `max_depth` and emit JSON to stdout.
 pub fn run(max_depth: usize) -> Result<(), String> {
     eprintln!("[stack-depth-probe] max_depth={max_depth}");
     eprintln!("[stack-depth-probe] running probe_function_call_depth ...");
@@ -433,6 +527,8 @@ pub fn run(max_depth: usize) -> Result<(), String> {
     probe_operand_stack_depth(max_depth)?;
     eprintln!("[stack-depth-probe] running probe_nested_try_catch ...");
     probe_nested_try_catch(max_depth)?;
+    eprintln!("[stack-depth-probe] running probe_parse_depth ...");
+    probe_parse_depth(max_depth)?;
     eprintln!("[stack-depth-probe] done.");
     Ok(())
 }

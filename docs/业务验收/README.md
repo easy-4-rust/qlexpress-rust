@@ -61,10 +61,10 @@
 
 ### Q2: 调用栈深度
 
-- 状态：**完成（仓库级实测）+ 暴露新风险**——见 [stack-depth-probe.md](stack-depth-probe.md)
-- **关键发现**：操作数栈预算（max_stack_size + try_push）100% 正确——深度 10-114 全部 OK；
-  - 但 **N=115 时** Rust 解析器递归下降**进程级栈溢出**——untrusted script 可让 worker 硬崩
-- 这是 **新发现的 P0 风险**（生产路径可触发），需修但工时 1-2 天；本轮记录未修
+- 状态：**完成 + P0 已修**——见 [stack-depth-probe.md](stack-depth-probe.md)
+- **关键发现**（修复前）：操作数栈预算 100% 正确；但 N=115 触发 `PROCESS_STACK_OVERFLOW`（解析器递归下降无深度限制）
+- **P0 修复**（2026-09-04 提交 `*P0-parser-depth*`）：新增错误码 `PARSE_AST_DEPTH_EXCEEDED`，6 个递归入口加 RAII DepthGuard（thread_local + Cell），`MAX_PARSE_DEPTH=100`
+- **修复后实测**：N=200/500/1000 全部返回 `PARSE_AST_DEPTH_EXCEEDED`（depth 101）而非进程崩溃；延迟 < 5ms
 
 ## 总体判断
 
