@@ -1,23 +1,18 @@
 # QLExpress-Rust 合成业务语料 -- 错误码覆盖报告
 
-> 生成时间: 2026-09-05T05:36:52.964401+00:00
-> 错误码来源: `crates/qlexpress/src/exception/ql_error_codes.rs` (66 个)
+> 生成时间: 2026-09-05T07:46:30.732040+00:00
+> 错误码来源: `crates/qlexpress/src/exception/ql_error_codes.rs` (67 个)
 > 仓库语料: `verification/corpus/differential.jsonl` (295 条, 覆盖 9 错误码)
-> 合成语料: `verification/corpus/business-synthetic.jsonl` (75 条)
->
-> **业务场景来源**：
-> - 风险控制 / 定价 / KYC 场景参考自 alibaba/QLExpress 官方 README「Common error codes」段（中文社区公开文档）
-> - 部分模板是 README 显式列出的生产反模式（divide-by-zero in pricing、shortCircuitDisable 误用、= 替代 ==、between DSL 未注册、list flatten 陷阱、macro+try-catch 模式等）
-> - 业务领域样本（`__BIZ_*__` 命名）不映射到具体错误码，只为业务脚本复杂度提供参照样本
+> 合成语料: `verification/corpus/business-synthetic.jsonl` (76 条)
 
 ## 1. 总览
 
 | 指标 | 值 |
 |---|---|
-| 错误码总数 | 66 |
+| 错误码总数 | 67 |
 | 仓库语料已覆盖 | 9 |
-| 合成语料覆盖 | 66 |
-| 合成语料中可通过脚本触发 | 66 |
+| 合成语料覆盖 | 67 |
+| 合成语料中可通过脚本触发 | 67 |
 | 合成语料中需要非脚本触发 | 9 |
 
 ## 2. 66 错误码 x 覆盖矩阵
@@ -77,6 +72,7 @@
 | `OPERAND_STACK_OVERFLOW` | P0 | -- | 1 | script |
 | `OPERAND_STACK_UNDERFLOW` | P0 | -- | 1 | non-script / manual |
 | `OPERATOR_NOT_ALLOWED` | P2 | -- | 1 | script |
+| `PARSE_AST_DEPTH_EXCEEDED` | P0 | -- | 1 | script |
 | `QL_THROW` | P1 | -- | 1 | script |
 | `SCRIPT_TIME_OUT` | P1 | -- | 1 | script |
 | `SERIALIZABLE_PARSE_CACHE_CLASS_NOT_FOUND` | P2 | -- | 1 | non-script / manual |
@@ -93,7 +89,7 @@
 
 ## 3. 仓库语料未覆盖的错误码 -- 构造方案
 
-共 57 个错误码在仓库 295 条语料中未被触发：
+共 58 个错误码在仓库 295 条语料中未被触发：
 
 ### `ARRAY_SIZE_NUM_REQUIRED` (P1, array)
 
@@ -323,6 +319,11 @@
 
 - **脚本**: `~1`
   - 触发原因: Bitwise NOT may be disallowed by operator restriction policy
+
+### `PARSE_AST_DEPTH_EXCEEDED` (P0, syntax-parsing)
+
+- **脚本**: `((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((1))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))`
+  - 触发原因: Deeply nested expression beyond parser MAX_PARSE_DEPTH=100 -- returns PARSE_AST_DEPTH_EXCEEDED instead of crashing the worker process (P0 fix: parser recursion depth guard)
 
 ### `QL_THROW` (P1, user-exception)
 

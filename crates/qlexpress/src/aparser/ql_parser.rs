@@ -42,10 +42,8 @@ use super::syntax_tree_factory::{
 use super::terminal_node::TerminalNode;
 use super::token::{self, Token};
 use crate::exception::error_codes;
-use crate::exception::ql_error_codes::format_msg;
 use crate::exception::ql_syntax_exception::QLSyntaxException;
 use crate::exception::QLException;
-use crate::exception::QLExceptionKind;
 use crate::ql_precedences;
 
 // Token type constants as `i32`, mirroring the `public static final int`
@@ -266,21 +264,31 @@ struct DepthGuard;
 
 impl DepthGuard {
     /// Increment depth and return `Ok(guard)` if within [`MAX_PARSE_DEPTH`],
-    /// or `Err(ParseFail)` if the limit is exceeded.
-    fn enter() -> Result<Self, ParseFail> {
+    /// or `Err(ParseFail)` carrying a fully-formatted
+    /// [`crate::exception::ql_error_codes::PARSE_AST_DEPTH_EXCEEDED`]
+    /// syntax exception (with source snippet, line/col from `token`)
+    /// if the limit is exceeded.
+    ///
+    /// Uses the standard [`QLException::report_scanner_err`] constructor so
+    /// hosts receive a non-empty `Display` message (the depth error used to
+    /// surface as an empty string when built through the test constructor).
+    fn enter(script: &str, token: &Token) -> Result<Self, ParseFail> {
         PARSE_DEPTH.with(|d| {
             let depth = d.get() + 1;
             d.set(depth);
             if depth > MAX_PARSE_DEPTH {
-                Err(ParseFail::Syntax(QLSyntaxException::from_exception(
-                    QLException::for_test(
-                        QLExceptionKind::Syntax,
-                        format_msg(
-                            error_codes::error_msg(error_codes::PARSE_AST_DEPTH_EXCEEDED),
-                            &[depth.to_string(), MAX_PARSE_DEPTH.to_string()],
-                        ),
-                        error_codes::PARSE_AST_DEPTH_EXCEEDED,
-                    ),
+                let reason = format!(
+                    "parse AST depth {}, exceed max allowed depth {}",
+                    depth, MAX_PARSE_DEPTH
+                );
+                Err(ParseFail::Syntax(QLException::report_scanner_err(
+                    script,
+                    token.start_index(),
+                    token.line(),
+                    token.char_position_in_line(),
+                    token.text(),
+                    error_codes::PARSE_AST_DEPTH_EXCEEDED,
+                    &reason,
                 )))
             } else {
                 Ok(DepthGuard)

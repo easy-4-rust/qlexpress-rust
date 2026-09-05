@@ -49,6 +49,9 @@ OUTPUT_PATH = PROJECT_ROOT / "verification" / "corpus" / "business-synthetic.jso
 # ---------------------------------------------------------------------------
 # Error code extraction (reuses the regex from analyze_error_distribution.py)
 # ---------------------------------------------------------------------------
+# 注意：ql_error_codes.rs 中部分常量是两行写法（`pub const X: &str =\n    "X";`），
+# 例如 SERIALIZABLE_PARSE_CACHE_UNSUPPORTED_VERSION / _UNSUPPORTED_INSTRUCTION。
+# 正则需兼容跨行赋值（`\s*` 覆盖换行）。
 _CODE_RE = re.compile(r'pub\s+const\s+(\w+)\s*:\s*&str\s*=\s*"(\w+)"')
 _MSG_RE = re.compile(r'^\s+(\w+)\s+=>\s+"(.+?)",?\s*$', re.MULTILINE)
 
@@ -130,6 +133,7 @@ DOMAIN_MAP: dict[str, str] = {
     "INCOMPATIBLE_TYPE_CAST": "type-cast",
     "INVALID_CAST_TARGET": "type-cast",
     "SCRIPT_TIME_OUT": "resource-limits",
+    "PARSE_AST_DEPTH_EXCEEDED": "syntax-parsing",
     "SANDBOX_DEADLINE_EXCEEDED": "resource-limits",
     "SANDBOX_FUEL_EXCEEDED": "resource-limits",
     "SANDBOX_CALL_DEPTH_EXCEEDED": "resource-limits",
@@ -192,6 +196,12 @@ def _build_script_templates() -> dict[str, list[tuple[str, str]]]:
         ("1 + + 1", "Double operator is a syntax error"),
         ("a = (1 + 2", "Unclosed parenthesis"),
         ("if (true) {", "Unclosed brace"),
+    ]
+    templates["PARSE_AST_DEPTH_EXCEEDED"] = [
+        ("(" * 120 + "1" + ")" * 120,
+         "Deeply nested expression beyond parser MAX_PARSE_DEPTH=100 -- "
+         "returns PARSE_AST_DEPTH_EXCEEDED instead of crashing the "
+         "worker process (P0 fix: parser recursion depth guard)"),
     ]
     templates["MISSING_INDEX"] = [
         ("a = [1,2,3]; a[]", "Empty brackets -- missing index expression"),
@@ -560,6 +570,7 @@ def _build_script_templates() -> dict[str, list[tuple[str, str]]]:
 P0_CODES = {
     "SYNTAX_ERROR", "MISSING_INDEX", "INVALID_NUMBER", "CLASS_NOT_FOUND",
     "STACK_OVERFLOW", "OPERAND_STACK_OVERFLOW", "OPERAND_STACK_UNDERFLOW",
+    "PARSE_AST_DEPTH_EXCEEDED",
 }
 
 P2_CODES = {

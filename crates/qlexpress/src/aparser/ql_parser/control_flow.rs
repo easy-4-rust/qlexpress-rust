@@ -194,7 +194,7 @@ impl<'a> QLParser<'a> {
     }
 
     fn parse_block_statements_until_switch_group_end(&mut self) -> PResult<Node> {
-        let _guard = DepthGuard::enter()?;
+        let _guard = DepthGuard::enter(self.script, self.lt())?;
         let mut ctx = BlockStatementsContext {
             statements: Vec::new(),
         };
@@ -263,7 +263,7 @@ impl<'a> QLParser<'a> {
     }
 
     fn parse_expression_list_until_arrow(&mut self) -> PResult<Node> {
-        let _guard = DepthGuard::enter()?;
+        let _guard = DepthGuard::enter(self.script, self.lt())?;
         let mut ctx = ExpressionListContext {
             expressions: Vec::new(),
             commas: Vec::new(),

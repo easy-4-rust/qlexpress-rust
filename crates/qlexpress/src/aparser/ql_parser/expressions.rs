@@ -1,6 +1,6 @@
 impl<'a> QLParser<'a> {
     fn parse_expression(&mut self) -> PResult<Node> {
-        let _guard = DepthGuard::enter()?;
+        let _guard = DepthGuard::enter(self.script, self.lt())?;
         let save = self.p;
         if self.has_top_level_assign_operator_ahead() {
             let left = self.try_parse_left_hand_side()?;
@@ -502,7 +502,7 @@ impl<'a> QLParser<'a> {
     }
 
     fn parse_block_expr(&mut self) -> PResult<Node> {
-        let _guard = DepthGuard::enter()?;
+        let _guard = DepthGuard::enter(self.script, self.lt())?;
         let lbrace = self.expect(LBRACE, "'{'")?;
         self.skip_newlines();
         let block_statements = if !self.la(RBRACE) {

@@ -1,8 +1,8 @@
 # QLExpress-Rust 错误码分布报告
 
-> 生成时间: 2026-09-05T04:17:09.081689+00:00
+> 生成时间: 2026-09-05T07:46:31.317197+00:00
 > 语料来源: `verification/corpus/differential.jsonl` (295 条)
-> 错误码来源: `crates/qlexpress/src/exception/ql_error_codes.rs` (66 个)
+> 错误码来源: `crates/qlexpress/src/exception/ql_error_codes.rs` (67 个)
 
 ## 1. 总览
 
@@ -11,8 +11,8 @@
 | 语料总数 | 295 |
 | 预期成功 | 257 |
 | 预期异常 | 38 |
-| 触发的错误码种类 | 9 / 66 |
-| 未触发的错误码种类 | 57 |
+| 触发的错误码种类 | 9 / 67 |
+| 未触发的错误码种类 | 58 |
 
 ## 2. 按严重度分布
 
@@ -246,6 +246,7 @@
 - `MISSING_INDEX`
 - `OPERAND_STACK_OVERFLOW`
 - `OPERAND_STACK_UNDERFLOW`
+- `PARSE_AST_DEPTH_EXCEEDED`
 - `STACK_OVERFLOW`
 
 **P1 (运行时) 未覆盖** -- 这些是运行时错误，
