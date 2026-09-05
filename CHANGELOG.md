@@ -2,7 +2,50 @@
 
 本项目遵循语义化版本，并将预发布版本用于兼容性与生产验收。
 
-## [Unreleased]
+## [0.1.0] - 2026-09-05
+
+> 本版本相对 0.1.0-beta.0：**官方测试集全量对拍 228/228 + 生产路径
+> P0/P1/P2 十一项加固 + 业务验收证据体系 + 基础设施（升级脚本化 /
+> 1.0 API 冻结准备）**，通道由 beta 晋级首个正式版。SemVer 稳定承诺
+> 自本版本生效，公共 API 表面见 [API 稳定性文档](docs/API-Stability.md)。
+
+### Fixed（生产路径 P0）
+
+- **解析器递归下降栈溢出**：深度 ~115 的嵌套表达式触发 Rust 进程栈溢出
+  （untrusted script 可致 worker 硬崩）。新增 RAII DepthGuard
+  （thread_local + Cell）+ 错误码 `PARSE_AST_DEPTH_EXCEEDED`
+  （MAX_PARSE_DEPTH=100，深度 101 起结构化报错而非进程崩溃）
+- **DepthGuard 错误消息为空**：改用标准 `report_scanner_err` 构造器，
+  宿主收到完整 `[Error PARSE_AST_DEPTH_EXCEEDED: parse AST depth 101, ...]`
+  + 源码位置片段
+- **ConcurrentParseCache 锁毒静默继续**：3 处
+  `unwrap_or_else(PoisonError::into_inner)` 会读"panic 线程写了一半的
+  哈希表"。改为 `poison_cleared: AtomicBool` 首次清毒策略（清空脏数据
+  一次，之后只拿锁），同模式应用于 regex 缓存
+- **ParametersTypeConvertor 反序列化路径 panic**：`cast` 改
+  `Result<Vec<DataValue>, QLException>`，4 处 panic/expect 转错误码
+- **DelegateQContext::close_scope 根作用域 panic**：改为 no-op（与 Java 一致）
+
+### Fixed（真 bug）
+
+- **FieldValue::set_inner 静默吞 setter 失败**：`LeftValue` trait 签名
+  `set_inner` 改 `Result<(), QLException>`，setter 返回 false 时报
+  `INCOMPATIBLE_ASSIGNMENT_TYPE`（与其他 4 个不可失败实现对齐）
+- **java_regex_split 重复编译**：进程级 `OnceLock<Mutex<HashMap>>` 缓存，
+  循环内 split 不再重复编译 pattern
+
+### Security
+
+- **ProcessWorker 新增 RLIMIT_NPROC**（默认 256，`QLEXPRESS_WORKER_NPROC`
+  可调，linux/macos 条件编译）：防 fork-bomb 耗尽进程表
+
+### Performance
+
+- **StringJoinInstruction O(n²) → O(n)**：预分配 + extend_from_slice
+- **class_assignable_from 字符串匹配 → 层级遍历**：catch 匹配改
+  `NativeType.supertypes` 链式判定 + 已知层级兜底，修复"MyExceptionHandler
+  被误捕获"类假阳性
+- **operator_manager 未知 lexeme panic → 返回 None**（用户输入触发路径）
 
 ### Deprecated
 
@@ -18,6 +61,23 @@
   - 1.0 之前可能变动的项清单
   - 从 beta.0 到 1.0 的迁移指南
   - API 问题报告指引
+
+### Verification（验收证据）
+
+- **官方测试集全量对拍 228/228**（independent 151 + java-fixtures 77），
+  其中 62 条 errCode 标注脚本逐条比对 Rust 错误码与 Java 标注一致
+- 迁移台账 **UNVERIFIED 归零**：方法 1,811 IMPLEMENTED + 3 PLATFORM_NA
+  （1,814/1,814），disposition 1,811/1,811 全匹配
+- 业务验收证据体系（docs/业务验收/）：仓库级错误码分布、合成业务语料
+  66/66 错误码覆盖、多进程隔离三场景、性能基线 52k ops/s / p99 874µs、
+  调用栈深度探针、QLExpress 官方测试集真实错误谱提取
+- cargo test 1,465/0；scripts 86/0；clippy/fmt/doc 全过
+
+### Infrastructure
+
+- `scripts/upgrade_unverified.py`：上游发版后一键复现 UNVERIFIED 升级
+  管线（check/apply/clean，幂等可恢复）
+- `docs/API-Stability.md`：1.0 API 冻结材料
 
 ## [0.1.0-beta.0] - 2026-09-03
 
