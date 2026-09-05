@@ -2,7 +2,7 @@
 
 本文档记录 `qlexpress` crate 的公共 API 表面、稳定性分类与版本演进策略。
 
-> 对应版本：`0.1.0-beta.1`（预发布）
+> 对应版本：`0.1.0`（首个正式版，SemVer 承诺已生效）
 > 最后更新：2026-09-05
 
 ---
@@ -15,7 +15,8 @@
 
 | 版本阶段 | 承诺 |
 |---------|------|
-| `0.x.y-beta.*` / `0.x.y-alpha.*` | **不承诺**跨预发布的 API 兼容性。breaking change 可在任意 beta 之间发生，但会在 CHANGELOG 中明确记录。 |
+| `0.x.y-beta.*` / `0.x.y-alpha.*` | （历史通道）**不承诺**跨预发布的 API 兼容性。breaking change 可在任意预发布之间发生，但会在 CHANGELOG 中明确记录。 |
+| `0.1.0`（正式版） | 首个稳定版本；minor/patch 升级遵循 SemVer，breaking change 需要 major 升级。 |
 | `1.0.0` 及以后 | 严格 SemVer：minor 版本升级不破坏公共 API；breaking change 需要 major 版本升级。 |
 
 ### 1.2 公共 API 的定义
@@ -117,9 +118,9 @@
 | `OutVarNamesVisitor` | 变量名收集访问者 | stable | 无 |
 | `ImportManager` | 导入管理器 | stable | 无 |
 | `MacroDefine` | 宏定义 | stable | 无 |
-| `CompileCache` | **unstable** -- 泛型编译缓存容器 | **unstable** | 可能在 1.0 移除或重命名；用户应使用 `SerializableParseCache` |
-| `QCompileCache` | **unstable** -- 泛型编译缓存值 | **unstable** | 可能在 1.0 移除或重命名；用户应使用 `LoadedCompileCache` |
-| `GeneratorScope` | **unstable** -- 编译期生成器作用域 | **unstable** | 内部实现细节，1.0 可能从 facade 移除 |
+| `CompileCache` | **unstable** -- 泛型编译缓存容器 | **unstable** | 后续版本可能移除或重命名（会先经 deprecated 过渡）；用户应使用 `SerializableParseCache` |
+| `QCompileCache` | **unstable** -- 泛型编译缓存值 | **unstable** | 后续版本可能移除或重命名（会先经 deprecated 过渡）；用户应使用 `LoadedCompileCache` |
+| `GeneratorScope` | **unstable** -- 编译期生成器作用域 | **unstable** | 内部实现细节，后续版本可能从 facade 移除 |
 
 ### 2.7 派生宏
 
@@ -192,20 +193,20 @@
 
 ### 4.2 `CompileCache` / `QCompileCache`（unstable）
 
-- **状态**：unstable，1.0 之前可能从 facade 移除或重命名
+- **状态**：unstable，后续版本可能从 facade 移除或重命名（会先经 deprecated 过渡）
 - **替代方案**：用户应使用 `api::parsecache::SerializableParseCache`（可序列化）和 `api::parsecache::LoadedParseCache`（已加载）
 - **原因**：`CompileCache<L, T>` / `QCompileCache<L, T>` 是解析器内部的泛型缓存容器，暴露了不应由用户直接操作的实现细节。`Express4Runner` 内部使用 `CompileCacheStore` 管理缓存，用户通过 `export_parse_cache` / `import_parse_cache` / `set_parse_cache` 等方法操作缓存。
 
 ### 4.3 `GeneratorScope`（unstable）
 
-- **状态**：unstable，1.0 之前可能从 facade 移除
+- **状态**：unstable，后续版本可能从 facade 移除（会先经 deprecated 过渡）
 - **原因**：编译期生成器作用域是解析器内部实现细节，不应暴露给用户。
 
 ---
 
-## 5. 1.0 之前可能变动的项
+## 5. 当前标记为 unstable 的项
 
-以下项在 1.0 之前可能发生变化：
+以下项在后续 minor 版本仍可能调整（调整前会先以 deprecated 过渡并在 CHANGELOG 记录）：
 
 | 项目 | 风险 | 说明 |
 |------|------|------|

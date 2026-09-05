@@ -266,7 +266,7 @@ The `=` prefix forces an exact version match. Both `qlexpress` and
 lockstep and mixing versions will produce compile errors.
 
 Before upgrading, review [CHANGELOG.md](CHANGELOG.md) for breaking changes.
-Once `1.0` is released, standard semver guarantees will apply.
+`0.1.0` already carries standard semver guarantees; breaking changes require a major version bump.
 
 ## Verification
 

@@ -258,7 +258,7 @@ cargo add qlexpress-derive@0.1.0
 二者同步发布，混用版本会导致编译错误。
 
 升级前请先阅读 [CHANGELOG.md](CHANGELOG.md) 中的破坏性变更说明。
-`1.0` 正式发布后将遵循标准 semver 保证。
+`0.1.0` 起已遵循标准 semver 保证；破坏性变更需要升 major 版本。
 
 ## 验证
 
