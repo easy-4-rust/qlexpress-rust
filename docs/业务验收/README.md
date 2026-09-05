@@ -99,3 +99,29 @@ cargo run --release -p qlexpress-verification -- load 30 8
 ## 历史
 
 - 2026-09-04：本轮首次落档
+
+
+## 2026-09-05 官方测试集全量对拍（最终验收）
+
+用户验收标准「Rust 环境达到与 Java 环境同等能力、同样结果，并通过官方测试脚本」落地：
+
+- **replay harness 扩展**：从只覆盖 `testsuite/independent/`（151）扩展到
+  `testsuite/java/`（77）——后者需要 Java 测试 fixture 宿主对象，
+  `suite_runner()` 已注册全部对应 Rust fixture（Person/SampleEnum/Parent/
+  JSONObject/TestEnum/TestChild 等 20+ 类型）。
+- **新增 `allowPrivateAccess` 脚本选项解析**：java/property 的
+  `private_member_attr_access_*.ql` 头部标注
+  `InitOptions.builder().allowPrivateAccess(true)`，replay 按标注构造
+  开启私有访问的 Runner（对侧 `private_member_set_not_accessible.ql`
+  仍以默认关闭 Runner 回放并断言 `INVALID_ASSIGNMENT`——两种语义都对）。
+- **实测结果**：**228/228 全部通过**（independent 151 + java-fixtures 77），
+  其中 62 条 errCode 标注脚本逐条比对 Rust 抛出错误码与 Java 标注一致。
+- 含本会话新修复的语义：`PARSE_AST_DEPTH_EXCEEDED`（解析器深度守护）、
+  `try_push` 操作数栈、private member 访问开关。
+
+**结论**：QLExpress4 官方测试集在 Rust 引擎上达到与 Java 环境同等能力、
+同样结果。重跑命令：
+
+```bash
+cargo run --release -p qlexpress-verification -- replay <java-baseline-repo>
+```

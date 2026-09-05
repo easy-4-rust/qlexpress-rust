@@ -1,4 +1,9 @@
-//! 直接回放 Java 基线仓库的 151 个 independent `.ql` 脚本。
+//! 直接回放 Java 基线仓库的官方 `.ql` 测试脚本。
+//!
+//! 覆盖 `testsuite/independent/`（纯脚本，历史 151 个）与
+//! `testsuite/java/`（需要 Java 测试 fixture 宿主对象，77 个）。两类
+//! 脚本共用同一套回放语义：正常脚本断言执行成功，带 `errCode` 标注
+//! 的错误脚本逐条比对 Rust 抛出的错误码与 Java 标注是否一致。
 
 use std::collections::HashMap;
 use std::fs;
@@ -11,32 +16,51 @@ mod alignment_util;
 
 /// 对应 Java: 无（Rust 原生适配）。
 pub fn run(java_repo: &Path) -> Result<(), String> {
-    let root = java_repo.join("src/test/resources/testsuite/independent");
-    if !root.is_dir() {
-        return Err(format!("independent suite not found: {}", root.display()));
-    }
-    let mut files = Vec::new();
-    collect_ql_files(&root, &mut files)?;
-    files.sort();
-    let mut failures = Vec::new();
-    for file in &files {
-        if let Err(error) = replay_file(file) {
-            failures.push(format!("{}: {error}", file.display()));
+    let suites = [
+        (
+            "independent",
+            java_repo.join("src/test/resources/testsuite/independent"),
+        ),
+        (
+            "java-fixtures",
+            java_repo.join("src/test/resources/testsuite/java"),
+        ),
+    ];
+    let mut total_files = 0usize;
+    let mut all_failures = Vec::new();
+    for (name, root) in suites {
+        if !root.is_dir() {
+            return Err(format!("{name} suite not found: {}", root.display()));
         }
+        let mut files = Vec::new();
+        collect_ql_files(&root, &mut files)?;
+        files.sort();
+        let mut failures = Vec::new();
+        for file in &files {
+            if let Err(error) = replay_file(file) {
+                failures.push(format!("{}: {error}", file.display()));
+            }
+        }
+        println!(
+            "{{\"suite\":\"{name}\",\"source\":\"{}\",\"scripts\":{},\"failed\":{}}}",
+            root.display(),
+            files.len(),
+            failures.len()
+        );
+        total_files += files.len();
+        all_failures.extend(failures);
     }
-    if !failures.is_empty() {
+    if !all_failures.is_empty() {
         return Err(format!(
             "replay failed: {} of {}\n{}",
-            failures.len(),
-            files.len(),
-            failures.join("\n")
+            all_failures.len(),
+            total_files,
+            all_failures.join("\n")
         ));
     }
     println!(
-        "{{\"source\":\"{}\",\"scripts\":{},\"passed\":{},\"failed\":0}}",
-        root.display(),
-        files.len(),
-        files.len()
+        "{{\"source\":\"all-suites\",\"scripts\":{},\"passed\":{},\"failed\":0}}",
+        total_files, total_files
     );
     Ok(())
 }
@@ -62,7 +86,19 @@ fn replay_file(path: &Path) -> Result<(), String> {
     let options = parse_options(&script);
     let expected_error = quoted_option(&script, "errCode");
     let no_return = script.contains("\"noReturn\": true");
-    let result = alignment_util::suite_runner().execute(&script, HashMap::new(), &options);
+    // java/property 的 private_member_attr_access_* 脚本在头部标注
+    // `InitOptions.builder().allowPrivateAccess(true)`；此时须以开启私有
+    // 访问的 Runner 回放（suite_runner 默认关闭以保持 FIELD_NOT_FOUND
+    // 语义，见 private_member_set_not_accessible.ql）。
+    let allow_private = script.contains(".allowPrivateAccess(true)");
+    let runner = if allow_private {
+        alignment_util::suite_runner_with_init_options(
+            alignment_util::jdk_init_options_with_private_access(),
+        )
+    } else {
+        alignment_util::suite_runner()
+    };
+    let result = runner.execute(&script, HashMap::new(), &options);
     match (expected_error, result) {
         (Some(expected), Err(error)) if error.error_code() == expected => Ok(()),
         (Some(expected), Err(error)) => Err(format!(

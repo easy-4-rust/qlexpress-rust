@@ -140,6 +140,17 @@ pub fn jdk_init_options() -> InitOptions {
         .build()
 }
 
+/// 同 [`jdk_init_options`],但开启私有成员访问——对应 java/property 的
+/// `private_member_attr_access_*.ql` 脚本头部标注的
+/// `InitOptions.builder().allowPrivateAccess(true)`。
+pub fn jdk_init_options_with_private_access() -> InitOptions {
+    InitOptions::builder()
+        .class_supplier(Rc::new(JdkClassSupplier))
+        .security_strategy(QLSecurityStrategy::open())
+        .allow_private_access(true)
+        .build()
+}
+
 /// Java `UserDefineException(message)`:错误码 `BIZ_EXCEPTION`。
 pub fn biz_error(message: impl Into<String>) -> QLException {
     QLException::for_test(
