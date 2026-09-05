@@ -284,7 +284,7 @@ official script replay, runner-per-worker concurrency, deterministic security fu
 business-host scenario, canary/rollback simulation, load acceptance, and libFuzzer.
 
 The current strict inventory records 1,118 Rust test functions and passes the full workspace,
-295/295 current live Java/Rust differential cases, 225 Maven tests, and 151/151 independent
+293/293 current live Java/Rust differential cases (plus 2 documented intentional Java-baseline divergences), 225 Maven tests, and 151/151 independent
 Java resource-script replays. Differential parity—not Rust code coverage—is the semantic
 acceptance criterion.
 The extended production run also records 228/228 Java official-suite cases, 16,000 concurrent

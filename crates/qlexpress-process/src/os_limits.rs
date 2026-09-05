@@ -101,7 +101,7 @@ fn set_limit(resource: libc::c_int, value: u64, name: &str) -> Result<(), String
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, unix))]
 mod tests {
     use super::*;
     use std::time::Duration;

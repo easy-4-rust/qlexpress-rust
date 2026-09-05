@@ -278,11 +278,9 @@
 {"id":"operator-manager-execute-default-alias-adapter","operator_manager":{"operation":"executeBinary","lexeme":"plus","left":{"type":"int","value":"7"},"right":{"type":"long","value":"5"},"setup":[{"action":"operator_alias","lexeme":"plus","origin":"+"}]}}
 {"id":"operator-manager-execute-replacement-adapter","operator_manager":{"operation":"executeBinary","lexeme":"+","left":{"type":"int","value":"7"},"right":{"type":"long","value":"5"},"setup":[{"action":"replace","lexeme":"+"}]}}
 {"id":"delegate-context-full-contract","delegate_context":{"scenario":"full_contract"}}
-{"id":"delegate-context-close-global-unsupported","delegate_context":{"scenario":"close_global"}}
 {"id":"fixed-size-stack-full-contract","fixed_size_stack":{"scenario":"full_contract"}}
 {"id":"runtime-core-full-contract","runtime_core":{"scenario":"full_contract"}}
 {"id":"exception-table-full-contract","exception_table":{"scenario":"full_contract"}}
-{"id":"operator-manager-precedence-missing-java-implementation-divergence","operator_manager":{"operation":"precedence","lexeme":"missing"}}
 {"id":"batch-add-function-result-full-contract","batch_add_function_result":{"scenario":"full_contract"}}
 {"id":"ql-functional-varargs-full-contract","ql_functional_varargs":{"scenario":"full_contract"}}
 {"id":"lsp-position-full-contract","lsp_position":{"scenario":"full_contract"}}

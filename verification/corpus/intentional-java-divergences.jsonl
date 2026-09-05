@@ -1,0 +1,8 @@
+# 有意偏离 Java 基线的差分用例台账
+# Java 基线（9065b9ac）在这两处的行为是上游缺陷（NPE / 硬编码
+# UNSUPPORTED）；qlexpress-rust 有意修复偏离，Rust 侧行为由
+# 回归测试钉住。移除自 differential.jsonl（2026-09-05）。
+# --- delegate-context-close-global-unsupported: P0-4 修复（420bcff）：根作用域 close_scope 由 Java 的 UNSUPPORTED_OPERATION panic 改为 no-op（与 Java 语义对齐而非崩溃），Rust 侧回归测试 close_global_scope_is_noop 钉住新契约
+{"id":"delegate-context-close-global-unsupported","delegate_context":{"scenario":"close_global"}}
+# --- operator-manager-precedence-missing-java-implementation-divergence: P1 修复（420bcff）：未知 lexeme precedence 由 Java 的 NullPointerException 改为返回 None（trait 已是 Option<i32>），Rust 侧回归测试 precedence_for_unknown_lexeme_returns_none 钉住新契约
+{"id":"operator-manager-precedence-missing-java-implementation-divergence","operator_manager":{"operation":"precedence","lexeme":"missing"}}

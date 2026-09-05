@@ -20,5 +20,7 @@ fn rust_side_executes_every_shared_differential_case() {
         .filter(|line| !line.trim().is_empty())
         .count();
     fs::remove_file(&output).expect("remove owned temporary output");
-    assert_eq!(records, 295, "every shared differential case must run");
+    // 293 = 295 - 2 条移入 intentional-java-divergences.jsonl 的
+    // 有意偏离用例（delegate close_global no-op / operator precedence None）
+    assert_eq!(records, 293, "every shared differential case must run");
 }

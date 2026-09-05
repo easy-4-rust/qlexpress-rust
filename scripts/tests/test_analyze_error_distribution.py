@@ -314,9 +314,9 @@ class MarkdownOutputTest(unittest.TestCase):
 
 
 class RealCorpusSmokeTest(unittest.TestCase):
-    """Smoke test against the real 295-entry corpus."""
+    """Smoke test against the live corpus (293 = 295 - 2 moved to intentional-java-divergences)."""
 
-    def test_total_cases_is_295(self) -> None:
+    def test_total_cases_is_293(self) -> None:
         corpus_path = Path(__file__).resolve().parent.parent.parent / "verification" / "corpus" / "differential.jsonl"
         if not corpus_path.exists():
             self.skipTest("corpus not found")
@@ -326,7 +326,7 @@ class RealCorpusSmokeTest(unittest.TestCase):
                 line = line.strip()
                 if line and not line.startswith("#"):
                     count += 1
-        self.assertEqual(count, 295)
+        self.assertEqual(count, 293)
 
     def test_classify_all_cases_no_unknown(self) -> None:
         corpus_path = Path(__file__).resolve().parent.parent.parent / "verification" / "corpus" / "differential.jsonl"
