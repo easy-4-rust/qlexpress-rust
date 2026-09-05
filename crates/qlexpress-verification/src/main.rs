@@ -6,6 +6,7 @@ mod canary;
 mod concurrency;
 mod lexer_differential;
 mod load;
+mod multi_process_isolation;
 mod replay;
 mod security_fuzz;
 
@@ -58,6 +59,11 @@ fn run() -> Result<(), String> {
             let cases = optional_usize(args.next(), 25_000, "cases")?;
             security_fuzz::run(cases)
         }
+        "multi-process-isolation" => {
+            let processes = optional_usize(args.next(), 8, "processes")?;
+            let seconds = optional_u64(args.next(), 30, "duration seconds")?;
+            multi_process_isolation::run(processes, Duration::from_secs(seconds))
+        }
         "business-host" => business_host::run(),
         "canary" => canary::run(),
         _ => Err(usage()),
@@ -97,6 +103,7 @@ fn usage() -> String {
         "  qlexpress-verification concurrency [threads] [iterations]",
         "  qlexpress-verification load [duration-seconds] [threads]",
         "  qlexpress-verification security-fuzz [cases]",
+        "  qlexpress-verification multi-process-isolation [processes] [duration-seconds]",
         "  qlexpress-verification business-host",
         "  qlexpress-verification canary",
     ]

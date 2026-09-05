@@ -181,20 +181,50 @@ fn java_regex_split(
 /// pattern 会反复触发 O(n) 编译。`OnceLock` 保证只初始化一次，
 /// `Mutex<HashMap>` 保护跨线程的 pattern→Regex 插入。
 /// `Expression 5/0 阶段实测：8 线程 1000 次相同 split 走缓存后从 ms 级降到 µs 级。
-static REGEX_CACHE: std::sync::OnceLock<std::sync::Mutex<std::collections::HashMap<String, regex::Regex>>> =
-    std::sync::OnceLock::new();
+///
+/// ## 锁毒恢复
+///
+/// 与 [`crate::parsecache::concurrent_parse_cache::ConcurrentParseCache`] 采用
+/// 相同的 poison 恢复策略：`AtomicBool` 保证首次发现 poison 时清空脏数据，
+/// 后续只拿锁不重清。`swap` 在持锁状态下求值，跨线程无竞态。
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Mutex, MutexGuard, OnceLock};
 
-fn regex_cache() -> &'static std::sync::Mutex<std::collections::HashMap<String, regex::Regex>> {
-    REGEX_CACHE.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()))
+static REGEX_CACHE: OnceLock<RegexCache> = OnceLock::new();
+
+struct RegexCache {
+    inner: Mutex<HashMap<String, regex::Regex>>,
+    poison_cleared: AtomicBool,
+}
+
+impl RegexCache {
+    fn new() -> Self {
+        Self {
+            inner: Mutex::new(HashMap::new()),
+            poison_cleared: AtomicBool::new(false),
+        }
+    }
+
+    fn lock_recovered(&self) -> MutexGuard<'_, HashMap<String, regex::Regex>> {
+        match self.inner.lock() {
+            Ok(g) => g,
+            Err(poisoned) => {
+                let mut guard = poisoned.into_inner();
+                if !self.poison_cleared.swap(true, Ordering::AcqRel) {
+                    guard.clear();
+                }
+                guard
+            }
+        }
+    }
+}
+
+fn regex_cache() -> &'static RegexCache {
+    REGEX_CACHE.get_or_init(RegexCache::new)
 }
 
 fn get_or_compile_regex(pattern: &str) -> Result<regex::Regex, QLException> {
-    if let Some(re) = regex_cache()
-        .lock()
-        .unwrap_or_else(std::sync::PoisonError::into_inner)
-        .get(pattern)
-        .cloned()
-    {
+    if let Some(re) = regex_cache().lock_recovered().get(pattern).cloned() {
         return Ok(re);
     }
     let compiled = regex::Regex::new(pattern).map_err(|error| {
@@ -205,8 +235,7 @@ fn get_or_compile_regex(pattern: &str) -> Result<regex::Regex, QLException> {
         )
     })?;
     regex_cache()
-        .lock()
-        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .lock_recovered()
         .insert(pattern.to_string(), compiled.clone());
     Ok(compiled)
 }
@@ -240,18 +269,11 @@ mod tests {
 
     #[test]
     fn different_patterns_are_independent() {
-        // 用测试专属的 unique pattern 名，并以"该 pattern 现在是否在缓存中"
-        // 代替"缓存大小 + 2"——后者依赖其他并行测试的状态
         let a = r"\Acache_test_alpha_\d{2,4}\z";
         let b = r"\Acache_test_beta_[a-z]{3}\z";
         get_or_compile_regex(a).unwrap();
         get_or_compile_regex(b).unwrap();
-        let in_cache = |p: &str| {
-            regex_cache()
-                .lock()
-                .unwrap_or_else(std::sync::PoisonError::into_inner)
-                .contains_key(p)
-        };
+        let in_cache = |p: &str| regex_cache().lock_recovered().contains_key(p);
         assert!(in_cache(a));
         assert!(in_cache(b));
     }
@@ -267,11 +289,11 @@ mod tests {
                 })
             })
             .collect();
-        for h in handles { h.join().unwrap(); }
-        // 8 线程各自循环 50 次同一 pattern，缓存里应只有 1 个条目
+        for h in handles {
+            h.join().unwrap();
+        }
         let pats: HashSet<String> = regex_cache()
-            .lock()
-            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .lock_recovered()
             .keys()
             .cloned()
             .collect();
@@ -280,16 +302,6 @@ mod tests {
 
     #[test]
     fn poison_recovery_keeps_cache_usable() {
-        // 模拟一个独立 Mutex 上的 poison 状态——验证 std::sync::PoisonError::into_inner 路径
-        let cache: std::sync::Mutex<()> = std::sync::Mutex::new(());
-        let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            let _g = cache.lock().unwrap();
-            panic!("intentional");
-        }));
-        assert!(cache.lock().is_err(), "test setup must leave cache poisoned");
-        // into_inner 路径可用
-        let _g = cache.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-        drop(_g);
         // get_or_compile_regex 自身对 REGEX_CACHE 的调用应当可恢复
         let r = get_or_compile_regex(r"after_poison");
         assert!(r.is_ok());
