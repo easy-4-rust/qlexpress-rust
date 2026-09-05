@@ -1,0 +1,381 @@
+{
+  "generated_at": "2026-09-05T07:37:39.318351+00:00",
+  "java_repo": "/Users/wandl/workspaces/workspace-github/QLExpress",
+  "testsuite_dir": "/Users/wandl/workspaces/workspace-github/QLExpress/src/test/resources/testsuite",
+  "total_ql_scripts": 228,
+  "annotated_with_errCode": 62,
+  "plain_scripts": 166,
+  "by_error_code": {
+    "INDEX_OUT_BOUND": 2,
+    "INVALID_INDEX": 1,
+    "SYNTAX_ERROR": 37,
+    "NONINDEXABLE_OBJECT": 1,
+    "FUNCTION_NOT_FOUND": 1,
+    "NULL_FIELD_ACCESS": 1,
+    "NULL_METHOD_ACCESS": 1,
+    "FOR_CONDITION_BOOL_REQUIRED": 1,
+    "FOR_EACH_TYPE_MISMATCH": 1,
+    "FOR_EACH_ITERABLE_REQUIRED": 1,
+    "INVALID_ARGUMENT": 4,
+    "CONDITION_BOOL_REQUIRED": 1,
+    "INCOMPATIBLE_ASSIGNMENT_TYPE": 1,
+    "SCRIPT_TIME_OUT": 1,
+    "WHILE_CONDITION_BOOL_REQUIRED": 1,
+    "INCOMPATIBLE_ARRAY_ITEM_TYPE": 1,
+    "ARRAY_SIZE_NUM_REQUIRED": 1,
+    "NO_SUITABLE_CONSTRUCTOR": 1,
+    "FIELD_NOT_FOUND": 3,
+    "INVALID_ASSIGNMENT": 1
+  },
+  "by_category": {
+    "independent/array": {
+      "INDEX_OUT_BOUND": 1,
+      "INVALID_INDEX": 1,
+      "SYNTAX_ERROR": 2,
+      "NONINDEXABLE_OBJECT": 1
+    },
+    "independent/avoidnullpointer": {
+      "FUNCTION_NOT_FOUND": 1,
+      "NULL_FIELD_ACCESS": 1,
+      "NULL_METHOD_ACCESS": 1
+    },
+    "independent/block": {
+      "SYNTAX_ERROR": 1
+    },
+    "independent/bool": {
+      "SYNTAX_ERROR": 1
+    },
+    "independent/for": {
+      "FOR_CONDITION_BOOL_REQUIRED": 1,
+      "FOR_EACH_TYPE_MISMATCH": 1,
+      "FOR_EACH_ITERABLE_REQUIRED": 1,
+      "SYNTAX_ERROR": 4
+    },
+    "independent/function": {
+      "INVALID_ARGUMENT": 1
+    },
+    "independent/if": {
+      "CONDITION_BOOL_REQUIRED": 1,
+      "SYNTAX_ERROR": 6
+    },
+    "independent/lambda": {
+      "INVALID_ARGUMENT": 2
+    },
+    "independent/macro": {
+      "SYNTAX_ERROR": 2
+    },
+    "independent/map": {
+      "SYNTAX_ERROR": 4
+    },
+    "independent/string": {
+      "INCOMPATIBLE_ASSIGNMENT_TYPE": 1,
+      "SYNTAX_ERROR": 1
+    },
+    "independent/ternary": {
+      "SYNTAX_ERROR": 1
+    },
+    "independent/timeout": {
+      "SCRIPT_TIME_OUT": 1
+    },
+    "independent/trycatch": {
+      "SYNTAX_ERROR": 2
+    },
+    "independent/while": {
+      "WHILE_CONDITION_BOOL_REQUIRED": 1,
+      "SYNTAX_ERROR": 2
+    },
+    "java/array": {
+      "INDEX_OUT_BOUND": 1,
+      "SYNTAX_ERROR": 3,
+      "INCOMPATIBLE_ARRAY_ITEM_TYPE": 1,
+      "ARRAY_SIZE_NUM_REQUIRED": 1
+    },
+    "java/generics": {
+      "SYNTAX_ERROR": 1
+    },
+    "java/import": {
+      "SYNTAX_ERROR": 7
+    },
+    "java/method_reference": {
+      "INVALID_ARGUMENT": 1
+    },
+    "java/newexpr": {
+      "NO_SUITABLE_CONSTRUCTOR": 1
+    },
+    "java/property": {
+      "FIELD_NOT_FOUND": 3,
+      "INVALID_ASSIGNMENT": 1
+    }
+  },
+  "examples": {
+    "INDEX_OUT_BOUND": [
+      "array_index_out_of_bound.ql",
+      "arr_index_out_of_bound.ql"
+    ],
+    "INVALID_INDEX": [
+      "invalid_index.ql"
+    ],
+    "SYNTAX_ERROR": [
+      "miss_comma_between_elements.ql",
+      "no_rbrack_to_match.ql",
+      "missing_rbrace.ql"
+    ],
+    "NONINDEXABLE_OBJECT": [
+      "unindexable.ql"
+    ],
+    "FUNCTION_NOT_FOUND": [
+      "can_not_find_function.ql"
+    ],
+    "NULL_FIELD_ACCESS": [
+      "get_from_null.ql"
+    ],
+    "NULL_METHOD_ACCESS": [
+      "get_method_from_null.ql"
+    ],
+    "FOR_CONDITION_BOOL_REQUIRED": [
+      "condition_not_bool.ql"
+    ],
+    "FOR_EACH_TYPE_MISMATCH": [
+      "for_each_invalid_type.ql"
+    ],
+    "FOR_EACH_ITERABLE_REQUIRED": [
+      "for_each_not_iterable.ql"
+    ],
+    "INVALID_ARGUMENT": [
+      "invalid_argument.ql",
+      "invalid_argument.ql",
+      "invalid_argument_call.ql"
+    ],
+    "CONDITION_BOOL_REQUIRED": [
+      "if_condition_not_bool.ql"
+    ],
+    "INCOMPATIBLE_ASSIGNMENT_TYPE": [
+      "invalid_char.ql"
+    ],
+    "SCRIPT_TIME_OUT": [
+      "timeout.ql"
+    ],
+    "WHILE_CONDITION_BOOL_REQUIRED": [
+      "condition_not_bool.ql"
+    ],
+    "INCOMPATIBLE_ARRAY_ITEM_TYPE": [
+      "invalid_arr_item.ql"
+    ],
+    "ARRAY_SIZE_NUM_REQUIRED": [
+      "invalid_arr_size_type.ql"
+    ],
+    "NO_SUITABLE_CONSTRUCTOR": [
+      "no_match_constructor.ql"
+    ],
+    "FIELD_NOT_FOUND": [
+      "enum_get_not_exist.ql",
+      "private_member_attr_not_access_get.ql",
+      "private_member_attr_not_access_set.ql"
+    ],
+    "INVALID_ASSIGNMENT": [
+      "private_member_set_not_accessible.ql"
+    ]
+  },
+  "severity": {
+    "INDEX_OUT_BOUND": "P1",
+    "INVALID_INDEX": "P1",
+    "SYNTAX_ERROR": "P0",
+    "NONINDEXABLE_OBJECT": "P1",
+    "FUNCTION_NOT_FOUND": "P1",
+    "NULL_FIELD_ACCESS": "P1",
+    "NULL_METHOD_ACCESS": "P1",
+    "FOR_CONDITION_BOOL_REQUIRED": "P1",
+    "FOR_EACH_TYPE_MISMATCH": "P1",
+    "FOR_EACH_ITERABLE_REQUIRED": "P1",
+    "INVALID_ARGUMENT": "P2",
+    "CONDITION_BOOL_REQUIRED": "P1",
+    "INCOMPATIBLE_ASSIGNMENT_TYPE": "P1",
+    "SCRIPT_TIME_OUT": "P0",
+    "WHILE_CONDITION_BOOL_REQUIRED": "P2",
+    "INCOMPATIBLE_ARRAY_ITEM_TYPE": "P2",
+    "ARRAY_SIZE_NUM_REQUIRED": "P1",
+    "NO_SUITABLE_CONSTRUCTOR": "P1",
+    "FIELD_NOT_FOUND": "P1",
+    "INVALID_ASSIGNMENT": "P1"
+  },
+  "covered_by_repo_corpus": [],
+  "_repo_scripts": [
+    "'ABCD' like 'A%B%D'",
+    "'a' * 2",
+    "'a' like null",
+    "'abc' < 'abd'",
+    "'abc' like 'abc%%'",
+    "'abc' like 200",
+    "'abcdef' like 'abc%'",
+    "'hello' + '-' + 'world'",
+    "'value=' + null",
+    "'你好' + '世界'",
+    "'😀'.length()",
+    "'😀'.substring(0,1)",
+    "'😀'.substring(0,1) + '😀'.substring(1,2)",
+    "'😀'.substring(0,1).charAt(0)",
+    "'😀'.substring(1,2)",
+    "(1 + 2) * 3",
+    "(7 & 3) | 8",
+    "+(7.5f)",
+    "-1 >>> 1",
+    "-1.0d / 0.0d",
+    "-7 % 3",
+    "-8 >> 2",
+    "-9223372036854775808L - 1L",
+    "0.0d / 0.0d",
+    "0.1d * 0.2d",
+    "0.1d + 0.2d",
+    "0.3d - 0.1d",
+    "1 % 0",
+    "1 + 'a'",
+    "1 + 'x'",
+    "1 + 2 * 3",
+    "1 / 0",
+    "1 << 32",
+    "1 == 1.00",
+    "1 == 1L",
+    "1 in new int[]{1,2,3}",
+    "1 in {'a':1}",
+    "1.0 == 1.00",
+    "1.0d % 0.0d",
+    "1.0d / 0.0d",
+    "1.0d / 3.0d",
+    "1.5 * 4",
+    "10 / 4",
+    "100 - 'a'",
+    "1073741824 * 2",
+    "10L & 6",
+    "12 in 'abc12def'",
+    "123456789.123456789 + 987654321.987654321",
+    "1L << 64",
+    "1L in [0,1.00,2]",
+    "2147483647 + 1",
+    "2147483648L + 2L",
+    "3 in [1,2,3]",
+    "34.00000000000 / 3",
+    "4 not in [1,2,3]",
+    "7 / 2",
+    "7.5d % 3.0d",
+    "8 >> 2.0d",
+    "8.0f >> 2",
+    "9223372036854775807L + 1L",
+    "97 == 'a'",
+    "98 > 'a'",
+    "999999999999999999999999999999 * 999999999999999999999999999999",
+    "99999999999999999999999999999999999999 + 1",
+    "BigInteger.valueOf(-7) % 3",
+    "BigInteger.valueOf(10) ^ 6",
+    "[1, ...[2,3], 4]",
+    "[1, 2, 3, 'x']",
+    "[1,2,3,4,5][1:4]",
+    "[1,2] == [1,2]",
+    "a * b + 1",
+    "a = (1 +",
+    "a = 0; false && ((a = 1) == 1); a",
+    "a = 3; a += 4; a",
+    "a > 1 && b > 1",
+    "a=[1]; a['x']",
+    "a=[]; a[1]",
+    "f = x -> x * 3; f(9)",
+    "function add(a,b) { return a+b; }; add(7,8)",
+    "function fib(n) { if (n <= 1) { return n; }; return fib(n-1)+fib(n-2); }; fib(10)",
+    "function value(){1;} value() += 2",
+    "functionThatDoesNotExist()",
+    "if (n > 5) { n * 2 } else { n - 1 }",
+    "items[0] + items[2]",
+    "m = {'a':1,'b':2}; m.a + m.b",
+    "missing.child",
+    "missing.child.value",
+    "name = 'QLExpress'; \"hello ${name}\"",
+    "new int[11]",
+    "null",
+    "null ^ true",
+    "null in [1,2,3]",
+    "null in null",
+    "null like null",
+    "null | true",
+    "request.amount >= request.limit",
+    "score >= 80 ? 'allow' : 'review'",
+    "sum = 0; for (i = 0; i < 10; i++) { sum = sum + i; }; sum",
+    "sum = 0; for (x : [1,2,3,4]) { sum = sum + x; }; sum",
+    "sum = 0; i = 0; while (i < 10) { sum = sum + i; i = i + 1; }; sum",
+    "tenant + ':' + action",
+    "true & null",
+    "true && false",
+    "true + []",
+    "true > false",
+    "try { 1 / 0 } catch(e) { 'caught' }",
+    "x = 2; switch (x) { case 1: 'one'; case 2: 'two'; default: 'other'; }",
+    "x = 4; x * x",
+    "{'a':1,'b':2}",
+    "{'items':[{'id':1},{'id':2}],'ok':true}"
+  ],
+  "_synthetic_scripts": [
+    "",
+    "(((((((((((((((((((((((((1+1))))))))))))))))))))))))",
+    "(42) 'hello'",
+    "(Integer)'hello'",
+    "-'hello'",
+    "1 + + 1",
+    "1 / 0",
+    "1 = 2",
+    "a = (1 + 2",
+    "a = [1, 2, 3]; a[100]",
+    "a = [1,2,3]; a[]",
+    "a = [10, 20, 30]; a['hello']",
+    "a = new int['not_a_number']",
+    "a = new int[10000000]",
+    "amount = 1000; tenureMonths = 0; monthly = amount / tenureMonths",
+    "big = []; i = 0; while (i < 1000000) { big.add(i); i = i + 1 }",
+    "f = null; f()",
+    "f = x -> { return 1/0; }; f(1)",
+    "false && (1/0)",
+    "fee = if (tier == 'GOLD') then rate*0.7 else if (tier == 'SILVER') then rate*0.85",
+    "for (1/0; i < 10; i++) { i }",
+    "for (i = 0; 1/0; i++) { i }",
+    "for (i = 0; 42; i++) { i }",
+    "for (i = 0; i < 10; i = 1/0) { i }",
+    "for (i = 0; i < 10; i++) { 1/0 }",
+    "for (int x : ['a','b']) { x }",
+    "for (x : 42) { x }",
+    "for (x : null) { x }",
+    "function boom() { return 1/0; }; boom()",
+    "function r(n) { return r(n-1); }; r(100000)",
+    "if (42) { x = 1 }",
+    "if (true) {",
+    "int x = 'not a number'",
+    "int[] a = [1, 2, 'three']",
+    "m = {'a': 1}; m.nonExistentField",
+    "maxRetry = 3; maxRetry = 'forever'",
+    "new Integer('not_a_number')",
+    "new Object()",
+    "new String(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11)",
+    "nonExistentFunction()",
+    "null.name",
+    "null.toString()",
+    "obj = 42; obj()",
+    "obj = new com.example.NonExistentClass()",
+    "obj = {'a':1}; obj.noSuchMethod(1,2,3)",
+    "order = {'id':'O-1', 'amt':100}; order.amount",
+    "s = 'hello'; s.charAt(-1)",
+    "s = 'hello'; s.nonExistentMethod()",
+    "s = 'hello'; s.substring()",
+    "throw 'business error'",
+    "true + 1",
+    "try { 1/0 } catch(e) { 'caught' }",
+    "try { 1/0 } catch(e) { 1/0 }",
+    "try { x = 1 } finally { 1/0 }",
+    "user = {'id':'U-1'}; user.getPassword()",
+    "while (1/0) { x = 1 }",
+    "while (42) { x = 1 }",
+    "while(true) { x = x + 1 }",
+    "x = 12abc",
+    "x = 1; x.readOnlyField = 99",
+    "x = 1; x.unknownInternalField",
+    "x = 42; x()",
+    "x = 42; x[0]",
+    "{ 1/0 }",
+    "~1"
+  ]
+}
