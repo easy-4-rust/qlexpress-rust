@@ -306,11 +306,14 @@ impl Drop for DepthGuard {
 }
 
 /// 消费 Token 流并按 QLExpress4 语法生成 AST 的递归下降解析器。
+/// 对应或承接 Java 源文件：`com/alibaba/qlexpress4/aparser/QLParser.java`；
+/// 具体对象路径见 `docs/对象级对照表.md`。
+/// 对应 Java: com.alibaba.qlexpress4.aparser.QLParser。
 ///
 /// Recursive descent parser that consumes a token stream and produces a
 /// syntax tree.  Recursion depth is bounded by `MAX_PARSE_DEPTH` via an
-/// RAII depth guard to prevent Rust process call-stack overflow on
-/// adversarial inputs.
+/// RAII depth guard (Rust 原生适配：防御不可信输入导致的进程栈溢出，
+/// Java 侧无对应物).
 pub struct QLParser<'a> {
     script: &'a str,
     tokens: &'a [Token],
