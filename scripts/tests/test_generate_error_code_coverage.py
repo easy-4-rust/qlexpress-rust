@@ -138,6 +138,9 @@ class TemplateClassificationTest(unittest.TestCase):
     def test_domain_map_covers_all_codes(self) -> None:
         templates = _build_script_templates()
         for code in templates:
+            # `__BIZ_*__` 是业务领域样本（不映射到错误码），无需 DOMAIN_MAP
+            if code.startswith("__BIZ_") and code.endswith("__"):
+                continue
             self.assertIn(
                 code, DOMAIN_MAP,
                 f"{code} should be in DOMAIN_MAP",

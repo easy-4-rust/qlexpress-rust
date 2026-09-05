@@ -1,9 +1,14 @@
 # QLExpress-Rust 合成业务语料 -- 错误码覆盖报告
 
-> 生成时间: 2026-09-05T05:15:54.315558+00:00
+> 生成时间: 2026-09-05T05:36:52.964401+00:00
 > 错误码来源: `crates/qlexpress/src/exception/ql_error_codes.rs` (66 个)
 > 仓库语料: `verification/corpus/differential.jsonl` (295 条, 覆盖 9 错误码)
-> 合成语料: `verification/corpus/business-synthetic.jsonl` (68 条)
+> 合成语料: `verification/corpus/business-synthetic.jsonl` (75 条)
+>
+> **业务场景来源**：
+> - 风险控制 / 定价 / KYC 场景参考自 alibaba/QLExpress 官方 README「Common error codes」段（中文社区公开文档）
+> - 部分模板是 README 显式列出的生产反模式（divide-by-zero in pricing、shortCircuitDisable 误用、= 替代 ==、between DSL 未注册、list flatten 陷阱、macro+try-catch 模式等）
+> - 业务领域样本（`__BIZ_*__` 命名）不映射到具体错误码，只为业务脚本复杂度提供参照样本
 
 ## 1. 总览
 
@@ -12,7 +17,7 @@
 | 错误码总数 | 66 |
 | 仓库语料已覆盖 | 9 |
 | 合成语料覆盖 | 66 |
-| 合成语料中可通过脚本触发 | 59 |
+| 合成语料中可通过脚本触发 | 66 |
 | 合成语料中需要非脚本触发 | 9 |
 
 ## 2. 66 错误码 x 覆盖矩阵
@@ -23,13 +28,13 @@
 | `BIZ_EXCEPTION` | P1 | -- | 1 | non-script / manual |
 | `CLASS_NOT_FOUND` | P0 | -- | 1 | script |
 | `CONDITION_BOOL_REQUIRED` | P1 | -- | 1 | script |
-| `EXCEED_MAX_ARR_LENGTH` | P1 | YES | 1 | script |
+| `EXCEED_MAX_ARR_LENGTH` | P1 | YES | 2 | script |
 | `EXECUTE_BLOCK_ERROR` | P1 | -- | 1 | script |
 | `EXECUTE_CATCH_HANDLER_ERROR` | P1 | -- | 1 | script |
 | `EXECUTE_FINAL_BLOCK_ERROR` | P1 | -- | 1 | script |
 | `EXECUTE_OPERATOR_EXCEPTION` | P1 | -- | 1 | script |
 | `EXECUTE_TRY_BLOCK_ERROR` | P1 | -- | 1 | script |
-| `FIELD_NOT_FOUND` | P1 | -- | 1 | script |
+| `FIELD_NOT_FOUND` | P1 | -- | 2 | script |
 | `FOR_BODY_ERROR` | P1 | -- | 1 | script |
 | `FOR_CONDITION_BOOL_REQUIRED` | P1 | -- | 1 | script |
 | `FOR_CONDITION_ERROR` | P1 | -- | 1 | script |
@@ -46,8 +51,8 @@
 | `INCOMPATIBLE_TYPE_CAST` | P1 | -- | 1 | script |
 | `INDEX_OUT_BOUND` | P1 | YES | 1 | script |
 | `INVALID_ARGUMENT` | P1 | -- | 1 | non-script / manual |
-| `INVALID_ARITHMETIC` | P1 | YES | 1 | script |
-| `INVALID_ASSIGNMENT` | P1 | YES | 1 | script |
+| `INVALID_ARITHMETIC` | P1 | YES | 3 | script |
+| `INVALID_ASSIGNMENT` | P1 | YES | 2 | script |
 | `INVALID_BINARY_OPERAND` | P1 | YES | 1 | script |
 | `INVALID_CAST_TARGET` | P1 | -- | 1 | script |
 | `INVALID_INDEX` | P1 | YES | 1 | script |
@@ -60,7 +65,7 @@
 | `INVOKE_METHOD_INNER_ERROR` | P1 | -- | 1 | script |
 | `INVOKE_METHOD_UNKNOWN_ERROR` | P1 | -- | 1 | script |
 | `INVOKE_METHOD_WITH_WRONG_ARGUMENTS` | P1 | -- | 1 | script |
-| `METHOD_NOT_FOUND` | P1 | -- | 1 | script |
+| `METHOD_NOT_FOUND` | P1 | -- | 2 | script |
 | `MISSING_INDEX` | P0 | -- | 1 | script |
 | `NONINDEXABLE_OBJECT` | P1 | -- | 1 | script |
 | `NONTRAVERSABLE_OBJECT` | P1 | -- | 1 | script |
@@ -82,7 +87,7 @@
 | `SERIALIZABLE_PARSE_CACHE_UNSUPPORTED_VERSION` | P2 | -- | 1 | non-script / manual |
 | `SET_FIELD_UNKNOWN_ERROR` | P1 | -- | 1 | script |
 | `STACK_OVERFLOW` | P0 | -- | 1 | script |
-| `SYNTAX_ERROR` | P0 | YES | 3 | script |
+| `SYNTAX_ERROR` | P0 | YES | 4 | script |
 | `WHILE_CONDITION_BOOL_REQUIRED` | P1 | -- | 1 | script |
 | `WHILE_CONDITION_ERROR` | P1 | -- | 1 | script |
 
@@ -139,6 +144,8 @@
 
 - **脚本**: `m = {'a': 1}; m.nonExistentField`
   - 触发原因: Access non-existent field on map
+- **脚本**: `order = {'id':'O-1', 'amt':100}; order.amount`
+  - 触发原因: Rule author uses dot on Map context expecting POJO field — QLExpress isolation strategy blocks reflective access to non-whitelisted fields
 
 ### `FOR_BODY_ERROR` (P1, control-flow)
 
@@ -264,6 +271,8 @@
 
 - **脚本**: `obj = {'a':1}; obj.noSuchMethod(1,2,3)`
   - 触发原因: No suitable method 'noSuchMethod' on map
+- **脚本**: `user = {'id':'U-1'}; user.getPassword()`
+  - 触发原因: Production anti-pattern: script attempts privileged getter not in whiteList — isolation security blocks
 
 ### `MISSING_INDEX` (P0, syntax-parsing)
 

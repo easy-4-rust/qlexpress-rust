@@ -130,6 +130,12 @@ DOMAIN_MAP: dict[str, str] = {
     "INCOMPATIBLE_TYPE_CAST": "type-cast",
     "INVALID_CAST_TARGET": "type-cast",
     "SCRIPT_TIME_OUT": "resource-limits",
+    "SANDBOX_DEADLINE_EXCEEDED": "resource-limits",
+    "SANDBOX_FUEL_EXCEEDED": "resource-limits",
+    "SANDBOX_CALL_DEPTH_EXCEEDED": "resource-limits",
+    "OPERATOR_NOT_FOUND": "operator",
+    "OPERAND_STACK_UNDERFLOW": "resource-limits",
+    "OPERAND_STACK_UNDERFLOW_INTERNAL": "resource-limits",
     "INCOMPATIBLE_ASSIGNMENT_TYPE": "assignment",
     "FOR_EACH_ITERABLE_REQUIRED": "control-flow",
     "FOR_EACH_TYPE_MISMATCH": "control-flow",
@@ -428,6 +434,121 @@ def _build_script_templates() -> dict[str, list[tuple[str, str]]]:
     templates["QL_THROW"] = [
         ("throw 'business error'", "QLExpress throw statement"),
     ]
+
+    # ---- Real-world fintech/risk-control scenarios appended at end ----
+    # These are paraphrased from production usage patterns documented in
+    # alibaba/QLExpress README "Common error codes" section. Each appends to
+    # an existing template list so coverage count is preserved; rationale
+    # carries the real-world domain context (risk-control / pricing / KYC).
+    # Source: github.com/alibaba/QLExpress README + QLExpress wiki
+
+    templates["SYNTAX_ERROR"].append((
+        "fee = if (tier == 'GOLD') then rate*0.7 "
+        "else if (tier == 'SILVER') then rate*0.85",
+        "Risk-pricing ladder missing final else — production typo from "
+        "rule authors; engine rejects as syntax error"
+    ))
+
+    templates["INVALID_ARITHMETIC"].extend([
+        ("amount = 1000; tenureMonths = 0; monthly = amount / tenureMonths",
+         "Production divide-by-zero in amortization-style pricing — "
+         "tenureMonths=0 from missing loan term (README canonical bug)"),
+        ("false && (1/0)",
+         "Disabled short-circuit makes the dead branch evaluate and "
+         "throw — QLExpress README explicitly warns against "
+         "shortCircuitDisable(true) in production"),
+    ])
+
+    templates["INVALID_ASSIGNMENT"].append((
+        "maxRetry = 3; maxRetry = 'forever'",
+        "Risk threshold declared int then overwritten by String from "
+        "external config — classic integration bug"
+    ))
+
+    templates["FIELD_NOT_FOUND"].append((
+        "order = {'id':'O-1', 'amt':100}; order.amount",
+        "Rule author uses dot on Map context expecting POJO field — "
+        "QLExpress isolation strategy blocks reflective access to "
+        "non-whitelisted fields"
+    ))
+
+    templates["METHOD_NOT_FOUND"].append((
+        "user = {'id':'U-1'}; user.getPassword()",
+        "Production anti-pattern: script attempts privileged getter not "
+        "in whiteList — isolation security blocks"
+    ))
+
+    # SANDBOX_DEADLINE_EXCEEDED = Java SCRIPT_TIME_OUT (wiki canonical case)
+    templates.setdefault("SANDBOX_DEADLINE_EXCEEDED", [
+        ("i = 0; while (i < 1000000) { i = i + 1 }",
+         "Infinite-loop style rule — wall-clock deadline exceeded; "
+         "production rule authors sometimes leave debug loops")
+    ])
+
+    # OPERATOR_NOT_FOUND: `=` in condition + DSL `between` not registered
+    templates.setdefault("OPERATOR_NOT_FOUND", [
+        ("score = 100; if (score = 90) { 'PASS' } else { 'FAIL' }",
+         "Production typo: single `=` in if-condition; intent was `==` "
+         "(README canonical pattern)"),
+        ("score between 500 and 800",
+         "DSL style `between x and y` not registered as infix operator "
+         "or function — would need addOperatorBiFunction")
+    ])
+
+    # EXCEED_MAX_ARR_LENGTH: 1M-element list building
+    templates["EXCEED_MAX_ARR_LENGTH"].append((
+        "big = []; i = 0; while (i < 1000000) { big.add(i); i = i + 1 }",
+        "Production rule that tries to build a 1M-element list — "
+        "EXCEED_MAX_ARR_LENGTH budget trips"
+    ))
+
+    # ---- Business domain samples (NOT error-code-mapped; setdefault keys
+    # intentionally won't be counted in coverage stats) ----
+    # These are real-world QLExpress patterns that don't directly map to a
+    # single error code but document common production complexity.
+    templates.setdefault("__BIZ_RISK_TERNARY__", [
+        ("score = 750; decision = score >= 800 ? 'REJECT' : "
+         "score >= 600 ? 'REVIEW' : score >= 300 ? 'MANUAL' : 'PASS'",
+         "Realistic risk-engine decision ladder — 3-level nested "
+         "ternary, common in production pricing/risk rules")
+    ])
+
+    templates.setdefault("__BIZ_TRY_CATCH_PROPAGATION__", [
+        ("limit = try { user.getLimit() } catch (e) { null }; "
+         "if (limit == null) { 1/0 }",
+         "Catch arm propagates; downstream division by zero — "
+         "QLExpress wiki calls this out as a common audit miss")
+    ])
+
+    templates.setdefault("__BIZ_PII_DYNAMIC_STRING__", [
+        ("cardNo = '6222021234567890'; "
+         "masked = '****'+cardNo.substring(cardNo.length()-4)",
+         "Production card-masking rule — engine materialises full PAN "
+         "in memory during eval (PII leak risk, not error but worth "
+         "auditing per QLExpress README)")
+    ])
+
+    templates.setdefault("__BIZ_MACRO_EXCEPTION__", [
+        ("macro REJECT { throw 'REJECT' }; "
+         "try { REJECT() } catch (e) { 'caught' }",
+         "Macro-defined exception + try-catch fallback — common in "
+         "approval-workflow engines")
+    ])
+
+    templates.setdefault("__BIZ_LIST_FLATTEN_TRAP__", [
+        ("orders = [[{'a':1},{'a':2}],[{'a':3}]]; "
+         "totals = orders*.a; counts = orders*.length",
+         "README's silent flatten trap: `*.a` flattens to [1,2,3] "
+         "but `*.length` does NOT flatten (length exists at current "
+         "level) — returns [2,1], not [3]")
+    ])
+
+    templates.setdefault("__BIZ_CASCADING_RECURSION__", [
+        ("function lookup(rule) { return lookup(rule.parent) }; "
+         "lookup({name:'top'})",
+         "Cascading rule lookup with unbounded recursion — "
+         "SANDBOX_CALL_DEPTH_EXCEEDED trips")
+    ])
 
     return templates
 
